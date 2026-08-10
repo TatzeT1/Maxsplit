@@ -1,0 +1,49 @@
+rules_version = '2';
+
+// Per ADR-001 (docs/DECISIONS.md), all writes go through Next.js Server Actions
+// using the Firebase Admin SDK, which bypasses these rules entirely. Rules here
+// exist to (a) gate realtime client reads to group members and (b) deny every
+// client write as a backstop — nothing should ever reach Firestore via a
+// client-issued write. Deny by default; only add narrow, explicit `allow` rules.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isGroupMember(groupId) {
+      return isSignedIn() &&
+        request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /groups/{groupId} {
+      allow read: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+      allow write: if false;
+
+      match /expenses/{expenseId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if false;
+      }
+
+      match /settlements/{settlementId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if false;
+      }
+
+      match /recurring/{ruleId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if false;
+      }
+    }
+
+    // Deny-all backstop for anything not explicitly matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
