@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeBalances } from "./balances";
+import { computeBalances, computePairwiseDebts } from "./balances";
 import { splitEqual } from "./split";
 
 describe("computeBalances", () => {
@@ -46,5 +46,53 @@ describe("computeBalances", () => {
     expect(balances.b).toBe(0);
     const sum = Object.values(balances).reduce((total, v) => total + v, 0);
     expect(sum).toBe(0);
+  });
+});
+
+describe("computePairwiseDebts", () => {
+  it("shows a direct debt from participant to payer for a two-person expense", () => {
+    const splits = splitEqual(2000, ["a", "b"]);
+    const net = computePairwiseDebts([{ payerUid: "a", splits }]);
+
+    expect(net.b.a).toBe(1000); // b owes a 10.00
+    expect(net.a.b).toBe(-1000); // mirror is always the negation
+  });
+
+  it("keeps net[a][b] === -net[b][a] for a three-person expense", () => {
+    const splits = splitEqual(3000, ["a", "b", "c"]);
+    const net = computePairwiseDebts([{ payerUid: "a", splits }]);
+
+    expect(net.b.a).toBe(1000);
+    expect(net.c.a).toBe(1000);
+    expect(net.a.b).toBe(-net.b.a);
+    expect(net.a.c).toBe(-net.c.a);
+  });
+
+  it("nets multiple expenses between the same pair", () => {
+    const expense1 = { payerUid: "a", splits: splitEqual(2000, ["a", "b"]) };
+    const expense2 = { payerUid: "b", splits: splitEqual(1000, ["a", "b"]) };
+    const net = computePairwiseDebts([expense1, expense2]);
+
+    // b owed a 1000 from expense1, a owed b 500 from expense2 -> net b owes a 500.
+    expect(net.b.a).toBe(500);
+    expect(net.a.b).toBe(-500);
+  });
+
+  it("settlements reduce the debt they're paying down", () => {
+    const splits = splitEqual(2000, ["a", "b"]);
+    const net = computePairwiseDebts(
+      [{ payerUid: "a", splits }],
+      [{ fromUid: "b", toUid: "a", amountMinor: 1000 }],
+    );
+
+    expect(net.b.a).toBe(0);
+    expect(net.a.b).toBe(0);
+  });
+
+  it("ignores a participant who is also the payer", () => {
+    const splits = splitEqual(1000, ["a"]);
+    const net = computePairwiseDebts([{ payerUid: "a", splits }]);
+
+    expect(net.a).toBeUndefined();
   });
 });
