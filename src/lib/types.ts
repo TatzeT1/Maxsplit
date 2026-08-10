@@ -1,8 +1,10 @@
+export type GroupRole = "owner" | "admin" | "member";
+
 export interface GroupMember {
   displayName: string;
   photoURL: string;
   joinedAt: string;
-  role: "owner" | "member";
+  role: GroupRole;
 }
 
 export interface Group {

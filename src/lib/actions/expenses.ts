@@ -2,6 +2,7 @@
 
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { isGroupManager } from "@/lib/groups/permissions";
 import {
   splitByPercent,
   splitByShares,
@@ -90,7 +91,12 @@ async function resolveExpense(
   session: { uid: string },
 ): Promise<
   | { ok: false; error: string }
-  | { ok: true; group: Omit<Group, "id">; groupRef: FirebaseFirestore.DocumentReference; splits: Record<string, ExpenseSplit> }
+  | {
+      ok: true;
+      group: Omit<Group, "id">;
+      groupRef: FirebaseFirestore.DocumentReference;
+      splits: Record<string, ExpenseSplit>;
+    }
 > {
   const membership = await requireGroupMembership(input.groupId, session.uid);
   if ("error" in membership) return { ok: false, error: membership.error };
@@ -113,7 +119,9 @@ async function resolveExpense(
   }
 }
 
-export async function addExpense(input: ExpenseInput): Promise<ActionResult<{ expenseId: string }>> {
+export async function addExpense(
+  input: ExpenseInput,
+): Promise<ActionResult<{ expenseId: string }>> {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
 
@@ -149,12 +157,13 @@ export async function editExpense(
 
   const resolved = await resolveExpense(input, session);
   if (!resolved.ok) return { ok: false, error: resolved.error };
-  const { groupRef, splits } = resolved;
+  const { group, groupRef, splits } = resolved;
 
   const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
   const expenseSnap = await expenseRef.get();
   if (!expenseSnap.exists) return { ok: false, error: "not-found" };
-  if ((expenseSnap.data() as Expense).createdBy !== session.uid) {
+  const canManage = isGroupManager(group.members[session.uid]?.role);
+  if ((expenseSnap.data() as Expense).createdBy !== session.uid && !canManage) {
     return { ok: false, error: "not-owner" };
   }
 
@@ -182,12 +191,13 @@ export async function deleteExpense(input: {
 
   const membership = await requireGroupMembership(input.groupId, session.uid);
   if ("error" in membership) return { ok: false, error: membership.error };
-  const { groupRef } = membership;
+  const { group, groupRef } = membership;
 
   const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
   const expenseSnap = await expenseRef.get();
   if (!expenseSnap.exists) return { ok: false, error: "not-found" };
-  if ((expenseSnap.data() as Expense).createdBy !== session.uid) {
+  const canManage = isGroupManager(group.members[session.uid]?.role);
+  if ((expenseSnap.data() as Expense).createdBy !== session.uid && !canManage) {
     return { ok: false, error: "not-owner" };
   }
 

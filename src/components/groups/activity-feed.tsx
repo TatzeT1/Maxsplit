@@ -19,6 +19,7 @@ import { deleteExpense } from "@/lib/actions/expenses";
 import { CATEGORY_IDS, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
+import { isGroupManager } from "@/lib/groups/permissions";
 import { t } from "@/lib/i18n/de";
 import type { CategoryId, Expense, GroupMember, Settlement } from "@/lib/types";
 
@@ -39,7 +40,7 @@ function ExpenseRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const isOwner = expense.createdBy === currentUid;
+  const canEdit = expense.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const payerUids = Object.keys(expense.paidBy);
   const payerNames = payerUids.map((uid) => members[uid]?.displayName ?? "?");
   const paidByText =
@@ -66,7 +67,7 @@ function ExpenseRow({
       </div>
       <div className="flex items-center gap-2">
         <span className="font-medium">{formatMoney(expense.amountMinor, expense.currency)}</span>
-        {isOwner && (
+        {canEdit && (
           <>
             <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
               {t("common.edit")}
@@ -91,7 +92,7 @@ function ExpenseRow({
           </>
         )}
       </div>
-      {isOwner && (
+      {canEdit && (
         <AddExpenseDialog
           groupId={groupId}
           members={members}
@@ -155,24 +156,20 @@ export function ActivityFeed({
   const isFiltering = query.length > 0 || categoryFilter !== "all";
 
   const items: ActivityItem[] = [
-    ...filteredExpenses.map(
-      (expense): ActivityItem => ({
-        kind: "expense",
-        date: expense.date,
-        createdAt: expense.createdAt,
-        expense,
-      }),
-    ),
+    ...filteredExpenses.map((expense): ActivityItem => ({
+      kind: "expense",
+      date: expense.date,
+      createdAt: expense.createdAt,
+      expense,
+    })),
     ...(isFiltering
       ? []
-      : settlements.map(
-          (settlement): ActivityItem => ({
-            kind: "settlement",
-            date: settlement.date,
-            createdAt: settlement.createdAt,
-            settlement,
-          }),
-        )),
+      : settlements.map((settlement): ActivityItem => ({
+          kind: "settlement",
+          date: settlement.date,
+          createdAt: settlement.createdAt,
+          settlement,
+        }))),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
   return (

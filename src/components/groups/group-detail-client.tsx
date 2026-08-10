@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { ActivityFeed } from "@/components/groups/activity-feed";
 import { BalanceView } from "@/components/groups/balance-view";
+import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -149,17 +150,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <h2 className="text-sm font-medium">{t("groups.members")}</h2>
-        <ul className="flex flex-col gap-1">
-          {Object.entries(group.members).map(([uid, member]) => (
-            <li key={uid} className="text-sm">
-              {member.displayName}
-              {uid === user.uid && " (du)"}
-            </li>
-          ))}
-        </ul>
-      </div>
+      <MembersPanel groupId={groupId} members={group.members} currentUid={user.uid} />
 
       <ActivityFeed
         expenses={expenses}
