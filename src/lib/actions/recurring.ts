@@ -66,8 +66,10 @@ export async function createRecurringRule(
   const validationError = validateRuleInput(input);
   if (validationError) return { ok: false, error: validationError };
 
+  // Checked against group.members (real + placeholder), not memberUids —
+  // placeholder members are valid payers/participants too.
   const allUids = [input.payerUid, ...input.participantUids];
-  if (!allUids.every((uid) => group.memberUids.includes(uid))) {
+  if (!allUids.every((uid) => uid in group.members)) {
     return { ok: false, error: "forbidden" };
   }
 

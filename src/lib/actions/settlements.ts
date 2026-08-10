@@ -27,7 +27,10 @@ export async function recordSettlement(
   if (!group.memberUids.includes(session.uid)) return { ok: false, error: "forbidden" };
 
   if (input.fromUid === input.toUid) return { ok: false, error: "invalid-parties" };
-  if (!group.memberUids.includes(input.fromUid) || !group.memberUids.includes(input.toUid)) {
+  // Checked against group.members (real + placeholder), not memberUids —
+  // settling up with a placeholder member is valid (e.g. recording cash
+  // paid to someone who hasn't joined the app yet).
+  if (!(input.fromUid in group.members) || !(input.toUid in group.members)) {
     return { ok: false, error: "forbidden" };
   }
   if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) {

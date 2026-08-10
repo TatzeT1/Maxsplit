@@ -112,8 +112,11 @@ async function resolveExpense(
   const validationError = validateExpenseInput(input);
   if (validationError) return { ok: false, error: validationError };
 
+  // Checked against group.members (real + placeholder), not memberUids
+  // (real, authenticated members only) — placeholder members are valid
+  // payers/participants even though they have no session of their own.
   const allParticipantUids = [...Object.keys(input.paidBy), ...splitParticipantUids(input)];
-  if (!allParticipantUids.every((uid) => group.memberUids.includes(uid))) {
+  if (!allParticipantUids.every((uid) => uid in group.members)) {
     return { ok: false, error: "forbidden" };
   }
 
