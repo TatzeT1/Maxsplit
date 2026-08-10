@@ -5,6 +5,16 @@ export interface GroupMember {
   photoURL: string;
   joinedAt: string;
   role: GroupRole;
+  /**
+   * True for a member added by name only, with no Firebase Auth account
+   * behind them yet — lets a group's expenses/balances be correct before
+   * everyone has actually joined. Never present in `memberUids` (that array
+   * is real, authenticated members only, since it's what Firestore rules
+   * check). Absent (not just false) on every member created before this
+   * field existed; always read it as `member.isPlaceholder === true`; never
+   * assume the field exists.
+   */
+  isPlaceholder: boolean;
 }
 
 export interface Group {

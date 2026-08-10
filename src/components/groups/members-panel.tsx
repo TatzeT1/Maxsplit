@@ -3,6 +3,7 @@
 import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AddPlaceholderDialog } from "@/components/groups/add-placeholder-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,14 @@ function RoleBadge({ role }: { role: GroupRole }) {
       )}
     >
       {roleLabel(role)}
+    </span>
+  );
+}
+
+function NotJoinedBadge() {
+  return (
+    <span className="text-muted-foreground bg-muted shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">
+      {t("groups.notJoinedBadge")}
     </span>
   );
 }
@@ -94,12 +103,12 @@ function MemberRow({
             {member.displayName}
             {isSelf && " (du)"}
           </span>
-          <RoleBadge role={member.role} />
+          {member.isPlaceholder ? <NotJoinedBadge /> : <RoleBadge role={member.role} />}
         </div>
       </div>
       {canManage && (
         <div className="flex justify-end gap-1 pt-1">
-          {currentRole === "owner" && (
+          {currentRole === "owner" && !member.isPlaceholder && (
             <Button variant="ghost" size="sm" disabled={busy} onClick={handleRoleChange}>
               {member.role === "admin" ? t("groups.removeAdmin") : t("groups.makeAdmin")}
             </Button>
@@ -184,11 +193,14 @@ export function MembersPanel({
           <Users className="h-4 w-4" />
           {t("groups.members")}
         </h2>
-        <span className="text-muted-foreground text-xs">
-          {Object.keys(members).length === 1
-            ? t("groups.memberCountSingular")
-            : t("groups.membersCount", { count: Object.keys(members).length })}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-xs">
+            {Object.keys(members).length === 1
+              ? t("groups.memberCountSingular")
+              : t("groups.membersCount", { count: Object.keys(members).length })}
+          </span>
+          {isGroupManager(currentRole) && <AddPlaceholderDialog groupId={groupId} />}
+        </div>
       </div>
       <ul className="flex flex-col gap-2">
         {Object.entries(members).map(([uid, member]) => (

@@ -1,11 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { generateInviteCode, normalizeInviteCode } from "@/lib/groups/invite-code";
 import { isGroupManager } from "@/lib/groups/permissions";
-import type { Group, GroupMember, GroupRole } from "@/lib/types";
+import type { Expense, Group, GroupMember, GroupRole, Settlement } from "@/lib/types";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -39,6 +40,7 @@ export async function createGroup(input: {
     photoURL: session.photoURL ?? "",
     joinedAt: now,
     role: "owner",
+    isPlaceholder: false,
   };
 
   const group: Omit<Group, "id"> = {
@@ -56,8 +58,132 @@ export async function createGroup(input: {
   return { ok: true, data: { groupId: docRef.id } };
 }
 
+export async function addPlaceholderMember(input: {
+  groupId: string;
+  displayName: string;
+}): Promise<ActionResult<{ placeholderId: string }>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+
+  const name = input.displayName.trim();
+  if (!name) return { ok: false, error: "invalid-name" };
+
+  const groupRef = adminDb.collection("groups").doc(input.groupId);
+  const groupSnap = await groupRef.get();
+  if (!groupSnap.exists) return { ok: false, error: "not-found" };
+  const group = groupSnap.data() as Omit<Group, "id">;
+
+  if (!isGroupManager(group.members[session.uid]?.role)) return { ok: false, error: "forbidden" };
+
+  // "ph_" guarantees no collision with a real Firebase Auth uid, and keeps
+  // placeholder ids visually obvious in Firestore data / logs.
+  const placeholderId = `ph_${randomUUID()}`;
+  const placeholder: GroupMember = {
+    displayName: name,
+    photoURL: "",
+    joinedAt: new Date().toISOString(),
+    role: "member",
+    isPlaceholder: true,
+  };
+
+  await groupRef.update({ [`members.${placeholderId}`]: placeholder });
+  return { ok: true, data: { placeholderId } };
+}
+
+export async function previewGroupByInviteCode(input: { inviteCode: string }): Promise<
+  ActionResult<{
+    groupId: string;
+    groupName: string;
+    placeholders: { id: string; displayName: string }[];
+  }>
+> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+
+  const code = normalizeInviteCode(input.inviteCode);
+  if (!code) return { ok: false, error: "invalid-code" };
+
+  const matches = await adminDb.collection("groups").where("inviteCode", "==", code).limit(1).get();
+  if (matches.empty) return { ok: false, error: "not-found" };
+
+  const groupDoc = matches.docs[0];
+  const group = groupDoc.data() as Omit<Group, "id">;
+
+  const placeholders = Object.entries(group.members)
+    .filter(([, member]) => member.isPlaceholder)
+    .map(([id, member]) => ({ id, displayName: member.displayName }));
+
+  return { ok: true, data: { groupId: groupDoc.id, groupName: group.name, placeholders } };
+}
+
+/**
+ * Rewrites every expense/settlement referencing `placeholderId` to
+ * `session.uid` instead, so a new real member "becomes" an existing
+ * placeholder rather than starting a second, disconnected identity — the
+ * whole point of placeholders is that the ledger is already correct once
+ * the real person shows up. One batch (500-write Firestore limit) is plenty
+ * at this app's scale; this isn't built to handle a group with hundreds of
+ * expenses referencing one placeholder.
+ */
+async function claimPlaceholder(
+  groupRef: FirebaseFirestore.DocumentReference,
+  group: Omit<Group, "id">,
+  placeholderId: string,
+  session: { uid: string; displayName: string | null; photoURL: string | null },
+): Promise<string | null> {
+  const placeholder = group.members[placeholderId];
+  if (!placeholder || !placeholder.isPlaceholder) return "invalid-placeholder";
+
+  const batch = adminDb.batch();
+
+  const expensesSnap = await groupRef.collection("expenses").get();
+  for (const doc of expensesSnap.docs) {
+    const expense = doc.data() as Expense;
+    const updates: Record<string, unknown> = {};
+    if (placeholderId in expense.paidBy) {
+      const paidBy = { ...expense.paidBy };
+      paidBy[session.uid] = paidBy[placeholderId];
+      delete paidBy[placeholderId];
+      updates.paidBy = paidBy;
+    }
+    if (placeholderId in expense.splits) {
+      const splits = { ...expense.splits };
+      splits[session.uid] = splits[placeholderId];
+      delete splits[placeholderId];
+      updates.splits = splits;
+    }
+    if (Object.keys(updates).length > 0) batch.update(doc.ref, updates);
+  }
+
+  const settlementsSnap = await groupRef.collection("settlements").get();
+  for (const doc of settlementsSnap.docs) {
+    const settlement = doc.data() as Settlement;
+    const updates: Record<string, unknown> = {};
+    if (settlement.fromUid === placeholderId) updates.fromUid = session.uid;
+    if (settlement.toUid === placeholderId) updates.toUid = session.uid;
+    if (Object.keys(updates).length > 0) batch.update(doc.ref, updates);
+  }
+
+  const claimedMember: GroupMember = {
+    displayName: session.displayName ?? placeholder.displayName,
+    photoURL: session.photoURL ?? "",
+    joinedAt: new Date().toISOString(),
+    role: placeholder.role,
+    isPlaceholder: false,
+  };
+  batch.update(groupRef, {
+    memberUids: FieldValue.arrayUnion(session.uid),
+    [`members.${placeholderId}`]: FieldValue.delete(),
+    [`members.${session.uid}`]: claimedMember,
+  });
+
+  await batch.commit();
+  return null;
+}
+
 export async function joinGroupByInviteCode(input: {
   inviteCode: string;
+  claimPlaceholderId?: string;
 }): Promise<ActionResult<{ groupId: string }>> {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
@@ -75,11 +201,18 @@ export async function joinGroupByInviteCode(input: {
     return { ok: true, data: { groupId: groupDoc.id } };
   }
 
+  if (input.claimPlaceholderId) {
+    const error = await claimPlaceholder(groupDoc.ref, group, input.claimPlaceholderId, session);
+    if (error) return { ok: false, error };
+    return { ok: true, data: { groupId: groupDoc.id } };
+  }
+
   const member: GroupMember = {
     displayName: session.displayName ?? "",
     photoURL: session.photoURL ?? "",
     joinedAt: new Date().toISOString(),
     role: "member",
+    isPlaceholder: false,
   };
 
   await groupDoc.ref.update({

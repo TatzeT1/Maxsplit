@@ -83,6 +83,19 @@ export const de = {
     createError: "Gruppe konnte nicht erstellt werden.",
     joinError: "Beitreten fehlgeschlagen. Prüf den Code.",
     joinSuccess: "Du bist jetzt Mitglied von {{name}}.",
+    addPlaceholder: "Person hinzufügen",
+    addPlaceholderTitle: "Person hinzufügen",
+    addPlaceholderHint:
+      "Für Leute, die noch nicht in Split sind. Du kannst sie sofort in Ausgaben einbeziehen — sobald sie beitreten, wählen sie einfach ihren Namen aus und alles wird ihnen zugeordnet.",
+    placeholderNameLabel: "Name",
+    placeholderNamePlaceholder: "z. B. Max",
+    addPlaceholderError: "Konnte nicht hinzugefügt werden.",
+    notJoinedBadge: "Noch nicht beigetreten",
+    joinStep2Title: "Bist du schon in der Liste?",
+    joinStep2Hint:
+      "Wähl deinen Namen aus, damit dir bisherige Ausgaben zugeordnet werden — oder tritt als neue Person bei.",
+    joinAsNew: "Ich bin neu",
+    joinContinue: "Weiter",
   },
   expenses: {
     title: "Ausgaben",
