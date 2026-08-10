@@ -58,6 +58,7 @@ export const de = {
     shareInvite: "Einladungscode teilen",
     members: "Mitglieder",
     membersCount: "{{count}} Mitglieder",
+    memberCountSingular: "1 Mitglied",
     memberSince: "Dabei seit {{date}}",
     leaveGroup: "Gruppe verlassen",
     archiveGroup: "Gruppe archivieren",
