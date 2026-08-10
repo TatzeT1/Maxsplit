@@ -88,7 +88,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
   const net = computePairwiseDebts(
     expenses.map((expense) => ({
-      payerUid: Object.keys(expense.paidBy)[0],
+      paidBy: expense.paidBy,
       splits: Object.fromEntries(
         Object.entries(expense.splits).map(([uid, split]) => [uid, split.amountMinor]),
       ),

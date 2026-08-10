@@ -13,12 +13,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { deleteExpense } from "@/lib/actions/expenses";
+import { CATEGORY_IDS, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { t } from "@/lib/i18n/de";
-import type { Expense, GroupMember, Settlement } from "@/lib/types";
+import type { CategoryId, Expense, GroupMember, Settlement } from "@/lib/types";
 
 type ActivityItem =
   | { kind: "expense"; date: string; createdAt: string; expense: Expense }
@@ -37,9 +39,12 @@ function ExpenseRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const payerUid = Object.keys(expense.paidBy)[0];
-  const payerName = members[payerUid]?.displayName ?? "?";
-
+  const payerUids = Object.keys(expense.paidBy);
+  const payerNames = payerUids.map((uid) => members[uid]?.displayName ?? "?");
+  const paidByText =
+    payerUids.length > 1
+      ? t("expenses.paidByMultiple", { names: payerNames.join(", ") })
+      : t("expenses.paidByOne", { name: payerNames[0] ?? "?" });
   async function handleDelete() {
     setDeleting(true);
     await deleteExpense({ groupId, expenseId: expense.id });
@@ -48,10 +53,14 @@ function ExpenseRow({
 
   return (
     <li className="flex items-center justify-between gap-3 rounded-lg border p-3">
-      <div className="flex flex-col gap-0.5">
+      <div className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+        {categoryIconElement(expense.category, "h-4 w-4")}
+      </div>
+      <div className="flex flex-1 flex-col gap-0.5">
         <span className="font-medium">{expense.description}</span>
         <span className="text-muted-foreground text-sm">
-          {t("expenses.paidByOne", { name: payerName })} · {formatDate(new Date(expense.date))}
+          {paidByText} · {formatDate(new Date(expense.date))}
+          {expense.category && ` · ${categoryLabel(expense.category)}`}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -127,8 +136,19 @@ export function ActivityFeed({
   groupId: string;
   currentUid: string;
 }) {
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<CategoryId | "all">("all");
+
+  const query = search.trim().toLowerCase();
+  const filteredExpenses = expenses.filter((expense) => {
+    if (categoryFilter !== "all" && expense.category !== categoryFilter) return false;
+    if (query && !expense.description.toLowerCase().includes(query)) return false;
+    return true;
+  });
+  const isFiltering = query.length > 0 || categoryFilter !== "all";
+
   const items: ActivityItem[] = [
-    ...expenses.map(
+    ...filteredExpenses.map(
       (expense): ActivityItem => ({
         kind: "expense",
         date: expense.date,
@@ -136,21 +156,47 @@ export function ActivityFeed({
         expense,
       }),
     ),
-    ...settlements.map(
-      (settlement): ActivityItem => ({
-        kind: "settlement",
-        date: settlement.date,
-        createdAt: settlement.createdAt,
-        settlement,
-      }),
-    ),
+    ...(isFiltering
+      ? []
+      : settlements.map(
+          (settlement): ActivityItem => ({
+            kind: "settlement",
+            date: settlement.date,
+            createdAt: settlement.createdAt,
+            settlement,
+          }),
+        )),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-medium">{t("activity.title")}</h2>
+      {expenses.length > 0 && (
+        <div className="flex gap-2">
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t("expenses.searchPlaceholder")}
+            className="flex-1"
+          />
+          <select
+            value={categoryFilter}
+            onChange={(event) => setCategoryFilter(event.target.value as CategoryId | "all")}
+            className="border-input h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
+          >
+            <option value="all">{t("expenses.filterAllCategories")}</option>
+            {CATEGORY_IDS.map((id) => (
+              <option key={id} value={id}>
+                {categoryLabel(id)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t("activity.empty")}</p>
+        <p className="text-muted-foreground text-sm">
+          {isFiltering ? t("expenses.noResults") : t("activity.empty")}
+        </p>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((item) =>
