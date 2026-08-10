@@ -101,6 +101,7 @@ export function AddExpenseDialog({
   currency,
   currentUid,
   expenseToEdit,
+  duplicateFrom,
   trigger,
   open: controlledOpen,
   onOpenChange,
@@ -110,6 +111,8 @@ export function AddExpenseDialog({
   currency: string;
   currentUid: string;
   expenseToEdit?: Expense;
+  /** Pre-fills the form like expenseToEdit, but stays in "add" mode — a new expense, not a revision. */
+  duplicateFrom?: Expense;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -119,53 +122,53 @@ export function AddExpenseDialog({
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
 
-  const [description, setDescription] = useState(expenseToEdit?.description ?? "");
-  const [amountInput, setAmountInput] = useState(
-    expenseToEdit ? moneyToInput(expenseToEdit.amountMinor) : "",
-  );
-  const [date, setDate] = useState(expenseToEdit?.date ?? todayIsoDate());
-  const [category, setCategory] = useState<CategoryId | null>(expenseToEdit?.category ?? null);
+  // Prefills form fields for both edit and duplicate; `date` is deliberately
+  // excluded below so a duplicated expense defaults to today, not the
+  // original's date.
+  const prefill = expenseToEdit ?? duplicateFrom;
 
-  const initialPayerUids = expenseToEdit ? Object.keys(expenseToEdit.paidBy) : [currentUid];
+  const [description, setDescription] = useState(prefill?.description ?? "");
+  const [amountInput, setAmountInput] = useState(prefill ? moneyToInput(prefill.amountMinor) : "");
+  const [date, setDate] = useState(expenseToEdit?.date ?? todayIsoDate());
+  const [category, setCategory] = useState<CategoryId | null>(prefill?.category ?? null);
+
+  const initialPayerUids = prefill ? Object.keys(prefill.paidBy) : [currentUid];
   const [multiplePayers, setMultiplePayers] = useState(initialPayerUids.length > 1);
   const [payerUid, setPayerUid] = useState(initialPayerUids[0] ?? currentUid);
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(() =>
-    expenseToEdit && initialPayerUids.length > 1
+    prefill && initialPayerUids.length > 1
       ? Object.fromEntries(
-          Object.entries(expenseToEdit.paidBy).map(([uid, amount]) => [uid, moneyToInput(amount)]),
+          Object.entries(prefill.paidBy).map(([uid, amount]) => [uid, moneyToInput(amount)]),
         )
       : {},
   );
 
-  const [splitMode, setSplitMode] = useState<SplitMode>(expenseToEdit?.splitMode ?? "equal");
+  const [splitMode, setSplitMode] = useState<SplitMode>(prefill?.splitMode ?? "equal");
   const [participantUids, setParticipantUids] = useState<string[]>(
-    !expenseToEdit || expenseToEdit.splitMode === "equal"
-      ? expenseToEdit
-        ? Object.keys(expenseToEdit.splits)
+    !prefill || prefill.splitMode === "equal"
+      ? prefill
+        ? Object.keys(prefill.splits)
         : memberUids
       : memberUids,
   );
   const [shareInputs, setShareInputs] = useState<Record<string, string>>(() =>
-    expenseToEdit?.splitMode === "shares"
+    prefill?.splitMode === "shares"
       ? Object.fromEntries(
-          Object.entries(expenseToEdit.splits).map(([uid, s]) => [uid, String(s.rawValue)]),
+          Object.entries(prefill.splits).map(([uid, s]) => [uid, String(s.rawValue)]),
         )
       : {},
   );
   const [percentInputs, setPercentInputs] = useState<Record<string, string>>(() =>
-    expenseToEdit?.splitMode === "percent"
+    prefill?.splitMode === "percent"
       ? Object.fromEntries(
-          Object.entries(expenseToEdit.splits).map(([uid, s]) => [uid, String(s.rawValue)]),
+          Object.entries(prefill.splits).map(([uid, s]) => [uid, String(s.rawValue)]),
         )
       : {},
   );
   const [exactInputs, setExactInputs] = useState<Record<string, string>>(() =>
-    expenseToEdit?.splitMode === "exact"
+    prefill?.splitMode === "exact"
       ? Object.fromEntries(
-          Object.entries(expenseToEdit.splits).map(([uid, s]) => [
-            uid,
-            moneyToInput(s.amountMinor),
-          ]),
+          Object.entries(prefill.splits).map(([uid, s]) => [uid, moneyToInput(s.amountMinor)]),
         )
       : {},
   );

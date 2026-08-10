@@ -90,6 +90,7 @@ export const de = {
     add: "Ausgabe hinzufügen",
     addTitle: "Neue Ausgabe",
     editTitle: "Ausgabe bearbeiten",
+    duplicate: "Duplizieren",
     deleteConfirm: "Ausgabe wirklich löschen?",
     deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",
     descriptionLabel: "Beschreibung",

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRightLeft, Pencil, Receipt, Trash2 } from "lucide-react";
+import { Activity, ArrowRightLeft, Copy, Pencil, Receipt, Trash2 } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -42,6 +42,7 @@ function ExpenseRow({
   currentUid: string;
 }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const canEdit = expense.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const payerUids = Object.keys(expense.paidBy);
@@ -73,30 +74,36 @@ function ExpenseRow({
           {formatMoney(expense.amountMinor, expense.currency)}
         </span>
       </div>
-      {canEdit && (
-        <div className="flex justify-end gap-1 pt-1">
-          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-            {t("common.edit")}
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" disabled={deleting}>
-                {t("common.delete")}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
-                <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
+      <div className="flex justify-end gap-1 pt-1">
+        <Button variant="ghost" size="sm" onClick={() => setDuplicateOpen(true)}>
+          <Copy className="h-3.5 w-3.5" />
+          {t("expenses.duplicate")}
+        </Button>
+        {canEdit && (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+              {t("common.edit")}
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={deleting}>
+                  {t("common.delete")}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        )}
+      </div>
       {canEdit && (
         <AddExpenseDialog
           groupId={groupId}
@@ -108,6 +115,15 @@ function ExpenseRow({
           onOpenChange={setEditOpen}
         />
       )}
+      <AddExpenseDialog
+        groupId={groupId}
+        members={members}
+        currency={expense.currency}
+        currentUid={currentUid}
+        duplicateFrom={expense}
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+      />
     </li>
   );
 }
