@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Split
 
-## Getting Started
+A self-hosted, free alternative to Splitwise — a shared-expense tracker for groups (flatmates,
+couples, trips). German UI, no paywalls.
 
-First, run the development server:
+## Stack
+
+Next.js (App Router, TypeScript strict) + Tailwind + shadcn/ui, Firebase (Auth, Firestore,
+Storage), pnpm, Vercel. See [docs/DECISIONS.md](docs/DECISIONS.md) for the architecture
+rationale (ADR-001: hybrid client reads / server-validated writes).
+
+## Prerequisites
+
+- Node.js 20+
+- [pnpm](https://pnpm.io) (`npm install -g pnpm`)
+- Java 11+ (required by the Firestore/Storage emulators — check with `java -version`)
+
+## Getting started (local dev, under 5 minutes)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Edit `.env.local`:
+- Set `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`.
+- Add these three lines so the Admin SDK also talks to the local emulators instead of
+  production Firebase:
+  ```
+  FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099
+  FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
+  FIREBASE_STORAGE_EMULATOR_HOST=127.0.0.1:9199
+  ```
+- The `NEXT_PUBLIC_FIREBASE_*` client values and `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64` can be
+  left as placeholders for emulator-only development — the emulators don't validate them. Real
+  values are only required to run against the actual Firebase project (see below).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Then, in two terminals:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm emulators   # Firebase Auth + Firestore + Storage emulators, UI at http://localhost:4000
+pnpm dev         # Next.js dev server at http://localhost:3000
+```
 
-## Learn More
+Sign in with "Mit Google anmelden" — the Auth emulator shows a fake account picker, no real
+Google account needed.
 
-To learn more about Next.js, take a look at the following resources:
+## Running against the real Firebase project
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Fill in the `NEXT_PUBLIC_FIREBASE_*` values from Firebase Console → Project settings →
+   Your apps → web app → `firebaseConfig`.
+2. Generate a service account key (Project settings → Service accounts → Generate new private
+   key), base64-encode the JSON file, and set `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64`.
+3. Set `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=false` and remove/comment out the three
+   `*_EMULATOR_HOST` lines.
+4. Deploy Firestore/Storage rules: `pnpm exec firebase deploy --only firestore:rules,storage`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Scripts
 
-## Deploy on Vercel
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Next.js dev server |
+| `pnpm build` | Production build |
+| `pnpm lint` | ESLint |
+| `pnpm format` / `format:check` | Prettier |
+| `pnpm test` | Unit tests (Vitest) |
+| `pnpm test:rules` | Firestore security rules tests against the emulator |
+| `pnpm emulators` | Firebase Auth/Firestore/Storage emulator suite |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/lib/i18n/de.ts` — the single German string dictionary; every UI string goes through
+  `t()` from here, no hardcoded text in components.
+- `src/lib/money/` — split calculation (largest-remainder rounding) and balance math. This is
+  the only place money invariants are computed; see the tests for the guarantees enforced.
+- `src/lib/firebase/` — `client.ts` (browser SDK, realtime reads) and `admin.ts` (Admin SDK,
+  server-only, used by Server Actions/Route Handlers for writes) — see ADR-001.
+- `src/lib/auth/session.ts` — server-side session cookie verification.
+- `firestore.rules` / `storage.rules` — deny-by-default; membership-gated reads, all writes
+  denied (writes go through the Admin SDK, which bypasses rules).
+- `docs/DECISIONS.md` — architecture decision records (ADR format).
