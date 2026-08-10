@@ -154,6 +154,9 @@ export async function editExpense(
   const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
   const expenseSnap = await expenseRef.get();
   if (!expenseSnap.exists) return { ok: false, error: "not-found" };
+  if ((expenseSnap.data() as Expense).createdBy !== session.uid) {
+    return { ok: false, error: "not-owner" };
+  }
 
   await expenseRef.update({
     description: input.description.trim(),
@@ -184,6 +187,9 @@ export async function deleteExpense(input: {
   const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
   const expenseSnap = await expenseRef.get();
   if (!expenseSnap.exists) return { ok: false, error: "not-found" };
+  if ((expenseSnap.data() as Expense).createdBy !== session.uid) {
+    return { ok: false, error: "not-owner" };
+  }
 
   await expenseRef.update({ deletedAt: new Date().toISOString() });
   return { ok: true, data: null };

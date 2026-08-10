@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { generateInviteCode, normalizeInviteCode } from "./invite-code";
 
 describe("generateInviteCode", () => {
-  it("generates a 6-character code", () => {
-    expect(generateInviteCode()).toHaveLength(6);
+  it("generates an 8-character code", () => {
+    expect(generateInviteCode()).toHaveLength(8);
   });
 
   it("only uses unambiguous uppercase letters and digits", () => {

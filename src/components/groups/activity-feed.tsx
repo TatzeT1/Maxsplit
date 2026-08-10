@@ -39,6 +39,7 @@ function ExpenseRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const isOwner = expense.createdBy === currentUid;
   const payerUids = Object.keys(expense.paidBy);
   const payerNames = payerUids.map((uid) => members[uid]?.displayName ?? "?");
   const paidByText =
@@ -65,36 +66,42 @@ function ExpenseRow({
       </div>
       <div className="flex items-center gap-2">
         <span className="font-medium">{formatMoney(expense.amountMinor, expense.currency)}</span>
-        <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-          {t("common.edit")}
-        </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="sm" disabled={deleting}>
-              {t("common.delete")}
+        {isOwner && (
+          <>
+            <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+              {t("common.edit")}
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
-              <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="sm" disabled={deleting}>
+                  {t("common.delete")}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
+                  <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </>
+        )}
       </div>
-      <AddExpenseDialog
-        groupId={groupId}
-        members={members}
-        currency={expense.currency}
-        currentUid={currentUid}
-        expenseToEdit={expense}
-        open={editOpen}
-        onOpenChange={setEditOpen}
-      />
+      {isOwner && (
+        <AddExpenseDialog
+          groupId={groupId}
+          members={members}
+          currency={expense.currency}
+          currentUid={currentUid}
+          expenseToEdit={expense}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      )}
     </li>
   );
 }

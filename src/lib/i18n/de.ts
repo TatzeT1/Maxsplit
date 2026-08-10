@@ -52,7 +52,7 @@ export const de = {
     namePlaceholder: "z. B. WG Küche",
     currencyLabel: "Währung",
     inviteCodeLabel: "Einladungscode",
-    inviteCodePlaceholder: "z. B. AB3F9K",
+    inviteCodePlaceholder: "z. B. AB3F9K7Q",
     inviteCodeHint: "Frag ein Gruppenmitglied nach dem Code.",
     inviteCodeCopied: "Einladungscode kopiert.",
     shareInvite: "Einladungscode teilen",
