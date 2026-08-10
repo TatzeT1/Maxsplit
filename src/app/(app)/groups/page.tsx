@@ -7,6 +7,7 @@ import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { JoinGroupDialog } from "@/components/groups/join-group-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
+import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { t } from "@/lib/i18n/de";
 import type { Group } from "@/lib/types";
@@ -14,6 +15,7 @@ import type { Group } from "@/lib/types";
 export default function GroupsPage() {
   const user = useCurrentUser();
   const [groups, setGroups] = useState<Group[] | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -24,6 +26,7 @@ export default function GroupsPage() {
     return onSnapshot(
       groupsQuery,
       (snapshot) => {
+        setErrorCode(null);
         setGroups(
           snapshot.docs
             .map((doc) => ({ id: doc.id, ...doc.data() }) as Group)
@@ -31,7 +34,7 @@ export default function GroupsPage() {
         );
       },
       (error) => {
-        if (error.code !== "permission-denied") console.error(error);
+        setErrorCode(reportSnapshotError("groups", error));
       },
     );
   }, [user]);
@@ -46,7 +49,12 @@ export default function GroupsPage() {
         </div>
       </div>
 
-      {groups === null ? (
+      {user && errorCode ? (
+        <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
+          <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
+          <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
+        </div>
+      ) : groups === null ? (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-16 w-full" />
           <Skeleton className="h-16 w-full" />

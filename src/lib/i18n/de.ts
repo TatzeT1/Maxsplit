@@ -151,6 +151,8 @@ export const de = {
     forbidden: "Dafür fehlt dir die Berechtigung.",
     network: "Keine Verbindung. Prüf dein Internet.",
     unknown: "Unbekannter Fehler.",
+    dataLoadFailed: "Daten konnten nicht geladen werden. Lade die Seite neu.",
+    errorCode: "Fehlercode: {{code}}",
   },
 } as const;
 

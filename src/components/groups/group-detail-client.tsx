@@ -9,6 +9,7 @@ import { RecordSettlementDialog } from "@/components/groups/record-settlement-di
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
+import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { t } from "@/lib/i18n/de";
 import { computePairwiseDebts } from "@/lib/money/balances";
@@ -19,6 +20,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
   const [group, setGroup] = useState<Group | null>(null);
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
   const [settlements, setSettlements] = useState<Settlement[] | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -29,14 +31,17 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         setGroup(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Group) : null);
       },
       (error) => {
-        if (error.code !== "permission-denied") console.error(error);
+        setErrorCode(reportSnapshotError("group", error));
       },
     );
   }, [groupId, user]);
 
   useEffect(() => {
     if (!user) return;
-    const expensesQuery = query(collection(db, "groups", groupId, "expenses"), orderBy("date", "desc"));
+    const expensesQuery = query(
+      collection(db, "groups", groupId, "expenses"),
+      orderBy("date", "desc"),
+    );
     return onSnapshot(
       expensesQuery,
       (snapshot) => {
@@ -47,7 +52,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         );
       },
       (error) => {
-        if (error.code !== "permission-denied") console.error(error);
+        setErrorCode(reportSnapshotError("expenses", error));
       },
     );
   }, [groupId, user]);
@@ -64,7 +69,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         setSettlements(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Settlement));
       },
       (error) => {
-        if (error.code !== "permission-denied") console.error(error);
+        setErrorCode(reportSnapshotError("settlements", error));
       },
     );
   }, [groupId, user]);
@@ -74,6 +79,17 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     await navigator.clipboard.writeText(group.inviteCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  }
+
+  if (user && errorCode) {
+    return (
+      <div className="p-4">
+        <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
+          <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
+          <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
+        </div>
+      </div>
+    );
   }
 
   if (!group || expenses === null || settlements === null || !user) {
@@ -104,11 +120,18 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
           onClick={handleCopyInviteCode}
           className="text-muted-foreground w-fit text-left text-sm hover:underline"
         >
-          {copied ? t("groups.inviteCodeCopied") : `${t("groups.inviteCodeLabel")}: ${group.inviteCode}`}
+          {copied
+            ? t("groups.inviteCodeCopied")
+            : `${t("groups.inviteCodeLabel")}: ${group.inviteCode}`}
         </button>
       </div>
 
-      <BalanceView net={net} members={group.members} currentUid={user.uid} currency={group.currency} />
+      <BalanceView
+        net={net}
+        members={group.members}
+        currentUid={user.uid}
+        currency={group.currency}
+      />
 
       <div className="flex gap-2">
         <AddExpenseDialog

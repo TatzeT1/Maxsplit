@@ -1,4 +1,13 @@
 import type { NextConfig } from "next";
+import { assertFirebaseClientEnvFormat } from "./src/lib/firebase/config";
+
+// Fail the build on a malformed NEXT_PUBLIC_FIREBASE_* value rather than
+// inlining it into the client bundle. These are baked in at build time, so a
+// bad value ships as a broken deployment that looks healthy: production once
+// ran with the storage bucket in NEXT_PUBLIC_FIREBASE_PROJECT_ID, which left
+// Auth working while every Firestore read was denied. A red build with the
+// offending variable named is the cheapest possible place to catch that.
+assertFirebaseClientEnvFormat();
 
 const nextConfig: NextConfig = {
   async headers() {
