@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeBalances, computePairwiseDebts } from "./balances";
+import { computeBalances, computePairwiseDebts, simplifyDebts } from "./balances";
 import { splitEqual } from "./split";
 
 describe("computeBalances", () => {
@@ -111,5 +111,45 @@ describe("computePairwiseDebts", () => {
       0,
     );
     expect(sum).toBe(0);
+  });
+});
+
+describe("simplifyDebts", () => {
+  it("returns a single transfer for a two-person balance", () => {
+    const transfers = simplifyDebts({ a: 1000, b: -1000 });
+    expect(transfers).toEqual([{ fromUid: "b", toUid: "a", amountMinor: 1000 }]);
+  });
+
+  it("returns nothing when everyone is settled up", () => {
+    expect(simplifyDebts({ a: 0, b: 0 })).toEqual([]);
+  });
+
+  it("collapses a three-person chain into a single transfer", () => {
+    // a owes b 1000, b owes c 1000 -> nets to a: -1000, b: 0, c: 1000.
+    const transfers = simplifyDebts({ a: -1000, b: 0, c: 1000 });
+    expect(transfers).toEqual([{ fromUid: "a", toUid: "c", amountMinor: 1000 }]);
+  });
+
+  it("every transfer amount is positive", () => {
+    const transfers = simplifyDebts({ a: 500, b: 300, c: -200, d: -600 });
+    for (const transfer of transfers) {
+      expect(transfer.amountMinor).toBeGreaterThan(0);
+    }
+  });
+
+  it("uses at most n-1 transfers and preserves each person's net balance", () => {
+    const balances = { a: 3000, b: -1000, c: -1500, d: -500 };
+    const transfers = simplifyDebts(balances);
+
+    expect(transfers.length).toBeLessThanOrEqual(Object.keys(balances).length - 1);
+
+    const net: Record<string, number> = {};
+    for (const { fromUid, toUid, amountMinor } of transfers) {
+      net[toUid] = (net[toUid] ?? 0) + amountMinor;
+      net[fromUid] = (net[fromUid] ?? 0) - amountMinor;
+    }
+    for (const [uid, balance] of Object.entries(balances)) {
+      expect(net[uid] ?? 0).toBe(balance);
+    }
   });
 });

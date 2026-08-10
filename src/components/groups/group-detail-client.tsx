@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, doc, onSnapshot, orderBy, query } from "firebase/firestore";
+import { collection, doc, limit, onSnapshot, orderBy, query } from "firebase/firestore";
 import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
@@ -8,20 +8,23 @@ import { ActivityFeed } from "@/components/groups/activity-feed";
 import { BalanceView } from "@/components/groups/balance-view";
 import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
+import { RecurringPanel } from "@/components/groups/recurring-panel";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { t } from "@/lib/i18n/de";
-import { computePairwiseDebts } from "@/lib/money/balances";
-import type { Expense, Group, Settlement } from "@/lib/types";
+import { computeBalances, computePairwiseDebts } from "@/lib/money/balances";
+import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
 
 export function GroupDetailClient({ groupId }: { groupId: string }) {
   const user = useCurrentUser();
   const [group, setGroup] = useState<Group | null>(null);
   const [expenses, setExpenses] = useState<Expense[] | null>(null);
   const [settlements, setSettlements] = useState<Settlement[] | null>(null);
+  const [activityLog, setActivityLog] = useState<ActivityLogEntry[] | null>(null);
+  const [recurringRules, setRecurringRules] = useState<RecurringRule[] | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -76,6 +79,37 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     );
   }, [groupId, user]);
 
+  useEffect(() => {
+    if (!user) return;
+    const activityLogQuery = query(
+      collection(db, "groups", groupId, "activityLog"),
+      orderBy("createdAt", "desc"),
+      limit(30),
+    );
+    return onSnapshot(
+      activityLogQuery,
+      (snapshot) => {
+        setActivityLog(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ActivityLogEntry));
+      },
+      (error) => {
+        setErrorCode(reportSnapshotError("activityLog", error));
+      },
+    );
+  }, [groupId, user]);
+
+  useEffect(() => {
+    if (!user) return;
+    return onSnapshot(
+      collection(db, "groups", groupId, "recurring"),
+      (snapshot) => {
+        setRecurringRules(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as RecurringRule));
+      },
+      (error) => {
+        setErrorCode(reportSnapshotError("recurring", error));
+      },
+    );
+  }, [groupId, user]);
+
   async function handleCopyInviteCode() {
     if (!group) return;
     await navigator.clipboard.writeText(group.inviteCode);
@@ -94,7 +128,14 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     );
   }
 
-  if (!group || expenses === null || settlements === null || !user) {
+  if (
+    !group ||
+    expenses === null ||
+    settlements === null ||
+    activityLog === null ||
+    recurringRules === null ||
+    !user
+  ) {
     return (
       <div className="mx-auto flex w-full max-w-lg flex-col gap-3 p-4">
         <Skeleton className="h-8 w-1/2" />
@@ -104,15 +145,14 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     );
   }
 
-  const net = computePairwiseDebts(
-    expenses.map((expense) => ({
-      paidBy: expense.paidBy,
-      splits: Object.fromEntries(
-        Object.entries(expense.splits).map(([uid, split]) => [uid, split.amountMinor]),
-      ),
-    })),
-    settlements,
-  );
+  const balanceExpenses = expenses.map((expense) => ({
+    paidBy: expense.paidBy,
+    splits: Object.fromEntries(
+      Object.entries(expense.splits).map(([uid, split]) => [uid, split.amountMinor]),
+    ),
+  }));
+  const net = computePairwiseDebts(balanceExpenses, settlements);
+  const balances = computeBalances(balanceExpenses, settlements);
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
@@ -131,6 +171,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
       <BalanceView
         net={net}
+        balances={balances}
         members={group.members}
         currentUid={user.uid}
         currency={group.currency}
@@ -158,9 +199,18 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
       <MembersPanel groupId={groupId} members={group.members} currentUid={user.uid} />
 
+      <RecurringPanel
+        groupId={groupId}
+        rules={recurringRules}
+        members={group.members}
+        currency={group.currency}
+        currentUid={user.uid}
+      />
+
       <ActivityFeed
         expenses={expenses}
         settlements={settlements}
+        activityLog={activityLog}
         members={group.members}
         groupId={groupId}
         currentUid={user.uid}

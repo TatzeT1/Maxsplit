@@ -1,20 +1,29 @@
-import { CheckCircle2, Scale } from "lucide-react";
+"use client";
+
+import { CheckCircle2, Scale, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import { formatMoney } from "@/lib/format/money";
 import { t } from "@/lib/i18n/de";
+import { simplifyDebts } from "@/lib/money/balances";
 import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
 
 export function BalanceView({
   net,
+  balances,
   members,
   currentUid,
   currency,
 }: {
   net: Record<string, Record<string, number>>;
+  balances: Record<string, number>;
   members: Record<string, GroupMember>;
   currentUid: string;
   currency: string;
 }) {
+  const [showSimplified, setShowSimplified] = useState(false);
+
   const myNet = net[currentUid] ?? {};
   const lines = Object.keys(members)
     .filter((uid) => uid !== currentUid && (myNet[uid] ?? 0) !== 0)
@@ -31,12 +40,43 @@ export function BalanceView({
       };
     });
 
+  // "Before" count: every outstanding debtor->creditor pair in the group,
+  // not just the current user's — this is what simplification is compared
+  // against. Each unresolved pair has exactly one positive side, so summing
+  // positive entries counts each pair once without a separate dedupe pass.
+  const pairwiseCount = useMemo(() => {
+    let count = 0;
+    for (const row of Object.values(net)) {
+      for (const amount of Object.values(row)) {
+        if (amount > 0) count++;
+      }
+    }
+    return count;
+  }, [net]);
+
+  const simplifiedTransfers = useMemo(() => simplifyDebts(balances), [balances]);
+  const canSimplify = pairwiseCount > simplifiedTransfers.length;
+
   return (
     <div className="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-4 ring-1">
-      <h2 className="flex items-center gap-1.5 text-sm font-medium">
-        <Scale className="h-4 w-4" />
-        {t("balances.title")}
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-medium">
+          <Scale className="h-4 w-4" />
+          {t("balances.title")}
+        </h2>
+        {canSimplify && (
+          <Button
+            type="button"
+            variant={showSimplified ? "secondary" : "ghost"}
+            size="sm"
+            onClick={() => setShowSimplified((current) => !current)}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {t("balances.simplifyDebts")}
+          </Button>
+        )}
+      </div>
+
       {lines.length === 0 ? (
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -56,6 +96,26 @@ export function BalanceView({
             </li>
           ))}
         </ul>
+      )}
+
+      {showSimplified && canSimplify && (
+        <div className="border-border/70 flex flex-col gap-2 border-t pt-3">
+          <p className="text-muted-foreground text-xs">
+            {t("balances.simplifyDebtsHint")} {t("balances.simplifyPreview")}: {pairwiseCount} →{" "}
+            {simplifiedTransfers.length}
+          </p>
+          <ul className="flex flex-col gap-1.5">
+            {simplifiedTransfers.map((transfer, index) => (
+              <li key={index} className="text-sm">
+                {t("balances.transferSuggestion", {
+                  from: members[transfer.fromUid]?.displayName ?? "?",
+                  to: members[transfer.toUid]?.displayName ?? "?",
+                  amount: formatMoney(transfer.amountMinor, currency),
+                })}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRightLeft, Receipt } from "lucide-react";
+import { Activity, ArrowRightLeft, Pencil, Receipt, Trash2 } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -23,11 +23,12 @@ import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { t } from "@/lib/i18n/de";
-import type { CategoryId, Expense, GroupMember, Settlement } from "@/lib/types";
+import type { ActivityLogEntry, CategoryId, Expense, GroupMember, Settlement } from "@/lib/types";
 
 type ActivityItem =
   | { kind: "expense"; date: string; createdAt: string; expense: Expense }
-  | { kind: "settlement"; date: string; createdAt: string; settlement: Settlement };
+  | { kind: "settlement"; date: string; createdAt: string; settlement: Settlement }
+  | { kind: "log"; date: string; createdAt: string; entry: ActivityLogEntry };
 
 function ExpenseRow({
   expense,
@@ -140,15 +141,44 @@ function SettlementRow({
   );
 }
 
+function LogRow({
+  entry,
+  members,
+}: {
+  entry: ActivityLogEntry;
+  members: Record<string, GroupMember>;
+}) {
+  const name = members[entry.actorUid]?.displayName ?? "?";
+  const text =
+    entry.type === "expense_edited"
+      ? t("activity.expenseEdited", { name, description: entry.description })
+      : t("activity.expenseDeleted", { name, description: entry.description });
+  const Icon = entry.type === "expense_edited" ? Pencil : Trash2;
+
+  return (
+    <li className="border-border/70 bg-muted/20 flex items-center gap-3 rounded-xl border border-dashed p-3">
+      <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+        <Icon className="h-4 w-4" />
+      </div>
+      <span className="text-muted-foreground flex-1 text-sm">{text}</span>
+      <span className="text-muted-foreground shrink-0 text-sm">
+        {formatDate(new Date(entry.createdAt))}
+      </span>
+    </li>
+  );
+}
+
 export function ActivityFeed({
   expenses,
   settlements,
+  activityLog,
   members,
   groupId,
   currentUid,
 }: {
   expenses: Expense[];
   settlements: Settlement[];
+  activityLog: ActivityLogEntry[];
   members: Record<string, GroupMember>;
   groupId: string;
   currentUid: string;
@@ -173,12 +203,20 @@ export function ActivityFeed({
     })),
     ...(isFiltering
       ? []
-      : settlements.map((settlement): ActivityItem => ({
-          kind: "settlement",
-          date: settlement.date,
-          createdAt: settlement.createdAt,
-          settlement,
-        }))),
+      : [
+          ...settlements.map((settlement): ActivityItem => ({
+            kind: "settlement",
+            date: settlement.date,
+            createdAt: settlement.createdAt,
+            settlement,
+          })),
+          ...activityLog.map((entry): ActivityItem => ({
+            kind: "log",
+            date: entry.createdAt,
+            createdAt: entry.createdAt,
+            entry,
+          })),
+        ]),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
   return (
@@ -228,12 +266,14 @@ export function ActivityFeed({
                 groupId={groupId}
                 currentUid={currentUid}
               />
-            ) : (
+            ) : item.kind === "settlement" ? (
               <SettlementRow
                 key={`settlement-${item.settlement.id}`}
                 settlement={item.settlement}
                 members={members}
               />
+            ) : (
+              <LogRow key={`log-${item.entry.id}`} entry={item.entry} members={members} />
             ),
           )}
         </ul>

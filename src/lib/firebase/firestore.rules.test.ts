@@ -77,4 +77,33 @@ describe("firestore.rules", () => {
     const alice = testEnv.authenticatedContext("alice").firestore();
     await assertFails(getDoc(doc(alice, "somethingUnexpected/doc1")));
   });
+
+  it("allows a group member to read an activity log entry", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/activityLog/log1")
+        .set({ type: "expense_edited", actorUid: "alice", description: "Miete", createdAt: "now" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertSucceeds(getDoc(doc(alice, "groups/group1/activityLog/log1")));
+  });
+
+  it("denies a non-member from reading an activity log entry", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/activityLog/log1")
+        .set({ type: "expense_edited", actorUid: "alice", description: "Miete", createdAt: "now" });
+    });
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    await assertFails(getDoc(doc(bob, "groups/group1/activityLog/log1")));
+  });
+
+  it("denies a client write to an activity log entry, even by a member", async () => {
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/activityLog/log1"), { type: "expense_edited" }),
+    );
+  });
 });

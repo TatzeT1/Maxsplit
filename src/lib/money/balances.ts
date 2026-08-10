@@ -47,6 +47,53 @@ export function computeBalances(
   return balances;
 }
 
+export interface SimplifiedTransfer {
+  fromUid: string;
+  toUid: string;
+  amountMinor: number;
+}
+
+/**
+ * Reduces a group's net balances to a minimal set of suggested transfers
+ * ("simplify debts"): repeatedly matches the largest creditor with the
+ * largest debtor until everyone nets to zero. This is a greedy min-cash-flow
+ * heuristic, not a globally-optimal minimum-transaction-count solver (that's
+ * NP-hard) — it's the same approach Splitwise-style apps use in practice and
+ * is always at most `n - 1` transfers for `n` people with a nonzero balance.
+ *
+ * Purely a display suggestion: it does not read or write settlements, so
+ * callers must still record an actual settlement (recordSettlement) once
+ * money changes hands. Input must already sum to zero (see computeBalances).
+ */
+export function simplifyDebts(balances: Record<string, number>): SimplifiedTransfer[] {
+  const creditors = Object.entries(balances)
+    .filter(([, amount]) => amount > 0)
+    .map(([uid, amount]) => ({ uid, amount }))
+    .sort((a, b) => b.amount - a.amount);
+  const debtors = Object.entries(balances)
+    .filter(([, amount]) => amount < 0)
+    .map(([uid, amount]) => ({ uid, amount: -amount }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const transfers: SimplifiedTransfer[] = [];
+  let ci = 0;
+  let di = 0;
+  while (ci < creditors.length && di < debtors.length) {
+    const creditor = creditors[ci];
+    const debtor = debtors[di];
+    const amountMinor = Math.min(creditor.amount, debtor.amount);
+
+    transfers.push({ fromUid: debtor.uid, toUid: creditor.uid, amountMinor });
+    creditor.amount -= amountMinor;
+    debtor.amount -= amountMinor;
+
+    if (creditor.amount === 0) ci++;
+    if (debtor.amount === 0) di++;
+  }
+
+  return transfers;
+}
+
 export interface PairwiseExpense {
   paidBy: Record<string, number>;
   splits: Record<string, number>;

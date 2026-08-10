@@ -10,7 +10,14 @@ import {
   splitExact,
   validatePaidBy,
 } from "@/lib/money/split";
-import type { CategoryId, Expense, ExpenseSplit, Group, SplitMode } from "@/lib/types";
+import type {
+  ActivityLogEntry,
+  CategoryId,
+  Expense,
+  ExpenseSplit,
+  Group,
+  SplitMode,
+} from "@/lib/types";
 import type { ActionResult } from "./groups";
 
 export interface ExpenseInput {
@@ -167,6 +174,7 @@ export async function editExpense(
     return { ok: false, error: "not-owner" };
   }
 
+  const now = new Date().toISOString();
   await expenseRef.update({
     description: input.description.trim(),
     amountMinor: input.amountMinor,
@@ -176,8 +184,16 @@ export async function editExpense(
     paidBy: input.paidBy,
     splitMode: input.splitMode,
     splits,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
   });
+
+  const logEntry: Omit<ActivityLogEntry, "id"> = {
+    type: "expense_edited",
+    actorUid: session.uid,
+    description: input.description.trim(),
+    createdAt: now,
+  };
+  await groupRef.collection("activityLog").add(logEntry);
 
   return { ok: true, data: { expenseId: input.expenseId } };
 }
@@ -196,11 +212,22 @@ export async function deleteExpense(input: {
   const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
   const expenseSnap = await expenseRef.get();
   if (!expenseSnap.exists) return { ok: false, error: "not-found" };
+  const expense = expenseSnap.data() as Expense;
   const canManage = isGroupManager(group.members[session.uid]?.role);
-  if ((expenseSnap.data() as Expense).createdBy !== session.uid && !canManage) {
+  if (expense.createdBy !== session.uid && !canManage) {
     return { ok: false, error: "not-owner" };
   }
 
-  await expenseRef.update({ deletedAt: new Date().toISOString() });
+  const now = new Date().toISOString();
+  await expenseRef.update({ deletedAt: now });
+
+  const logEntry: Omit<ActivityLogEntry, "id"> = {
+    type: "expense_deleted",
+    actorUid: session.uid,
+    description: expense.description,
+    createdAt: now,
+  };
+  await groupRef.collection("activityLog").add(logEntry);
+
   return { ok: true, data: null };
 }

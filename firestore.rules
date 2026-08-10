@@ -39,6 +39,11 @@ service cloud.firestore {
         allow read: if isGroupMember(groupId);
         allow write: if false;
       }
+
+      match /activityLog/{logId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if false;
+      }
     }
 
     // Deny-all backstop for anything not explicitly matched above.
