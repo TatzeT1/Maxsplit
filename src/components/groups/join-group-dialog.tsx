@@ -65,7 +65,12 @@ export function JoinGroupDialog() {
             {error && <p className="text-destructive text-sm">{t("groups.joinError")}</p>}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || !inviteCode.trim()}>
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={loading || !inviteCode.trim()}
+            >
               {loading ? t("common.loading") : t("common.confirm")}
             </Button>
           </DialogFooter>

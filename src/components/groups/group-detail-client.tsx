@@ -1,6 +1,7 @@
 "use client";
 
 import { collection, doc, onSnapshot, orderBy, query } from "firebase/firestore";
+import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { ActivityFeed } from "@/components/groups/activity-feed";
@@ -84,7 +85,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
   if (user && errorCode) {
     return (
-      <div className="p-4">
+      <div className="mx-auto w-full max-w-lg p-4">
         <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
           <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
           <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
@@ -95,7 +96,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
   if (!group || expenses === null || settlements === null || !user) {
     return (
-      <div className="flex flex-col gap-3 p-4">
+      <div className="mx-auto flex w-full max-w-lg flex-col gap-3 p-4">
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-24 w-full" />
@@ -114,13 +115,14 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
   );
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4">
-      <div className="flex flex-col gap-1">
+    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
+      <div className="flex flex-col gap-2">
         <h1 className="text-xl font-semibold">{group.name}</h1>
         <button
           onClick={handleCopyInviteCode}
-          className="text-muted-foreground w-fit text-left text-sm hover:underline"
+          className="border-input hover:bg-accent flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors"
         >
+          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
           {copied
             ? t("groups.inviteCodeCopied")
             : `${t("groups.inviteCodeLabel")}: ${group.inviteCode}`}
@@ -134,13 +136,17 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         currency={group.currency}
       />
 
-      <div className="flex gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <AddExpenseDialog
           groupId={groupId}
           members={group.members}
           currency={group.currency}
           currentUid={user.uid}
-          trigger={<Button>{t("expenses.add")}</Button>}
+          trigger={
+            <Button size="lg" className="w-full">
+              {t("expenses.add")}
+            </Button>
+          }
         />
         <RecordSettlementDialog
           groupId={groupId}

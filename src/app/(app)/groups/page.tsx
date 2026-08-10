@@ -1,6 +1,7 @@
 "use client";
 
 import { collection, onSnapshot, query, where } from "firebase/firestore";
+import { ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
@@ -40,7 +41,7 @@ export default function GroupsPage() {
   }, [user]);
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-4">
+    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">{t("groups.title")}</h1>
         <div className="flex gap-2">
@@ -60,21 +61,30 @@ export default function GroupsPage() {
           <Skeleton className="h-16 w-full" />
         </div>
       ) : groups.length === 0 ? (
-        <p className="text-muted-foreground">{t("groups.empty")}</p>
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
+          <Users className="text-muted-foreground h-6 w-6" />
+          <p className="text-muted-foreground text-sm">{t("groups.empty")}</p>
+        </div>
       ) : (
         <ul className="flex flex-col gap-3">
           {groups.map((group) => (
             <li key={group.id}>
               <Link
                 href={`/groups/${group.id}`}
-                className="hover:bg-accent flex items-center justify-between rounded-lg border p-4 transition-colors"
+                className="hover:bg-accent active:bg-accent bg-card ring-foreground/10 flex items-center gap-3 rounded-xl p-4 ring-1 transition-colors"
               >
-                <span className="font-medium">{group.name}</span>
-                <span className="text-muted-foreground text-sm">
-                  {group.memberUids.length === 1
-                    ? t("groups.memberCountSingular")
-                    : t("groups.membersCount", { count: group.memberUids.length })}
-                </span>
+                <div className="bg-primary/10 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold">
+                  {group.name.charAt(0).toUpperCase() || "?"}
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-medium">{group.name}</span>
+                  <span className="text-muted-foreground text-sm">
+                    {group.memberUids.length === 1
+                      ? t("groups.memberCountSingular")
+                      : t("groups.membersCount", { count: group.memberUids.length })}
+                  </span>
+                </div>
+                <ChevronRight className="text-muted-foreground h-5 w-5 shrink-0" />
               </Link>
             </li>
           ))}

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import { CATEGORY_IDS, categoryLabel } from "@/lib/categories";
 import { formatMoney, parseMoneyInput } from "@/lib/format/money";
@@ -57,7 +58,15 @@ const SPLIT_MODES: { mode: SplitMode; labelKey: TranslationKey }[] = [
 ];
 
 /** Shows how far a running total is from the target, or nothing once it matches. */
-function MoneyBalanceHint({ targetMinor, currentMinor, currency }: { targetMinor: number; currentMinor: number; currency: string }) {
+function MoneyBalanceHint({
+  targetMinor,
+  currentMinor,
+  currency,
+}: {
+  targetMinor: number;
+  currentMinor: number;
+  currency: string;
+}) {
   const diff = targetMinor - currentMinor;
   if (diff === 0) return null;
   return (
@@ -131,7 +140,9 @@ export function AddExpenseDialog({
   const [splitMode, setSplitMode] = useState<SplitMode>(expenseToEdit?.splitMode ?? "equal");
   const [participantUids, setParticipantUids] = useState<string[]>(
     !expenseToEdit || expenseToEdit.splitMode === "equal"
-      ? (expenseToEdit ? Object.keys(expenseToEdit.splits) : memberUids)
+      ? expenseToEdit
+        ? Object.keys(expenseToEdit.splits)
+        : memberUids
       : memberUids,
   );
   const [shareInputs, setShareInputs] = useState<Record<string, string>>(() =>
@@ -151,7 +162,10 @@ export function AddExpenseDialog({
   const [exactInputs, setExactInputs] = useState<Record<string, string>>(() =>
     expenseToEdit?.splitMode === "exact"
       ? Object.fromEntries(
-          Object.entries(expenseToEdit.splits).map(([uid, s]) => [uid, moneyToInput(s.amountMinor)]),
+          Object.entries(expenseToEdit.splits).map(([uid, s]) => [
+            uid,
+            moneyToInput(s.amountMinor),
+          ]),
         )
       : {},
   );
@@ -278,7 +292,9 @@ export function AddExpenseDialog({
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{expenseToEdit ? t("expenses.editTitle") : t("expenses.addTitle")}</DialogTitle>
+            <DialogTitle>
+              {expenseToEdit ? t("expenses.editTitle") : t("expenses.addTitle")}
+            </DialogTitle>
           </DialogHeader>
           <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto py-4">
             <div className="flex flex-col gap-2">
@@ -315,11 +331,10 @@ export function AddExpenseDialog({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-category">{t("expenses.categoryLabel")}</Label>
-              <select
+              <Select
                 id="expense-category"
                 value={category ?? ""}
                 onChange={(event) => setCategory((event.target.value || null) as CategoryId | null)}
-                className="border-input h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
               >
                 <option value="">{t("expenses.categoryPlaceholder")}</option>
                 {CATEGORY_IDS.map((id) => (
@@ -327,18 +342,18 @@ export function AddExpenseDialog({
                     {categoryLabel(id)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
                 <Label>{t("expenses.paidByLabel")}</Label>
-                <label className="text-muted-foreground flex items-center gap-2 text-sm">
+                <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
                   <input
                     type="checkbox"
                     checked={multiplePayers}
                     onChange={(event) => setMultiplePayers(event.target.checked)}
-                    className="accent-primary"
+                    className="accent-primary size-4"
                   />
                   {t("expenses.multiplePayers")}
                 </label>
@@ -348,7 +363,9 @@ export function AddExpenseDialog({
                   <p className="text-muted-foreground text-sm">{t("expenses.payerAmountsHint")}</p>
                   {memberUids.map((uid) => (
                     <div key={uid} className="flex items-center gap-2">
-                      <span className="w-24 shrink-0 text-sm">{members[uid].displayName}</span>
+                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                        {members[uid].displayName}
+                      </span>
                       <Input
                         value={payerAmounts[uid] ?? ""}
                         onChange={(event) =>
@@ -366,18 +383,17 @@ export function AddExpenseDialog({
                   />
                 </div>
               ) : (
-                <select
+                <Select
                   id="expense-paid-by"
                   value={payerUid}
                   onChange={(event) => setPayerUid(event.target.value)}
-                  className="border-input h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
                 >
                   {memberUids.map((uid) => (
                     <option key={uid} value={uid}>
                       {members[uid].displayName}
                     </option>
                   ))}
-                </select>
+                </Select>
               )}
             </div>
 
@@ -390,8 +406,10 @@ export function AddExpenseDialog({
                     type="button"
                     onClick={() => handleSelectSplitMode(mode)}
                     className={cn(
-                      "flex-1 rounded-md px-2 py-1 text-sm",
-                      splitMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+                      "flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                      splitMode === mode
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {t(labelKey)}
@@ -403,12 +421,15 @@ export function AddExpenseDialog({
                 <div className="flex flex-col gap-2">
                   <p className="text-muted-foreground text-sm">{t("expenses.splitEqualHint")}</p>
                   {memberUids.map((uid) => (
-                    <label key={uid} className="flex items-center gap-2 text-sm">
+                    <label
+                      key={uid}
+                      className="flex cursor-pointer items-center gap-2 py-1 text-sm"
+                    >
                       <input
                         type="checkbox"
                         checked={participantUids.includes(uid)}
                         onChange={() => toggleParticipant(uid)}
-                        className="accent-primary"
+                        className="accent-primary size-4"
                       />
                       {members[uid].displayName}
                     </label>
@@ -421,7 +442,9 @@ export function AddExpenseDialog({
                   <p className="text-muted-foreground text-sm">{t("expenses.splitSharesHint")}</p>
                   {memberUids.map((uid) => (
                     <div key={uid} className="flex items-center gap-2">
-                      <span className="w-24 shrink-0 text-sm">{members[uid].displayName}</span>
+                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                        {members[uid].displayName}
+                      </span>
                       <Input
                         value={shareInputs[uid] ?? ""}
                         onChange={(event) =>
@@ -430,7 +453,9 @@ export function AddExpenseDialog({
                         placeholder="0"
                         inputMode="numeric"
                       />
-                      <span className="text-muted-foreground shrink-0 text-sm">{t("expenses.sharesUnit")}</span>
+                      <span className="text-muted-foreground shrink-0 text-sm">
+                        {t("expenses.sharesUnit")}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -441,7 +466,9 @@ export function AddExpenseDialog({
                   <p className="text-muted-foreground text-sm">{t("expenses.splitPercentHint")}</p>
                   {memberUids.map((uid) => (
                     <div key={uid} className="flex items-center gap-2">
-                      <span className="w-24 shrink-0 text-sm">{members[uid].displayName}</span>
+                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                        {members[uid].displayName}
+                      </span>
                       <Input
                         value={percentInputs[uid] ?? ""}
                         onChange={(event) =>
@@ -462,7 +489,9 @@ export function AddExpenseDialog({
                   <p className="text-muted-foreground text-sm">{t("expenses.splitExactHint")}</p>
                   {memberUids.map((uid) => (
                     <div key={uid} className="flex items-center gap-2">
-                      <span className="w-24 shrink-0 text-sm">{members[uid].displayName}</span>
+                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                        {members[uid].displayName}
+                      </span>
                       <Input
                         value={exactInputs[uid] ?? ""}
                         onChange={(event) =>
@@ -485,7 +514,7 @@ export function AddExpenseDialog({
             {error && <p className="text-destructive text-sm">{t("expenses.saveError")}</p>}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
               {loading ? t("common.loading") : t("common.save")}
             </Button>
           </DialogFooter>

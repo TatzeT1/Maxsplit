@@ -1,5 +1,7 @@
+import { CheckCircle2, Scale } from "lucide-react";
 import { formatMoney } from "@/lib/format/money";
 import { t } from "@/lib/i18n/de";
+import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
 
 export function BalanceView({
@@ -19,21 +21,38 @@ export function BalanceView({
     .map((uid) => {
       const amountMinor = myNet[uid];
       const name = members[uid].displayName;
-      return amountMinor > 0
-        ? t("balances.youOwe", { name, amount: formatMoney(amountMinor, currency) })
-        : t("balances.owesYou", { name, amount: formatMoney(-amountMinor, currency) });
+      return {
+        uid,
+        youOwe: amountMinor > 0,
+        text:
+          amountMinor > 0
+            ? t("balances.youOwe", { name, amount: formatMoney(amountMinor, currency) })
+            : t("balances.owesYou", { name, amount: formatMoney(-amountMinor, currency) }),
+      };
     });
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border p-4">
-      <h2 className="text-sm font-medium">{t("balances.title")}</h2>
+    <div className="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-4 ring-1">
+      <h2 className="flex items-center gap-1.5 text-sm font-medium">
+        <Scale className="h-4 w-4" />
+        {t("balances.title")}
+      </h2>
       {lines.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{t("balances.settledUp")}</p>
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+          {t("balances.settledUp")}
+        </div>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-1.5">
           {lines.map((line) => (
-            <li key={line} className="text-sm">
-              {line}
+            <li
+              key={line.uid}
+              className={cn(
+                "text-sm font-medium",
+                line.youOwe ? "text-destructive" : "text-emerald-600 dark:text-emerald-400",
+              )}
+            >
+              {line.text}
             </li>
           ))}
         </ul>

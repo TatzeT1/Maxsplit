@@ -10,7 +10,10 @@ export default async function Home() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <header className="flex items-center justify-between border-b px-4 py-3">
+      <header
+        className="flex items-center justify-between border-b px-4 py-3"
+        style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
+      >
         <span className="text-lg font-semibold">{t("app.name")}</span>
         <ThemeToggle />
       </header>

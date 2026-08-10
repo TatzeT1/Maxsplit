@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { recordSettlement } from "@/lib/actions/settlements";
 import { parseMoneyInput } from "@/lib/format/money";
 import { t } from "@/lib/i18n/de";
@@ -77,7 +78,9 @@ export function RecordSettlementDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">{t("settlements.record")}</Button>
+        <Button variant="outline" size="lg" className="w-full">
+          {t("settlements.record")}
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>
@@ -87,33 +90,31 @@ export function RecordSettlementDialog({
           <div className="flex flex-col gap-4 py-4">
             <div className="flex flex-col gap-2">
               <Label htmlFor="settlement-from">{t("settlements.fromLabel")}</Label>
-              <select
+              <Select
                 id="settlement-from"
                 value={fromUid}
                 onChange={(event) => setFromUid(event.target.value)}
-                className="border-input h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
               >
                 {memberUids.map((uid) => (
                   <option key={uid} value={uid}>
                     {members[uid].displayName}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="settlement-to">{t("settlements.toLabel")}</Label>
-              <select
+              <Select
                 id="settlement-to"
                 value={toUid}
                 onChange={(event) => setToUid(event.target.value)}
-                className="border-input h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
               >
                 {memberUids.map((uid) => (
                   <option key={uid} value={uid}>
                     {members[uid].displayName}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="settlement-amount">{t("settlements.amountLabel")}</Label>
@@ -139,7 +140,7 @@ export function RecordSettlementDialog({
             {error && <p className="text-destructive text-sm">{t("settlements.saveError")}</p>}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" size="lg" className="w-full" disabled={loading}>
               {loading ? t("common.loading") : t("common.save")}
             </Button>
           </DialogFooter>

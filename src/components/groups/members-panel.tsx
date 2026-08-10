@@ -1,5 +1,6 @@
 "use client";
 
+import { Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -17,12 +18,27 @@ import { Button } from "@/components/ui/button";
 import { deleteGroup, leaveGroup, removeMember, setMemberRole } from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { t } from "@/lib/i18n/de";
+import { cn } from "@/lib/utils";
 import type { GroupMember, GroupRole } from "@/lib/types";
 
 function roleLabel(role: GroupRole): string {
   if (role === "owner") return t("groups.roleOwner");
   if (role === "admin") return t("groups.roleAdmin");
   return t("groups.roleMember");
+}
+
+function RoleBadge({ role }: { role: GroupRole }) {
+  if (role === "member") return null;
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+        role === "owner" ? "bg-primary/10 text-primary" : "bg-accent text-accent-foreground",
+      )}
+    >
+      {roleLabel(role)}
+    </span>
+  );
 }
 
 function MemberRow({
@@ -68,46 +84,51 @@ function MemberRow({
   }
 
   return (
-    <li className="flex flex-col gap-1 rounded-lg border p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-sm">
-          {member.displayName}
-          {isSelf && " (du)"}
-          <span className="text-muted-foreground"> · {roleLabel(member.role)}</span>
-        </span>
-        {canManage && (
-          <div className="flex items-center gap-1">
-            {currentRole === "owner" && (
-              <Button variant="ghost" size="sm" disabled={busy} onClick={handleRoleChange}>
-                {member.role === "admin" ? t("groups.removeAdmin") : t("groups.makeAdmin")}
-              </Button>
-            )}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" disabled={busy}>
-                  {t("groups.removeMember")}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {t("groups.removeMemberConfirm", { name: member.displayName })}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t("groups.removeMemberConfirmBody", { name: member.displayName })}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleRemove}>
-                    {t("groups.removeMember")}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </div>
-        )}
+    <li className="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl p-3 ring-1">
+      <div className="flex items-center gap-3">
+        <div className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium">
+          {member.displayName.charAt(0).toUpperCase() || "?"}
+        </div>
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="truncate text-sm font-medium">
+            {member.displayName}
+            {isSelf && " (du)"}
+          </span>
+          <RoleBadge role={member.role} />
+        </div>
       </div>
+      {canManage && (
+        <div className="flex justify-end gap-1 pt-1">
+          {currentRole === "owner" && (
+            <Button variant="ghost" size="sm" disabled={busy} onClick={handleRoleChange}>
+              {member.role === "admin" ? t("groups.removeAdmin") : t("groups.makeAdmin")}
+            </Button>
+          )}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" disabled={busy}>
+                {t("groups.removeMember")}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {t("groups.removeMemberConfirm", { name: member.displayName })}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("groups.removeMemberConfirmBody", { name: member.displayName })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleRemove}>
+                  {t("groups.removeMember")}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
       {error && <p className="text-destructive text-xs">{error}</p>}
     </li>
   );
@@ -158,7 +179,17 @@ export function MembersPanel({
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">{t("groups.members")}</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-1.5 text-sm font-medium">
+          <Users className="h-4 w-4" />
+          {t("groups.members")}
+        </h2>
+        <span className="text-muted-foreground text-xs">
+          {Object.keys(members).length === 1
+            ? t("groups.memberCountSingular")
+            : t("groups.membersCount", { count: Object.keys(members).length })}
+        </span>
+      </div>
       <ul className="flex flex-col gap-2">
         {Object.entries(members).map(([uid, member]) => (
           <MemberRow

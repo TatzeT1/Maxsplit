@@ -1,5 +1,6 @@
 "use client";
 
+import { Activity, ArrowRightLeft, Receipt } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -14,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { deleteExpense } from "@/lib/actions/expenses";
 import { CATEGORY_IDS, categoryIconElement, categoryLabel } from "@/lib/categories";
@@ -54,44 +56,46 @@ function ExpenseRow({
   }
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border p-3">
-      <div className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-        {categoryIconElement(expense.category, "h-4 w-4")}
-      </div>
-      <div className="flex flex-1 flex-col gap-0.5">
-        <span className="font-medium">{expense.description}</span>
-        <span className="text-muted-foreground text-sm">
-          {paidByText} · {formatDate(new Date(expense.date))}
-          {expense.category && ` · ${categoryLabel(expense.category)}`}
+    <li className="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl p-3 ring-1">
+      <div className="flex items-center gap-3">
+        <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+          {categoryIconElement(expense.category, "h-4 w-4")}
+        </div>
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="truncate font-medium">{expense.description}</span>
+          <span className="text-muted-foreground truncate text-sm">
+            {paidByText} · {formatDate(new Date(expense.date))}
+            {expense.category && ` · ${categoryLabel(expense.category)}`}
+          </span>
+        </div>
+        <span className="shrink-0 font-semibold">
+          {formatMoney(expense.amountMinor, expense.currency)}
         </span>
       </div>
-      <div className="flex items-center gap-2">
-        <span className="font-medium">{formatMoney(expense.amountMinor, expense.currency)}</span>
-        {canEdit && (
-          <>
-            <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-              {t("common.edit")}
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" disabled={deleting}>
-                  {t("common.delete")}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
-                  <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
-        )}
-      </div>
+      {canEdit && (
+        <div className="flex justify-end gap-1 pt-1">
+          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+            {t("common.edit")}
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" disabled={deleting}>
+                {t("common.delete")}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
+                <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
       {canEdit && (
         <AddExpenseDialog
           groupId={groupId}
@@ -118,15 +122,20 @@ function SettlementRow({
   const toName = members[settlement.toUid]?.displayName ?? "?";
 
   return (
-    <li className="flex items-center justify-between gap-3 rounded-lg border border-dashed p-3">
-      <span className="text-sm">
+    <li className="border-border/70 bg-muted/30 flex items-center gap-3 rounded-xl border border-dashed p-3">
+      <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+        <ArrowRightLeft className="h-4 w-4" />
+      </div>
+      <span className="flex-1 text-sm">
         {t("activity.settlementRecorded", {
           from: fromName,
           to: toName,
           amount: formatMoney(settlement.amountMinor, settlement.currency),
         })}
       </span>
-      <span className="text-muted-foreground text-sm">{formatDate(new Date(settlement.date))}</span>
+      <span className="text-muted-foreground shrink-0 text-sm">
+        {formatDate(new Date(settlement.date))}
+      </span>
     </li>
   );
 }
@@ -174,33 +183,40 @@ export function ActivityFeed({
 
   return (
     <div className="flex flex-col gap-2">
-      <h2 className="text-sm font-medium">{t("activity.title")}</h2>
+      <h2 className="flex items-center gap-1.5 text-sm font-medium">
+        <Activity className="h-4 w-4" />
+        {t("activity.title")}
+      </h2>
       {expenses.length > 0 && (
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder={t("expenses.searchPlaceholder")}
             className="flex-1"
           />
-          <select
-            value={categoryFilter}
-            onChange={(event) => setCategoryFilter(event.target.value as CategoryId | "all")}
-            className="border-input h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
-          >
-            <option value="all">{t("expenses.filterAllCategories")}</option>
-            {CATEGORY_IDS.map((id) => (
-              <option key={id} value={id}>
-                {categoryLabel(id)}
-              </option>
-            ))}
-          </select>
+          <div className="sm:w-44 sm:shrink-0">
+            <Select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value as CategoryId | "all")}
+            >
+              <option value="all">{t("expenses.filterAllCategories")}</option>
+              {CATEGORY_IDS.map((id) => (
+                <option key={id} value={id}>
+                  {categoryLabel(id)}
+                </option>
+              ))}
+            </Select>
+          </div>
         </div>
       )}
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
-          {isFiltering ? t("expenses.noResults") : t("activity.empty")}
-        </p>
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-6 text-center">
+          <Receipt className="text-muted-foreground h-6 w-6" />
+          <p className="text-muted-foreground text-sm">
+            {isFiltering ? t("expenses.noResults") : t("activity.empty")}
+          </p>
+        </div>
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((item) =>

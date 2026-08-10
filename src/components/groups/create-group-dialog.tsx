@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { createGroup } from "@/lib/actions/groups";
 import { t } from "@/lib/i18n/de";
 
@@ -66,23 +67,22 @@ export function CreateGroupDialog() {
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="group-currency">{t("groups.currencyLabel")}</Label>
-              <select
+              <Select
                 id="group-currency"
                 value={currency}
                 onChange={(event) => setCurrency(event.target.value)}
-                className="border-input h-8 w-full rounded-lg border bg-transparent px-2.5 py-1 text-base outline-none md:text-sm"
               >
                 {CURRENCIES.map((code) => (
                   <option key={code} value={code}>
                     {code}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             {error && <p className="text-destructive text-sm">{t("groups.createError")}</p>}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || !name.trim()}>
+            <Button type="submit" size="lg" className="w-full" disabled={loading || !name.trim()}>
               {loading ? t("common.loading") : t("common.save")}
             </Button>
           </DialogFooter>
