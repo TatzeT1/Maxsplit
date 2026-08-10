@@ -63,6 +63,55 @@ export function splitEqual(amountMinor: number, uids: string[]): Record<string, 
   return distributeByWeights(amountMinor, weights);
 }
 
+/** Splits an amount proportionally to each participant's share count (e.g. 2 shares vs. 1). */
+export function splitByShares(
+  amountMinor: number,
+  shares: Record<string, number>,
+): Record<string, number> {
+  for (const [uid, value] of Object.entries(shares)) {
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error(`Share for "${uid}" must be a positive integer, got ${value}`);
+    }
+  }
+  return distributeByWeights(amountMinor, shares);
+}
+
+/** Throws unless the given percentages sum to 100 (within floating-point tolerance). */
+export function validatePercentsSum100(percents: Record<string, number>): void {
+  const sum = Object.values(percents).reduce((total, value) => total + value, 0);
+  if (Math.abs(sum - 100) > 0.01) {
+    throw new AmountMismatchError("sum(percents)", 100, sum);
+  }
+}
+
+/** Splits an amount proportionally to each participant's percentage; percentages must sum to 100. */
+export function splitByPercent(
+  amountMinor: number,
+  percents: Record<string, number>,
+): Record<string, number> {
+  for (const [uid, value] of Object.entries(percents)) {
+    if (value <= 0) {
+      throw new Error(`Percent for "${uid}" must be greater than zero, got ${value}`);
+    }
+  }
+  validatePercentsSum100(percents);
+  return distributeByWeights(amountMinor, percents);
+}
+
+/** Validates and returns exact per-participant amounts; they must sum to the expense total. */
+export function splitExact(
+  amountMinor: number,
+  exactAmounts: Record<string, number>,
+): Record<string, number> {
+  for (const [uid, value] of Object.entries(exactAmounts)) {
+    if (!Number.isInteger(value) || value < 0) {
+      throw new Error(`Exact amount for "${uid}" must be a non-negative integer, got ${value}`);
+    }
+  }
+  validateSplits(amountMinor, exactAmounts);
+  return { ...exactAmounts };
+}
+
 /** Throws unless the payer amounts sum exactly to the expense total. */
 export function validatePaidBy(amountMinor: number, paidBy: Record<string, number>): void {
   assertIntegerMinorUnits(amountMinor);

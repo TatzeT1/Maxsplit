@@ -22,15 +22,29 @@ export interface ExpenseSplit {
   amountMinor: number;
 }
 
+export type SplitMode = "equal" | "shares" | "percent" | "exact";
+
+export type CategoryId =
+  | "groceries"
+  | "restaurant"
+  | "transport"
+  | "housing"
+  | "utilities"
+  | "entertainment"
+  | "travel"
+  | "shopping"
+  | "health"
+  | "other";
+
 export interface Expense {
   id: string;
   description: string;
   amountMinor: number;
   currency: string;
   date: string;
-  category: string | null;
+  category: CategoryId | null;
   paidBy: Record<string, number>;
-  splitMode: "equal";
+  splitMode: SplitMode;
   splits: Record<string, ExpenseSplit>;
   createdBy: string;
   createdAt: string;

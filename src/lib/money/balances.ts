@@ -1,3 +1,5 @@
+import { distributeByWeights } from "./split";
+
 export interface BalanceExpense {
   paidBy: Record<string, number>;
   splits: Record<string, number>;
@@ -46,7 +48,7 @@ export function computeBalances(
 }
 
 export interface PairwiseExpense {
-  payerUid: string;
+  paidBy: Record<string, number>;
   splits: Record<string, number>;
 }
 
@@ -58,12 +60,18 @@ export interface PairwiseSettlement {
 
 /**
  * Computes net pairwise debts for direct "Du schuldest Anna 12,50 €"-style
- * display (single payer per expense, as in Phase 1 — see plan.md). Returns
- * `net[a][b]`: how much `a` owes `b` (negative means `b` owes `a` instead).
- * By construction `net[a][b] === -net[b][a]`, so callers only need to read
- * one direction. This is a direct per-expense ledger, not a simplified
- * minimum-cash-flow result — debt simplification is a separate, opt-in
- * Phase 3 feature per the project roadmap.
+ * display. Returns `net[a][b]`: how much `a` owes `b` (negative means `b`
+ * owes `a` instead). By construction `net[a][b] === -net[b][a]`, so callers
+ * only need to read one direction. This is a direct per-expense ledger, not
+ * a simplified minimum-cash-flow result — debt simplification is a
+ * separate, opt-in Phase 3 feature per the project roadmap.
+ *
+ * With multiple payers on one expense, each participant's split is
+ * attributed across the payers proportionally to what each payer
+ * contributed (via the same largest-remainder distribution used for
+ * splits), so e.g. a 100 € expense paid 60/40 by Anna/Ben and split evenly
+ * three ways correctly credits both Anna and Ben, not just whoever happens
+ * to be the first key in `paidBy`.
  */
 export function computePairwiseDebts(
   expenses: PairwiseExpense[],
@@ -72,7 +80,7 @@ export function computePairwiseDebts(
   const net: Record<string, Record<string, number>> = {};
 
   const add = (debtor: string, creditor: string, amountMinor: number) => {
-    if (debtor === creditor) return;
+    if (debtor === creditor || amountMinor === 0) return;
     net[debtor] ??= {};
     net[creditor] ??= {};
     net[debtor][creditor] = (net[debtor][creditor] ?? 0) + amountMinor;
@@ -80,9 +88,16 @@ export function computePairwiseDebts(
   };
 
   for (const expense of expenses) {
+    const payerUids = Object.keys(expense.paidBy);
     for (const [participantUid, amountMinor] of Object.entries(expense.splits)) {
-      if (participantUid === expense.payerUid) continue;
-      add(participantUid, expense.payerUid, amountMinor);
+      if (amountMinor === 0) continue;
+      const portions =
+        payerUids.length === 1
+          ? { [payerUids[0]]: amountMinor }
+          : distributeByWeights(amountMinor, expense.paidBy);
+      for (const payerUid of payerUids) {
+        add(participantUid, payerUid, portions[payerUid]);
+      }
     }
   }
 

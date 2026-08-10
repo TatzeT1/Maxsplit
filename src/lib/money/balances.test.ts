@@ -52,7 +52,7 @@ describe("computeBalances", () => {
 describe("computePairwiseDebts", () => {
   it("shows a direct debt from participant to payer for a two-person expense", () => {
     const splits = splitEqual(2000, ["a", "b"]);
-    const net = computePairwiseDebts([{ payerUid: "a", splits }]);
+    const net = computePairwiseDebts([{ paidBy: { a: 2000 }, splits }]);
 
     expect(net.b.a).toBe(1000); // b owes a 10.00
     expect(net.a.b).toBe(-1000); // mirror is always the negation
@@ -60,7 +60,7 @@ describe("computePairwiseDebts", () => {
 
   it("keeps net[a][b] === -net[b][a] for a three-person expense", () => {
     const splits = splitEqual(3000, ["a", "b", "c"]);
-    const net = computePairwiseDebts([{ payerUid: "a", splits }]);
+    const net = computePairwiseDebts([{ paidBy: { a: 3000 }, splits }]);
 
     expect(net.b.a).toBe(1000);
     expect(net.c.a).toBe(1000);
@@ -69,8 +69,8 @@ describe("computePairwiseDebts", () => {
   });
 
   it("nets multiple expenses between the same pair", () => {
-    const expense1 = { payerUid: "a", splits: splitEqual(2000, ["a", "b"]) };
-    const expense2 = { payerUid: "b", splits: splitEqual(1000, ["a", "b"]) };
+    const expense1 = { paidBy: { a: 2000 }, splits: splitEqual(2000, ["a", "b"]) };
+    const expense2 = { paidBy: { b: 1000 }, splits: splitEqual(1000, ["a", "b"]) };
     const net = computePairwiseDebts([expense1, expense2]);
 
     // b owed a 1000 from expense1, a owed b 500 from expense2 -> net b owes a 500.
@@ -81,7 +81,7 @@ describe("computePairwiseDebts", () => {
   it("settlements reduce the debt they're paying down", () => {
     const splits = splitEqual(2000, ["a", "b"]);
     const net = computePairwiseDebts(
-      [{ payerUid: "a", splits }],
+      [{ paidBy: { a: 2000 }, splits }],
       [{ fromUid: "b", toUid: "a", amountMinor: 1000 }],
     );
 
@@ -91,8 +91,25 @@ describe("computePairwiseDebts", () => {
 
   it("ignores a participant who is also the payer", () => {
     const splits = splitEqual(1000, ["a"]);
-    const net = computePairwiseDebts([{ payerUid: "a", splits }]);
+    const net = computePairwiseDebts([{ paidBy: { a: 1000 }, splits }]);
 
     expect(net.a).toBeUndefined();
+  });
+
+  it("attributes a participant's split across multiple payers proportionally", () => {
+    // 100.00 paid 60/40 by a/b, split evenly three ways (a, b, c get 33.34/33.33/33.33).
+    const splits = splitEqual(10000, ["a", "b", "c"]);
+    const net = computePairwiseDebts([{ paidBy: { a: 6000, b: 4000 }, splits }]);
+
+    // c's 3333 owed is split 60/40 across the payers: 2000 to a, 1333 to b.
+    expect(net.c.a).toBe(2000);
+    expect(net.c.b).toBe(1333);
+    // a and b each owe part of their own split back to the other payer.
+    expect(net.a.b + net.b.a).toBe(0);
+    const sum = Object.values(net).reduce(
+      (total, row) => total + Object.values(row).reduce((s, v) => s + v, 0),
+      0,
+    );
+    expect(sum).toBe(0);
   });
 });

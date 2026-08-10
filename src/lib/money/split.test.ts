@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { distributeByWeights, splitEqual, validatePaidBy, validateSplits } from "./split";
+import {
+  distributeByWeights,
+  splitByPercent,
+  splitByShares,
+  splitEqual,
+  splitExact,
+  validatePaidBy,
+  validatePercentsSum100,
+  validateSplits,
+} from "./split";
 import { AmountMismatchError } from "./errors";
 
 describe("splitEqual", () => {
@@ -56,6 +65,72 @@ describe("distributeByWeights", () => {
 
   it("throws for zero total weight", () => {
     expect(() => distributeByWeights(100, { a: 0 })).toThrow();
+  });
+});
+
+describe("splitByShares", () => {
+  it("splits proportionally to share counts", () => {
+    const result = splitByShares(1000, { a: 1, b: 3 });
+    expect(result).toEqual({ a: 250, b: 750 });
+  });
+
+  it("sums to the total for an awkward amount", () => {
+    const result = splitByShares(1000, { a: 1, b: 1, c: 1 });
+    const sum = Object.values(result).reduce((total, v) => total + v, 0);
+    expect(sum).toBe(1000);
+  });
+
+  it("throws for a zero or negative share", () => {
+    expect(() => splitByShares(1000, { a: 1, b: 0 })).toThrow();
+    expect(() => splitByShares(1000, { a: 1, b: -1 })).toThrow();
+  });
+
+  it("throws for a non-integer share", () => {
+    expect(() => splitByShares(1000, { a: 1.5, b: 1 })).toThrow();
+  });
+});
+
+describe("validatePercentsSum100", () => {
+  it("passes when percentages sum to 100", () => {
+    expect(() => validatePercentsSum100({ a: 60, b: 40 })).not.toThrow();
+  });
+
+  it("tolerates small floating-point rounding", () => {
+    expect(() => validatePercentsSum100({ a: 33.33, b: 33.33, c: 33.34 })).not.toThrow();
+  });
+
+  it("throws when percentages don't sum to 100", () => {
+    expect(() => validatePercentsSum100({ a: 60, b: 30 })).toThrow(AmountMismatchError);
+  });
+});
+
+describe("splitByPercent", () => {
+  it("splits proportionally to percentages", () => {
+    const result = splitByPercent(10000, { a: 70, b: 30 });
+    expect(result).toEqual({ a: 7000, b: 3000 });
+  });
+
+  it("throws when percentages don't sum to 100", () => {
+    expect(() => splitByPercent(1000, { a: 50, b: 30 })).toThrow(AmountMismatchError);
+  });
+
+  it("throws for a zero or negative percent", () => {
+    expect(() => splitByPercent(1000, { a: 100, b: 0 })).toThrow();
+  });
+});
+
+describe("splitExact", () => {
+  it("returns the exact amounts when they sum to the total", () => {
+    expect(splitExact(1000, { a: 400, b: 600 })).toEqual({ a: 400, b: 600 });
+  });
+
+  it("throws when exact amounts don't sum to the total", () => {
+    expect(() => splitExact(1000, { a: 400, b: 500 })).toThrow(AmountMismatchError);
+  });
+
+  it("throws for a negative or non-integer amount", () => {
+    expect(() => splitExact(1000, { a: -100, b: 1100 })).toThrow();
+    expect(() => splitExact(1000, { a: 400.5, b: 599.5 })).toThrow();
   });
 });
 
