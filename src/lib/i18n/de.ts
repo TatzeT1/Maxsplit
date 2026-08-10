@@ -153,6 +153,7 @@ export const de = {
     fromLabel: "Von",
     toLabel: "An",
     amountLabel: "Betrag",
+    dateLabel: "Datum",
     noteLabel: "Notiz (optional)",
     notePlaceholder: "z. B. per PayPal",
     saveError: "Zahlung konnte nicht gespeichert werden.",

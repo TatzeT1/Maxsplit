@@ -40,6 +40,7 @@ export function RecordSettlementDialog({
   const [fromUid, setFromUid] = useState(currentUid);
   const [toUid, setToUid] = useState(otherUids[0] ?? currentUid);
   const [amountInput, setAmountInput] = useState("");
+  const [date, setDate] = useState(todayIsoDate());
   const [note, setNote] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -60,7 +61,7 @@ export function RecordSettlementDialog({
       toUid,
       amountMinor,
       currency,
-      date: todayIsoDate(),
+      date,
       note,
     });
     setLoading(false);
@@ -72,6 +73,7 @@ export function RecordSettlementDialog({
 
     setOpen(false);
     setAmountInput("");
+    setDate(todayIsoDate());
     setNote("");
   }
 
@@ -125,6 +127,16 @@ export function RecordSettlementDialog({
                 placeholder={`0,00 ${currency}`}
                 inputMode="decimal"
                 autoFocus
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="settlement-date">{t("settlements.dateLabel")}</Label>
+              <Input
+                id="settlement-date"
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
                 required
               />
             </div>
