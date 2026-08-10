@@ -4,3 +4,9 @@ allowBuilds:
   re2: true
   sharp: false
   unrs-resolver: false
+
+# jose v6 is ESM-only, which breaks firebase-admin's jwks-rsa dependency
+# under Vercel's serverless require() bundling (ERR_REQUIRE_ESM). Pin to
+# the last CJS-compatible major until jwks-rsa/firebase-admin catch up.
+overrides:
+  jose: ^5.9.6
