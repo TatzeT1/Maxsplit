@@ -164,6 +164,7 @@ export const de = {
   settlements: {
     record: "Zahlung eintragen",
     recordTitle: "Zahlung eintragen",
+    editTitle: "Zahlung bearbeiten",
     fromLabel: "Von",
     toLabel: "An",
     amountLabel: "Betrag",
@@ -171,6 +172,8 @@ export const de = {
     noteLabel: "Notiz (optional)",
     notePlaceholder: "z. B. per PayPal",
     saveError: "Zahlung konnte nicht gespeichert werden.",
+    deleteConfirm: "Zahlung wirklich löschen?",
+    deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",
   },
   recurring: {
     title: "Wiederkehrende Ausgaben",
@@ -197,6 +200,8 @@ export const de = {
     expenseEdited: "{{name}} hat „{{description}}“ bearbeitet",
     expenseDeleted: "{{name}} hat „{{description}}“ gelöscht",
     settlementRecorded: "{{from}} hat {{to}} {{amount}} bezahlt",
+    settlementEdited: "{{name}} hat eine Zahlung bearbeitet: {{description}}",
+    settlementDeleted: "{{name}} hat eine Zahlung gelöscht: {{description}}",
   },
   errors: {
     notFound: "Nicht gefunden.",

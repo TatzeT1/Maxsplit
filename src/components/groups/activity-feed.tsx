@@ -17,13 +17,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
+import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { deleteExpense } from "@/lib/actions/expenses";
+import { deleteSettlement } from "@/lib/actions/settlements";
 import { CATEGORY_IDS, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
-import { t } from "@/lib/i18n/de";
-import type { ActivityLogEntry, CategoryId, Expense, GroupMember, Settlement } from "@/lib/types";
+import { t, type TranslationKey } from "@/lib/i18n/de";
+import type {
+  ActivityLogEntry,
+  ActivityLogType,
+  CategoryId,
+  Expense,
+  GroupMember,
+  Settlement,
+} from "@/lib/types";
 
 type ActivityItem =
   | { kind: "expense"; date: string; createdAt: string; expense: Expense }
@@ -131,28 +140,80 @@ function ExpenseRow({
 function SettlementRow({
   settlement,
   members,
+  groupId,
+  currentUid,
 }: {
   settlement: Settlement;
   members: Record<string, GroupMember>;
+  groupId: string;
+  currentUid: string;
 }) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const canEdit = settlement.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const fromName = members[settlement.fromUid]?.displayName ?? "?";
   const toName = members[settlement.toUid]?.displayName ?? "?";
 
+  async function handleDelete() {
+    setDeleting(true);
+    await deleteSettlement({ groupId, settlementId: settlement.id });
+    setDeleting(false);
+  }
+
   return (
-    <li className="border-border/70 bg-muted/30 flex items-center gap-3 rounded-xl border border-dashed p-3">
-      <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-        <ArrowRightLeft className="h-4 w-4" />
+    <li className="border-border/70 bg-muted/30 flex flex-col gap-1 rounded-xl border border-dashed p-3">
+      <div className="flex items-center gap-3">
+        <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+          <ArrowRightLeft className="h-4 w-4" />
+        </div>
+        <span className="flex-1 text-sm">
+          {t("activity.settlementRecorded", {
+            from: fromName,
+            to: toName,
+            amount: formatMoney(settlement.amountMinor, settlement.currency),
+          })}
+        </span>
+        <span className="text-muted-foreground shrink-0 text-sm">
+          {formatDate(new Date(settlement.date))}
+        </span>
       </div>
-      <span className="flex-1 text-sm">
-        {t("activity.settlementRecorded", {
-          from: fromName,
-          to: toName,
-          amount: formatMoney(settlement.amountMinor, settlement.currency),
-        })}
-      </span>
-      <span className="text-muted-foreground shrink-0 text-sm">
-        {formatDate(new Date(settlement.date))}
-      </span>
+      {canEdit && (
+        <div className="flex justify-end gap-1 pt-1">
+          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+            {t("common.edit")}
+          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" disabled={deleting}>
+                {t("common.delete")}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("settlements.deleteConfirm")}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {t("settlements.deleteConfirmBody")}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+      {canEdit && (
+        <RecordSettlementDialog
+          groupId={groupId}
+          members={members}
+          currency={settlement.currency}
+          currentUid={currentUid}
+          settlementToEdit={settlement}
+          open={editOpen}
+          onOpenChange={setEditOpen}
+        />
+      )}
     </li>
   );
 }
@@ -165,11 +226,15 @@ function LogRow({
   members: Record<string, GroupMember>;
 }) {
   const name = members[entry.actorUid]?.displayName ?? "?";
-  const text =
-    entry.type === "expense_edited"
-      ? t("activity.expenseEdited", { name, description: entry.description })
-      : t("activity.expenseDeleted", { name, description: entry.description });
-  const Icon = entry.type === "expense_edited" ? Pencil : Trash2;
+  const logKeys: Record<ActivityLogType, TranslationKey> = {
+    expense_edited: "activity.expenseEdited",
+    expense_deleted: "activity.expenseDeleted",
+    settlement_edited: "activity.settlementEdited",
+    settlement_deleted: "activity.settlementDeleted",
+  };
+  const text = t(logKeys[entry.type], { name, description: entry.description });
+  const isEdit = entry.type === "expense_edited" || entry.type === "settlement_edited";
+  const Icon = isEdit ? Pencil : Trash2;
 
   return (
     <li className="border-border/70 bg-muted/20 flex items-center gap-3 rounded-xl border border-dashed p-3">
@@ -287,6 +352,8 @@ export function ActivityFeed({
                 key={`settlement-${item.settlement.id}`}
                 settlement={item.settlement}
                 members={members}
+                groupId={groupId}
+                currentUid={currentUid}
               />
             ) : (
               <LogRow key={`log-${item.entry.id}`} entry={item.entry} members={members} />

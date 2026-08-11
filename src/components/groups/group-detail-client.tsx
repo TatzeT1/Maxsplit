@@ -194,6 +194,11 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
           members={group.members}
           currency={group.currency}
           currentUid={user.uid}
+          trigger={
+            <Button variant="outline" size="lg" className="w-full">
+              {t("settlements.record")}
+            </Button>
+          }
         />
       </div>
 

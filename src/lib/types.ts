@@ -72,15 +72,17 @@ export interface Settlement {
   currency: string;
   date: string;
   note: string;
+  createdBy: string;
   createdAt: string;
 }
 
 /**
- * Records edit/delete history for expenses. "Added" isn't logged — the
- * expense row itself already signals that, so a log entry would just
+ * Records edit/delete history for expenses and settlements. "Added" isn't
+ * logged — the row itself already signals that, so a log entry would just
  * duplicate it right next to the row that shows the same thing in full.
  */
-export type ActivityLogType = "expense_edited" | "expense_deleted";
+export type ActivityLogType =
+  "expense_edited" | "expense_deleted" | "settlement_edited" | "settlement_deleted";
 
 export interface ActivityLogEntry {
   id: string;

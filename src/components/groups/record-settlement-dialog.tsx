@@ -13,13 +13,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { recordSettlement } from "@/lib/actions/settlements";
+import { editSettlement, recordSettlement } from "@/lib/actions/settlements";
 import { parseMoneyInput } from "@/lib/format/money";
 import { t } from "@/lib/i18n/de";
-import type { GroupMember } from "@/lib/types";
+import type { GroupMember, Settlement } from "@/lib/types";
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function moneyToInput(amountMinor: number): string {
+  return (amountMinor / 100).toFixed(2).replace(".", ",");
 }
 
 export function RecordSettlementDialog({
@@ -27,21 +31,34 @@ export function RecordSettlementDialog({
   members,
   currency,
   currentUid,
+  settlementToEdit,
+  trigger,
+  open: controlledOpen,
+  onOpenChange,
 }: {
   groupId: string;
   members: Record<string, GroupMember>;
   currency: string;
   currentUid: string;
+  settlementToEdit?: Settlement;
+  trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const memberUids = Object.keys(members);
   const otherUids = memberUids.filter((uid) => uid !== currentUid);
 
-  const [open, setOpen] = useState(false);
-  const [fromUid, setFromUid] = useState(currentUid);
-  const [toUid, setToUid] = useState(otherUids[0] ?? currentUid);
-  const [amountInput, setAmountInput] = useState("");
-  const [date, setDate] = useState(todayIsoDate());
-  const [note, setNote] = useState("");
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
+
+  const [fromUid, setFromUid] = useState(settlementToEdit?.fromUid ?? currentUid);
+  const [toUid, setToUid] = useState(settlementToEdit?.toUid ?? otherUids[0] ?? currentUid);
+  const [amountInput, setAmountInput] = useState(
+    settlementToEdit ? moneyToInput(settlementToEdit.amountMinor) : "",
+  );
+  const [date, setDate] = useState(settlementToEdit?.date ?? todayIsoDate());
+  const [note, setNote] = useState(settlementToEdit?.note ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
@@ -55,15 +72,10 @@ export function RecordSettlementDialog({
 
     setLoading(true);
     setError(false);
-    const result = await recordSettlement({
-      groupId,
-      fromUid,
-      toUid,
-      amountMinor,
-      currency,
-      date,
-      note,
-    });
+    const payload = { groupId, fromUid, toUid, amountMinor, currency, date, note };
+    const result = settlementToEdit
+      ? await editSettlement({ ...payload, settlementId: settlementToEdit.id })
+      : await recordSettlement(payload);
     setLoading(false);
 
     if (!result.ok) {
@@ -72,22 +84,22 @@ export function RecordSettlementDialog({
     }
 
     setOpen(false);
-    setAmountInput("");
-    setDate(todayIsoDate());
-    setNote("");
+    if (!settlementToEdit) {
+      setAmountInput("");
+      setDate(todayIsoDate());
+      setNote("");
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="lg" className="w-full">
-          {t("settlements.record")}
-        </Button>
-      </DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{t("settlements.recordTitle")}</DialogTitle>
+            <DialogTitle>
+              {settlementToEdit ? t("settlements.editTitle") : t("settlements.recordTitle")}
+            </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
             <div className="flex flex-col gap-2">
