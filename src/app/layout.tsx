@@ -24,6 +24,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  // Makes the layout viewport (and `dvh` units) actually shrink when the
+  // on-screen keyboard opens, instead of the keyboard just overlaying a
+  // viewport that still thinks it's full height — otherwise our centered
+  // dialogs can end up with their input fields hidden behind the keyboard.
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "oklch(1 0 0)" },
     { media: "(prefers-color-scheme: dark)", color: "oklch(0.145 0 0)" },
