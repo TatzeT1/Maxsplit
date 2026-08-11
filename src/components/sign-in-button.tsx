@@ -31,7 +31,7 @@ function GoogleLogo() {
   );
 }
 
-export function SignInButton() {
+export function SignInButton({ redirectTo = "/groups" }: { redirectTo?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const router = useRouter();
@@ -49,7 +49,7 @@ export function SignInButton() {
         body: JSON.stringify({ idToken }),
       });
       if (!response.ok) throw new Error("Session creation failed");
-      router.push("/groups");
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setError(true);

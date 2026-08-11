@@ -112,9 +112,10 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     );
   }, [groupId, user]);
 
-  async function handleCopyInviteCode() {
+  async function handleCopyInviteLink() {
     if (!group) return;
-    await navigator.clipboard.writeText(group.inviteCode);
+    const url = `${window.location.origin}/invite/${group.inviteCode}`;
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -177,7 +178,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
       <div className="animate-pop-in flex flex-col gap-2">
         <h1 className="font-heading text-2xl font-semibold">{group.name}</h1>
         <button
-          onClick={handleCopyInviteCode}
+          onClick={handleCopyInviteLink}
           className={cn(
             "flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95",
             copied
@@ -190,9 +191,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
-          {copied
-            ? t("groups.inviteCodeCopied")
-            : `${t("groups.inviteCodeLabel")}: ${group.inviteCode}`}
+          {copied ? t("groups.inviteCodeCopied") : t("groups.shareInvite")}
         </button>
       </div>
 
