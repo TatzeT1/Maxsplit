@@ -208,6 +208,7 @@ export const en: Dictionary = {
     deleteConfirmBody: "Future expenses will no longer be created automatically.",
     empty: "No recurring expenses.",
     saveError: "Couldn't save it.",
+    errorNotOwner: "You can only edit or delete your own rules.",
   },
   activity: {
     title: "Activity",

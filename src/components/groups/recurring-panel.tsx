@@ -23,6 +23,20 @@ import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import type { GroupMember, GroupRole, RecurringRule } from "@/lib/types";
 
+/** Turns a server ActionResult error code into a message that says what to fix. */
+function recurringActionErrorMessage(code: string, t: ReturnType<typeof useT>): string {
+  switch (code) {
+    case "not-owner":
+      return t("recurring.errorNotOwner");
+    case "forbidden":
+      return t("errors.forbidden");
+    case "not-found":
+      return t("errors.notFound");
+    default:
+      return t("recurring.saveError");
+  }
+}
+
 function RuleRow({
   rule,
   groupId,
@@ -47,7 +61,7 @@ function RuleRow({
       ruleId: rule.id,
       active: !rule.active,
     });
-    if (!result.ok) setError(t("recurring.saveError"));
+    if (!result.ok) setError(recurringActionErrorMessage(result.error, t));
     setBusy(false);
   }
 
@@ -55,7 +69,7 @@ function RuleRow({
     setBusy(true);
     setError(null);
     const result = await deleteRecurringRule({ groupId, ruleId: rule.id });
-    if (!result.ok) setError(t("recurring.saveError"));
+    if (!result.ok) setError(recurringActionErrorMessage(result.error, t));
     setBusy(false);
   }
 

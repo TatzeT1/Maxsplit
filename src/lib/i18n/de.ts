@@ -208,6 +208,7 @@ export const de = {
     deleteConfirmBody: "Zukünftige Ausgaben werden nicht mehr automatisch erstellt.",
     empty: "Keine wiederkehrenden Ausgaben.",
     saveError: "Konnte nicht gespeichert werden.",
+    errorNotOwner: "Du kannst nur eigene Regeln bearbeiten oder löschen.",
   },
   activity: {
     title: "Aktivität",
