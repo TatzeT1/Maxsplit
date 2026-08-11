@@ -27,6 +27,8 @@ export const en: Dictionary = {
     groups: "Groups",
     activity: "Activity",
     settings: "Settings",
+    profile: "Profile",
+    admin: "Admin",
     signOut: "Sign out",
   },
   profile: {

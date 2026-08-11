@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { AppHeader } from "@/components/app-header";
+import { AppSidebar } from "@/components/app-sidebar";
 import { isAdminEmail } from "@/lib/auth/admin";
 import { getSession } from "@/lib/auth/session";
 
@@ -8,8 +8,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!session) redirect("/");
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader displayName={session.displayName} isAdmin={isAdminEmail(session.email)} />
+    <div className="flex flex-1 flex-col md:flex-row">
+      <AppSidebar displayName={session.displayName} isAdmin={isAdminEmail(session.email)} />
       <main className="flex flex-1 flex-col">{children}</main>
     </div>
   );

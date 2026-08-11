@@ -26,6 +26,8 @@ export const de = {
     groups: "Gruppen",
     activity: "Aktivität",
     settings: "Einstellungen",
+    profile: "Profil",
+    admin: "Admin",
     signOut: "Abmelden",
   },
   profile: {
