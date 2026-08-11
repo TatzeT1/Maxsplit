@@ -4,13 +4,14 @@ import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/locale-provider";
 import { auth } from "@/lib/firebase/client";
-import { t } from "@/lib/i18n/de";
 
 export function SignInButton() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const router = useRouter();
+  const t = useT();
 
   async function handleSignIn() {
     setLoading(true);

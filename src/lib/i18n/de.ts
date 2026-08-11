@@ -1,7 +1,7 @@
 /**
- * Single source of truth for all user-facing strings. No component should
- * hardcode German text — everything goes through `t()` so a future locale
- * is a new dictionary file, not a refactor.
+ * German dictionary — the app's default/original locale. No component
+ * should hardcode UI text — everything goes through `t()` (see
+ * translate.ts) so adding a locale is a new dictionary file, not a refactor.
  */
 export const de = {
   app: {
@@ -33,6 +33,11 @@ export const de = {
     dark: "Dunkel",
     system: "System",
     toggleLabel: "Design wechseln",
+  },
+  language: {
+    toggleLabel: "Sprache wechseln",
+    de: "Deutsch",
+    en: "English",
   },
   auth: {
     signInTitle: "Willkommen bei Split",
@@ -96,6 +101,7 @@ export const de = {
       "Wähl deinen Namen aus, damit dir bisherige Ausgaben zugeordnet werden — oder tritt als neue Person bei.",
     joinAsNew: "Ich bin neu",
     joinContinue: "Weiter",
+    selfSuffix: " (du)",
   },
   expenses: {
     title: "Ausgaben",
@@ -222,39 +228,3 @@ export const de = {
     errorCode: "Fehlercode: {{code}}",
   },
 } as const;
-
-type Dictionary = typeof de;
-
-type DotPaths<T> = T extends string
-  ? never
-  : {
-      [K in keyof T & string]: T[K] extends string ? K : `${K}.${DotPaths<T[K]>}`;
-    }[keyof T & string];
-
-export type TranslationKey = DotPaths<Dictionary>;
-
-function resolve(path: string): string {
-  const value = path.split(".").reduce<unknown>((node, key) => {
-    if (typeof node === "object" && node !== null && key in node) {
-      return (node as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, de);
-
-  if (typeof value !== "string") {
-    throw new Error(`Missing translation for key "${path}"`);
-  }
-  return value;
-}
-
-/**
- * Look up a German UI string by dot path, optionally interpolating
- * `{{placeholder}}` tokens, e.g. `t("balances.youOwe", { name: "Anna", amount: "12,50 €" })`.
- */
-export function t(key: TranslationKey, vars?: Record<string, string | number>): string {
-  const template = resolve(key);
-  if (!vars) return template;
-  return template.replace(/\{\{(\w+)\}\}/g, (match, token: string) =>
-    token in vars ? String(vars[token]) : match,
-  );
-}

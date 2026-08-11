@@ -18,13 +18,14 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
+import { useT } from "@/components/locale-provider";
 import { deleteExpense } from "@/lib/actions/expenses";
 import { deleteSettlement } from "@/lib/actions/settlements";
 import { CATEGORY_IDS, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
-import { t, type TranslationKey } from "@/lib/i18n/de";
+import type { TranslationKey } from "@/lib/i18n/translate";
 import type {
   ActivityLogEntry,
   ActivityLogType,
@@ -39,7 +40,7 @@ type ActivityItem =
   | { kind: "settlement"; date: string; createdAt: string; settlement: Settlement }
   | { kind: "log"; date: string; createdAt: string; entry: ActivityLogEntry };
 
-function expenseDeleteErrorMessage(code: string): string {
+function expenseDeleteErrorMessage(code: string, t: ReturnType<typeof useT>): string {
   switch (code) {
     case "not-owner":
       return t("expenses.errorNotOwner");
@@ -52,7 +53,7 @@ function expenseDeleteErrorMessage(code: string): string {
   }
 }
 
-function settlementDeleteErrorMessage(code: string): string {
+function settlementDeleteErrorMessage(code: string, t: ReturnType<typeof useT>): string {
   switch (code) {
     case "not-owner":
       return t("settlements.errorNotOwner");
@@ -80,6 +81,7 @@ function ExpenseRow({
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const t = useT();
   const canEdit = expense.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const payerUids = Object.keys(expense.paidBy);
   const payerNames = payerUids.map((uid) => members[uid]?.displayName ?? "?");
@@ -91,7 +93,7 @@ function ExpenseRow({
     setDeleting(true);
     setDeleteError(null);
     const result = await deleteExpense({ groupId, expenseId: expense.id });
-    if (!result.ok) setDeleteError(expenseDeleteErrorMessage(result.error));
+    if (!result.ok) setDeleteError(expenseDeleteErrorMessage(result.error, t));
     setDeleting(false);
   }
 
@@ -105,7 +107,7 @@ function ExpenseRow({
           <span className="truncate font-medium">{expense.description}</span>
           <span className="text-muted-foreground truncate text-sm">
             {paidByText} · {formatDate(new Date(expense.date))}
-            {expense.category && ` · ${categoryLabel(expense.category)}`}
+            {expense.category && ` · ${categoryLabel(expense.category, t)}`}
           </span>
         </div>
         <span className="shrink-0 font-semibold">
@@ -181,6 +183,7 @@ function SettlementRow({
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const t = useT();
   const canEdit = settlement.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const fromName = members[settlement.fromUid]?.displayName ?? "?";
   const toName = members[settlement.toUid]?.displayName ?? "?";
@@ -189,7 +192,7 @@ function SettlementRow({
     setDeleting(true);
     setDeleteError(null);
     const result = await deleteSettlement({ groupId, settlementId: settlement.id });
-    if (!result.ok) setDeleteError(settlementDeleteErrorMessage(result.error));
+    if (!result.ok) setDeleteError(settlementDeleteErrorMessage(result.error, t));
     setDeleting(false);
   }
 
@@ -259,6 +262,7 @@ function LogRow({
   entry: ActivityLogEntry;
   members: Record<string, GroupMember>;
 }) {
+  const t = useT();
   const name = members[entry.actorUid]?.displayName ?? "?";
   const logKeys: Record<ActivityLogType, TranslationKey> = {
     expense_edited: "activity.expenseEdited",
@@ -300,6 +304,7 @@ export function ActivityFeed({
 }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryId | "all">("all");
+  const t = useT();
 
   const query = search.trim().toLowerCase();
   const filteredExpenses = expenses.filter((expense) => {
@@ -356,7 +361,7 @@ export function ActivityFeed({
               <option value="all">{t("expenses.filterAllCategories")}</option>
               {CATEGORY_IDS.map((id) => (
                 <option key={id} value={id}>
-                  {categoryLabel(id)}
+                  {categoryLabel(id, t)}
                 </option>
               ))}
             </Select>

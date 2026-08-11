@@ -3,8 +3,8 @@
 import { CheckCircle2, Scale, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/locale-provider";
 import { formatMoney } from "@/lib/format/money";
-import { t } from "@/lib/i18n/de";
 import { simplifyDebts } from "@/lib/money/balances";
 import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
@@ -23,6 +23,7 @@ export function BalanceView({
   currency: string;
 }) {
   const [showSimplified, setShowSimplified] = useState(false);
+  const t = useT();
 
   const myNet = net[currentUid] ?? {};
   const lines = Object.keys(members)

@@ -13,9 +13,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { useT } from "@/components/locale-provider";
 import { editSettlement, recordSettlement } from "@/lib/actions/settlements";
 import { parseMoneyInput } from "@/lib/format/money";
-import { t } from "@/lib/i18n/de";
 import type { GroupMember, Settlement } from "@/lib/types";
 
 function todayIsoDate(): string {
@@ -27,7 +27,7 @@ function moneyToInput(amountMinor: number): string {
 }
 
 /** Turns a server ActionResult error code into a message that says what to fix. */
-function settlementErrorMessage(code: string): string {
+function settlementErrorMessage(code: string, t: ReturnType<typeof useT>): string {
   switch (code) {
     case "invalid-parties":
       return t("settlements.errorInvalidParties");
@@ -79,6 +79,7 @@ export function RecordSettlementDialog({
   const [note, setNote] = useState(settlementToEdit?.note ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -101,7 +102,7 @@ export function RecordSettlementDialog({
     setLoading(false);
 
     if (!result.ok) {
-      setError(settlementErrorMessage(result.error));
+      setError(settlementErrorMessage(result.error, t));
       return;
     }
 

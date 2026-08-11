@@ -13,7 +13,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { CategoryId } from "@/lib/types";
-import { t, type TranslationKey } from "@/lib/i18n/de";
+import type { TranslationKey } from "@/lib/i18n/translate";
 
 export const CATEGORY_IDS: CategoryId[] = [
   "groceries",
@@ -50,6 +50,9 @@ export function categoryIconElement(category: CategoryId | null, className?: str
   return createElement(categoryIcon(category), { className });
 }
 
-export function categoryLabel(category: CategoryId | null): string {
+export function categoryLabel(
+  category: CategoryId | null,
+  t: (key: TranslationKey) => string,
+): string {
   return t(("categories." + (category ?? "other")) as TranslationKey);
 }

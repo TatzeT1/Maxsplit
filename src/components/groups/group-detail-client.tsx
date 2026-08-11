@@ -9,12 +9,12 @@ import { BalanceView } from "@/components/groups/balance-view";
 import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { RecurringPanel } from "@/components/groups/recurring-panel";
+import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
-import { t } from "@/lib/i18n/de";
 import { computeBalances, computePairwiseDebts } from "@/lib/money/balances";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
 
@@ -27,6 +27,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
   const [recurringRules, setRecurringRules] = useState<RecurringRule[] | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const t = useT();
 
   useEffect(() => {
     if (!user) return;

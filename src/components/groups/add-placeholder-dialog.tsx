@@ -13,14 +13,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/components/locale-provider";
 import { addPlaceholderMember } from "@/lib/actions/groups";
-import { t } from "@/lib/i18n/de";
 
 export function AddPlaceholderDialog({ groupId }: { groupId: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const t = useT();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

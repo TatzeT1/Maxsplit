@@ -1,12 +1,14 @@
 import { redirect } from "next/navigation";
+import { LanguageToggle } from "@/components/language-toggle";
 import { SignInButton } from "@/components/sign-in-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getSession } from "@/lib/auth/session";
-import { t } from "@/lib/i18n/de";
+import { getServerT } from "@/lib/i18n/server";
 
 export default async function Home() {
   const session = await getSession();
   if (session) redirect("/groups");
+  const t = await getServerT();
 
   return (
     <div className="flex flex-1 flex-col">
@@ -15,7 +17,10 @@ export default async function Home() {
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
       >
         <span className="text-lg font-semibold">{t("app.name")}</span>
-        <ThemeToggle />
+        <div className="flex items-center gap-1">
+          <LanguageToggle />
+          <ThemeToggle />
+        </div>
       </header>
       <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 text-center">
         <div className="flex flex-col gap-2">

@@ -14,8 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { useT } from "@/components/locale-provider";
 import { createGroup } from "@/lib/actions/groups";
-import { t } from "@/lib/i18n/de";
 
 const CURRENCIES = ["EUR", "USD", "CHF", "GBP"];
 
@@ -26,6 +26,7 @@ export function CreateGroupDialog() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const router = useRouter();
+  const t = useT();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();

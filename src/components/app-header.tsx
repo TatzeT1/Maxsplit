@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { LanguageToggle } from "@/components/language-toggle";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { t } from "@/lib/i18n/de";
+import { getServerT } from "@/lib/i18n/server";
 
-export function AppHeader({ displayName }: { displayName: string | null }) {
+export async function AppHeader({ displayName }: { displayName: string | null }) {
+  const t = await getServerT();
   return (
     <header
       className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur-sm"
@@ -17,6 +19,7 @@ export function AppHeader({ displayName }: { displayName: string | null }) {
           {displayName && (
             <span className="text-muted-foreground hidden text-sm sm:inline">{displayName}</span>
           )}
+          <LanguageToggle />
           <ThemeToggle />
           <SignOutButton />
         </nav>

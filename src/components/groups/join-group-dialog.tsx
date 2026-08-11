@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useT } from "@/components/locale-provider";
 import { joinGroupByInviteCode, previewGroupByInviteCode } from "@/lib/actions/groups";
-import { t } from "@/lib/i18n/de";
 import { cn } from "@/lib/utils";
 
 interface Preview {
@@ -31,6 +31,7 @@ export function JoinGroupDialog() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const router = useRouter();
+  const t = useT();
 
   function reset() {
     setInviteCode("");

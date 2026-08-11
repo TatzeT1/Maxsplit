@@ -13,10 +13,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { useT } from "@/components/locale-provider";
 import { createRecurringRule } from "@/lib/actions/recurring";
 import { CATEGORY_IDS, categoryLabel } from "@/lib/categories";
 import { parseMoneyInput } from "@/lib/format/money";
-import { t } from "@/lib/i18n/de";
 import type { CategoryId, GroupMember, RecurringFrequency } from "@/lib/types";
 
 function todayIsoDate(): string {
@@ -24,7 +24,7 @@ function todayIsoDate(): string {
 }
 
 /** Turns a server ActionResult error code into a message that says what to fix. */
-function recurringErrorMessage(code: string): string {
+function recurringErrorMessage(code: string, t: ReturnType<typeof useT>): string {
   switch (code) {
     case "invalid-description":
       return t("expenses.errorInvalidDescription");
@@ -66,6 +66,7 @@ export function RecurringRuleDialog({
   const [startDate, setStartDate] = useState(todayIsoDate());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   function toggleParticipant(uid: string) {
     setParticipantUids((current) =>
@@ -101,7 +102,7 @@ export function RecurringRuleDialog({
     setLoading(false);
 
     if (!result.ok) {
-      setError(recurringErrorMessage(result.error));
+      setError(recurringErrorMessage(result.error, t));
       return;
     }
 
@@ -160,7 +161,7 @@ export function RecurringRuleDialog({
                 <option value="">{t("expenses.categoryPlaceholder")}</option>
                 {CATEGORY_IDS.map((id) => (
                   <option key={id} value={id}>
-                    {categoryLabel(id)}
+                    {categoryLabel(id, t)}
                   </option>
                 ))}
               </Select>

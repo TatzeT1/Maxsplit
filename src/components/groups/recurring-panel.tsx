@@ -15,12 +15,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { RecurringRuleDialog } from "@/components/groups/recurring-rule-dialog";
+import { useT } from "@/components/locale-provider";
 import { deleteRecurringRule, setRecurringRuleActive } from "@/lib/actions/recurring";
 import { categoryIconElement } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
-import { t } from "@/lib/i18n/de";
 import type { GroupMember, GroupRole, RecurringRule } from "@/lib/types";
 
 function RuleRow({
@@ -36,6 +36,7 @@ function RuleRow({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
   const canManage = rule.createdBy === currentUid || isGroupManager(currentRole);
 
   async function handleToggleActive() {
@@ -132,6 +133,7 @@ export function RecurringPanel({
   currency: string;
   currentUid: string;
 }) {
+  const t = useT();
   const currentRole = members[currentUid]?.role ?? "member";
 
   return (

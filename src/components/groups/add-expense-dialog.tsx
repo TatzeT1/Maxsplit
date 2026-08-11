@@ -13,10 +13,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { useT } from "@/components/locale-provider";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import { CATEGORY_IDS, categoryLabel } from "@/lib/categories";
 import { formatMoney, parseMoneyInput } from "@/lib/format/money";
-import { t, type TranslationKey } from "@/lib/i18n/de";
+import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
 import { cn } from "@/lib/utils";
 import type { CategoryId, Expense, GroupMember, SplitMode } from "@/lib/types";
@@ -43,7 +44,7 @@ function parseIntInput(input: string): number | null {
 }
 
 /** Turns a server ActionResult error code into a message that says what to fix. */
-function expenseErrorMessage(code: string): string {
+function expenseErrorMessage(code: string, t: ReturnType<typeof useT>): string {
   switch (code) {
     case "invalid-description":
       return t("expenses.errorInvalidDescription");
@@ -91,6 +92,7 @@ function MoneyBalanceHint({
   currentMinor: number;
   currency: string;
 }) {
+  const t = useT();
   const diff = targetMinor - currentMinor;
   if (diff === 0) return null;
   return (
@@ -108,6 +110,7 @@ const percentFormatter = new Intl.NumberFormat("de-DE", {
 });
 
 function PercentBalanceHint({ current }: { current: number }) {
+  const t = useT();
   const diff = 100 - current;
   if (Math.abs(diff) < 0.01) return null;
   return (
@@ -199,6 +202,7 @@ export function AddExpenseDialog({
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const t = useT();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
 
@@ -301,7 +305,7 @@ export function AddExpenseDialog({
 
     setLoading(false);
     if (!result.ok) {
-      setError(expenseErrorMessage(result.error));
+      setError(expenseErrorMessage(result.error, t));
       return;
     }
 
@@ -374,7 +378,7 @@ export function AddExpenseDialog({
                 <option value="">{t("expenses.categoryPlaceholder")}</option>
                 {CATEGORY_IDS.map((id) => (
                   <option key={id} value={id}>
-                    {categoryLabel(id)}
+                    {categoryLabel(id, t)}
                   </option>
                 ))}
               </Select>

@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
-import { t } from "@/lib/i18n/de";
+import { getServerT } from "@/lib/i18n/server";
 
-export default function manifest(): MetadataRoute.Manifest {
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const t = await getServerT();
   return {
     name: t("app.name"),
     short_name: t("app.name"),

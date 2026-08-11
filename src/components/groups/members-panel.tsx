@@ -16,19 +16,20 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/locale-provider";
 import { deleteGroup, leaveGroup, removeMember, setMemberRole } from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
-import { t } from "@/lib/i18n/de";
 import { cn } from "@/lib/utils";
 import type { GroupMember, GroupRole } from "@/lib/types";
 
-function roleLabel(role: GroupRole): string {
+function roleLabel(role: GroupRole, t: ReturnType<typeof useT>): string {
   if (role === "owner") return t("groups.roleOwner");
   if (role === "admin") return t("groups.roleAdmin");
   return t("groups.roleMember");
 }
 
 function RoleBadge({ role }: { role: GroupRole }) {
+  const t = useT();
   if (role === "member") return null;
   return (
     <span
@@ -37,12 +38,13 @@ function RoleBadge({ role }: { role: GroupRole }) {
         role === "owner" ? "bg-primary/10 text-primary" : "bg-accent text-accent-foreground",
       )}
     >
-      {roleLabel(role)}
+      {roleLabel(role, t)}
     </span>
   );
 }
 
 function NotJoinedBadge() {
+  const t = useT();
   return (
     <span className="text-muted-foreground bg-muted shrink-0 rounded-full px-2 py-0.5 text-xs font-medium">
       {t("groups.notJoinedBadge")}
@@ -65,6 +67,7 @@ function MemberRow({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const t = useT();
   const isSelf = uid === currentUid;
   const canManage =
     isGroupManager(currentRole) &&
@@ -101,7 +104,7 @@ function MemberRow({
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <span className="truncate text-sm font-medium">
             {member.displayName}
-            {isSelf && " (du)"}
+            {isSelf && t("groups.selfSuffix")}
           </span>
           {member.isPlaceholder ? <NotJoinedBadge /> : <RoleBadge role={member.role} />}
         </div>
@@ -155,6 +158,7 @@ export function MembersPanel({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const t = useT();
   const currentRole = members[currentUid]?.role ?? "member";
   const isOwner = currentRole === "owner";
 

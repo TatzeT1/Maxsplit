@@ -6,17 +6,18 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { JoinGroupDialog } from "@/components/groups/join-group-dialog";
+import { useT } from "@/components/locale-provider";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
-import { t } from "@/lib/i18n/de";
 import type { Group } from "@/lib/types";
 
 export default function GroupsPage() {
   const user = useCurrentUser();
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
+  const t = useT();
 
   useEffect(() => {
     if (!user) return;
