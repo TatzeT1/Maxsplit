@@ -81,7 +81,7 @@ function RuleRow({
         </span>
       </div>
       {canManage && (
-        <div className="flex justify-end gap-1 pt-1">
+        <div className="flex justify-end gap-2 pt-1">
           <Button variant="ghost" size="sm" disabled={busy} onClick={handleToggleActive}>
             {rule.active ? (
               <>

@@ -107,7 +107,7 @@ function MemberRow({
         </div>
       </div>
       {canManage && (
-        <div className="flex justify-end gap-1 pt-1">
+        <div className="flex justify-end gap-2 pt-1">
           {currentRole === "owner" && !member.isPlaceholder && (
             <Button variant="ghost" size="sm" disabled={busy} onClick={handleRoleChange}>
               {member.role === "admin" ? t("groups.removeAdmin") : t("groups.makeAdmin")}

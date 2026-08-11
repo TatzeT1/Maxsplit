@@ -83,7 +83,7 @@ function ExpenseRow({
           {formatMoney(expense.amountMinor, expense.currency)}
         </span>
       </div>
-      <div className="flex justify-end gap-1 pt-1">
+      <div className="flex justify-end gap-2 pt-1">
         <Button variant="ghost" size="sm" onClick={() => setDuplicateOpen(true)}>
           <Copy className="h-3.5 w-3.5" />
           {t("expenses.duplicate")}
@@ -178,7 +178,7 @@ function SettlementRow({
         </span>
       </div>
       {canEdit && (
-        <div className="flex justify-end gap-1 pt-1">
+        <div className="flex justify-end gap-2 pt-1">
           <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
             {t("common.edit")}
           </Button>
