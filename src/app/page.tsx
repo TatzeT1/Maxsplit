@@ -3,8 +3,11 @@ import { redirect } from "next/navigation";
 import { LanguageToggle } from "@/components/language-toggle";
 import { SignInButton } from "@/components/sign-in-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Hero10 } from "@/components/ui/hero-10";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
+
+const HERO_IMAGES = ["/hero/split-groceries.png", "/hero/split-bill.png", "/hero/split-travel.png"];
 
 export default async function Home() {
   const session = await getSession();
@@ -37,23 +40,29 @@ export default async function Home() {
         <div className="motion-safe:animate-float-a absolute -bottom-28 left-1/4 size-72 rounded-full bg-fuchsia-400/20 blur-3xl [animation-delay:2s] dark:bg-fuchsia-500/15" />
       </div>
 
-      <main className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-4 text-center">
-        <div className="flex flex-col gap-3">
-          <h1
-            className="motion-safe:animate-pop-in font-heading text-4xl font-semibold tracking-tight text-balance"
-            style={{ animationDelay: "60ms" }}
-          >
-            {t("auth.signInTitle")}
-          </h1>
-          <p
-            className="motion-safe:animate-pop-in text-muted-foreground max-w-sm text-balance"
-            style={{ animationDelay: "160ms" }}
-          >
-            {t("auth.signInSubtitle")}
-          </p>
-        </div>
-        <div className="motion-safe:animate-pop-in" style={{ animationDelay: "260ms" }}>
+      <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4">
+        <Hero10
+          title={t("auth.heroTitle")}
+          titleLine2Prefix={t("auth.heroTitleLine2Prefix")}
+          titleHighlight={t("auth.heroTitleHighlight")}
+          description={t("auth.heroDescription")}
+          socialProof={t("auth.heroSocialProof")}
+          images={HERO_IMAGES}
+          imageAlts={[
+            t("auth.heroImageAltGroceries"),
+            t("auth.heroImageAltBill"),
+            t("auth.heroImageAltTravel"),
+          ]}
+          animation="subtle"
+          variant="compact"
+          primaryCTA={{ ctaEnabled: false, text: "" }}
+        />
+        <div
+          className="motion-safe:animate-pop-in -mt-2 flex flex-col items-center gap-2 pb-16 text-center"
+          style={{ animationDelay: "260ms" }}
+        >
           <SignInButton />
+          <p className="text-muted-foreground text-xs">{t("auth.signInSubtitle")}</p>
         </div>
       </main>
     </div>
