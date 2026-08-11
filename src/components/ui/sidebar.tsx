@@ -117,7 +117,7 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
         aria-label="Open menu"
         aria-hidden={open}
         tabIndex={open ? -1 : 0}
-        className="text-sidebar-foreground z-20 flex size-9 items-center justify-center"
+        className="text-sidebar-foreground touch-manipulation z-20 flex size-11 items-center justify-center"
         onClick={() => setOpen(true)}
       >
         <Menu className="size-5" />
@@ -133,7 +133,7 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
               ease: "easeInOut",
             }}
             className={cn(
-              "bg-sidebar fixed inset-0 z-100 flex h-full w-full flex-col justify-between p-6",
+              "bg-sidebar fixed inset-0 z-40 flex h-full w-full flex-col justify-between overflow-y-auto p-6",
               className,
             )}
             style={{
@@ -144,7 +144,7 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
             <button
               type="button"
               aria-label="Close menu"
-              className="text-sidebar-foreground absolute top-6 right-6 z-50"
+              className="text-sidebar-foreground touch-manipulation absolute top-6 right-6 z-50 flex size-11 items-center justify-center"
               style={{ top: "calc(env(safe-area-inset-top) + 1.5rem)" }}
               onClick={() => setOpen(false)}
             >
@@ -175,7 +175,7 @@ export const SidebarLink = ({
       aria-label={link.label}
       aria-current={link.active ? "page" : undefined}
       className={cn(
-        "group/sidebar flex items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors",
+        "group/sidebar touch-manipulation flex items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors",
         link.active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",

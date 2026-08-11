@@ -10,14 +10,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function LanguageToggle() {
+export function LanguageToggle({ size = "icon" }: { size?: "icon" | "icon-lg" }) {
   const { locale, setLocale } = useLocale();
   const t = useT();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t("language.toggleLabel")}>
+        <Button variant="ghost" size={size} aria-label={t("language.toggleLabel")}>
           <Languages className="size-5" />
         </Button>
       </DropdownMenuTrigger>

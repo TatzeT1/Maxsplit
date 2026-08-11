@@ -10,6 +10,7 @@ import { useSignOut } from "@/components/sign-out-button";
 import { useT } from "@/components/locale-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 
 export function AppSidebar({
   displayName,
@@ -116,9 +117,9 @@ function SidebarFooter({ displayName }: { displayName: string | null }) {
           {displayName}
         </motion.p>
       )}
-      <div className="flex items-center gap-1 px-1">
-        <LanguageToggle />
-        <ThemeToggle />
+      <div className={cn("flex gap-2 px-1", open ? "flex-row items-center" : "flex-col items-start")}>
+        <LanguageToggle size="icon-lg" />
+        <ThemeToggle size="icon-lg" />
       </div>
       <button
         type="button"
@@ -128,7 +129,7 @@ function SidebarFooter({ displayName }: { displayName: string | null }) {
           setOpen(false);
           void signOut();
         }}
-        className="group/sidebar text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground flex items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors disabled:opacity-50"
+        className="group/sidebar text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground touch-manipulation flex items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors disabled:opacity-50"
       >
         <LogOut className="size-5 shrink-0" />
         <motion.span
