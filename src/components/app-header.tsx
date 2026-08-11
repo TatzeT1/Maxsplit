@@ -1,10 +1,18 @@
+import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
 import { SignOutButton } from "@/components/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getServerT } from "@/lib/i18n/server";
 
-export async function AppHeader({ displayName }: { displayName: string | null }) {
+export async function AppHeader({
+  displayName,
+  isAdmin,
+}: {
+  displayName: string | null;
+  isAdmin: boolean;
+}) {
   const t = await getServerT();
   return (
     <header
@@ -18,6 +26,13 @@ export async function AppHeader({ displayName }: { displayName: string | null })
         <nav className="flex items-center gap-2">
           {displayName && (
             <span className="text-muted-foreground hidden text-sm sm:inline">{displayName}</span>
+          )}
+          {isAdmin && (
+            <Button variant="ghost" size="icon" aria-label="Admin" asChild>
+              <Link href="/admin">
+                <ShieldCheck className="size-5" />
+              </Link>
+            </Button>
           )}
           <LanguageToggle />
           <ThemeToggle />
