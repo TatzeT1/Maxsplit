@@ -94,6 +94,54 @@ export function simplifyDebts(balances: Record<string, number>): SimplifiedTrans
   return transfers;
 }
 
+export interface MemberTotals {
+  paidMinor: number;
+  shareMinor: number;
+  settlementsSentMinor: number;
+  settlementsReceivedMinor: number;
+}
+
+/**
+ * Per-member breakdown of what feeds into `computeBalances`'s net figure:
+ * how much each person paid vs. their share across all expenses, plus
+ * settlements sent/received. For every uid,
+ * `paidMinor - shareMinor + settlementsSentMinor - settlementsReceivedMinor`
+ * equals that person's `computeBalances` result — this exists to make that
+ * arithmetic visible (e.g. for a "why do I owe this" export) rather than
+ * just the collapsed net.
+ */
+export function computeMemberTotals(
+  expenses: BalanceExpense[],
+  settlements: BalanceSettlement[] = [],
+): Record<string, MemberTotals> {
+  const totals: Record<string, MemberTotals> = {};
+  const ensure = (uid: string) => {
+    totals[uid] ??= {
+      paidMinor: 0,
+      shareMinor: 0,
+      settlementsSentMinor: 0,
+      settlementsReceivedMinor: 0,
+    };
+    return totals[uid];
+  };
+
+  for (const expense of expenses) {
+    for (const [uid, amountMinor] of Object.entries(expense.paidBy)) {
+      ensure(uid).paidMinor += amountMinor;
+    }
+    for (const [uid, amountMinor] of Object.entries(expense.splits)) {
+      ensure(uid).shareMinor += amountMinor;
+    }
+  }
+
+  for (const settlement of settlements) {
+    ensure(settlement.fromUid).settlementsSentMinor += settlement.amountMinor;
+    ensure(settlement.toUid).settlementsReceivedMinor += settlement.amountMinor;
+  }
+
+  return totals;
+}
+
 export interface PairwiseExpense {
   paidBy: Record<string, number>;
   splits: Record<string, number>;

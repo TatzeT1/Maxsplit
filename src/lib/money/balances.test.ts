@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { computeBalances, computePairwiseDebts, simplifyDebts } from "./balances";
+import {
+  computeBalances,
+  computeMemberTotals,
+  computePairwiseDebts,
+  simplifyDebts,
+  type BalanceExpense,
+} from "./balances";
 import { splitEqual } from "./split";
 
 describe("computeBalances", () => {
@@ -46,6 +52,34 @@ describe("computeBalances", () => {
     expect(balances.b).toBe(0);
     const sum = Object.values(balances).reduce((total, v) => total + v, 0);
     expect(sum).toBe(0);
+  });
+});
+
+describe("computeMemberTotals", () => {
+  it("reconstructs each computeBalances net from paid/share/settlement totals", () => {
+    const expenses: BalanceExpense[] = [
+      { paidBy: { a: 3000 }, splits: splitEqual(3000, ["a", "b", "c"]) },
+      { paidBy: { b: 1000, c: 1000 }, splits: splitEqual(2000, ["a", "b"]) },
+    ];
+    const settlements = [{ fromUid: "b", toUid: "a", amountMinor: 500 }];
+
+    const balances = computeBalances(expenses, settlements);
+    const totals = computeMemberTotals(expenses, settlements);
+
+    for (const uid of Object.keys(balances)) {
+      const t = totals[uid];
+      expect(t.paidMinor - t.shareMinor + t.settlementsSentMinor - t.settlementsReceivedMinor).toBe(
+        balances[uid],
+      );
+    }
+  });
+
+  it("returns zeroed totals for a member with no settlements", () => {
+    const totals = computeMemberTotals([
+      { paidBy: { a: 1000 }, splits: splitEqual(1000, ["a", "b"]) },
+    ]);
+    expect(totals.a.settlementsSentMinor).toBe(0);
+    expect(totals.a.settlementsReceivedMinor).toBe(0);
   });
 });
 

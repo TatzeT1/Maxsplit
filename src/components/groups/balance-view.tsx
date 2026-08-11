@@ -1,21 +1,24 @@
 "use client";
 
-import { CheckCircle2, Scale, Sparkles } from "lucide-react";
+import { Check, CheckCircle2, Copy, Download, Scale, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
+import { getOrCreateSettlementShareToken } from "@/lib/actions/settlement-share";
 import { formatMoney } from "@/lib/format/money";
 import { simplifyDebts } from "@/lib/money/balances";
 import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
 
 export function BalanceView({
+  groupId,
   net,
   balances,
   members,
   currentUid,
   currency,
 }: {
+  groupId: string;
   net: Record<string, Record<string, number>>;
   balances: Record<string, number>;
   members: Record<string, GroupMember>;
@@ -23,6 +26,9 @@ export function BalanceView({
   currency: string;
 }) {
   const [showSimplified, setShowSimplified] = useState(false);
+  const [pdfState, setPdfState] = useState<"idle" | "pending" | "error">("idle");
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
   const t = useT();
 
   const myNet = net[currentUid] ?? {};
@@ -61,6 +67,26 @@ export function BalanceView({
   const totalNet = Object.values(myNet).reduce((sum, amount) => sum + amount, 0);
   const isSettled = lines.length === 0;
   const youAreOwed = !isSettled && totalNet < 0;
+
+  async function handleDownloadPdf() {
+    setPdfState("pending");
+    const result = await getOrCreateSettlementShareToken({ groupId });
+    if (!result.ok) {
+      setPdfState("error");
+      return;
+    }
+    const url = `${window.location.origin}/share/settlement/${groupId}/${result.data.token}`;
+    setShareUrl(url);
+    setPdfState("idle");
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleCopyShareLink() {
+    if (!shareUrl) return;
+    await navigator.clipboard.writeText(shareUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
 
   return (
     <div
@@ -129,6 +155,38 @@ export function BalanceView({
               </li>
             ))}
           </ul>
+
+          <div className="flex flex-col gap-1.5 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              disabled={pdfState === "pending"}
+              onClick={handleDownloadPdf}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {pdfState === "pending"
+                ? t("balances.downloadPdfPending")
+                : t("balances.downloadPdf")}
+            </Button>
+            {pdfState === "error" && (
+              <p className="text-destructive text-xs">{t("balances.downloadPdfError")}</p>
+            )}
+            {shareUrl && (
+              <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={handleCopyShareLink}
+                  className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1.5 text-xs"
+                >
+                  {linkCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  {linkCopied ? t("balances.linkCopied") : t("balances.copyLink")}
+                </button>
+                <p className="text-muted-foreground text-xs">{t("balances.shareLinkHint")}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

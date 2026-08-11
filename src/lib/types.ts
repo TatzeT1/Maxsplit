@@ -27,6 +27,12 @@ export interface Group {
   memberUids: string[];
   members: Record<string, GroupMember>;
   inviteCode: string;
+  /**
+   * Opaque token gating the public, unauthenticated settlement PDF link
+   * (see /share/settlement/[groupId]/[token]). Generated lazily on first
+   * request — absent until then, never regenerated automatically.
+   */
+  settlementShareToken?: string;
 }
 
 export interface ExpenseSplit {

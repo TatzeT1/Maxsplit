@@ -197,6 +197,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
       </div>
 
       <BalanceView
+        groupId={groupId}
         net={net}
         balances={balances}
         members={group.members}
