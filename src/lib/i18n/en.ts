@@ -194,6 +194,7 @@ export const en: Dictionary = {
     dateLabel: "Date",
     noteLabel: "Note (optional)",
     notePlaceholder: "e.g. via PayPal",
+    celebrateTitle: "Payment sent!",
     saveError: "Couldn't save the payment.",
     deleteConfirm: "Really delete this payment?",
     deleteConfirmBody: "This can't be undone.",

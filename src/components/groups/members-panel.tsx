@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
 import { deleteGroup, leaveGroup, removeMember, setMemberRole } from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
-import { cn } from "@/lib/utils";
+import { avatarGradient, cn } from "@/lib/utils";
 import type { GroupMember, GroupRole } from "@/lib/types";
 
 function roleLabel(role: GroupRole, t: ReturnType<typeof useT>): string {
@@ -98,7 +98,12 @@ function MemberRow({
   return (
     <li className="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl p-3 ring-1">
       <div className="flex items-center gap-3">
-        <div className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium">
+        <div
+          className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-sm font-medium text-white shadow-sm",
+            avatarGradient(member.displayName),
+          )}
+        >
           {member.displayName.charAt(0).toUpperCase() || "?"}
         </div>
         <div className="flex min-w-0 flex-1 items-center gap-2">

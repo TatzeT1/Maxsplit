@@ -194,6 +194,7 @@ export const de = {
     dateLabel: "Datum",
     noteLabel: "Notiz (optional)",
     notePlaceholder: "z. B. per PayPal",
+    celebrateTitle: "Zahlung verschickt!",
     saveError: "Zahlung konnte nicht gespeichert werden.",
     deleteConfirm: "Zahlung wirklich löschen?",
     deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",

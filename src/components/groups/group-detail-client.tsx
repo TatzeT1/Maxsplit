@@ -16,6 +16,7 @@ import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { computeBalances, computePairwiseDebts } from "@/lib/money/balances";
+import { cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
 
 export function GroupDetailClient({ groupId }: { groupId: string }) {
@@ -173,13 +174,22 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold">{group.name}</h1>
+      <div className="animate-pop-in flex flex-col gap-2">
+        <h1 className="font-heading text-2xl font-semibold">{group.name}</h1>
         <button
           onClick={handleCopyInviteCode}
-          className="border-input hover:bg-accent flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors"
+          className={cn(
+            "flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95",
+            copied
+              ? "border-success/40 bg-success/10 text-success"
+              : "border-input hover:bg-accent hover:text-accent-foreground",
+          )}
         >
-          {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? (
+            <Check className="animate-pop-in h-3.5 w-3.5" />
+          ) : (
+            <Copy className="h-3.5 w-3.5" />
+          )}
           {copied
             ? t("groups.inviteCodeCopied")
             : `${t("groups.inviteCodeLabel")}: ${group.inviteCode}`}

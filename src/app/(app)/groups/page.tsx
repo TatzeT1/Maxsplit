@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
+import { avatarGradient } from "@/lib/utils";
 import type { Group } from "@/lib/types";
 
 export default function GroupsPage() {
@@ -44,7 +45,7 @@ export default function GroupsPage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">{t("groups.title")}</h1>
+        <h1 className="font-heading text-xl font-semibold">{t("groups.title")}</h1>
         <div className="flex gap-2">
           <JoinGroupDialog />
           <CreateGroupDialog />
@@ -68,13 +69,19 @@ export default function GroupsPage() {
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
-          {groups.map((group) => (
-            <li key={group.id}>
+          {groups.map((group, index) => (
+            <li
+              key={group.id}
+              className="animate-pop-in"
+              style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+            >
               <Link
                 href={`/groups/${group.id}`}
-                className="hover:bg-accent active:bg-accent bg-card ring-foreground/10 flex items-center gap-3 rounded-xl p-4 ring-1 transition-colors"
+                className="hover:border-primary/30 bg-card ring-foreground/10 group hover:shadow-foreground/5 flex items-center gap-3 rounded-xl p-4 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.99]"
               >
-                <div className="bg-primary/10 text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold">
+                <div
+                  className={`bg-linear-to-br ${avatarGradient(group.name)} flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-semibold text-white shadow-sm`}
+                >
                   {group.name.charAt(0).toUpperCase() || "?"}
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
@@ -85,7 +92,7 @@ export default function GroupsPage() {
                       : t("groups.membersCount", { count: group.memberUids.length })}
                   </span>
                 </div>
-                <ChevronRight className="text-muted-foreground h-5 w-5 shrink-0" />
+                <ChevronRight className="text-muted-foreground group-hover:text-primary h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
               </Link>
             </li>
           ))}

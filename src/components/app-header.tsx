@@ -1,4 +1,4 @@
-import { ShieldCheck, User } from "lucide-react";
+import { ShieldCheck, User, Wallet } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -20,7 +20,10 @@ export async function AppHeader({
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="mx-auto flex w-full max-w-lg items-center justify-between px-4 py-3">
-        <Link href="/groups" className="text-lg font-semibold">
+        <Link href="/groups" className="font-heading flex items-center gap-2 text-lg font-semibold">
+          <span className="shadow-primary/30 flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-orange-400 to-rose-500 text-white shadow-sm">
+            <Wallet className="size-4" />
+          </span>
           {t("app.name")}
         </Link>
         <nav className="flex items-center gap-2">

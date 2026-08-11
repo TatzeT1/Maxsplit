@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { LocaleProvider } from "@/components/locale-provider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -14,6 +14,15 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+// Distinctive display serif for headings, dialog titles, and money amounts —
+// deliberately different in character from the neutral body font so the
+// numbers that matter most (what you owe, what you're owed) carry weight.
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+  axes: ["opsz", "SOFT", "WONK"],
 });
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -34,8 +43,8 @@ export const viewport: Viewport = {
   // dialogs can end up with their input fields hidden behind the keyboard.
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "oklch(1 0 0)" },
-    { media: "(prefers-color-scheme: dark)", color: "oklch(0.145 0 0)" },
+    { media: "(prefers-color-scheme: light)", color: "oklch(0.98 0.012 75)" },
+    { media: "(prefers-color-scheme: dark)", color: "oklch(0.19 0.028 235)" },
   ],
 };
 
@@ -61,7 +70,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <Script id="theme-init" strategy="beforeInteractive">

@@ -58,8 +58,21 @@ export function BalanceView({
   const simplifiedTransfers = useMemo(() => simplifyDebts(balances), [balances]);
   const canSimplify = pairwiseCount > simplifiedTransfers.length;
 
+  const totalNet = Object.values(myNet).reduce((sum, amount) => sum + amount, 0);
+  const isSettled = lines.length === 0;
+  const youAreOwed = !isSettled && totalNet < 0;
+
   return (
-    <div className="bg-card ring-foreground/10 flex flex-col gap-3 rounded-xl p-4 ring-1">
+    <div
+      className={cn(
+        "animate-pop-in relative flex flex-col gap-3 overflow-hidden rounded-xl border-l-4 p-4 ring-1 transition-colors",
+        isSettled
+          ? "bg-card ring-foreground/10 border-l-success"
+          : youAreOwed
+            ? "bg-success/5 ring-foreground/10 border-l-success"
+            : "bg-destructive/5 ring-foreground/10 border-l-destructive",
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-1.5 text-sm font-medium">
           <Scale className="h-4 w-4" />
@@ -79,8 +92,8 @@ export function BalanceView({
       </div>
 
       {lines.length === 0 ? (
-        <div className="text-muted-foreground flex items-center gap-2 text-sm">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+        <div className="text-success flex items-center gap-2 text-sm font-medium">
+          <CheckCircle2 className="h-4 w-4" />
           {t("balances.settledUp")}
         </div>
       ) : (
@@ -89,8 +102,8 @@ export function BalanceView({
             <li
               key={line.uid}
               className={cn(
-                "text-sm font-medium",
-                line.youOwe ? "text-destructive" : "text-emerald-600 dark:text-emerald-400",
+                "font-heading text-base font-medium",
+                line.youOwe ? "text-destructive" : "text-success",
               )}
             >
               {line.text}

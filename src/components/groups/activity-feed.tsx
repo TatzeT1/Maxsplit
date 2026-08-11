@@ -1,7 +1,7 @@
 "use client";
 
 import { Activity, ArrowRightLeft, Copy, Pencil, Receipt, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type CSSProperties, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,11 +21,17 @@ import { RecordSettlementDialog } from "@/components/groups/record-settlement-di
 import { useT } from "@/components/locale-provider";
 import { deleteExpense } from "@/lib/actions/expenses";
 import { deleteSettlement } from "@/lib/actions/settlements";
-import { CATEGORY_IDS, categoryIconElement, categoryLabel } from "@/lib/categories";
+import {
+  CATEGORY_IDS,
+  categoryColorClasses,
+  categoryIconElement,
+  categoryLabel,
+} from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import type { TranslationKey } from "@/lib/i18n/translate";
+import { cn } from "@/lib/utils";
 import type {
   ActivityLogEntry,
   ActivityLogType,
@@ -71,11 +77,13 @@ function ExpenseRow({
   members,
   groupId,
   currentUid,
+  style,
 }: {
   expense: Expense;
   members: Record<string, GroupMember>;
   groupId: string;
   currentUid: string;
+  style?: CSSProperties;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
@@ -98,9 +106,17 @@ function ExpenseRow({
   }
 
   return (
-    <li className="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl p-3 ring-1">
+    <li
+      style={style}
+      className="bg-card ring-foreground/10 hover:ring-foreground/20 animate-pop-in flex flex-col gap-1 rounded-xl p-3 ring-1 transition-all duration-200 hover:shadow-sm"
+    >
       <div className="flex items-center gap-3">
-        <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+            categoryColorClasses(expense.category),
+          )}
+        >
           {categoryIconElement(expense.category, "h-4 w-4")}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -110,7 +126,7 @@ function ExpenseRow({
             {expense.category && ` · ${categoryLabel(expense.category, t)}`}
           </span>
         </div>
-        <span className="shrink-0 font-semibold">
+        <span className="font-heading shrink-0 text-base font-semibold">
           {formatMoney(expense.amountMinor, expense.currency)}
         </span>
       </div>
@@ -174,11 +190,13 @@ function SettlementRow({
   members,
   groupId,
   currentUid,
+  style,
 }: {
   settlement: Settlement;
   members: Record<string, GroupMember>;
   groupId: string;
   currentUid: string;
+  style?: CSSProperties;
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -197,9 +215,12 @@ function SettlementRow({
   }
 
   return (
-    <li className="border-border/70 bg-muted/30 flex flex-col gap-1 rounded-xl border border-dashed p-3">
+    <li
+      style={style}
+      className="border-success/30 bg-success/5 animate-pop-in flex flex-col gap-1 rounded-xl border border-dashed p-3"
+    >
       <div className="flex items-center gap-3">
-        <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+        <div className="bg-success/15 text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
           <ArrowRightLeft className="h-4 w-4" />
         </div>
         <span className="flex-1 text-sm">
@@ -258,9 +279,11 @@ function SettlementRow({
 function LogRow({
   entry,
   members,
+  style,
 }: {
   entry: ActivityLogEntry;
   members: Record<string, GroupMember>;
+  style?: CSSProperties;
 }) {
   const t = useT();
   const name = members[entry.actorUid]?.displayName ?? "?";
@@ -275,7 +298,10 @@ function LogRow({
   const Icon = isEdit ? Pencil : Trash2;
 
   return (
-    <li className="border-border/70 bg-muted/20 flex items-center gap-3 rounded-xl border border-dashed p-3">
+    <li
+      style={style}
+      className="border-border/70 bg-muted/20 animate-pop-in flex items-center gap-3 rounded-xl border border-dashed p-3"
+    >
       <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
         <Icon className="h-4 w-4" />
       </div>
@@ -377,14 +403,16 @@ export function ActivityFeed({
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
-          {items.map((item) =>
-            item.kind === "expense" ? (
+          {items.map((item, index) => {
+            const style = { animationDelay: `${Math.min(index, 8) * 40}ms` };
+            return item.kind === "expense" ? (
               <ExpenseRow
                 key={`expense-${item.expense.id}`}
                 expense={item.expense}
                 members={members}
                 groupId={groupId}
                 currentUid={currentUid}
+                style={style}
               />
             ) : item.kind === "settlement" ? (
               <SettlementRow
@@ -393,11 +421,17 @@ export function ActivityFeed({
                 members={members}
                 groupId={groupId}
                 currentUid={currentUid}
+                style={style}
               />
             ) : (
-              <LogRow key={`log-${item.entry.id}`} entry={item.entry} members={members} />
-            ),
-          )}
+              <LogRow
+                key={`log-${item.entry.id}`}
+                entry={item.entry}
+                members={members}
+                style={style}
+              />
+            );
+          })}
         </ul>
       )}
     </div>

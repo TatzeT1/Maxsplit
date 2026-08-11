@@ -1,5 +1,6 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,12 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useT } from "@/components/locale-provider";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
-import { CATEGORY_IDS, categoryLabel } from "@/lib/categories";
+import {
+  CATEGORY_IDS,
+  categoryColorClasses,
+  categoryIconElement,
+  categoryLabel,
+} from "@/lib/categories";
 import { formatMoney, parseMoneyInput } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
@@ -201,6 +207,7 @@ export function AddExpenseDialog({
   );
 
   const [loading, setLoading] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
 
@@ -309,20 +316,24 @@ export function AddExpenseDialog({
       return;
     }
 
-    setOpen(false);
-    if (!expenseToEdit) {
-      setDescription("");
-      setAmountInput("");
-      setCategory(null);
-      setSplitMode("equal");
-      setParticipantUids(memberUids);
-      setMultiplePayers(false);
-      setPayerUid(currentUid);
-      setPayerAmounts({});
-      setShareInputs({});
-      setPercentInputs({});
-      setExactInputs({});
-    }
+    setSaved(true);
+    setTimeout(() => {
+      setSaved(false);
+      setOpen(false);
+      if (!expenseToEdit) {
+        setDescription("");
+        setAmountInput("");
+        setCategory(null);
+        setSplitMode("equal");
+        setParticipantUids(memberUids);
+        setMultiplePayers(false);
+        setPayerUid(currentUid);
+        setPayerAmounts({});
+        setShareInputs({});
+        setPercentInputs({});
+        setExactInputs({});
+      }
+    }, 500);
   }
 
   return (
@@ -370,18 +381,32 @@ export function AddExpenseDialog({
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-category">{t("expenses.categoryLabel")}</Label>
-              <Select
-                id="expense-category"
-                value={category ?? ""}
-                onChange={(event) => setCategory((event.target.value || null) as CategoryId | null)}
-              >
-                <option value="">{t("expenses.categoryPlaceholder")}</option>
-                {CATEGORY_IDS.map((id) => (
-                  <option key={id} value={id}>
-                    {categoryLabel(id, t)}
-                  </option>
-                ))}
-              </Select>
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors",
+                    categoryColorClasses(category),
+                  )}
+                >
+                  {categoryIconElement(category, "h-4 w-4")}
+                </span>
+                <div className="flex-1">
+                  <Select
+                    id="expense-category"
+                    value={category ?? ""}
+                    onChange={(event) =>
+                      setCategory((event.target.value || null) as CategoryId | null)
+                    }
+                  >
+                    <option value="">{t("expenses.categoryPlaceholder")}</option>
+                    {CATEGORY_IDS.map((id) => (
+                      <option key={id} value={id}>
+                        {categoryLabel(id, t)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -445,10 +470,10 @@ export function AddExpenseDialog({
                     type="button"
                     onClick={() => handleSelectSplitMode(mode)}
                     className={cn(
-                      "flex-1 rounded-md px-2 py-2 text-sm font-medium transition-colors",
+                      "flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95",
                       splitMode === mode
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground",
+                        ? "bg-primary text-primary-foreground shadow-primary/30 shadow-sm"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
                     {t(labelKey)}
@@ -553,8 +578,22 @@ export function AddExpenseDialog({
             {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
           <DialogFooter>
-            <Button type="submit" size="lg" className="w-full" disabled={loading}>
-              {loading ? t("common.loading") : t("common.save")}
+            <Button
+              type="submit"
+              size="lg"
+              className={cn("w-full", saved && "bg-success hover:bg-success")}
+              disabled={loading || saved}
+            >
+              {saved ? (
+                <>
+                  <Check className="animate-pop-in size-4" />
+                  {t("common.save")}
+                </>
+              ) : loading ? (
+                t("common.loading")
+              ) : (
+                t("common.save")
+              )}
             </Button>
           </DialogFooter>
         </form>
