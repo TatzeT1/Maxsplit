@@ -23,6 +23,26 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Turns a server ActionResult error code into a message that says what to fix. */
+function recurringErrorMessage(code: string): string {
+  switch (code) {
+    case "invalid-description":
+      return t("expenses.errorInvalidDescription");
+    case "invalid-amount":
+      return t("expenses.errorInvalidAmount");
+    case "invalid-participants":
+      return t("expenses.errorInvalidParticipants");
+    case "invalid-split":
+      return t("expenses.amountMismatch");
+    case "forbidden":
+      return t("errors.forbidden");
+    case "not-found":
+      return t("errors.notFound");
+    default:
+      return t("recurring.saveError");
+  }
+}
+
 export function RecurringRuleDialog({
   groupId,
   members,
@@ -45,7 +65,7 @@ export function RecurringRuleDialog({
   const [frequency, setFrequency] = useState<RecurringFrequency>("monthly");
   const [startDate, setStartDate] = useState(todayIsoDate());
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function toggleParticipant(uid: string) {
     setParticipantUids((current) =>
@@ -56,13 +76,17 @@ export function RecurringRuleDialog({
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const amountMinor = parseMoneyInput(amountInput);
-    if (amountMinor === null || amountMinor <= 0 || participantUids.length === 0) {
-      setError(true);
+    if (amountMinor === null || amountMinor <= 0) {
+      setError(t("expenses.errorInvalidAmount"));
+      return;
+    }
+    if (participantUids.length === 0) {
+      setError(t("expenses.errorInvalidParticipants"));
       return;
     }
 
     setLoading(true);
-    setError(false);
+    setError(null);
     const result = await createRecurringRule({
       groupId,
       description,
@@ -77,7 +101,7 @@ export function RecurringRuleDialog({
     setLoading(false);
 
     if (!result.ok) {
-      setError(true);
+      setError(recurringErrorMessage(result.error));
       return;
     }
 
@@ -190,7 +214,7 @@ export function RecurringRuleDialog({
                 required
               />
             </div>
-            {error && <p className="text-destructive text-sm">{t("recurring.saveError")}</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
           <DialogFooter>
             <Button type="submit" size="lg" className="w-full" disabled={loading}>
