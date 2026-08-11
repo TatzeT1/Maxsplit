@@ -39,6 +39,32 @@ type ActivityItem =
   | { kind: "settlement"; date: string; createdAt: string; settlement: Settlement }
   | { kind: "log"; date: string; createdAt: string; entry: ActivityLogEntry };
 
+function expenseDeleteErrorMessage(code: string): string {
+  switch (code) {
+    case "not-owner":
+      return t("expenses.errorNotOwner");
+    case "forbidden":
+      return t("errors.forbidden");
+    case "not-found":
+      return t("errors.notFound");
+    default:
+      return t("expenses.deleteError");
+  }
+}
+
+function settlementDeleteErrorMessage(code: string): string {
+  switch (code) {
+    case "not-owner":
+      return t("settlements.errorNotOwner");
+    case "forbidden":
+      return t("errors.forbidden");
+    case "not-found":
+      return t("errors.notFound");
+    default:
+      return t("settlements.deleteError");
+  }
+}
+
 function ExpenseRow({
   expense,
   members,
@@ -53,6 +79,7 @@ function ExpenseRow({
   const [editOpen, setEditOpen] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const canEdit = expense.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const payerUids = Object.keys(expense.paidBy);
   const payerNames = payerUids.map((uid) => members[uid]?.displayName ?? "?");
@@ -62,7 +89,9 @@ function ExpenseRow({
       : t("expenses.paidByOne", { name: payerNames[0] ?? "?" });
   async function handleDelete() {
     setDeleting(true);
-    await deleteExpense({ groupId, expenseId: expense.id });
+    setDeleteError(null);
+    const result = await deleteExpense({ groupId, expenseId: expense.id });
+    if (!result.ok) setDeleteError(expenseDeleteErrorMessage(result.error));
     setDeleting(false);
   }
 
@@ -113,6 +142,7 @@ function ExpenseRow({
           </>
         )}
       </div>
+      {deleteError && <p className="text-destructive text-xs">{deleteError}</p>}
       {canEdit && (
         <AddExpenseDialog
           groupId={groupId}
@@ -150,13 +180,16 @@ function SettlementRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const canEdit = settlement.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const fromName = members[settlement.fromUid]?.displayName ?? "?";
   const toName = members[settlement.toUid]?.displayName ?? "?";
 
   async function handleDelete() {
     setDeleting(true);
-    await deleteSettlement({ groupId, settlementId: settlement.id });
+    setDeleteError(null);
+    const result = await deleteSettlement({ groupId, settlementId: settlement.id });
+    if (!result.ok) setDeleteError(settlementDeleteErrorMessage(result.error));
     setDeleting(false);
   }
 
@@ -203,6 +236,7 @@ function SettlementRow({
           </AlertDialog>
         </div>
       )}
+      {deleteError && <p className="text-destructive text-xs">{deleteError}</p>}
       {canEdit && (
         <RecordSettlementDialog
           groupId={groupId}

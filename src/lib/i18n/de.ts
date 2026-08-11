@@ -141,6 +141,7 @@ export const de = {
     errorInvalidPayer: "Wähl mindestens eine zahlende Person aus.",
     errorInvalidParticipants: "Wähl mindestens eine teilnehmende Person aus.",
     errorNotOwner: "Du kannst nur eigene Ausgaben bearbeiten oder löschen.",
+    deleteError: "Ausgabe konnte nicht gelöscht werden.",
   },
   categories: {
     groceries: "Lebensmittel",
@@ -182,6 +183,7 @@ export const de = {
     errorInvalidParties: "„Von“ und „An“ dürfen nicht dieselbe Person sein.",
     errorInvalidAmount: "Bitte einen gültigen Betrag eingeben.",
     errorNotOwner: "Du kannst nur eigene Zahlungen bearbeiten oder löschen.",
+    deleteError: "Zahlung konnte nicht gelöscht werden.",
   },
   recurring: {
     title: "Wiederkehrende Ausgaben",
