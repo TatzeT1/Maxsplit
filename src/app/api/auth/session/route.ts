@@ -24,15 +24,19 @@ export async function POST(request: NextRequest) {
 
   const userRef = adminDb.doc(`users/${decoded.uid}`);
   const snapshot = await userRef.get();
-  const profile = {
-    displayName: decoded.name ?? "",
-    email: decoded.email ?? "",
-    photoURL: decoded.picture ?? "",
-  };
+  // displayName is intentionally excluded from the merge on existing docs: once
+  // set, it's owned by the user (see updateDisplayName in lib/actions/profile.ts)
+  // and must not be clobbered back to the Google account name on every login.
+  const profile = { email: decoded.email ?? "", photoURL: decoded.picture ?? "" };
   if (snapshot.exists) {
     await userRef.set(profile, { merge: true });
   } else {
-    await userRef.set({ ...profile, defaultCurrency: "EUR", createdAt: new Date().toISOString() });
+    await userRef.set({
+      ...profile,
+      displayName: decoded.name ?? "",
+      defaultCurrency: "EUR",
+      createdAt: new Date().toISOString(),
+    });
   }
 
   const response = NextResponse.json({ ok: true });

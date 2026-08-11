@@ -1,6 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
-import { adminAuth } from "@/lib/firebase/admin";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
 
 export const SESSION_COOKIE_NAME = "session";
 
@@ -11,7 +11,17 @@ export interface Session {
   photoURL: string | null;
 }
 
-/** Reads and verifies the session cookie server-side. Returns null if absent or invalid. */
+/**
+ * Reads and verifies the session cookie server-side. Returns null if absent
+ * or invalid.
+ *
+ * `displayName`/`photoURL` come from the `users/{uid}` Firestore doc, not the
+ * session cookie's own claims — the cookie only ever carries the name Google
+ * had at sign-in time, which would silently overwrite a user's own edit (see
+ * updateDisplayName in lib/actions/profile.ts) every time it's read. Falling
+ * back to the cookie's claims covers the brief window before the profile doc
+ * exists (first-ever sign-in, before POST /api/auth/session finishes).
+ */
 export async function getSession(): Promise<Session | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
@@ -19,11 +29,13 @@ export async function getSession(): Promise<Session | null> {
 
   try {
     const decoded = await adminAuth.verifySessionCookie(sessionCookie, true);
+    const profileSnap = await adminDb.doc(`users/${decoded.uid}`).get();
+    const profile = profileSnap.data();
     return {
       uid: decoded.uid,
       email: decoded.email ?? null,
-      displayName: decoded.name ?? null,
-      photoURL: decoded.picture ?? null,
+      displayName: (profile?.displayName as string | undefined) || decoded.name || null,
+      photoURL: (profile?.photoURL as string | undefined) || decoded.picture || null,
     };
   } catch {
     return null;

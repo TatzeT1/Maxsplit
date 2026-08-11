@@ -29,6 +29,17 @@ export const en: Dictionary = {
     settings: "Settings",
     signOut: "Sign out",
   },
+  profile: {
+    title: "Profile",
+    displayNameLabel: "Display name",
+    displayNamePlaceholder: "e.g. Max",
+    displayNameHint: "This name is shown in your groups.",
+    emailLabel: "Email",
+    save: "Save",
+    saveSuccess: "Saved.",
+    saveError: "Couldn't save it.",
+    errorInvalidName: "Please enter a name.",
+  },
   theme: {
     light: "Light",
     dark: "Dark",

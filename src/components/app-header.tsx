@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -25,8 +25,18 @@ export async function AppHeader({
         </Link>
         <nav className="flex items-center gap-2">
           {displayName && (
-            <span className="text-muted-foreground hidden text-sm sm:inline">{displayName}</span>
+            <Link
+              href="/profile"
+              className="text-muted-foreground hidden text-sm hover:underline sm:inline"
+            >
+              {displayName}
+            </Link>
           )}
+          <Button variant="ghost" size="icon" aria-label={t("profile.title")} asChild>
+            <Link href="/profile">
+              <User className="size-5" />
+            </Link>
+          </Button>
           {isAdmin && (
             <Button variant="ghost" size="icon" aria-label="Admin" asChild>
               <Link href="/admin">

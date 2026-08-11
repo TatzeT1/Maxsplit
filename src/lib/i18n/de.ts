@@ -28,6 +28,17 @@ export const de = {
     settings: "Einstellungen",
     signOut: "Abmelden",
   },
+  profile: {
+    title: "Profil",
+    displayNameLabel: "Anzeigename",
+    displayNamePlaceholder: "z. B. Max",
+    displayNameHint: "Dieser Name wird in deinen Gruppen angezeigt.",
+    emailLabel: "E-Mail",
+    save: "Speichern",
+    saveSuccess: "Gespeichert.",
+    saveError: "Konnte nicht gespeichert werden.",
+    errorInvalidName: "Bitte gib einen Namen ein.",
+  },
   theme: {
     light: "Hell",
     dark: "Dunkel",
