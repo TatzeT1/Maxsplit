@@ -136,6 +136,11 @@ export const de = {
     noResults: "Keine Ausgaben gefunden.",
     saveError: "Ausgabe konnte nicht gespeichert werden.",
     amountMismatch: "Die Summe der Aufteilung stimmt nicht mit dem Betrag überein.",
+    errorInvalidDescription: "Bitte eine Beschreibung eingeben.",
+    errorInvalidAmount: "Bitte einen gültigen Betrag eingeben.",
+    errorInvalidPayer: "Wähl mindestens eine zahlende Person aus.",
+    errorInvalidParticipants: "Wähl mindestens eine teilnehmende Person aus.",
+    errorNotOwner: "Du kannst nur eigene Ausgaben bearbeiten oder löschen.",
   },
   categories: {
     groceries: "Lebensmittel",
@@ -174,6 +179,9 @@ export const de = {
     saveError: "Zahlung konnte nicht gespeichert werden.",
     deleteConfirm: "Zahlung wirklich löschen?",
     deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",
+    errorInvalidParties: "„Von“ und „An“ dürfen nicht dieselbe Person sein.",
+    errorInvalidAmount: "Bitte einen gültigen Betrag eingeben.",
+    errorNotOwner: "Du kannst nur eigene Zahlungen bearbeiten oder löschen.",
   },
   recurring: {
     title: "Wiederkehrende Ausgaben",

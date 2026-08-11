@@ -42,6 +42,30 @@ function parseIntInput(input: string): number | null {
   return Number.parseInt(trimmed, 10);
 }
 
+/** Turns a server ActionResult error code into a message that says what to fix. */
+function expenseErrorMessage(code: string): string {
+  switch (code) {
+    case "invalid-description":
+      return t("expenses.errorInvalidDescription");
+    case "invalid-amount":
+      return t("expenses.errorInvalidAmount");
+    case "invalid-payer":
+      return t("expenses.errorInvalidPayer");
+    case "invalid-participants":
+      return t("expenses.errorInvalidParticipants");
+    case "invalid-split":
+      return t("expenses.amountMismatch");
+    case "not-owner":
+      return t("expenses.errorNotOwner");
+    case "forbidden":
+      return t("errors.forbidden");
+    case "not-found":
+      return t("errors.notFound");
+    default:
+      return t("expenses.saveError");
+  }
+}
+
 function sumMoneyInputs(map: Record<string, string>): number {
   return Object.values(map).reduce((total, raw) => total + (parseMoneyInput(raw) ?? 0), 0);
 }
@@ -174,7 +198,7 @@ export function AddExpenseDialog({
   );
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
 
@@ -242,13 +266,21 @@ export function AddExpenseDialog({
     const hasParticipants =
       splitMode === "equal" ? participantUids.length > 0 : Object.keys(splitInputs).length > 0;
 
-    if (amountMinor <= 0 || Object.keys(paidBy).length === 0 || !hasParticipants) {
-      setError(true);
+    if (amountMinor <= 0) {
+      setError(t("expenses.errorInvalidAmount"));
+      return;
+    }
+    if (Object.keys(paidBy).length === 0) {
+      setError(t("expenses.errorInvalidPayer"));
+      return;
+    }
+    if (!hasParticipants) {
+      setError(t("expenses.errorInvalidParticipants"));
       return;
     }
 
     setLoading(true);
-    setError(false);
+    setError(null);
 
     const payload: ExpenseInput = {
       groupId,
@@ -269,7 +301,7 @@ export function AddExpenseDialog({
 
     setLoading(false);
     if (!result.ok) {
-      setError(true);
+      setError(expenseErrorMessage(result.error));
       return;
     }
 
@@ -514,7 +546,7 @@ export function AddExpenseDialog({
               )}
             </div>
 
-            {error && <p className="text-destructive text-sm">{t("expenses.saveError")}</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
           <DialogFooter>
             <Button type="submit" size="lg" className="w-full" disabled={loading}>

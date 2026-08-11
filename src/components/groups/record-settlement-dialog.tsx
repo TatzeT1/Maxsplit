@@ -26,6 +26,24 @@ function moneyToInput(amountMinor: number): string {
   return (amountMinor / 100).toFixed(2).replace(".", ",");
 }
 
+/** Turns a server ActionResult error code into a message that says what to fix. */
+function settlementErrorMessage(code: string): string {
+  switch (code) {
+    case "invalid-parties":
+      return t("settlements.errorInvalidParties");
+    case "invalid-amount":
+      return t("settlements.errorInvalidAmount");
+    case "not-owner":
+      return t("settlements.errorNotOwner");
+    case "forbidden":
+      return t("errors.forbidden");
+    case "not-found":
+      return t("errors.notFound");
+    default:
+      return t("settlements.saveError");
+  }
+}
+
 export function RecordSettlementDialog({
   groupId,
   members,
@@ -60,18 +78,22 @@ export function RecordSettlementDialog({
   const [date, setDate] = useState(settlementToEdit?.date ?? todayIsoDate());
   const [note, setNote] = useState(settlementToEdit?.note ?? "");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const amountMinor = parseMoneyInput(amountInput);
-    if (amountMinor === null || amountMinor <= 0 || fromUid === toUid) {
-      setError(true);
+    if (amountMinor === null || amountMinor <= 0) {
+      setError(t("settlements.errorInvalidAmount"));
+      return;
+    }
+    if (fromUid === toUid) {
+      setError(t("settlements.errorInvalidParties"));
       return;
     }
 
     setLoading(true);
-    setError(false);
+    setError(null);
     const payload = { groupId, fromUid, toUid, amountMinor, currency, date, note };
     const result = settlementToEdit
       ? await editSettlement({ ...payload, settlementId: settlementToEdit.id })
@@ -79,7 +101,7 @@ export function RecordSettlementDialog({
     setLoading(false);
 
     if (!result.ok) {
-      setError(true);
+      setError(settlementErrorMessage(result.error));
       return;
     }
 
@@ -161,7 +183,7 @@ export function RecordSettlementDialog({
                 placeholder={t("settlements.notePlaceholder")}
               />
             </div>
-            {error && <p className="text-destructive text-sm">{t("settlements.saveError")}</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
           <DialogFooter>
             <Button type="submit" size="lg" className="w-full" disabled={loading}>
