@@ -15,6 +15,10 @@ export interface GroupMember {
    * assume the field exists.
    */
   isPlaceholder: boolean;
+  /** Denormalized copy of the owning user's payment details, kept in sync by updatePaymentDetails (lib/actions/profile.ts). Absent/empty when not set. */
+  paypalEmail?: string;
+  /** @see paypalEmail */
+  iban?: string;
 }
 
 export interface Group {

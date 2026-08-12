@@ -41,6 +41,8 @@ export async function createGroup(input: {
     joinedAt: now,
     role: "owner",
     isPlaceholder: false,
+    paypalEmail: session.paypalEmail ?? "",
+    iban: session.iban ?? "",
   };
 
   const group: Omit<Group, "id"> = {
@@ -129,7 +131,13 @@ async function claimPlaceholder(
   groupRef: FirebaseFirestore.DocumentReference,
   group: Omit<Group, "id">,
   placeholderId: string,
-  session: { uid: string; displayName: string | null; photoURL: string | null },
+  session: {
+    uid: string;
+    displayName: string | null;
+    photoURL: string | null;
+    paypalEmail: string | null;
+    iban: string | null;
+  },
 ): Promise<string | null> {
   const placeholder = group.members[placeholderId];
   if (!placeholder || !placeholder.isPlaceholder) return "invalid-placeholder";
@@ -170,6 +178,8 @@ async function claimPlaceholder(
     joinedAt: new Date().toISOString(),
     role: placeholder.role,
     isPlaceholder: false,
+    paypalEmail: session.paypalEmail ?? "",
+    iban: session.iban ?? "",
   };
   batch.update(groupRef, {
     memberUids: FieldValue.arrayUnion(session.uid),
@@ -213,6 +223,8 @@ export async function joinGroupByInviteCode(input: {
     joinedAt: new Date().toISOString(),
     role: "member",
     isPlaceholder: false,
+    paypalEmail: session.paypalEmail ?? "",
+    iban: session.iban ?? "",
   };
 
   await groupDoc.ref.update({

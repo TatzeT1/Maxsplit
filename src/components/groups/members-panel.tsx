@@ -1,6 +1,6 @@
 "use client";
 
-import { Users } from "lucide-react";
+import { Check, Copy, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AddPlaceholderDialog } from "@/components/groups/add-placeholder-dialog";
@@ -19,8 +19,29 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
 import { deleteGroup, leaveGroup, removeMember, setMemberRole } from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { GroupMember, GroupRole } from "@/lib/types";
+
+function CopyChip({ label, value }: { label: string; value: string }) {
+  const { copied, copy } = useCopyToClipboard();
+  return (
+    <button
+      type="button"
+      onClick={() => copy(value)}
+      title={value}
+      className={cn(
+        "flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-all duration-200 active:scale-95",
+        copied
+          ? "border-success/40 bg-success/10 text-success"
+          : "border-input hover:bg-accent hover:text-accent-foreground",
+      )}
+    >
+      {copied ? <Check className="animate-pop-in h-3 w-3" /> : <Copy className="h-3 w-3" />}
+      {label}
+    </button>
+  );
+}
 
 function roleLabel(role: GroupRole, t: ReturnType<typeof useT>): string {
   if (role === "owner") return t("groups.roleOwner");
@@ -123,6 +144,14 @@ function MemberRow({
           {member.isPlaceholder ? <NotJoinedBadge /> : <RoleBadge role={member.role} />}
         </div>
       </div>
+      {(member.paypalEmail || member.iban) && (
+        <div className="flex flex-wrap gap-1.5 pl-12">
+          {member.paypalEmail && (
+            <CopyChip label={t("groups.copyPaypal")} value={member.paypalEmail} />
+          )}
+          {member.iban && <CopyChip label={t("groups.copyIban")} value={member.iban} />}
+        </div>
+      )}
       {canManage && (
         <div className="flex justify-end gap-2 pt-1">
           {currentRole === "owner" && !member.isPlaceholder && (

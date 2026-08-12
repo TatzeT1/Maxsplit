@@ -41,6 +41,15 @@ export const en: Dictionary = {
     saveSuccess: "Saved.",
     saveError: "Couldn't save it.",
     errorInvalidName: "Please enter a name.",
+    paymentDetailsTitle: "Payment details",
+    paypalEmailLabel: "PayPal email",
+    paypalEmailPlaceholder: "you@example.com",
+    ibanLabel: "IBAN",
+    ibanPlaceholder: "e.g. DE89 3704 0044 0532 0130 00",
+    paymentDetailsHint:
+      "Shown to your group members so they can pay you back. Leave a field empty to hide it.",
+    errorInvalidPaypalEmail: "Please enter a valid email address.",
+    errorInvalidIban: "Please enter a valid IBAN.",
   },
   theme: {
     light: "Light",
@@ -163,6 +172,8 @@ export const en: Dictionary = {
     joinAsNew: "I'm new",
     joinContinue: "Continue",
     selfSuffix: " (you)",
+    copyPaypal: "PayPal",
+    copyIban: "IBAN",
   },
   expenses: {
     title: "Expenses",

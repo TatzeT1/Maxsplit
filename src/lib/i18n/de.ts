@@ -40,6 +40,15 @@ export const de = {
     saveSuccess: "Gespeichert.",
     saveError: "Konnte nicht gespeichert werden.",
     errorInvalidName: "Bitte gib einen Namen ein.",
+    paymentDetailsTitle: "Zahlungsdaten",
+    paypalEmailLabel: "PayPal-E-Mail",
+    paypalEmailPlaceholder: "du@beispiel.de",
+    ibanLabel: "IBAN",
+    ibanPlaceholder: "z. B. DE89 3704 0044 0532 0130 00",
+    paymentDetailsHint:
+      "Wird deinen Gruppenmitgliedern angezeigt, damit sie dich zurückzahlen können. Leer lassen, um ein Feld auszublenden.",
+    errorInvalidPaypalEmail: "Bitte gib eine gültige E-Mail-Adresse ein.",
+    errorInvalidIban: "Bitte gib eine gültige IBAN ein.",
   },
   theme: {
     light: "Hell",
@@ -163,6 +172,8 @@ export const de = {
     joinAsNew: "Ich bin neu",
     joinContinue: "Weiter",
     selfSuffix: " (du)",
+    copyPaypal: "PayPal",
+    copyIban: "IBAN",
   },
   expenses: {
     title: "Ausgaben",
