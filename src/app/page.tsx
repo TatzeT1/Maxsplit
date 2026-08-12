@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LanguageToggle } from "@/components/language-toggle";
 import { SignInButton } from "@/components/sign-in-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { FeaturePins } from "@/components/ui/feature-pins";
 import { Hero10 } from "@/components/ui/hero-10";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
@@ -64,6 +65,54 @@ export default async function Home() {
           <SignInButton />
           <p className="text-muted-foreground text-xs">{t("auth.signInSubtitle")}</p>
         </div>
+
+        <section className="w-full max-w-5xl px-4 pb-24">
+          <div className="mx-auto mb-4 flex max-w-xl flex-col items-center gap-3 text-center">
+            <span className="text-primary text-xs font-semibold tracking-wide uppercase">
+              {t("auth.featuresEyebrow")}
+            </span>
+            <h2 className="font-heading text-2xl font-normal tracking-tight sm:text-3xl">
+              {t("auth.featuresTitle")}
+            </h2>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              {t("auth.featuresSubtitle")}
+            </p>
+          </div>
+          <FeaturePins
+            features={[
+              {
+                title: t("auth.featureInviteTitle"),
+                description: t("auth.featureInviteDescription"),
+                icon: "invite",
+                colorTheme: "orange",
+              },
+              {
+                title: t("auth.featureSplitTitle"),
+                description: t("auth.featureSplitDescription"),
+                icon: "split",
+                colorTheme: "teal",
+              },
+              {
+                title: t("auth.featureBalanceTitle"),
+                description: t("auth.featureBalanceDescription"),
+                icon: "balance",
+                colorTheme: "rose",
+              },
+              {
+                title: t("auth.featurePdfTitle"),
+                description: t("auth.featurePdfDescription"),
+                icon: "pdf",
+                colorTheme: "orange",
+              },
+              {
+                title: t("auth.featureFreeTitle"),
+                description: t("auth.featureFreeDescription"),
+                icon: "free",
+                colorTheme: "teal",
+              },
+            ]}
+          />
+        </section>
       </main>
     </div>
   );

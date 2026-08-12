@@ -87,6 +87,24 @@ export const en: Dictionary = {
     heroImageAltGroceries: "Two roommates unpacking groceries together in their kitchen",
     heroImageAltBill: "A group of friends laughing over the bill at a café",
     heroImageAltTravel: "Three friends checking their phone together on a road trip",
+    featuresEyebrow: "Everything in one app",
+    featuresTitle: "Built for every shared bill",
+    featuresSubtitle: "Roommates, trips, or friends — Split has what you need.",
+    featureInviteTitle: "Invite friends",
+    featureInviteDescription:
+      "Share a link — everyone joins the group in one click after signing in with Google.",
+    featureSplitTitle: "Split flexibly",
+    featureSplitDescription:
+      "Equally, by shares, percent, or exact amount — with categories and multiple payers per expense.",
+    featureBalanceTitle: "Balances at a glance",
+    featureBalanceDescription:
+      "Split automatically works out who owes whom, and suggests the fewest transfers needed to settle up.",
+    featurePdfTitle: "Settlement as a PDF",
+    featurePdfDescription:
+      "Export the settlement as a PDF and share it via link — even with people who don't have a Split account.",
+    featureFreeTitle: "100% free",
+    featureFreeDescription:
+      "No ads, no subscription trap, no hidden costs. Just fair splitting for everyone.",
   },
   groups: {
     title: "Your groups",

@@ -86,6 +86,24 @@ export const de = {
     heroImageAltGroceries: "Zwei Mitbewohner räumen gemeinsam Einkäufe in ihrer Küche ein",
     heroImageAltBill: "Eine Gruppe Freunde lacht über die Rechnung in einem Café",
     heroImageAltTravel: "Drei Freunde schauen gemeinsam auf ihr Handy während eines Roadtrips",
+    featuresEyebrow: "Alles in einer App",
+    featuresTitle: "Für jede geteilte Rechnung gemacht",
+    featuresSubtitle: "Egal ob WG, Reise oder Freundeskreis — Split hat, was ihr braucht.",
+    featureInviteTitle: "Freunde einladen",
+    featureInviteDescription:
+      "Teil einen Link — alle treten nach der Google-Anmeldung mit einem Klick der Gruppe bei.",
+    featureSplitTitle: "Flexibel aufteilen",
+    featureSplitDescription:
+      "Gleich, nach Anteilen, Prozent oder genauem Betrag — mit Kategorien und mehreren Zahlern pro Ausgabe.",
+    featureBalanceTitle: "Salden auf einen Blick",
+    featureBalanceDescription:
+      "Split rechnet automatisch aus, wer wem was schuldet, und schlägt die wenigsten nötigen Überweisungen vor.",
+    featurePdfTitle: "Abrechnung als PDF",
+    featurePdfDescription:
+      "Exportier den Schuldenausgleich als PDF und teil ihn per Link — auch mit Leuten ohne Split-Konto.",
+    featureFreeTitle: "100 % kostenlos",
+    featureFreeDescription:
+      "Keine Werbung, keine Abo-Falle, keine versteckten Kosten. Einfach faire Aufteilung für alle.",
   },
   groups: {
     title: "Deine Gruppen",
