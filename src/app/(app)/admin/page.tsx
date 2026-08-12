@@ -87,7 +87,7 @@ export default async function AdminPage() {
                   className="hover:bg-accent bg-card ring-foreground/10 flex items-center gap-3 rounded-xl p-3 ring-1 transition-colors"
                 >
                   <div className="bg-primary/10 text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold">
-                    {group.name.charAt(0).toUpperCase() || "?"}
+                    {group.icon || group.name.charAt(0).toUpperCase() || "?"}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate font-medium">{group.name}</span>

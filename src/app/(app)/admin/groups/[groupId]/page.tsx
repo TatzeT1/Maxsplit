@@ -16,7 +16,10 @@ export default async function AdminGroupPage({ params }: { params: Promise<{ gro
         <Link href="/admin" className="text-muted-foreground w-fit text-sm hover:underline">
           ← Admin
         </Link>
-        <h1 className="text-xl font-semibold">{group.name}</h1>
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
+          {group.icon && <span aria-hidden>{group.icon}</span>}
+          {group.name}
+        </h1>
       </div>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">

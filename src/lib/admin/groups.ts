@@ -5,6 +5,7 @@ import type { Group, GroupRole } from "@/lib/types";
 export interface AdminGroupSummary {
   groupId: string;
   name: string;
+  icon: string | null;
   currency: string;
   archived: boolean;
   createdAt: string;
@@ -18,6 +19,7 @@ export async function listGroups(): Promise<AdminGroupSummary[]> {
     return {
       groupId: doc.id,
       name: group.name,
+      icon: group.icon ?? null,
       currency: group.currency,
       archived: group.archived,
       createdAt: group.createdAt,
@@ -61,6 +63,7 @@ export async function getGroupDetail(groupId: string): Promise<AdminGroupDetail 
   return {
     groupId,
     name: group.name,
+    icon: group.icon ?? null,
     currency: group.currency,
     archived: group.archived,
     createdAt: group.createdAt,
