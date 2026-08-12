@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { createContext, useContext, type ReactNode } from "react";
 import { LOCALE_COOKIE, translate, type Locale, type TranslationKey } from "@/lib/i18n/translate";
 
@@ -17,7 +18,10 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
  * cookie — see lib/i18n/server.ts) rather than from storage picked up after
  * mount: text is rendered server-side, so the first client render must match
  * the server-rendered HTML exactly or React flags a hydration mismatch.
- * Switching locale writes the same cookie so the next server render agrees.
+ * Switching locale writes the same cookie, then asks the router to re-render
+ * the current route's Server Components against it (a `router.refresh()`)
+ * instead of a full `window.location.reload()` — that used to hard-reload
+ * the whole page (blank flash, re-fetch every asset) just to swap strings.
  */
 export function LocaleProvider({
   initialLocale,
@@ -26,9 +30,11 @@ export function LocaleProvider({
   initialLocale: Locale;
   children: ReactNode;
 }) {
+  const router = useRouter();
+
   function setLocale(next: Locale) {
     document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=${COOKIE_MAX_AGE}; samesite=lax`;
-    window.location.reload();
+    router.refresh();
   }
 
   return (

@@ -3,7 +3,7 @@
 import { LogOut, ShieldCheck, User, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useSignOut } from "@/components/sign-out-button";
@@ -20,15 +20,42 @@ export function AppSidebar({
   isAdmin: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  // The sidebar collapses on mouseleave, but the language/theme dropdowns
+  // render into a portal outside the sidebar's DOM — moving the pointer from
+  // the trigger into the open menu counts as "left the sidebar" and used to
+  // snap it shut mid-click. Suppress that collapse while a menu is open, and
+  // apply it afterwards only if the pointer is still gone by then.
+  const menuOpenRef = useRef(false);
+  const pendingCloseRef = useRef(false);
+
+  function setOpenGuarded(value: boolean | ((prev: boolean) => boolean)) {
+    setOpen((prev) => {
+      const next = typeof value === "function" ? value(prev) : value;
+      if (!next && menuOpenRef.current) {
+        pendingCloseRef.current = true;
+        return prev;
+      }
+      if (next) pendingCloseRef.current = false;
+      return next;
+    });
+  }
+
+  function handleMenuOpenChange(menuOpen: boolean) {
+    menuOpenRef.current = menuOpen;
+    if (!menuOpen && pendingCloseRef.current) {
+      pendingCloseRef.current = false;
+      setOpen(false);
+    }
+  }
 
   return (
-    <Sidebar open={open} setOpen={setOpen}>
+    <Sidebar open={open} setOpen={setOpenGuarded}>
       <SidebarBody className="justify-between gap-6">
         <div className="flex flex-1 flex-col overflow-x-hidden overflow-y-auto">
           <SidebarLogo />
           <SidebarNavLinks isAdmin={isAdmin} />
         </div>
-        <SidebarFooter displayName={displayName} />
+        <SidebarFooter displayName={displayName} onMenuOpenChange={handleMenuOpenChange} />
       </SidebarBody>
     </Sidebar>
   );
@@ -99,7 +126,13 @@ function SidebarNavLinks({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-function SidebarFooter({ displayName }: { displayName: string | null }) {
+function SidebarFooter({
+  displayName,
+  onMenuOpenChange,
+}: {
+  displayName: string | null;
+  onMenuOpenChange: (open: boolean) => void;
+}) {
   const { open, animate, setOpen } = useSidebar();
   const { signOut, loading } = useSignOut();
   const t = useT();
@@ -130,8 +163,8 @@ function SidebarFooter({ displayName }: { displayName: string | null }) {
       <div
         className={cn("flex gap-2 px-1", open ? "flex-row items-center" : "flex-col items-start")}
       >
-        <LanguageToggle size="icon-lg" />
-        <ThemeToggle size="icon-lg" />
+        <LanguageToggle size="icon-lg" onOpenChange={onMenuOpenChange} />
+        <ThemeToggle size="icon-lg" onOpenChange={onMenuOpenChange} />
       </div>
       <button
         type="button"

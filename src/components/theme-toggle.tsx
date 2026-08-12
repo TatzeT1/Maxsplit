@@ -11,12 +11,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-export function ThemeToggle({ size = "icon" }: { size?: "icon" | "icon-lg" }) {
+export function ThemeToggle({
+  size = "icon",
+  onOpenChange,
+}: {
+  size?: "icon" | "icon-lg";
+  onOpenChange?: (open: boolean) => void;
+}) {
   const { setTheme } = useTheme();
   const t = useT();
 
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={onOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size={size} aria-label={t("theme.toggleLabel")}>
           <Sun className="size-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
