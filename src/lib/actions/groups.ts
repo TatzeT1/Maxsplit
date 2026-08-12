@@ -25,6 +25,8 @@ async function findUniqueInviteCode(): Promise<string> {
 export async function createGroup(input: {
   name: string;
   currency: string;
+  icon?: string | null;
+  memberNames?: string[];
 }): Promise<ActionResult<{ groupId: string }>> {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
@@ -35,24 +37,42 @@ export async function createGroup(input: {
   const inviteCode = await findUniqueInviteCode();
   const now = new Date().toISOString();
 
-  const member: GroupMember = {
-    displayName: session.displayName ?? "",
-    photoURL: session.photoURL ?? "",
-    joinedAt: now,
-    role: "owner",
-    isPlaceholder: false,
-    paypalEmail: session.paypalEmail ?? "",
-    iban: session.iban ?? "",
+  const members: Record<string, GroupMember> = {
+    [session.uid]: {
+      displayName: session.displayName ?? "",
+      photoURL: session.photoURL ?? "",
+      joinedAt: now,
+      role: "owner",
+      isPlaceholder: false,
+      paypalEmail: session.paypalEmail ?? "",
+      iban: session.iban ?? "",
+    },
   };
+
+  // Optional placeholder members entered at creation time, same shape
+  // addPlaceholderMember produces later — folded into the initial write so
+  // the group never exists with only its creator as a transient state.
+  const memberNames = (input.memberNames ?? []).map((n) => n.trim()).filter((n) => n.length > 0);
+  for (const displayName of memberNames) {
+    const placeholderId = `ph_${randomUUID()}`;
+    members[placeholderId] = {
+      displayName,
+      photoURL: "",
+      joinedAt: now,
+      role: "member",
+      isPlaceholder: true,
+    };
+  }
 
   const group: Omit<Group, "id"> = {
     name,
+    icon: input.icon ?? null,
     currency: input.currency,
     createdBy: session.uid,
     createdAt: now,
     archived: false,
     memberUids: [session.uid],
-    members: { [session.uid]: member },
+    members,
     inviteCode,
   };
 

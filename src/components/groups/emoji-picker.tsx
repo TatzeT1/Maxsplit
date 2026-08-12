@@ -7,29 +7,31 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useT } from "@/components/locale-provider";
-import { EXPENSE_EMOJIS } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
 
-export function ExpenseEmojiPicker({
+export function EmojiPicker({
   value,
   onChange,
+  emojis,
   fallback,
   colorClassName,
+  ariaLabel,
+  resetLabel,
 }: {
   value: string | null;
   onChange: (emoji: string | null) => void;
+  emojis: string[];
   fallback: ReactNode;
   colorClassName: string;
+  ariaLabel: string;
+  resetLabel: string;
 }) {
-  const t = useT();
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={t("expenses.emojiPickerLabel")}
+          aria-label={ariaLabel}
           className={cn(
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg transition-colors active:scale-95",
             colorClassName,
@@ -43,10 +45,10 @@ export function ExpenseEmojiPicker({
           onSelect={() => onChange(null)}
           className="justify-center rounded-md py-1.5 text-xs font-medium"
         >
-          {t("expenses.emojiReset")}
+          {resetLabel}
         </DropdownMenuItem>
         <div className="grid grid-cols-6 gap-1 p-1">
-          {EXPENSE_EMOJIS.map((emoji) => (
+          {emojis.map((emoji) => (
             <DropdownMenuItem
               key={emoji}
               onSelect={() => onChange(emoji)}

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useT } from "@/components/locale-provider";
-import { ExpenseEmojiPicker } from "@/components/groups/emoji-picker";
+import { EmojiPicker } from "@/components/groups/emoji-picker";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -23,6 +23,7 @@ import {
   categoryIconElement,
   categoryLabel,
 } from "@/lib/categories";
+import { EXPENSE_EMOJIS } from "@/lib/emoji";
 import { formatMoney, parseMoneyInput } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
@@ -386,11 +387,14 @@ export function AddExpenseDialog({
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-category">{t("expenses.categoryLabel")}</Label>
               <div className="flex items-center gap-2">
-                <ExpenseEmojiPicker
+                <EmojiPicker
                   value={emoji}
                   onChange={setEmoji}
+                  emojis={EXPENSE_EMOJIS}
                   fallback={categoryIconElement(category, "h-4 w-4")}
                   colorClassName={categoryColorClasses(category)}
+                  ariaLabel={t("expenses.emojiPickerLabel")}
+                  resetLabel={t("expenses.emojiReset")}
                 />
                 <div className="flex-1">
                   <Select

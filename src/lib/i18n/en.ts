@@ -124,7 +124,13 @@ export const en: Dictionary = {
     joinTitle: "Join group",
     nameLabel: "Group name",
     namePlaceholder: "e.g. Shared flat",
+    iconPickerLabel: "Choose an icon",
+    iconReset: "Remove icon",
     currencyLabel: "Currency",
+    membersLabel: "Members (optional)",
+    membersHint:
+      "Add names now, even without a Split account — once they join, they just pick their name.",
+    addAnotherMember: "Add another person",
     inviteCodeLabel: "Invite code",
     inviteCodePlaceholder: "e.g. AB3F9K7Q",
     inviteCodeHint: "Ask a group member for the code.",

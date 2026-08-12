@@ -34,3 +34,27 @@ export const EXPENSE_EMOJIS: string[] = [
 
 /** Always shown for settlements/transfers, so they read as "money moving" at a glance — never user-editable. */
 export const SETTLEMENT_EMOJI = "💸";
+
+/** Curated palette offered when picking an icon for a group. */
+export const GROUP_ICONS: string[] = [
+  "🏠",
+  "🏢",
+  "🏖️",
+  "✈️",
+  "🚗",
+  "🏕️",
+  "🎉",
+  "🎄",
+  "💍",
+  "🎓",
+  "👨‍👩‍👧‍👦",
+  "🍻",
+  "🍕",
+  "☕",
+  "⚽",
+  "🎮",
+  "🐾",
+  "💼",
+  "🎁",
+  "💰",
+];

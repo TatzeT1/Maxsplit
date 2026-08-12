@@ -190,7 +190,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
           <div
             className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white shadow-sm ring-2`}
           >
-            {group.name.charAt(0).toUpperCase() || "?"}
+            {group.icon || group.name.charAt(0).toUpperCase() || "?"}
           </div>
           <div className="flex flex-col gap-2">
             <h1 className="font-heading text-2xl font-semibold">{group.name}</h1>

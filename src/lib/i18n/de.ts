@@ -123,7 +123,13 @@ export const de = {
     joinTitle: "Gruppe beitreten",
     nameLabel: "Gruppenname",
     namePlaceholder: "z. B. WG Küche",
+    iconPickerLabel: "Icon wählen",
+    iconReset: "Icon entfernen",
     currencyLabel: "Währung",
+    membersLabel: "Mitglieder (optional)",
+    membersHint:
+      "Trag schon jetzt Namen ein, auch ohne Split-Konto — sobald sie beitreten, wählen sie einfach ihren Namen aus.",
+    addAnotherMember: "Weitere Person hinzufügen",
     inviteCodeLabel: "Einladungscode",
     inviteCodePlaceholder: "z. B. AB3F9K7Q",
     inviteCodeHint: "Frag ein Gruppenmitglied nach dem Code.",

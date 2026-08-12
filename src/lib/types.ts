@@ -24,6 +24,8 @@ export interface GroupMember {
 export interface Group {
   id: string;
   name: string;
+  /** User-chosen emoji shown instead of the initial-letter avatar. Null/absent falls back to the initial letter. */
+  icon?: string | null;
   currency: string;
   createdBy: string;
   createdAt: string;
