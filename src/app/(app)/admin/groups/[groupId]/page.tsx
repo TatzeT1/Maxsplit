@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminGroupActions } from "@/components/admin/admin-group-actions";
 import { getGroupDetail } from "@/lib/admin/groups";
 import { requireAdminSession } from "@/lib/auth/admin";
 
@@ -60,6 +61,8 @@ export default async function AdminGroupPage({ params }: { params: Promise<{ gro
           ))}
         </ul>
       </div>
+
+      <AdminGroupActions groupId={groupId} archived={group.archived} />
     </div>
   );
 }

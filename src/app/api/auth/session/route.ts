@@ -13,7 +13,10 @@ export async function POST(request: NextRequest) {
 
   let decoded;
   try {
-    decoded = await adminAuth.verifyIdToken(idToken);
+    // checkRevoked=true also rejects a disabled account, not just a revoked
+    // token — without it, a banned user with a still-live cached ID token
+    // could mint themselves a fresh session cookie and undo the ban.
+    decoded = await adminAuth.verifyIdToken(idToken, true);
   } catch {
     return NextResponse.json({ error: "Invalid idToken" }, { status: 401 });
   }

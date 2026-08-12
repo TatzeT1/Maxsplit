@@ -1,6 +1,7 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminUserActions } from "@/components/admin/admin-user-actions";
 import { getUserDetail } from "@/lib/admin/users";
 import { requireAdminSession } from "@/lib/auth/admin";
 
@@ -28,6 +29,10 @@ export default async function AdminUserPage({ params }: { params: Promise<{ uid:
         <dd>{user.defaultCurrency ?? "—"}</dd>
         <dt className="text-muted-foreground">Joined</dt>
         <dd>{user.createdAt ? new Date(user.createdAt).toLocaleString() : "—"}</dd>
+        <dt className="text-muted-foreground">Status</dt>
+        <dd className={user.banned ? "text-destructive font-medium" : undefined}>
+          {user.banned ? "Banned" : "Active"}
+        </dd>
       </dl>
 
       <div className="flex flex-col gap-3">
@@ -56,6 +61,8 @@ export default async function AdminUserPage({ params }: { params: Promise<{ uid:
           </ul>
         )}
       </div>
+
+      <AdminUserActions uid={user.uid} banned={user.banned} />
     </div>
   );
 }

@@ -7,6 +7,7 @@ export interface AdminUserSummary {
   email: string | null;
   displayName: string | null;
   createdAt: string | null;
+  banned: boolean;
 }
 
 export async function listUsers(): Promise<AdminUserSummary[]> {
@@ -18,6 +19,7 @@ export async function listUsers(): Promise<AdminUserSummary[]> {
       email: (data.email as string | undefined) ?? null,
       displayName: (data.displayName as string | undefined) ?? null,
       createdAt: (data.createdAt as string | undefined) ?? null,
+      banned: data.banned === true,
     };
   });
 }
@@ -64,6 +66,7 @@ export async function getUserDetail(uid: string): Promise<AdminUserDetail | null
     photoURL: (data.photoURL as string | undefined) ?? null,
     defaultCurrency: (data.defaultCurrency as string | undefined) ?? null,
     createdAt: (data.createdAt as string | undefined) ?? null,
+    banned: data.banned === true,
     groups,
   };
 }

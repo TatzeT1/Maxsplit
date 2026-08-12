@@ -56,7 +56,12 @@ export default async function AdminPage() {
                     {(user.displayName || user.email || "?").charAt(0).toUpperCase()}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate font-medium">{user.displayName || "(no name)"}</span>
+                    <span className="truncate font-medium">
+                      {user.displayName || "(no name)"}
+                      {user.banned && (
+                        <span className="text-destructive ml-2 text-xs font-normal">banned</span>
+                      )}
+                    </span>
                     <span className="text-muted-foreground truncate text-xs">
                       {user.email ?? "—"}
                     </span>

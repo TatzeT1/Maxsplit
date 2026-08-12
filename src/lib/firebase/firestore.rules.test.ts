@@ -106,4 +106,20 @@ describe("firestore.rules", () => {
       setDoc(doc(alice, "groups/group1/activityLog/log1"), { type: "expense_edited" }),
     );
   });
+
+  it("denies a banned member from reading their own group", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("users/alice").set({ displayName: "Alice", banned: true });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1")));
+  });
+
+  it("still allows a banned user to read their own profile", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("users/alice").set({ displayName: "Alice", banned: true });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertSucceeds(getDoc(doc(alice, "users/alice")));
+  });
 });
