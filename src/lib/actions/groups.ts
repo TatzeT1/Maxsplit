@@ -80,6 +80,34 @@ export async function createGroup(input: {
   return { ok: true, data: { groupId: docRef.id } };
 }
 
+export async function updateGroup(input: {
+  groupId: string;
+  name: string;
+  currency: string;
+  icon?: string | null;
+}): Promise<ActionResult<null>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+
+  const name = input.name.trim();
+  if (!name) return { ok: false, error: "invalid-name" };
+
+  const groupRef = adminDb.collection("groups").doc(input.groupId);
+  const groupSnap = await groupRef.get();
+  if (!groupSnap.exists) return { ok: false, error: "not-found" };
+  const group = groupSnap.data() as Omit<Group, "id">;
+
+  if (!isGroupManager(group.members[session.uid]?.role)) return { ok: false, error: "forbidden" };
+
+  await groupRef.update({
+    name,
+    currency: input.currency,
+    icon: input.icon ?? null,
+  });
+
+  return { ok: true, data: null };
+}
+
 export async function addPlaceholderMember(input: {
   groupId: string;
   displayName: string;

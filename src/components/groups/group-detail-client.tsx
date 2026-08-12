@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { ActivityFeed } from "@/components/groups/activity-feed";
 import { BalanceView } from "@/components/groups/balance-view";
+import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
 import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { RecurringPanel } from "@/components/groups/recurring-panel";
@@ -15,6 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
+import { isGroupManager } from "@/lib/groups/permissions";
 import { computeBalances, computePairwiseDebts } from "@/lib/money/balances";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
@@ -186,31 +188,34 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
       </div>
 
       <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
-        <div className="animate-pop-in flex items-center gap-3">
-          <div
-            className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white shadow-sm ring-2`}
-          >
-            {group.icon || group.name.charAt(0).toUpperCase() || "?"}
-          </div>
-          <div className="flex flex-col gap-2">
-            <h1 className="font-heading text-2xl font-semibold">{group.name}</h1>
-            <button
-              onClick={handleCopyInviteLink}
-              className={cn(
-                "flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95",
-                copied
-                  ? "border-success/40 bg-success/10 text-success"
-                  : "border-input hover:bg-accent hover:text-accent-foreground",
-              )}
+        <div className="animate-pop-in flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white shadow-sm ring-2`}
             >
-              {copied ? (
-                <Check className="animate-pop-in h-3.5 w-3.5" />
-              ) : (
-                <Copy className="h-3.5 w-3.5" />
-              )}
-              {copied ? t("groups.inviteCodeCopied") : t("groups.shareInvite")}
-            </button>
+              {group.icon || group.name.charAt(0).toUpperCase() || "?"}
+            </div>
+            <div className="flex min-w-0 flex-col gap-2">
+              <h1 className="font-heading truncate text-2xl font-semibold">{group.name}</h1>
+              <button
+                onClick={handleCopyInviteLink}
+                className={cn(
+                  "flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95",
+                  copied
+                    ? "border-success/40 bg-success/10 text-success"
+                    : "border-input hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                {copied ? (
+                  <Check className="animate-pop-in h-3.5 w-3.5" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+                {copied ? t("groups.inviteCodeCopied") : t("groups.shareInvite")}
+              </button>
+            </div>
           </div>
+          {isGroupManager(group.members[user.uid]?.role) && <EditGroupDialog group={group} />}
         </div>
 
         <BalanceView
