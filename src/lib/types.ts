@@ -61,6 +61,8 @@ export interface Expense {
   currency: string;
   date: string;
   category: CategoryId | null;
+  /** User-chosen override shown instead of the category icon. Absent on expenses created before this field existed. */
+  emoji?: string | null;
   paidBy: Record<string, number>;
   splitMode: SplitMode;
   splits: Record<string, ExpenseSplit>;

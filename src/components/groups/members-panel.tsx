@@ -96,7 +96,16 @@ function MemberRow({
   }
 
   return (
-    <li className="bg-card ring-foreground/10 flex flex-col gap-1 rounded-xl p-3 ring-1">
+    <li
+      className={cn(
+        "flex flex-col gap-1 rounded-xl p-3 ring-1",
+        member.role === "owner"
+          ? "bg-primary/5 ring-primary/15"
+          : member.role === "admin"
+            ? "bg-accent/40 ring-foreground/10"
+            : "bg-card ring-foreground/10",
+      )}
+    >
       <div className="flex items-center gap-3">
         <div
           className={cn(

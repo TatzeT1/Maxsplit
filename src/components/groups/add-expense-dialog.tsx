@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useT } from "@/components/locale-provider";
+import { ExpenseEmojiPicker } from "@/components/groups/emoji-picker";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -164,6 +165,7 @@ export function AddExpenseDialog({
   const [amountInput, setAmountInput] = useState(prefill ? moneyToInput(prefill.amountMinor) : "");
   const [date, setDate] = useState(expenseToEdit?.date ?? todayIsoDate());
   const [category, setCategory] = useState<CategoryId | null>(prefill?.category ?? null);
+  const [emoji, setEmoji] = useState<string | null>(prefill?.emoji ?? null);
 
   const initialPayerUids = prefill ? Object.keys(prefill.paidBy) : [currentUid];
   const [multiplePayers, setMultiplePayers] = useState(initialPayerUids.length > 1);
@@ -300,6 +302,7 @@ export function AddExpenseDialog({
       currency,
       date,
       category,
+      emoji,
       paidBy,
       splitMode,
       participantUids,
@@ -324,6 +327,7 @@ export function AddExpenseDialog({
         setDescription("");
         setAmountInput("");
         setCategory(null);
+        setEmoji(null);
         setSplitMode("equal");
         setParticipantUids(memberUids);
         setMultiplePayers(false);
@@ -382,14 +386,12 @@ export function AddExpenseDialog({
             <div className="flex flex-col gap-2">
               <Label htmlFor="expense-category">{t("expenses.categoryLabel")}</Label>
               <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors",
-                    categoryColorClasses(category),
-                  )}
-                >
-                  {categoryIconElement(category, "h-4 w-4")}
-                </span>
+                <ExpenseEmojiPicker
+                  value={emoji}
+                  onChange={setEmoji}
+                  fallback={categoryIconElement(category, "h-4 w-4")}
+                  colorClassName={categoryColorClasses(category)}
+                />
                 <div className="flex-1">
                   <Select
                     id="expense-category"

@@ -7,8 +7,21 @@ import { useT } from "@/components/locale-provider";
 import { getOrCreateSettlementShareToken } from "@/lib/actions/settlement-share";
 import { formatMoney } from "@/lib/format/money";
 import { simplifyDebts } from "@/lib/money/balances";
-import { cn } from "@/lib/utils";
+import { avatarGradient, cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
+
+function MemberChip({ name }: { name: string }) {
+  return (
+    <span
+      className={cn(
+        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-[10px] font-semibold text-white",
+        avatarGradient(name),
+      )}
+    >
+      {name.charAt(0).toUpperCase() || "?"}
+    </span>
+  );
+}
 
 export function BalanceView({
   groupId,
@@ -39,6 +52,7 @@ export function BalanceView({
       const name = members[uid].displayName;
       return {
         uid,
+        name,
         youOwe: amountMinor > 0,
         text:
           amountMinor > 0
@@ -128,10 +142,11 @@ export function BalanceView({
             <li
               key={line.uid}
               className={cn(
-                "font-heading text-base font-medium",
+                "font-heading flex items-center gap-2 text-base font-medium",
                 line.youOwe ? "text-destructive" : "text-success",
               )}
             >
+              <MemberChip name={line.name} />
               {line.text}
             </li>
           ))}
@@ -146,7 +161,8 @@ export function BalanceView({
           </p>
           <ul className="flex flex-col gap-1.5">
             {simplifiedTransfers.map((transfer, index) => (
-              <li key={index} className="text-sm">
+              <li key={index} className="flex items-center gap-2 text-sm">
+                <MemberChip name={members[transfer.fromUid]?.displayName ?? "?"} />
                 {t("balances.transferSuggestion", {
                   from: members[transfer.fromUid]?.displayName ?? "?",
                   to: members[transfer.toUid]?.displayName ?? "?",

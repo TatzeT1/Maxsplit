@@ -63,6 +63,24 @@ export function categoryColorClasses(category: CategoryId | null): string {
   return category ? CATEGORY_COLORS[category] : CATEGORY_COLORS.other;
 }
 
+/** Very light full-row background wash, same hues as `categoryColorClasses` but faint enough to sit behind text. */
+const CATEGORY_ROW_TINTS: Record<CategoryId, string> = {
+  groceries: "bg-emerald-500/[0.09]",
+  restaurant: "bg-orange-500/[0.09]",
+  transport: "bg-sky-500/[0.09]",
+  housing: "bg-violet-500/[0.09]",
+  utilities: "bg-amber-500/[0.09]",
+  entertainment: "bg-pink-500/[0.09]",
+  travel: "bg-cyan-500/[0.09]",
+  shopping: "bg-fuchsia-500/[0.09]",
+  health: "bg-rose-500/[0.09]",
+  other: "bg-slate-500/[0.09]",
+};
+
+export function categoryRowTintClass(category: CategoryId | null): string {
+  return category ? CATEGORY_ROW_TINTS[category] : CATEGORY_ROW_TINTS.other;
+}
+
 /** Renders a category's icon as an element, avoiding a dynamic JSX tag reference. */
 export function categoryIconElement(category: CategoryId | null, className?: string): ReactElement {
   return createElement(categoryIcon(category), { className });

@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ArrowRightLeft, Copy, Pencil, Receipt, Trash2 } from "lucide-react";
+import { Activity, Copy, Pencil, Receipt, Trash2 } from "lucide-react";
 import { type CSSProperties, useState } from "react";
 import {
   AlertDialog,
@@ -26,9 +26,11 @@ import {
   categoryColorClasses,
   categoryIconElement,
   categoryLabel,
+  categoryRowTintClass,
 } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
+import { SETTLEMENT_EMOJI } from "@/lib/emoji";
 import { isGroupManager } from "@/lib/groups/permissions";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { cn } from "@/lib/utils";
@@ -108,16 +110,21 @@ function ExpenseRow({
   return (
     <li
       style={style}
-      className="bg-card ring-foreground/10 hover:ring-foreground/20 animate-pop-in flex flex-col gap-1 rounded-xl p-3 ring-1 transition-all duration-200 hover:shadow-sm"
+      className="bg-card ring-foreground/10 hover:ring-foreground/20 animate-pop-in relative flex flex-col gap-1 overflow-hidden rounded-xl p-3 ring-1 transition-all duration-200 hover:shadow-sm"
     >
-      <div className="flex items-center gap-3">
+      <div className={cn("absolute inset-0 -z-10", categoryRowTintClass(expense.category))} />
+      <div className="relative flex items-center gap-3">
         <div
           className={cn(
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
             categoryColorClasses(expense.category),
           )}
         >
-          {categoryIconElement(expense.category, "h-4 w-4")}
+          {expense.emoji ? (
+            <span className="text-lg leading-none">{expense.emoji}</span>
+          ) : (
+            categoryIconElement(expense.category, "h-4 w-4")
+          )}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="truncate font-medium">{expense.description}</span>
@@ -130,7 +137,7 @@ function ExpenseRow({
           {formatMoney(expense.amountMinor, expense.currency)}
         </span>
       </div>
-      <div className="flex justify-end gap-2 pt-1">
+      <div className="relative flex justify-end gap-2 pt-1">
         <Button variant="ghost" size="sm" onClick={() => setDuplicateOpen(true)}>
           <Copy className="h-3.5 w-3.5" />
           {t("expenses.duplicate")}
@@ -220,8 +227,8 @@ function SettlementRow({
       className="border-success/30 bg-success/5 animate-pop-in flex flex-col gap-1 rounded-xl border border-dashed p-3"
     >
       <div className="flex items-center gap-3">
-        <div className="bg-success/15 text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-          <ArrowRightLeft className="h-4 w-4" />
+        <div className="bg-success/15 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+          <span className="text-lg leading-none">{SETTLEMENT_EMOJI}</span>
         </div>
         <span className="flex-1 text-sm">
           {t("activity.settlementRecorded", {

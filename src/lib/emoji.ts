@@ -1,0 +1,36 @@
+/** Curated palette offered when picking a custom emoji for an expense. */
+export const EXPENSE_EMOJIS: string[] = [
+  "🍕",
+  "🍔",
+  "🍣",
+  "🍺",
+  "☕",
+  "🛒",
+  "🚗",
+  "⛽",
+  "🚕",
+  "✈️",
+  "🏠",
+  "💡",
+  "📱",
+  "🎬",
+  "🎮",
+  "🎉",
+  "🎁",
+  "🏖️",
+  "🛍️",
+  "👗",
+  "💊",
+  "🏥",
+  "⚽",
+  "🎓",
+  "📚",
+  "💼",
+  "🐶",
+  "🧾",
+  "🎵",
+  "🖥️",
+];
+
+/** Always shown for settlements/transfers, so they read as "money moving" at a glance — never user-editable. */
+export const SETTLEMENT_EMOJI = "💸";

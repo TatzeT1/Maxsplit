@@ -198,6 +198,8 @@ export const de = {
     percentOverBy: "{{percent}} % zu viel",
     categoryLabel: "Kategorie",
     categoryPlaceholder: "Kategorie wählen",
+    emojiPickerLabel: "Emoji wählen",
+    emojiReset: "Kategoriesymbol verwenden",
     filterAllCategories: "Alle Kategorien",
     searchPlaceholder: "Ausgaben durchsuchen …",
     noResults: "Keine Ausgaben gefunden.",

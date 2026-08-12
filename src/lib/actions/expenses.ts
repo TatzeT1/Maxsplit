@@ -27,6 +27,7 @@ export interface ExpenseInput {
   currency: string;
   date: string;
   category: CategoryId | null;
+  emoji: string | null;
   paidBy: Record<string, number>;
   splitMode: SplitMode;
   /** Participant uids for "equal"; ignored for the other modes. */
@@ -146,6 +147,7 @@ export async function addExpense(
     currency: input.currency,
     date: input.date,
     category: input.category,
+    emoji: input.emoji,
     paidBy: input.paidBy,
     splitMode: input.splitMode,
     splits,
@@ -184,6 +186,7 @@ export async function editExpense(
     currency: input.currency,
     date: input.date,
     category: input.category,
+    emoji: input.emoji,
     paidBy: input.paidBy,
     splitMode: input.splitMode,
     splits,

@@ -16,7 +16,7 @@ import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { computeBalances, computePairwiseDebts } from "@/lib/money/balances";
-import { cn } from "@/lib/utils";
+import { avatarGradient, cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
 
 export function GroupDetailClient({ groupId }: { groupId: string }) {
@@ -141,9 +141,12 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
   ) {
     return (
       <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-7 w-40" />
-          <Skeleton className="h-6 w-36 rounded-full" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-14 w-14 shrink-0 rounded-2xl" />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-7 w-40" />
+            <Skeleton className="h-6 w-36 rounded-full" />
+          </div>
         </div>
         <Skeleton className="h-32 w-full rounded-xl" />
         <div className="grid grid-cols-2 gap-2">
@@ -174,79 +177,95 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
   const balances = computeBalances(balanceExpenses, settlements);
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
-      <div className="animate-pop-in flex flex-col gap-2">
-        <h1 className="font-heading text-2xl font-semibold">{group.name}</h1>
-        <button
-          onClick={handleCopyInviteLink}
-          className={cn(
-            "flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95",
-            copied
-              ? "border-success/40 bg-success/10 text-success"
-              : "border-input hover:bg-accent hover:text-accent-foreground",
-          )}
-        >
-          {copied ? (
-            <Check className="animate-pop-in h-3.5 w-3.5" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}
-          {copied ? t("groups.inviteCodeCopied") : t("groups.shareInvite")}
-        </button>
-      </div>
-
-      <BalanceView
-        groupId={groupId}
-        net={net}
-        balances={balances}
-        members={group.members}
-        currentUid={user.uid}
-        currency={group.currency}
-      />
-
-      <div className="grid grid-cols-2 gap-2">
-        <AddExpenseDialog
-          groupId={groupId}
-          members={group.members}
-          currency={group.currency}
-          currentUid={user.uid}
-          trigger={
-            <Button size="lg" className="w-full">
-              {t("expenses.add")}
-            </Button>
-          }
-        />
-        <RecordSettlementDialog
-          groupId={groupId}
-          members={group.members}
-          currency={group.currency}
-          currentUid={user.uid}
-          trigger={
-            <Button variant="outline" size="lg" className="w-full">
-              {t("settlements.record")}
-            </Button>
-          }
+    <div className="relative flex flex-1 flex-col overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="bg-paper-texture absolute inset-0 opacity-[0.25]" />
+        <div
+          className={`motion-safe:animate-float-a absolute -top-24 -left-20 size-72 rounded-full bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.15] blur-3xl`}
         />
       </div>
 
-      <MembersPanel groupId={groupId} members={group.members} currentUid={user.uid} />
+      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
+        <div className="animate-pop-in flex items-center gap-3">
+          <div
+            className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white shadow-sm ring-2`}
+          >
+            {group.name.charAt(0).toUpperCase() || "?"}
+          </div>
+          <div className="flex flex-col gap-2">
+            <h1 className="font-heading text-2xl font-semibold">{group.name}</h1>
+            <button
+              onClick={handleCopyInviteLink}
+              className={cn(
+                "flex w-fit items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 active:scale-95",
+                copied
+                  ? "border-success/40 bg-success/10 text-success"
+                  : "border-input hover:bg-accent hover:text-accent-foreground",
+              )}
+            >
+              {copied ? (
+                <Check className="animate-pop-in h-3.5 w-3.5" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              {copied ? t("groups.inviteCodeCopied") : t("groups.shareInvite")}
+            </button>
+          </div>
+        </div>
 
-      <RecurringPanel
-        groupId={groupId}
-        rules={recurringRules}
-        members={group.members}
-        currency={group.currency}
-        currentUid={user.uid}
-      />
+        <BalanceView
+          groupId={groupId}
+          net={net}
+          balances={balances}
+          members={group.members}
+          currentUid={user.uid}
+          currency={group.currency}
+        />
 
-      <ActivityFeed
-        expenses={expenses}
-        settlements={settlements}
-        activityLog={activityLog}
-        members={group.members}
-        groupId={groupId}
-        currentUid={user.uid}
-      />
+        <div className="grid grid-cols-2 gap-2">
+          <AddExpenseDialog
+            groupId={groupId}
+            members={group.members}
+            currency={group.currency}
+            currentUid={user.uid}
+            trigger={
+              <Button size="lg" className="w-full">
+                {t("expenses.add")}
+              </Button>
+            }
+          />
+          <RecordSettlementDialog
+            groupId={groupId}
+            members={group.members}
+            currency={group.currency}
+            currentUid={user.uid}
+            trigger={
+              <Button variant="outline" size="lg" className="w-full">
+                {t("settlements.record")}
+              </Button>
+            }
+          />
+        </div>
+
+        <MembersPanel groupId={groupId} members={group.members} currentUid={user.uid} />
+
+        <RecurringPanel
+          groupId={groupId}
+          rules={recurringRules}
+          members={group.members}
+          currency={group.currency}
+          currentUid={user.uid}
+        />
+
+        <ActivityFeed
+          expenses={expenses}
+          settlements={settlements}
+          activityLog={activityLog}
+          members={group.members}
+          groupId={groupId}
+          currentUid={user.uid}
+        />
+      </div>
     </div>
   );
 }

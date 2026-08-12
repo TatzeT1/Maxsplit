@@ -10,7 +10,7 @@ import { useSignOut } from "@/components/sign-out-button";
 import { useT } from "@/components/locale-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+import { avatarGradient, cn } from "@/lib/utils";
 
 export function AppSidebar({
   displayName,
@@ -107,17 +107,29 @@ function SidebarFooter({ displayName }: { displayName: string | null }) {
   return (
     <div className="border-sidebar-border flex flex-col gap-3 border-t pt-4">
       {displayName && (
-        <motion.p
-          animate={{
-            display: animate ? (open ? "block" : "none") : "block",
-            opacity: animate ? (open ? 1 : 0) : 1,
-          }}
-          className="text-sidebar-foreground/60 truncate px-2 text-xs whitespace-pre"
-        >
-          {displayName}
-        </motion.p>
+        <div className="flex items-center gap-2 px-1">
+          <div
+            className={cn(
+              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-semibold text-white",
+              avatarGradient(displayName),
+            )}
+          >
+            {displayName.charAt(0).toUpperCase() || "?"}
+          </div>
+          <motion.p
+            animate={{
+              display: animate ? (open ? "block" : "none") : "block",
+              opacity: animate ? (open ? 1 : 0) : 1,
+            }}
+            className="text-sidebar-foreground/60 truncate text-xs whitespace-pre"
+          >
+            {displayName}
+          </motion.p>
+        </div>
       )}
-      <div className={cn("flex gap-2 px-1", open ? "flex-row items-center" : "flex-col items-start")}>
+      <div
+        className={cn("flex gap-2 px-1", open ? "flex-row items-center" : "flex-col items-start")}
+      >
         <LanguageToggle size="icon-lg" />
         <ThemeToggle size="icon-lg" />
       </div>
@@ -129,7 +141,7 @@ function SidebarFooter({ displayName }: { displayName: string | null }) {
           setOpen(false);
           void signOut();
         }}
-        className="group/sidebar text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground touch-manipulation flex items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors disabled:opacity-50"
+        className="group/sidebar text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground flex touch-manipulation items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors disabled:opacity-50"
       >
         <LogOut className="size-5 shrink-0" />
         <motion.span

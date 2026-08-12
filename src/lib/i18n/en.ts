@@ -198,6 +198,8 @@ export const en: Dictionary = {
     percentOverBy: "{{percent}}% too much",
     categoryLabel: "Category",
     categoryPlaceholder: "Choose a category",
+    emojiPickerLabel: "Choose an emoji",
+    emojiReset: "Use category icon",
     filterAllCategories: "All categories",
     searchPlaceholder: "Search expenses …",
     noResults: "No expenses found.",
