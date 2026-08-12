@@ -6,9 +6,44 @@ import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { generateInviteCode, normalizeInviteCode } from "@/lib/groups/invite-code";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { computeBalances } from "@/lib/money/balances";
 import type { Expense, Group, GroupMember, GroupRole, Settlement } from "@/lib/types";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+/**
+ * A member's net balance (minor units) across the group's whole ledger, not
+ * just its current members — same computation the settlement PDF uses (see
+ * app/share/settlement/[groupId]/[token]/route.ts). Used to block
+ * removing/leaving while unsettled: BalanceView only ever renders debts for
+ * `Object.keys(members)`, so a member removed with a nonzero balance would
+ * have their debt silently vanish from the main view even though the
+ * expenses/settlements that created it are still sitting in the ledger.
+ */
+async function computeMemberBalance(
+  groupRef: FirebaseFirestore.DocumentReference,
+  uid: string,
+): Promise<number> {
+  const [expensesSnap, settlementsSnap] = await Promise.all([
+    groupRef.collection("expenses").get(),
+    groupRef.collection("settlements").get(),
+  ]);
+
+  const expenses = expensesSnap.docs
+    .map((doc) => doc.data() as Expense)
+    .filter((expense) => !expense.deletedAt);
+  const settlements = settlementsSnap.docs.map((doc) => doc.data() as Settlement);
+
+  const balanceExpenses = expenses.map((expense) => ({
+    paidBy: expense.paidBy,
+    splits: Object.fromEntries(
+      Object.entries(expense.splits).map(([memberUid, split]) => [memberUid, split.amountMinor]),
+    ),
+  }));
+
+  const balances = computeBalances(balanceExpenses, settlements);
+  return balances[uid] ?? 0;
+}
 
 const MAX_INVITE_CODE_ATTEMPTS = 5;
 
@@ -321,6 +356,9 @@ export async function leaveGroup(input: { groupId: string }): Promise<ActionResu
   if (!member) return { ok: false, error: "forbidden" };
   if (member.role === "owner") return { ok: false, error: "owner-cannot-leave" };
 
+  const balance = await computeMemberBalance(groupRef, session.uid);
+  if (balance !== 0) return { ok: false, error: "unsettled-balance" };
+
   await groupRef.update({
     memberUids: FieldValue.arrayRemove(session.uid),
     [`members.${session.uid}`]: FieldValue.delete(),
@@ -363,6 +401,9 @@ export async function removeMember(input: {
   if (target.role === "owner") return { ok: false, error: "cannot-remove-owner" };
   if (!isGroupManager(actor.role)) return { ok: false, error: "forbidden" };
   if (actor.role === "admin" && target.role === "admin") return { ok: false, error: "forbidden" };
+
+  const balance = await computeMemberBalance(groupRef, input.uid);
+  if (balance !== 0) return { ok: false, error: "unsettled-balance" };
 
   await groupRef.update({
     memberUids: FieldValue.arrayRemove(input.uid),

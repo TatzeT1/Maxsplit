@@ -153,6 +153,7 @@ export const de = {
     removeMemberConfirm: "{{name}} aus der Gruppe entfernen?",
     removeMemberConfirmBody: "{{name}} verliert den Zugriff auf diese Gruppe.",
     removeMemberError: "Entfernen fehlgeschlagen.",
+    unsettledBalanceError: "Es gibt noch eine offene Schuld. Erst ausgleichen, dann geht's weiter.",
     roleChangeError: "Rolle konnte nicht geändert werden.",
     leaveGroup: "Gruppe verlassen",
     leaveGroupConfirm: "Gruppe wirklich verlassen?",

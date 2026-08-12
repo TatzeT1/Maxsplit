@@ -154,6 +154,7 @@ export const en: Dictionary = {
     removeMemberConfirm: "Remove {{name}} from the group?",
     removeMemberConfirmBody: "{{name}} will lose access to this group.",
     removeMemberError: "Removing failed.",
+    unsettledBalanceError: "There's still an open balance. Settle up first, then try again.",
     roleChangeError: "Couldn't change the role.",
     leaveGroup: "Leave group",
     leaveGroupConfirm: "Really leave this group?",

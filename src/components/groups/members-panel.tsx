@@ -122,7 +122,13 @@ function MemberRow({
     setBusy(true);
     setError(null);
     const result = await removeMember({ groupId, uid });
-    if (!result.ok) setError(t("groups.removeMemberError"));
+    if (!result.ok) {
+      setError(
+        result.error === "unsettled-balance"
+          ? t("groups.unsettledBalanceError")
+          : t("groups.removeMemberError"),
+      );
+    }
     setBusy(false);
   }
 
@@ -291,7 +297,9 @@ export function MembersPanel({
       setError(
         result.error === "owner-cannot-leave"
           ? t("groups.ownerCannotLeave")
-          : t("groups.leaveGroupError"),
+          : result.error === "unsettled-balance"
+            ? t("groups.unsettledBalanceError")
+            : t("groups.leaveGroupError"),
       );
       setBusy(false);
       return;
