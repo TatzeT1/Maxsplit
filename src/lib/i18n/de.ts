@@ -343,6 +343,8 @@ export const de = {
     colTo: "An",
     colAmount: "Betrag",
     colNote: "Notiz",
+    paypalLabel: "PayPal:",
+    ibanLabel: "IBAN:",
     expensesHeading: "Alle Ausgaben",
     expensesEmpty: "Keine Ausgaben erfasst.",
     colDescription: "Beschreibung",

@@ -342,6 +342,8 @@ export const en: Dictionary = {
     colTo: "To",
     colAmount: "Amount",
     colNote: "Note",
+    paypalLabel: "PayPal:",
+    ibanLabel: "IBAN:",
     expensesHeading: "All expenses",
     expensesEmpty: "No expenses recorded.",
     colDescription: "Description",

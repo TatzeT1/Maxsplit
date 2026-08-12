@@ -170,14 +170,17 @@ const styles = StyleSheet.create({
   heading: { fontSize: 10.5, fontFamily: "Helvetica-Bold", color: colors.ink },
   empty: { fontSize: 9, color: colors.inkMuted, fontStyle: "italic" },
   transferCard: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     borderRadius: 7,
     paddingVertical: 7,
     paddingHorizontal: 10,
     marginBottom: 5,
   },
+  transferRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  transferPaymentInfo: { fontSize: 7.5, color: colors.inkMuted, marginTop: 3 },
   transferNames: { flexDirection: "row", alignItems: "center" },
   transferText: { fontSize: 9.5, color: colors.ink },
   transferArrowWrap: { marginHorizontal: 7 },
@@ -243,6 +246,25 @@ const styles = StyleSheet.create({
 
 function memberName(members: Record<string, GroupMember>, uid: string): string {
   return members[uid]?.displayName || "?";
+}
+
+/**
+ * Shown only for the recipient of a suggested transfer, not every member —
+ * this PDF is served from a public, unauthenticated share link (see
+ * app/share/settlement/[groupId]/[token]/route.ts), so it should carry no
+ * more banking detail than is needed to complete that specific payment.
+ */
+function paymentDetailsLine(
+  members: Record<string, GroupMember>,
+  uid: string,
+  t: (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) => string,
+): string | null {
+  const member = members[uid];
+  if (!member) return null;
+  const parts: string[] = [];
+  if (member.paypalEmail) parts.push(`${t("settlementPdf.paypalLabel")} ${member.paypalEmail}`);
+  if (member.iban) parts.push(`${t("settlementPdf.ibanLabel")} ${member.iban}`);
+  return parts.length > 0 ? parts.join("   ·   ") : null;
 }
 
 function formatContributions(
@@ -331,35 +353,41 @@ function SettlementDocument(data: SettlementPdfData) {
             {data.transfers.length === 0 ? (
               <Text style={styles.empty}>{t("settlementPdf.transfersEmpty")}</Text>
             ) : (
-              data.transfers.map((transfer, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.transferCard,
-                    index % 2 === 1 ? { backgroundColor: colors.cardTint } : undefined,
-                  ]}
-                  wrap={false}
-                >
-                  <View style={styles.transferNames}>
-                    <Text style={styles.transferText}>
-                      {memberName(data.members, transfer.fromUid)}
-                    </Text>
-                    <View style={styles.transferArrowWrap}>
-                      <Svg width={9} height={7} viewBox="0 0 9 7">
-                        <Path d="M0 0.5 L6.5 3.5 L0 6.5 Z" fill={colors.primary} />
-                      </Svg>
+              data.transfers.map((transfer, index) => {
+                const payTo = paymentDetailsLine(data.members, transfer.toUid, t);
+                return (
+                  <View
+                    key={index}
+                    style={[
+                      styles.transferCard,
+                      index % 2 === 1 ? { backgroundColor: colors.cardTint } : undefined,
+                    ]}
+                    wrap={false}
+                  >
+                    <View style={styles.transferRow}>
+                      <View style={styles.transferNames}>
+                        <Text style={styles.transferText}>
+                          {memberName(data.members, transfer.fromUid)}
+                        </Text>
+                        <View style={styles.transferArrowWrap}>
+                          <Svg width={9} height={7} viewBox="0 0 9 7">
+                            <Path d="M0 0.5 L6.5 3.5 L0 6.5 Z" fill={colors.primary} />
+                          </Svg>
+                        </View>
+                        <Text style={styles.transferText}>
+                          {memberName(data.members, transfer.toUid)}
+                        </Text>
+                      </View>
+                      <View style={styles.transferAmountPill}>
+                        <Text style={styles.transferAmount}>
+                          {formatMoney(transfer.amountMinor, data.currency)}
+                        </Text>
+                      </View>
                     </View>
-                    <Text style={styles.transferText}>
-                      {memberName(data.members, transfer.toUid)}
-                    </Text>
+                    {payTo && <Text style={styles.transferPaymentInfo}>{payTo}</Text>}
                   </View>
-                  <View style={styles.transferAmountPill}>
-                    <Text style={styles.transferAmount}>
-                      {formatMoney(transfer.amountMinor, data.currency)}
-                    </Text>
-                  </View>
-                </View>
-              ))
+                );
+              })
             )}
           </View>
 
