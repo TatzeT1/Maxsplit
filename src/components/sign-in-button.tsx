@@ -4,9 +4,14 @@ import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { EmailAuthForm } from "@/components/email-auth-form";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { useT } from "@/components/locale-provider";
+import { authErrorKey } from "@/lib/firebase/auth-error";
 import { auth } from "@/lib/firebase/client";
+import { createServerSession } from "@/lib/firebase/complete-sign-in";
+import type { TranslationKey } from "@/lib/i18n/translate";
 
 function GoogleLogo() {
   return (
@@ -33,33 +38,30 @@ function GoogleLogo() {
 
 export function SignInButton({ redirectTo = "/groups" }: { redirectTo?: string }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
+  const [showEmail, setShowEmail] = useState(false);
   const router = useRouter();
   const t = useT();
 
   async function handleSignIn() {
     setLoading(true);
-    setError(false);
+    setErrorKey(null);
     try {
       const credential = await signInWithPopup(auth, new GoogleAuthProvider());
       const idToken = await credential.user.getIdToken();
-      const response = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-      if (!response.ok) throw new Error("Session creation failed");
+      const ok = await createServerSession(idToken);
+      if (!ok) throw new Error("Session creation failed");
       router.push(redirectTo);
       router.refresh();
-    } catch {
-      setError(true);
+    } catch (error) {
+      setErrorKey(authErrorKey(error));
       setLoading(false);
     }
   }
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <Button onClick={handleSignIn} disabled={loading} size="lg" className="gap-2.5 px-6">
+    <div className="flex w-full max-w-xs flex-col items-center gap-3">
+      <Button onClick={handleSignIn} disabled={loading} size="lg" className="w-full gap-2.5">
         {loading ? (
           <>
             <Loader2 className="size-4 animate-spin" />
@@ -72,7 +74,22 @@ export function SignInButton({ redirectTo = "/groups" }: { redirectTo?: string }
           </>
         )}
       </Button>
-      {error && <p className="animate-pop-in text-destructive text-sm">{t("auth.signInError")}</p>}
+      {errorKey && <p className="animate-pop-in text-destructive text-sm">{t(errorKey)}</p>}
+
+      {showEmail ? (
+        <EmailAuthForm redirectTo={redirectTo} />
+      ) : (
+        <>
+          <div className="flex w-full items-center gap-3">
+            <Separator className="flex-1" />
+            <span className="text-muted-foreground text-xs">{t("auth.orDivider")}</span>
+            <Separator className="flex-1" />
+          </div>
+          <Button variant="ghost" size="sm" onClick={() => setShowEmail(true)}>
+            {t("auth.continueWithEmail")}
+          </Button>
+        </>
+      )}
     </div>
   );
 }
