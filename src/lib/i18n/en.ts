@@ -125,6 +125,8 @@ export const en: Dictionary = {
     membersCount: "{{count}} members",
     memberCountSingular: "1 member",
     memberSince: "Member since {{date}}",
+    createdOn: "Since {{date}}",
+    moreMembers: "+{{count}}",
     roleOwner: "Creator",
     roleAdmin: "Admin",
     roleMember: "Member",
@@ -304,8 +306,12 @@ export const en: Dictionary = {
     errorCode: "Error code: {{code}}",
   },
   settlementPdf: {
+    badge: "Settlement Receipt",
     documentTitle: "Settlement – {{group}}",
     generatedAt: "Generated on {{date}}",
+    summaryExpenses: "Total expenses",
+    summaryMembers: "Members",
+    summaryTransfers: "Open transfers",
     transfersHeading: "Suggested settlement transfers",
     transfersEmpty: "All balances are settled — nobody needs to transfer anything.",
     transferLine: "{{from}} pays {{to}}: {{amount}}",
@@ -329,5 +335,6 @@ export const en: Dictionary = {
     colPaidBy: "Paid by",
     colSplitAmong: "Split among",
     footer: "Generated with Split · {{url}}",
+    footerTagline: "Thanks for keeping things fair.",
   },
 };

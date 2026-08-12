@@ -124,6 +124,8 @@ export const de = {
     membersCount: "{{count}} Mitglieder",
     memberCountSingular: "1 Mitglied",
     memberSince: "Dabei seit {{date}}",
+    createdOn: "Seit {{date}}",
+    moreMembers: "+{{count}}",
     roleOwner: "Ersteller",
     roleAdmin: "Admin",
     roleMember: "Mitglied",
@@ -305,8 +307,12 @@ export const de = {
     errorCode: "Fehlercode: {{code}}",
   },
   settlementPdf: {
+    badge: "Abrechnungsbeleg",
     documentTitle: "Schuldenausgleich – {{group}}",
     generatedAt: "Erstellt am {{date}}",
+    summaryExpenses: "Ausgaben gesamt",
+    summaryMembers: "Mitglieder",
+    summaryTransfers: "Offene Zahlungen",
     transfersHeading: "Vorgeschlagene Ausgleichszahlungen",
     transfersEmpty: "Alle Salden sind ausgeglichen — niemand muss etwas überweisen.",
     transferLine: "{{from}} zahlt {{to}}: {{amount}}",
@@ -330,5 +336,6 @@ export const de = {
     colPaidBy: "Bezahlt von",
     colSplitAmong: "Aufgeteilt auf",
     footer: "Erstellt mit Split · {{url}}",
+    footerTagline: "Danke, dass ihr fair teilt.",
   },
 } as const;
