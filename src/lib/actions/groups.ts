@@ -140,6 +140,31 @@ export async function addPlaceholderMember(input: {
   return { ok: true, data: { placeholderId } };
 }
 
+export async function renamePlaceholderMember(input: {
+  groupId: string;
+  uid: string;
+  displayName: string;
+}): Promise<ActionResult<null>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+
+  const name = input.displayName.trim();
+  if (!name) return { ok: false, error: "invalid-name" };
+
+  const groupRef = adminDb.collection("groups").doc(input.groupId);
+  const groupSnap = await groupRef.get();
+  if (!groupSnap.exists) return { ok: false, error: "not-found" };
+  const group = groupSnap.data() as Omit<Group, "id">;
+
+  if (!isGroupManager(group.members[session.uid]?.role)) return { ok: false, error: "forbidden" };
+
+  const target = group.members[input.uid];
+  if (!target || !target.isPlaceholder) return { ok: false, error: "not-found" };
+
+  await groupRef.update({ [`members.${input.uid}.displayName`]: name });
+  return { ok: true, data: null };
+}
+
 export async function previewGroupByInviteCode(input: { inviteCode: string }): Promise<
   ActionResult<{
     groupId: string;

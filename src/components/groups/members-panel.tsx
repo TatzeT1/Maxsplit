@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Users } from "lucide-react";
+import { Check, Copy, Pencil, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AddPlaceholderDialog } from "@/components/groups/add-placeholder-dialog";
@@ -16,8 +16,15 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useT } from "@/components/locale-provider";
-import { deleteGroup, leaveGroup, removeMember, setMemberRole } from "@/lib/actions/groups";
+import {
+  deleteGroup,
+  leaveGroup,
+  removeMember,
+  renamePlaceholderMember,
+  setMemberRole,
+} from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { avatarGradient, cn } from "@/lib/utils";
@@ -88,6 +95,8 @@ function MemberRow({
 }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [nameInput, setNameInput] = useState(member.displayName);
   const t = useT();
   const isSelf = uid === currentUid;
   const canManage =
@@ -95,6 +104,7 @@ function MemberRow({
     !isSelf &&
     member.role !== "owner" &&
     !(currentRole === "admin" && member.role === "admin");
+  const canRename = canManage && member.isPlaceholder;
 
   async function handleRoleChange() {
     setBusy(true);
@@ -114,6 +124,28 @@ function MemberRow({
     const result = await removeMember({ groupId, uid });
     if (!result.ok) setError(t("groups.removeMemberError"));
     setBusy(false);
+  }
+
+  function startRenaming() {
+    setNameInput(member.displayName);
+    setRenaming(true);
+  }
+
+  async function handleRename() {
+    const name = nameInput.trim();
+    if (!name || name === member.displayName) {
+      setRenaming(false);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const result = await renamePlaceholderMember({ groupId, uid, displayName: name });
+    setBusy(false);
+    if (!result.ok) {
+      setError(t("groups.renamePlaceholderError"));
+      return;
+    }
+    setRenaming(false);
   }
 
   return (
@@ -136,13 +168,59 @@ function MemberRow({
         >
           {member.displayName.charAt(0).toUpperCase() || "?"}
         </div>
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="truncate text-sm font-medium">
-            {member.displayName}
-            {isSelf && t("groups.selfSuffix")}
-          </span>
-          {member.isPlaceholder ? <NotJoinedBadge /> : <RoleBadge role={member.role} />}
-        </div>
+        {renaming ? (
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <Input
+              autoFocus
+              value={nameInput}
+              onChange={(event) => setNameInput(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setRenaming(false);
+              }}
+              className="h-8"
+              disabled={busy}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("common.save")}
+              disabled={busy}
+              onClick={handleRename}
+            >
+              <Check className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={t("common.cancel")}
+              disabled={busy}
+              onClick={() => setRenaming(false)}
+            >
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="truncate text-sm font-medium">
+              {member.displayName}
+              {isSelf && t("groups.selfSuffix")}
+            </span>
+            {member.isPlaceholder ? <NotJoinedBadge /> : <RoleBadge role={member.role} />}
+            {canRename && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={t("groups.renamePlaceholder")}
+                onClick={startRenaming}
+              >
+                <Pencil className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       {(member.paypalEmail || member.iban) && (
         <div className="flex flex-wrap gap-1.5 pl-12">

@@ -174,6 +174,8 @@ export const de = {
     placeholderNameLabel: "Name",
     placeholderNamePlaceholder: "z. B. Max",
     addPlaceholderError: "Konnte nicht hinzugefügt werden.",
+    renamePlaceholder: "Umbenennen",
+    renamePlaceholderError: "Umbenennen fehlgeschlagen.",
     notJoinedBadge: "Noch nicht beigetreten",
     joinStep2Title: "Bist du schon in der Liste?",
     joinStep2Hint:

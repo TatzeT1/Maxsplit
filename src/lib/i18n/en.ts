@@ -175,6 +175,8 @@ export const en: Dictionary = {
     placeholderNameLabel: "Name",
     placeholderNamePlaceholder: "e.g. Max",
     addPlaceholderError: "Couldn't add them.",
+    renamePlaceholder: "Rename",
+    renamePlaceholderError: "Couldn't rename them.",
     notJoinedBadge: "Not joined yet",
     joinStep2Title: "Are you already on the list?",
     joinStep2Hint: "Pick your name so past expenses get linked to you — or join as a new person.",
