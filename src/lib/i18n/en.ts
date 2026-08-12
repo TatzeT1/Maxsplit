@@ -329,6 +329,7 @@ export const en: Dictionary = {
     unknown: "Unknown error.",
     dataLoadFailed: "Couldn't load data. Please reload the page.",
     errorCode: "Error code: {{code}}",
+    sessionExpired: "Your session expired. Redirecting you to sign in again …",
   },
   settlementPdf: {
     badge: "Settlement Receipt",

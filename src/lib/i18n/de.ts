@@ -330,6 +330,7 @@ export const de = {
     unknown: "Unbekannter Fehler.",
     dataLoadFailed: "Daten konnten nicht geladen werden. Lade die Seite neu.",
     errorCode: "Fehlercode: {{code}}",
+    sessionExpired: "Deine Sitzung ist abgelaufen. Du wirst zur Anmeldung weitergeleitet …",
   },
   settlementPdf: {
     badge: "Abrechnungsbeleg",

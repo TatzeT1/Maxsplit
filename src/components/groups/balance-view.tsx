@@ -91,8 +91,26 @@ export function BalanceView({
     }
     const url = `${window.location.origin}/share/settlement/${groupId}/${result.data.token}`;
     setShareUrl(url);
-    setPdfState("idle");
-    window.open(url, "_blank", "noopener,noreferrer");
+
+    // Fetch-and-save via a blob URL instead of `window.open`/navigating to
+    // the PDF: on mobile, especially installed as a standalone PWA (see
+    // manifest.ts), navigating to an inline-rendered PDF strands the user
+    // there with no browser chrome and no way back. A blob download never
+    // navigates the tab at all, so there's nothing to return from.
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("PDF fetch failed");
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = "schuldenausgleich.pdf";
+      link.click();
+      URL.revokeObjectURL(blobUrl);
+      setPdfState("idle");
+    } catch {
+      setPdfState("error");
+    }
   }
 
   async function handleCopyShareLink() {
