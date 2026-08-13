@@ -62,6 +62,13 @@ export const en: Dictionary = {
     de: "Deutsch",
     en: "English",
   },
+  installApp: {
+    button: "Install app",
+    iosTitle: "Install the app",
+    iosDescription: "Add Split to your home screen in a couple of taps.",
+    iosStep1: "Tap Share at the bottom of Safari.",
+    iosStep2: 'Choose "Add to Home Screen".',
+  },
   auth: {
     signInTitle: "Welcome to Split",
     signInSubtitle: "Sign in to see your groups.",
