@@ -122,4 +122,61 @@ describe("firestore.rules", () => {
     const alice = testEnv.authenticatedContext("alice").firestore();
     await assertSucceeds(getDoc(doc(alice, "users/alice")));
   });
+
+  it("allows a group member to read a chat message", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/messages/msg1")
+        .set({ senderUid: "alice", text: "Hi", createdAt: "now" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertSucceeds(getDoc(doc(alice, "groups/group1/messages/msg1")));
+  });
+
+  it("denies a non-member from reading a chat message", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/messages/msg1")
+        .set({ senderUid: "alice", text: "Hi", createdAt: "now" });
+    });
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    await assertFails(getDoc(doc(bob, "groups/group1/messages/msg1")));
+  });
+
+  it("denies a client write to a chat message, even by a member", async () => {
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/messages/msg1"), { senderUid: "alice", text: "Hi" }),
+    );
+  });
+
+  it("allows a member to read their own chat read receipt", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("groups/group1/chatReads/alice").set({ lastReadAt: "now" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertSucceeds(getDoc(doc(alice, "groups/group1/chatReads/alice")));
+  });
+
+  it("denies a member from reading another member's chat read receipt", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1")
+        .update({ memberUids: ["alice", "bob"] });
+      await context.firestore().doc("groups/group1/chatReads/alice").set({ lastReadAt: "now" });
+    });
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    await assertFails(getDoc(doc(bob, "groups/group1/chatReads/alice")));
+  });
+
+  it("denies a non-member from reading their own chat read receipt", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("groups/group1/chatReads/bob").set({ lastReadAt: "now" });
+    });
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    await assertFails(getDoc(doc(bob, "groups/group1/chatReads/bob")));
+  });
 });

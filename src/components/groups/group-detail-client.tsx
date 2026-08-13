@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { ActivityFeed } from "@/components/groups/activity-feed";
 import { BalanceView } from "@/components/groups/balance-view";
+import { ChatEntryCard } from "@/components/groups/chat-entry-card";
 import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
 import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
@@ -251,6 +252,8 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
             }
           />
         </div>
+
+        <ChatEntryCard groupId={groupId} members={group.members} currentUid={user.uid} />
 
         <MembersPanel groupId={groupId} members={group.members} currentUid={user.uid} />
 
