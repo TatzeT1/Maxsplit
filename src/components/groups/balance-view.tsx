@@ -44,23 +44,6 @@ export function BalanceView({
   const [linkCopied, setLinkCopied] = useState(false);
   const t = useT();
 
-  const myNet = net[currentUid] ?? {};
-  const lines = Object.keys(members)
-    .filter((uid) => uid !== currentUid && (myNet[uid] ?? 0) !== 0)
-    .map((uid) => {
-      const amountMinor = myNet[uid];
-      const name = members[uid].displayName;
-      return {
-        uid,
-        name,
-        youOwe: amountMinor > 0,
-        text:
-          amountMinor > 0
-            ? t("balances.youOwe", { name, amount: formatMoney(amountMinor, currency) })
-            : t("balances.owesYou", { name, amount: formatMoney(-amountMinor, currency) }),
-      };
-    });
-
   // "Before" count: every outstanding debtor->creditor pair in the group,
   // not just the current user's — this is what simplification is compared
   // against. Each unresolved pair has exactly one positive side, so summing
@@ -78,9 +61,31 @@ export function BalanceView({
   const simplifiedTransfers = useMemo(() => simplifyDebts(balances), [balances]);
   const canSimplify = pairwiseCount > simplifiedTransfers.length;
 
-  const totalNet = Object.values(myNet).reduce((sum, amount) => sum + amount, 0);
+  // The headline "Salden" lines are net-balance-based (via simplifyDebts), not
+  // the raw pairwise ledger: once a group settles up by routing payments
+  // through one member instead of paying every literal expense counterpart
+  // directly, the pairwise ledger accrues balances between people who never
+  // actually transacted, even though everyone's overall net position is
+  // correct. Net balances don't have that failure mode.
+  const lines = simplifiedTransfers
+    .filter((transfer) => transfer.fromUid === currentUid || transfer.toUid === currentUid)
+    .map((transfer) => {
+      const youOwe = transfer.fromUid === currentUid;
+      const uid = youOwe ? transfer.toUid : transfer.fromUid;
+      const name = members[uid]?.displayName ?? "?";
+      return {
+        uid,
+        name,
+        youOwe,
+        text: youOwe
+          ? t("balances.youOwe", { name, amount: formatMoney(transfer.amountMinor, currency) })
+          : t("balances.owesYou", { name, amount: formatMoney(transfer.amountMinor, currency) }),
+      };
+    });
+
+  const totalNet = balances[currentUid] ?? 0;
   const isSettled = lines.length === 0;
-  const youAreOwed = !isSettled && totalNet < 0;
+  const youAreOwed = !isSettled && totalNet > 0;
 
   async function handleDownloadPdf() {
     setPdfState("pending");
