@@ -1,7 +1,7 @@
 "use client";
 
 import { collection, doc, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
-import { ArrowLeft, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, MessageCircle, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import {
@@ -60,7 +60,10 @@ function MessageBubble({
 
   return (
     <div
-      className={cn("animate-pop-in flex flex-col gap-0.5", isOwn ? "items-end" : "items-start")}
+      className={cn(
+        "animate-bubble-in flex flex-col gap-0.5",
+        isOwn ? "origin-bottom-right items-end" : "origin-bottom-left items-start",
+      )}
     >
       {showSender && !isOwn && (
         <div className="flex items-center gap-1.5 pl-1">
@@ -83,7 +86,7 @@ function MessageBubble({
                 type="button"
                 disabled={deleting}
                 aria-label={t("common.delete")}
-                className="text-muted-foreground hover:text-destructive shrink-0 rounded-full p-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-full p-1.5 opacity-0 transition-all duration-150 group-hover:opacity-100 focus-visible:opacity-100"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -102,8 +105,10 @@ function MessageBubble({
         )}
         <div
           className={cn(
-            "max-w-[75vw] rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-sm",
-            isOwn ? "bg-primary text-primary-foreground rounded-br-sm" : "bg-muted rounded-bl-sm",
+            "max-w-[75vw] rounded-2xl px-3.5 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-sm",
+            isOwn
+              ? "from-primary to-primary/85 text-primary-foreground shadow-primary/20 rounded-br-md bg-linear-to-br shadow-md"
+              : "bg-card ring-foreground/10 rounded-bl-md shadow-sm ring-1",
           )}
         >
           {message.text}
@@ -208,103 +213,135 @@ export function ChatClient({ groupId }: { groupId: string }) {
     );
   }
 
-  const items: { message: ChatMessage; showDivider: boolean; showSender: boolean }[] = [];
-  {
-    let previousDay = "";
-    let previousSender = "";
-    for (const message of messages) {
-      const key = dayKey(message.createdAt);
-      const showDivider = key !== previousDay;
-      const showSender = showDivider || message.senderUid !== previousSender;
-      items.push({ message, showDivider, showSender });
-      previousDay = key;
-      previousSender = message.senderUid;
-    }
+  const memberCount = Object.keys(group.members).length;
+  const memberCountLabel =
+    memberCount === 1
+      ? t("groups.memberCountSingular")
+      : t("groups.membersCount", { count: memberCount });
+
+  let previousDay = "";
+  let previousSender = "";
+  const items: {
+    message: ChatMessage;
+    showDivider: boolean;
+    showSender: boolean;
+    grouped: boolean;
+  }[] = [];
+  for (const message of messages) {
+    const key = dayKey(message.createdAt);
+    const showDivider = key !== previousDay;
+    const showSender = showDivider || message.senderUid !== previousSender;
+    const grouped = !showDivider && message.senderUid === previousSender;
+    items.push({ message, showDivider, showSender, grouped });
+    previousDay = key;
+    previousSender = message.senderUid;
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col">
-      <div className="bg-background/80 sticky top-0 z-10 flex items-center gap-3 border-b p-3 backdrop-blur-sm">
-        <Link
-          href={`/groups/${groupId}`}
-          aria-label={t("common.back")}
-          className="hover:bg-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors"
-        >
-          <ArrowLeft className="h-4.5 w-4.5" />
-        </Link>
+    <div className="relative flex flex-1 flex-col overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+        <div className="bg-paper-texture absolute inset-0 opacity-[0.2]" />
         <div
-          className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-sm ring-2`}
-        >
-          {group.icon || group.name.charAt(0).toUpperCase() || "?"}
-        </div>
-        <div className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium">{group.name}</span>
-          <span className="text-muted-foreground text-xs">{t("chat.title")}</span>
-        </div>
+          className={`motion-safe:animate-float-a absolute -top-16 -right-24 size-80 rounded-full bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.12] blur-3xl`}
+        />
+        <div
+          className={`motion-safe:animate-float-b absolute -bottom-24 -left-20 size-72 rounded-full bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.08] blur-3xl`}
+        />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4">
-        {messages.length === 0 ? (
-          <div className="text-muted-foreground flex flex-1 items-center justify-center pt-12 text-center text-sm">
-            {t("chat.empty")}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            {items.map(({ message, showDivider, showSender }) => {
-              const senderName = group.members[message.senderUid]?.displayName ?? "?";
-
-              return (
-                <div key={message.id} className="flex flex-col gap-3">
-                  {showDivider && (
-                    <div className="flex justify-center">
-                      <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-[11px] font-medium">
-                        {formatDate(new Date(message.createdAt))}
-                      </span>
-                    </div>
-                  )}
-                  <MessageBubble
-                    message={message}
-                    senderName={senderName}
-                    isOwn={message.senderUid === user.uid}
-                    showSender={showSender}
-                    groupId={groupId}
-                    onDeleteError={setActionError}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      <form onSubmit={handleSend} className="border-t p-3">
-        {actionError && <p className="text-destructive mb-2 text-xs">{actionError}</p>}
-        <div className="flex items-end gap-2">
-          <textarea
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                void handleSend(event);
-              }
-            }}
-            placeholder={t("chat.placeholder")}
-            rows={1}
-            maxLength={MAX_MESSAGE_LENGTH}
-            className="border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 max-h-32 min-h-10 flex-1 resize-none rounded-lg border bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-3"
-          />
-          <Button
-            type="submit"
-            size="icon"
-            disabled={sending || !text.trim()}
-            aria-label={t("chat.send")}
+      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col overflow-hidden">
+        <div className="bg-background/85 sticky top-0 z-10 flex items-center gap-3 border-b p-3 shadow-sm backdrop-blur-md">
+          <Link
+            href={`/groups/${groupId}`}
+            aria-label={t("common.back")}
+            className="hover:bg-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95"
           >
-            <Send className="h-4 w-4" />
-          </Button>
+            <ArrowLeft className="h-4.5 w-4.5" />
+          </Link>
+          <div
+            className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-sm ring-2`}
+          >
+            {group.icon || group.name.charAt(0).toUpperCase() || "?"}
+          </div>
+          <div className="flex min-w-0 flex-col">
+            <span className="font-heading truncate text-sm font-semibold">{group.name}</span>
+            <span className="text-muted-foreground text-xs">{memberCountLabel}</span>
+          </div>
         </div>
-      </form>
+
+        <div className="flex flex-1 flex-col overflow-y-auto p-4">
+          {messages.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-8 text-center">
+              <div className="bg-primary/10 text-primary flex h-11 w-11 items-center justify-center rounded-full">
+                <MessageCircle className="h-5 w-5" />
+              </div>
+              <p className="text-muted-foreground text-sm">{t("chat.empty")}</p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {items.map(({ message, showDivider, showSender, grouped }) => {
+                const senderName = group.members[message.senderUid]?.displayName ?? "?";
+
+                return (
+                  <div
+                    key={message.id}
+                    className={cn(showDivider ? "mt-5 first:mt-0" : grouped ? "mt-1" : "mt-4")}
+                  >
+                    {showDivider && (
+                      <div className="mb-4 flex items-center justify-center">
+                        <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-0.5 text-[11px] font-medium">
+                          {formatDate(new Date(message.createdAt))}
+                        </span>
+                      </div>
+                    )}
+                    <MessageBubble
+                      message={message}
+                      senderName={senderName}
+                      isOwn={message.senderUid === user.uid}
+                      showSender={showSender}
+                      groupId={groupId}
+                      onDeleteError={setActionError}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </div>
+
+        <div className="bg-background/85 sticky bottom-0 z-10 border-t p-3 backdrop-blur-md">
+          {actionError && <p className="text-destructive mb-2 px-1 text-xs">{actionError}</p>}
+          <form
+            onSubmit={handleSend}
+            className="border-input bg-card/70 focus-within:border-ring focus-within:ring-ring/50 flex items-end gap-1.5 rounded-3xl border p-1.5 pl-4 shadow-sm transition-colors focus-within:ring-3"
+          >
+            <textarea
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  void handleSend(event);
+                }
+              }}
+              placeholder={t("chat.placeholder")}
+              rows={1}
+              maxLength={MAX_MESSAGE_LENGTH}
+              className="placeholder:text-muted-foreground max-h-32 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-sm outline-none"
+            />
+            <Button
+              type="submit"
+              size="icon"
+              className="shrink-0 rounded-full"
+              disabled={sending || !text.trim()}
+              aria-label={t("chat.send")}
+            >
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 }
