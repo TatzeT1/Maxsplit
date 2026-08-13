@@ -5,6 +5,7 @@ import { SignInButton } from "@/components/sign-in-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { FeaturePins } from "@/components/ui/feature-pins";
 import { Hero10 } from "@/components/ui/hero-10";
+import { InstallAppButton } from "@/components/install-app-button";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
 
@@ -28,6 +29,7 @@ export default async function Home() {
           {t("app.name")}
         </span>
         <div className="flex items-center gap-1">
+          <InstallAppButton />
           <LanguageToggle />
           <ThemeToggle />
         </div>

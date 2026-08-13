@@ -61,6 +61,13 @@ export const de = {
     de: "Deutsch",
     en: "English",
   },
+  installApp: {
+    button: "App installieren",
+    iosTitle: "App installieren",
+    iosDescription: "Füg Split in wenigen Schritten zu deinem Home-Bildschirm hinzu.",
+    iosStep1: "Tipp unten in Safari auf „Teilen“.",
+    iosStep2: "Wähl „Zum Home-Bildschirm“.",
+  },
   auth: {
     signInTitle: "Willkommen bei Split",
     signInSubtitle: "Melde dich an, um deine Gruppen zu sehen.",
