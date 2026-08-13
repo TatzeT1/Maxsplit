@@ -20,6 +20,7 @@ export const en: Dictionary = {
     confirm: "Confirm",
     loading: "Loading …",
     retry: "Try again",
+    moreActions: "More actions",
     somethingWentWrong: "Something went wrong.",
     unsavedChanges: "You have unsaved changes.",
   },
@@ -293,7 +294,8 @@ export const en: Dictionary = {
   },
   recurring: {
     title: "Recurring expenses",
-    add: "Recurring expense",
+    // Sits directly under the heading above, which already supplies the noun.
+    add: "Add",
     addTitle: "New recurring expense",
     frequencyLabel: "Repeats",
     frequencyWeekly: "Weekly",

@@ -11,13 +11,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
+import { RowActions } from "@/components/groups/row-actions";
 import { useT } from "@/components/locale-provider";
 import { deleteExpense } from "@/lib/actions/expenses";
 import { deleteSettlement } from "@/lib/actions/settlements";
@@ -89,6 +89,7 @@ function ExpenseRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const t = useT();
@@ -113,7 +114,10 @@ function ExpenseRow({
       className="bg-card ring-foreground/10 hover:ring-foreground/20 animate-pop-in relative flex flex-col gap-1 overflow-hidden rounded-xl p-3 ring-1 transition-all duration-200 hover:shadow-sm"
     >
       <div className={cn("absolute inset-0 -z-10", categoryRowTintClass(expense.category))} />
-      <div className="relative flex items-center gap-3">
+      {/* Tight gaps and a menu pulled into the card's own padding: the
+          description competes with the amount for a phone's width, and every
+          pixel spent here truncates a shopping list item instead. */}
+      <div className="relative flex items-center gap-2.5">
         <div
           className={cn(
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
@@ -127,7 +131,10 @@ function ExpenseRow({
           )}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="truncate font-medium">{expense.description}</span>
+          {/* Wraps rather than truncates: the description is the one thing a
+              row exists to tell you, and "Neue Kaffeemaschi…" hides what the
+              user themselves typed. Short titles keep the row at one line. */}
+          <span className="line-clamp-2 font-medium">{expense.description}</span>
           <span className="text-muted-foreground truncate text-sm">
             {paidByText} · {formatDate(new Date(expense.date))}
             {expense.category && ` · ${categoryLabel(expense.category, t)}`}
@@ -136,37 +143,43 @@ function ExpenseRow({
         <span className="font-heading shrink-0 text-base font-semibold">
           {formatMoney(expense.amountMinor, expense.currency)}
         </span>
+        <RowActions>
+          <DropdownMenuItem onSelect={() => setDuplicateOpen(true)}>
+            <Copy className="h-3.5 w-3.5" />
+            {t("expenses.duplicate")}
+          </DropdownMenuItem>
+          {canEdit && (
+            <>
+              <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+                {t("common.edit")}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                disabled={deleting}
+                onSelect={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {t("common.delete")}
+              </DropdownMenuItem>
+            </>
+          )}
+        </RowActions>
       </div>
-      <div className="relative flex justify-end gap-2 pt-1">
-        <Button variant="ghost" size="sm" onClick={() => setDuplicateOpen(true)}>
-          <Copy className="h-3.5 w-3.5" />
-          {t("expenses.duplicate")}
-        </Button>
-        {canEdit && (
-          <>
-            <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-              {t("common.edit")}
-            </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" disabled={deleting}>
-                  {t("common.delete")}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
-                  <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
-        )}
-      </div>
+      {/* Controlled rather than trigger-based: a Radix AlertDialogTrigger nested
+          inside a DropdownMenuItem fights the menu over focus as it unmounts. */}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("expenses.deleteConfirm")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("expenses.deleteConfirmBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {deleteError && <p className="text-destructive text-xs">{deleteError}</p>}
       {canEdit && (
         <AddExpenseDialog
@@ -206,6 +219,7 @@ function SettlementRow({
   style?: CSSProperties;
 }) {
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const t = useT();
@@ -240,33 +254,35 @@ function SettlementRow({
         <span className="text-muted-foreground shrink-0 text-sm">
           {formatDate(new Date(settlement.date))}
         </span>
+        {canEdit && (
+          <RowActions>
+            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+              <Pencil className="h-3.5 w-3.5" />
+              {t("common.edit")}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={deleting}
+              onSelect={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {t("common.delete")}
+            </DropdownMenuItem>
+          </RowActions>
+        )}
       </div>
-      {canEdit && (
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
-            {t("common.edit")}
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" disabled={deleting}>
-                {t("common.delete")}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("settlements.deleteConfirm")}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("settlements.deleteConfirmBody")}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settlements.deleteConfirm")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("settlements.deleteConfirmBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>{t("common.delete")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {deleteError && <p className="text-destructive text-xs">{deleteError}</p>}
       {canEdit && (
         <RecordSettlementDialog

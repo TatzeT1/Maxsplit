@@ -19,6 +19,7 @@ export const de = {
     confirm: "Bestätigen",
     loading: "Lädt …",
     retry: "Erneut versuchen",
+    moreActions: "Weitere Aktionen",
     somethingWentWrong: "Da ist etwas schiefgelaufen.",
     unsavedChanges: "Du hast ungespeicherte Änderungen.",
   },
@@ -294,7 +295,8 @@ export const de = {
   },
   recurring: {
     title: "Wiederkehrende Ausgaben",
-    add: "Wiederkehrende Ausgabe",
+    // Sits directly under the heading above, which already supplies the noun.
+    add: "Hinzufügen",
     addTitle: "Neue wiederkehrende Ausgabe",
     frequencyLabel: "Wiederholung",
     frequencyWeekly: "Wöchentlich",

@@ -152,9 +152,9 @@ export function RecurringPanel({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 text-sm font-medium">
-          <Repeat className="h-4 w-4" />
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="flex min-w-0 items-center gap-1.5 text-sm font-medium">
+          <Repeat className="h-4 w-4 shrink-0" />
           {t("recurring.title")}
         </h2>
         <RecurringRuleDialog

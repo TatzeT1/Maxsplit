@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Copy, Pencil, Users, X } from "lucide-react";
+import { Check, Copy, Pencil, ShieldCheck, UserMinus, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AddPlaceholderDialog } from "@/components/groups/add-placeholder-dialog";
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { RowActions } from "@/components/groups/row-actions";
 import { useT } from "@/components/locale-provider";
 import {
   deleteGroup,
@@ -96,6 +98,7 @@ function MemberRow({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [renaming, setRenaming] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
   const [nameInput, setNameInput] = useState(member.displayName);
   const t = useT();
   const isSelf = uid === currentUid;
@@ -214,18 +217,31 @@ function MemberRow({
               {isSelf && t("groups.selfSuffix")}
             </span>
             {member.isPlaceholder ? <NotJoinedBadge /> : <RoleBadge role={member.role} />}
-            {canRename && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                aria-label={t("groups.renamePlaceholder")}
-                onClick={startRenaming}
-              >
-                <Pencil className="h-3 w-3" />
-              </Button>
-            )}
           </div>
+        )}
+        {canManage && !renaming && (
+          <RowActions>
+            {canRename && (
+              <DropdownMenuItem onSelect={startRenaming}>
+                <Pencil className="h-3.5 w-3.5" />
+                {t("groups.renamePlaceholder")}
+              </DropdownMenuItem>
+            )}
+            {currentRole === "owner" && !member.isPlaceholder && (
+              <DropdownMenuItem disabled={busy} onSelect={handleRoleChange}>
+                <ShieldCheck className="h-3.5 w-3.5" />
+                {member.role === "admin" ? t("groups.removeAdmin") : t("groups.makeAdmin")}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={busy}
+              onSelect={() => setRemoveOpen(true)}
+            >
+              <UserMinus className="h-3.5 w-3.5" />
+              {t("groups.removeMember")}
+            </DropdownMenuItem>
+          </RowActions>
         )}
       </div>
       {(member.paypalEmail || member.iban) && (
@@ -236,38 +252,22 @@ function MemberRow({
           {member.iban && <CopyChip label={t("groups.copyIban")} value={member.iban} />}
         </div>
       )}
-      {canManage && (
-        <div className="flex justify-end gap-2 pt-1">
-          {currentRole === "owner" && !member.isPlaceholder && (
-            <Button variant="ghost" size="sm" disabled={busy} onClick={handleRoleChange}>
-              {member.role === "admin" ? t("groups.removeAdmin") : t("groups.makeAdmin")}
-            </Button>
-          )}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="sm" disabled={busy}>
-                {t("groups.removeMember")}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {t("groups.removeMemberConfirm", { name: member.displayName })}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("groups.removeMemberConfirmBody", { name: member.displayName })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleRemove}>
-                  {t("groups.removeMember")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
+      <AlertDialog open={removeOpen} onOpenChange={setRemoveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t("groups.removeMemberConfirm", { name: member.displayName })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("groups.removeMemberConfirmBody", { name: member.displayName })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemove}>{t("groups.removeMember")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {error && <p className="text-destructive text-xs">{error}</p>}
     </li>
   );
