@@ -24,6 +24,7 @@ import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { formatDate, formatTime } from "@/lib/format/date";
+import { useVisibleHeight } from "@/lib/use-visible-height";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { ChatMessage, Group } from "@/lib/types";
 
@@ -131,6 +132,8 @@ export function ChatClient({ groupId }: { groupId: string }) {
   const [actionError, setActionError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const visibleHeight = useVisibleHeight(rootRef);
   const t = useT();
 
   // Grows the composer with its content instead of leaving typed text
@@ -178,9 +181,12 @@ export function ChatClient({ groupId }: { groupId: string }) {
     void markChatRead({ groupId });
   }, [groupId, user, messages]);
 
+  // Also re-pins when the keyboard opens: the message list shrinks by the
+  // keyboard's height, which would otherwise leave the newest message hidden
+  // above the fold right as you start typing a reply to it.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages]);
+  }, [messages, visibleHeight]);
 
   async function submitMessage() {
     const trimmed = text.trim();
@@ -217,12 +223,25 @@ export function ChatClient({ groupId }: { groupId: string }) {
     }
   }
 
+  // The chat owns its own scrolling and parks the composer at the bottom, so
+  // it must be exactly as tall as the visible area — never taller, or the
+  // document grows and the composer slides down behind the keyboard. The ref
+  // stays mounted across every branch below so the measurement happens even
+  // while the messages are still loading.
+  const frameProps = {
+    ref: rootRef,
+    className: "relative flex flex-1 flex-col overflow-hidden",
+    style: visibleHeight === null ? undefined : { height: visibleHeight, flex: "none" as const },
+  };
+
   if (user && errorCode) {
     return (
-      <div className="mx-auto w-full max-w-lg p-4">
-        <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
-          <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
-          <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
+      <div {...frameProps}>
+        <div className="mx-auto w-full max-w-lg p-4">
+          <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
+            <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
+            <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
+          </div>
         </div>
       </div>
     );
@@ -230,11 +249,13 @@ export function ChatClient({ groupId }: { groupId: string }) {
 
   if (!group || messages === null || !user) {
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 p-4">
-        <Skeleton className="h-10 w-full" />
-        <Skeleton className="h-16 w-2/3 self-start" />
-        <Skeleton className="h-16 w-2/3 self-end" />
-        <Skeleton className="h-16 w-1/2 self-start" />
+      <div {...frameProps}>
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 p-4">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-16 w-2/3 self-start" />
+          <Skeleton className="h-16 w-2/3 self-end" />
+          <Skeleton className="h-16 w-1/2 self-start" />
+        </div>
       </div>
     );
   }
@@ -264,7 +285,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
   }
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
+    <div {...frameProps}>
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
         <div className="bg-paper-texture absolute inset-0 opacity-[0.2]" />
         <div
@@ -354,7 +375,12 @@ export function ChatClient({ groupId }: { groupId: string }) {
               enterKeyHint="send"
               rows={1}
               maxLength={MAX_MESSAGE_LENGTH}
-              className="placeholder:text-muted-foreground max-h-32 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-sm outline-none"
+              // text-base (16px) on mobile is load-bearing, not styling: iOS
+              // Safari auto-zooms the whole page when a focused field is under
+              // 16px, which shoves the send button off the right edge and
+              // scrolls what you're typing out of view. Same md:text-sm
+              // pattern as ui/input.tsx and ui/select.tsx.
+              className="placeholder:text-muted-foreground max-h-32 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-base outline-none md:text-sm"
             />
             <Button
               type="submit"
