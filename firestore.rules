@@ -54,6 +54,19 @@ service cloud.firestore {
         allow read: if isGroupMember(groupId);
         allow write: if false;
       }
+
+      match /messages/{messageId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if false;
+      }
+
+      // Doc id == uid, so a member can only ever read their own read
+      // receipt — no need to gate on it beyond that plus membership.
+      match /chatReads/{uid} {
+        allow read: if isSignedIn() && !isBanned() && request.auth.uid == uid &&
+          isGroupMember(groupId);
+        allow write: if false;
+      }
     }
 
     // Deny-all backstop for anything not explicitly matched above.

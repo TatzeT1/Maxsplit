@@ -106,6 +106,24 @@ export interface ActivityLogEntry {
   createdAt: string;
 }
 
+/** A single message in a group's chat (`groups/{groupId}/messages`). Text only for v1 — no attachments, edits, or reactions. */
+export interface ChatMessage {
+  id: string;
+  senderUid: string;
+  text: string;
+  createdAt: string;
+}
+
+/**
+ * Per-member read receipt (`groups/{groupId}/chatReads/{uid}`), doc id ==
+ * uid so a member can only ever hold one. Drives the unread badge: a group
+ * has unread chat activity for a member when this is older than the newest
+ * message's `createdAt` (or absent entirely).
+ */
+export interface ChatRead {
+  lastReadAt: string;
+}
+
 export type RecurringFrequency = "weekly" | "monthly";
 
 export interface RecurringRule {
