@@ -30,6 +30,9 @@ import type { ChatMessage, Group } from "@/lib/types";
 
 const MAX_LOADED_MESSAGES = 300;
 
+/** How far from the true bottom still counts as "reading the newest messages". */
+const BOTTOM_SLACK = 48;
+
 function dayKey(iso: string): string {
   return iso.slice(0, 10);
 }
@@ -133,6 +136,9 @@ export function ChatClient({ groupId }: { groupId: string }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Starts true so the very first keyboard open still pins to the newest
+  // message, before the reader has scrolled anywhere.
+  const atBottomRef = useRef(true);
   const visibleHeight = useVisibleHeight(rootRef);
   const t = useT();
 
@@ -181,12 +187,18 @@ export function ChatClient({ groupId }: { groupId: string }) {
     void markChatRead({ groupId });
   }, [groupId, user, messages]);
 
-  // Also re-pins when the keyboard opens: the message list shrinks by the
-  // keyboard's height, which would otherwise leave the newest message hidden
-  // above the fold right as you start typing a reply to it.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages, visibleHeight]);
+  }, [messages]);
+
+  // The frame shrinks when the keyboard opens, which would otherwise leave the
+  // newest message hidden above the fold right as you type a reply to it. Only
+  // re-pin if the reader was already at the bottom — doing it unconditionally
+  // would also yank someone reading old history back down when the keyboard
+  // closes or the phone rotates.
+  useEffect(() => {
+    if (atBottomRef.current) bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [visibleHeight]);
 
   async function submitMessage() {
     const trimmed = text.trim();
@@ -297,7 +309,11 @@ export function ChatClient({ groupId }: { groupId: string }) {
       </div>
 
       <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col overflow-hidden">
-        <div className="bg-background/85 sticky top-0 z-10 flex items-center gap-3 border-b p-3 shadow-sm backdrop-blur-md">
+        {/* shrink-0 here and on the composer: the message list is flex-1, whose
+            flex-basis:0 gives it a scaled shrink factor of 0, so without this
+            the header and composer would absorb every pixel of a short frame
+            and get clipped by the frame's overflow-hidden. */}
+        <div className="bg-background/85 sticky top-0 z-10 flex shrink-0 items-center gap-3 border-b p-3 shadow-sm backdrop-blur-md">
           <Link
             href={`/groups/${groupId}`}
             aria-label={t("common.back")}
@@ -316,7 +332,17 @@ export function ChatClient({ groupId }: { groupId: string }) {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col overflow-y-auto p-4">
+        <div
+          className="flex flex-1 flex-col overflow-y-auto p-4"
+          onScroll={(event) => {
+            const list = event.currentTarget;
+            // The container keeps a padding-bottom of breathing room under the
+            // newest bubble that scrollIntoView leaves unscrolled, so "at the
+            // bottom" is never exactly zero.
+            atBottomRef.current =
+              list.scrollHeight - list.scrollTop - list.clientHeight <= BOTTOM_SLACK;
+          }}
+        >
           {messages.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed p-8 text-center">
               <div className="bg-primary/10 text-primary flex h-11 w-11 items-center justify-center rounded-full">
@@ -358,7 +384,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
         </div>
 
         <div
-          className="bg-background/85 sticky bottom-0 z-10 border-t px-3 pt-3 backdrop-blur-md"
+          className="bg-background/85 sticky bottom-0 z-10 shrink-0 border-t px-3 pt-3 backdrop-blur-md"
           style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
         >
           {actionError && <p className="text-destructive mb-2 px-1 text-xs">{actionError}</p>}
