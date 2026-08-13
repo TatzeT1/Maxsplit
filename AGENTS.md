@@ -58,6 +58,35 @@ never by discarding the error.
 The same rule generalizes: a failure state must never be indistinguishable from
 a loading state.
 
+## Mobile is the primary surface — two iOS rules
+
+Both of these shipped as "the chat is unusable on my phone" bugs and are
+invisible on a desktop browser and in a resized desktop window alike. Only a
+real iOS device (or a deliberate simulation) shows them.
+
+**1. Any focused text field must be ≥16px on mobile.** Below that, iOS Safari
+auto-zooms the whole page on focus, which shoves the right-hand side of the
+layout off-screen and scrolls what you are typing out of view. `ui/input.tsx`
+and `ui/select.tsx` encode the fix as `text-base ... md:text-sm` — 16px on
+phones, 14px from `md` up. Any raw `<input>`/`<textarea>` outside those
+components must repeat it. (Checkboxes and radios are exempt; only text entry
+triggers the zoom.)
+
+**2. iOS ignores `interactiveWidget: "resizes-content"`.** That viewport hint
+in `app/layout.tsx` makes Android Chrome genuinely shrink the layout viewport
+for the keyboard. iOS — standalone PWA included — does not: the keyboard
+_overlays_ a still-full-height layout viewport, `100dvh` never changes, and
+anything parked at the bottom ends up behind the keyboard. Only
+`window.visualViewport` reports the truth, which is what
+`useVisibleHeight` (src/lib/use-visible-height.ts) is for.
+
+Note the trap that follows from `body { min-height: 100% }`: the height chain
+is deliberately **indefinite** so ordinary pages can grow and scroll. So adding
+bottom padding to "make room" for the keyboard makes the _document taller_
+instead of squeezing the content — measured, this grew the page from 664px to
+898px and pushed the composer further down. A screen that needs a fixed frame
+must be given a definite height, not padding.
+
 ## NEXT_PUBLIC_* vars are inlined at build time
 
 They are baked into the client bundle by `next build`, not read at runtime.
