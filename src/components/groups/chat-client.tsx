@@ -336,7 +336,10 @@ export function ChatClient({ groupId }: { groupId: string }) {
           <div ref={bottomRef} />
         </div>
 
-        <div className="bg-background/85 sticky bottom-0 z-10 border-t p-3 backdrop-blur-md">
+        <div
+          className="bg-background/85 sticky bottom-0 z-10 border-t px-3 pt-3 backdrop-blur-md"
+          style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 0.75rem)" }}
+        >
           {actionError && <p className="text-destructive mb-2 px-1 text-xs">{actionError}</p>}
           <form
             onSubmit={handleFormSubmit}
