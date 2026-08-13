@@ -3,7 +3,7 @@
 import { collection, doc, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
 import { ArrowLeft, MessageCircle, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -130,7 +130,17 @@ export function ChatClient({ groupId }: { groupId: string }) {
   const [sending, setSending] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const t = useT();
+
+  // Grows the composer with its content instead of leaving typed text
+  // scrolling inside a fixed one-line box (rows={1} alone doesn't resize).
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
 
   useEffect(() => {
     if (!user) return;
@@ -172,8 +182,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages]);
 
-  async function handleSend(event: FormEvent) {
-    event.preventDefault();
+  async function submitMessage() {
     const trimmed = text.trim();
     if (!trimmed || sending) return;
     setSending(true);
@@ -189,6 +198,23 @@ export function ChatClient({ groupId }: { groupId: string }) {
       return;
     }
     setText("");
+    // The send button click already moved focus away from the textarea,
+    // which on mobile dismisses the keyboard after every single message.
+    // Bring focus straight back so a chat back-and-forth doesn't require
+    // re-tapping the input each time.
+    textareaRef.current?.focus();
+  }
+
+  function handleFormSubmit(event: FormEvent) {
+    event.preventDefault();
+    void submitMessage();
+  }
+
+  function handleTextareaKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+      event.preventDefault();
+      void submitMessage();
+    }
   }
 
   if (user && errorCode) {
@@ -313,19 +339,16 @@ export function ChatClient({ groupId }: { groupId: string }) {
         <div className="bg-background/85 sticky bottom-0 z-10 border-t p-3 backdrop-blur-md">
           {actionError && <p className="text-destructive mb-2 px-1 text-xs">{actionError}</p>}
           <form
-            onSubmit={handleSend}
+            onSubmit={handleFormSubmit}
             className="border-input bg-card/70 focus-within:border-ring focus-within:ring-ring/50 flex items-end gap-1.5 rounded-3xl border p-1.5 pl-4 shadow-sm transition-colors focus-within:ring-3"
           >
             <textarea
+              ref={textareaRef}
               value={text}
               onChange={(event) => setText(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
-                  event.preventDefault();
-                  void handleSend(event);
-                }
-              }}
+              onKeyDown={handleTextareaKeyDown}
               placeholder={t("chat.placeholder")}
+              enterKeyHint="send"
               rows={1}
               maxLength={MAX_MESSAGE_LENGTH}
               className="placeholder:text-muted-foreground max-h-32 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-sm outline-none"
@@ -336,6 +359,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
               className="shrink-0 rounded-full"
               disabled={sending || !text.trim()}
               aria-label={t("chat.send")}
+              onMouseDown={(event) => event.preventDefault()}
             >
               <Send className="h-4 w-4" />
             </Button>
