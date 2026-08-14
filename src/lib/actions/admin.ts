@@ -1,6 +1,6 @@
 "use server";
 
-import { isAdminEmail } from "@/lib/auth/admin";
+import { isAdminEmail, isAdminSession } from "@/lib/auth/admin";
 import { getSession, type Session } from "@/lib/auth/session";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
 
@@ -14,7 +14,7 @@ export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string
  */
 async function requireAdminActionSession(): Promise<Session | null> {
   const session = await getSession();
-  if (!session || !isAdminEmail(session.email)) return null;
+  if (!isAdminSession(session)) return null;
   return session;
 }
 
