@@ -421,6 +421,14 @@ export async function setMemberRole(input: {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
 
+  // The `role` type is compile-time only; a hand-crafted request can carry any
+  // string. Reject anything but the two assignable roles so an owner can't
+  // mint a second "owner" (breaking the owner-cannot-leave / remove-owner
+  // invariants) or store a bogus role that slips past isGroupManager.
+  if (input.role !== "admin" && input.role !== "member") {
+    return { ok: false, error: "invalid-role" };
+  }
+
   const groupRef = adminDb.collection("groups").doc(input.groupId);
   const groupSnap = await groupRef.get();
   if (!groupSnap.exists) return { ok: false, error: "not-found" };

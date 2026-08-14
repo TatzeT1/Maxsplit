@@ -7,6 +7,14 @@ export const SESSION_COOKIE_NAME = "session";
 export interface Session {
   uid: string;
   email: string | null;
+  /**
+   * Whether the identity provider verified ownership of `email`. False for a
+   * bare email/password sign-up that never confirmed the address. Any
+   * privilege boundary keyed on the email string (see isAdminEmail) MUST also
+   * require this, or an attacker can register someone else's email unverified
+   * and inherit whatever that email is trusted for.
+   */
+  emailVerified: boolean;
   displayName: string | null;
   photoURL: string | null;
   paypalEmail: string | null;
@@ -36,6 +44,7 @@ export async function getSession(): Promise<Session | null> {
     return {
       uid: decoded.uid,
       email: decoded.email ?? null,
+      emailVerified: decoded.email_verified === true,
       displayName: (profile?.displayName as string | undefined) || decoded.name || null,
       photoURL: (profile?.photoURL as string | undefined) || decoded.picture || null,
       paypalEmail: (profile?.paypalEmail as string | undefined) || null,
