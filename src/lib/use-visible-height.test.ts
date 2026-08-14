@@ -33,6 +33,38 @@ describe("computeVisibleHeight", () => {
     expect(computeVisibleHeight(120, 0, 56)).toBe(200);
     expect(computeVisibleHeight(328, 0, 500)).toBe(200);
   });
+
+  // Reported from an iPhone standalone PWA: with the keyboard open, the chat
+  // header had scrolled off the top and the composer sat behind the keyboard —
+  // the frame had grown past the visible area at both ends at once.
+  //
+  // The cause is a negative elementTop. Every other case here assumes the frame
+  // starts at or below the top of the layout viewport, but iOS is known to
+  // leave a non-zero body scroll with the keyboard up in a standalone PWA (see
+  // f8b4fb0, which removed the scrollY term on the assumption that the frame
+  // keeps the document at viewport height — true only until something scrolls
+  // it once). Once elementTop goes negative, `visualHeight - elementTop`
+  // *adds* the scrolled-away distance to the frame, and the overshoot is
+  // self-feeding: a taller frame makes the document scrollable, which allows
+  // more scroll, which makes the next measurement taller still.
+  it("never asks for more height than the visible area itself", () => {
+    // Keyboard open (340px visible), frame scrolled 144px off the top.
+    // Uncapped this returns 484 — 144px of composer below the fold.
+    expect(computeVisibleHeight(340, 0, -144)).toBe(340);
+  });
+
+  it("caps against the visible band, not the layout viewport", () => {
+    // offsetTop is iOS scrolling the visual viewport to reveal the field. It
+    // shifts where the band sits, but never makes the band itself taller, so
+    // it must not raise the cap.
+    expect(computeVisibleHeight(328, 40, -100)).toBe(328);
+  });
+
+  it("keeps the floor winning over the cap on a very short viewport", () => {
+    // Both guards apply at once here. The floor has to win: clipping the send
+    // button is the worse failure, and is what MIN_FRAME_HEIGHT exists for.
+    expect(computeVisibleHeight(120, 0, -50)).toBe(200);
+  });
 });
 
 /** Installs a fake visualViewport and returns a handle to drive it. */
