@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -65,7 +66,7 @@ function MessageBubble({
   return (
     <div
       className={cn(
-        "animate-bubble-in flex flex-col gap-0.5",
+        "animate-rise flex flex-col gap-0.5",
         isOwn ? "origin-bottom-right items-end" : "origin-bottom-left items-start",
       )}
     >
@@ -111,8 +112,8 @@ function MessageBubble({
           className={cn(
             "max-w-[75vw] rounded-2xl px-3.5 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-sm",
             isOwn
-              ? "from-primary to-primary/85 text-primary-foreground shadow-primary/20 rounded-br-md bg-linear-to-br shadow-md"
-              : "bg-card ring-foreground/10 rounded-bl-md shadow-sm ring-1",
+              ? "from-primary to-primary/85 text-primary-foreground shadow-primary/20 shadow-e1 rounded-br-md bg-linear-to-br"
+              : "bg-card ring-foreground/10 shadow-e1 rounded-bl-md ring-1",
           )}
         >
           {message.text}
@@ -298,22 +299,14 @@ export function ChatClient({ groupId }: { groupId: string }) {
 
   return (
     <div {...frameProps}>
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-paper-texture absolute inset-0 opacity-[0.2]" />
-        <div
-          className={`motion-safe:animate-float-a absolute -top-16 -right-24 size-80 rounded-full bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.12] blur-3xl`}
-        />
-        <div
-          className={`motion-safe:animate-float-b absolute -bottom-24 -left-20 size-72 rounded-full bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.08] blur-3xl`}
-        />
-      </div>
+      <AmbientBackdrop tint={avatarGradient(group.name)} />
 
       <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col overflow-hidden">
         {/* shrink-0 here and on the composer: the message list is flex-1, whose
             flex-basis:0 gives it a scaled shrink factor of 0, so without this
             the header and composer would absorb every pixel of a short frame
             and get clipped by the frame's overflow-hidden. */}
-        <div className="bg-background/85 sticky top-0 z-10 flex shrink-0 items-center gap-3 border-b p-3 shadow-sm backdrop-blur-md">
+        <div className="bg-background/85 shadow-e1 sticky top-0 z-10 flex shrink-0 items-center gap-3 border-b p-3 backdrop-blur-md">
           <Link
             href={`/groups/${groupId}`}
             aria-label={t("common.back")}
@@ -322,7 +315,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
             <ArrowLeft className="h-4.5 w-4.5" />
           </Link>
           <div
-            className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white shadow-sm ring-2`}
+            className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card shadow-e1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ring-2`}
           >
             {group.icon || group.name.charAt(0).toUpperCase() || "?"}
           </div>
@@ -390,7 +383,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
           {actionError && <p className="text-destructive mb-2 px-1 text-xs">{actionError}</p>}
           <form
             onSubmit={handleFormSubmit}
-            className="border-input bg-card/70 focus-within:border-ring focus-within:ring-ring/50 flex items-end gap-1.5 rounded-3xl border p-1.5 pl-4 shadow-sm transition-colors focus-within:ring-3"
+            className="border-input bg-card/70 focus-within:border-ring focus-within:ring-ring/50 shadow-e1 flex items-end gap-1.5 rounded-3xl border p-1.5 pl-4 transition-colors focus-within:ring-3"
           >
             <textarea
               ref={textareaRef}

@@ -1,6 +1,7 @@
 import { Wallet } from "lucide-react";
 import Link from "next/link";
 import { InviteClient } from "@/components/groups/invite-client";
+import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getSession } from "@/lib/auth/session";
@@ -22,7 +23,7 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
       >
         <Link href="/" className="font-heading flex items-center gap-2 text-lg font-semibold">
-          <span className="shadow-primary/30 flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 text-white shadow-md">
+          <span className="shadow-primary/30 shadow-e1 flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 text-white">
             <Wallet className="size-4" />
           </span>
           {t("app.name")}
@@ -33,15 +34,11 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
         </div>
       </header>
 
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-paper-texture absolute inset-0 opacity-[0.35]" />
-        <div className="motion-safe:animate-float-a absolute -top-24 -left-24 size-72 rounded-full bg-orange-400/30 blur-3xl dark:bg-orange-500/20" />
-        <div className="motion-safe:animate-float-b absolute top-1/3 -right-20 size-80 rounded-full bg-teal-400/25 blur-3xl dark:bg-teal-500/20" />
-      </div>
+      <AmbientBackdrop />
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 px-4 py-12 text-center">
         {!group ? (
-          <div className="animate-pop-in flex flex-col items-center gap-3">
+          <div className="animate-rise flex flex-col items-center gap-3">
             <h1 className="font-heading text-xl font-semibold">{t("invite.notFoundTitle")}</h1>
             <p className="text-muted-foreground text-sm">{t("invite.notFoundBody")}</p>
             <Link href="/" className="text-primary text-sm underline underline-offset-4">
@@ -50,7 +47,7 @@ export default async function InvitePage({ params }: { params: Promise<{ code: s
           </div>
         ) : (
           <>
-            <div className="animate-pop-in flex flex-col items-center gap-1">
+            <div className="animate-rise flex flex-col items-center gap-1">
               <h1 className="font-heading text-xl font-semibold">{t("invite.title")}</h1>
               <p className="font-heading text-2xl font-semibold">{group.groupName}</p>
             </div>

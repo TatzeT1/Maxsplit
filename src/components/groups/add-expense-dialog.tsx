@@ -478,7 +478,7 @@ export function AddExpenseDialog({
                     className={cn(
                       "flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95",
                       splitMode === mode
-                        ? "bg-primary text-primary-foreground shadow-primary/30 shadow-sm"
+                        ? "bg-primary text-primary-foreground shadow-primary/30 shadow-e1"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
@@ -592,7 +592,7 @@ export function AddExpenseDialog({
             >
               {saved ? (
                 <>
-                  <Check className="animate-pop-in size-4" />
+                  <Check className="animate-rise size-4" />
                   {t("common.save")}
                 </>
               ) : loading ? (

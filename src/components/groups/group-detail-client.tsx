@@ -12,6 +12,7 @@ import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { RecurringPanel } from "@/components/groups/recurring-panel";
 import { useT } from "@/components/locale-provider";
+import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
@@ -181,18 +182,13 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-paper-texture absolute inset-0 opacity-[0.25]" />
-        <div
-          className={`motion-safe:animate-float-a absolute -top-24 -left-20 size-72 rounded-full bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.15] blur-3xl`}
-        />
-      </div>
+      <AmbientBackdrop tint={avatarGradient(group.name)} />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
-        <div className="animate-pop-in flex items-center justify-between gap-3">
+      <div className="stagger-sections relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <div
-              className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white shadow-sm ring-2`}
+              className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card shadow-e1 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-semibold text-white ring-2`}
             >
               {group.icon || group.name.charAt(0).toUpperCase() || "?"}
             </div>
@@ -208,7 +204,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
                 )}
               >
                 {copied ? (
-                  <Check className="animate-pop-in h-3.5 w-3.5" />
+                  <Check className="animate-rise h-3.5 w-3.5" />
                 ) : (
                   <Copy className="h-3.5 w-3.5" />
                 )}

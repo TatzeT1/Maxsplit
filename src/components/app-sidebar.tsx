@@ -4,7 +4,7 @@ import { LogOut, ShieldCheck, User, Users, Wallet } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useSignOut } from "@/components/sign-out-button";
 import { useT } from "@/components/locale-provider";
@@ -72,7 +72,7 @@ function SidebarLogo() {
       aria-label={t("app.name")}
       className="relative z-20 flex items-center gap-2 px-2 py-1"
     >
-      <span className="shadow-primary/30 flex size-7 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-orange-400 to-rose-500 text-white shadow-sm">
+      <span className="shadow-primary/30 shadow-e1 flex size-7 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-orange-400 to-rose-500 text-white">
         <Wallet className="size-4" />
       </span>
       <motion.span

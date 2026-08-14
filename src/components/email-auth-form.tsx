@@ -132,7 +132,7 @@ export function EmailAuthForm({ redirectTo = "/groups" }: { redirectTo?: string 
         </Button>
       )}
 
-      {errorKey && <p className="animate-pop-in text-destructive text-sm">{t(errorKey)}</p>}
+      {errorKey && <p className="animate-rise text-destructive text-sm">{t(errorKey)}</p>}
 
       <div className="flex flex-col items-center gap-1 text-xs">
         {mode === "signIn" && (

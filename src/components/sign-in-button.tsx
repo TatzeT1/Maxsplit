@@ -74,7 +74,7 @@ export function SignInButton({ redirectTo = "/groups" }: { redirectTo?: string }
           </>
         )}
       </Button>
-      {errorKey && <p className="animate-pop-in text-destructive text-sm">{t(errorKey)}</p>}
+      {errorKey && <p className="animate-rise text-destructive text-sm">{t(errorKey)}</p>}
 
       {showEmail ? (
         <EmailAuthForm redirectTo={redirectTo} />

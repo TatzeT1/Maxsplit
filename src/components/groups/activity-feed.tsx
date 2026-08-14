@@ -111,7 +111,7 @@ function ExpenseRow({
   return (
     <li
       style={style}
-      className="bg-card ring-foreground/10 hover:ring-foreground/20 animate-pop-in relative flex flex-col gap-1 overflow-hidden rounded-xl p-3 ring-1 transition-all duration-200 hover:shadow-sm"
+      className="bg-card ring-foreground/10 hover:ring-foreground/20 animate-rise hover:shadow-e1 relative flex flex-col gap-1 overflow-hidden rounded-xl p-3 ring-1 transition-all duration-200"
     >
       <div className={cn("absolute inset-0 -z-10", categoryRowTintClass(expense.category))} />
       {/* Tight gaps and a menu pulled into the card's own padding: the
@@ -140,7 +140,7 @@ function ExpenseRow({
             {expense.category && ` · ${categoryLabel(expense.category, t)}`}
           </span>
         </div>
-        <span className="font-heading shrink-0 text-base font-semibold">
+        <span className="font-heading tabular-money shrink-0 text-base font-semibold">
           {formatMoney(expense.amountMinor, expense.currency)}
         </span>
         <RowActions>
@@ -238,7 +238,7 @@ function SettlementRow({
   return (
     <li
       style={style}
-      className="border-success/30 bg-success/5 animate-pop-in flex flex-col gap-1 rounded-xl border border-dashed p-3"
+      className="border-success/30 bg-success/5 animate-rise flex flex-col gap-1 rounded-xl border border-dashed p-3"
     >
       <div className="flex items-center gap-3">
         <div className="bg-success/15 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
@@ -323,7 +323,7 @@ function LogRow({
   return (
     <li
       style={style}
-      className="border-border/70 bg-muted/20 animate-pop-in flex items-center gap-3 rounded-xl border border-dashed p-3"
+      className="border-border/70 bg-muted/20 animate-rise flex items-center gap-3 rounded-xl border border-dashed p-3"
     >
       <div className="bg-muted text-muted-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
         <Icon className="h-4 w-4" />
