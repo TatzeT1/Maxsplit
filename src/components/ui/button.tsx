@@ -4,15 +4,35 @@ import { Slot } from "radix-ui";
 
 import { cn } from "@/lib/utils";
 
+/*
+ * Press physics, applied to every variant.
+ *
+ * The press is a scale of 0.98 — not the 0.95-0.97 that most component kits
+ * ship. On a full-width button, a 3-5% scale is a visible squash of a large
+ * rectangle and reads as cheap; 2% reads as the surface taking the load. The
+ * spring easing means a double-tap compounds instead of restarting.
+ *
+ * `not-aria-[haspopup]` exempts menu triggers, which stay put while their
+ * popup is open rather than sitting visibly depressed the whole time.
+ */
+const PRESS = "active:not-aria-[haspopup]:scale-[0.98] active:not-aria-[haspopup]:shadow-pressed";
+
 const buttonVariants = cva(
-  "group/button touch-manipulation inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all duration-200 outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px active:not-aria-[haspopup]:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  `group/button touch-manipulation inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none transition-[transform,box-shadow,background-color,border-color,color] duration-(--duration-fast) ease-spring focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 ${PRESS} disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4`,
   {
     variants: {
       variant: {
+        /*
+         * The gradient is a 10% white wash from the top, not a second color:
+         * it makes one flat fill read as a lit surface without introducing a
+         * hue that has to be maintained alongside `--primary`. Combined with
+         * the inset top edge from `shadow-e1`, that is the entire difference
+         * between a colored rectangle and a physical control.
+         */
         default:
-          "relative overflow-hidden bg-primary text-primary-foreground shadow-md shadow-primary/25 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/35 after:absolute after:inset-0 after:-translate-x-[130%] after:skew-x-[-20deg] after:bg-linear-to-r after:from-transparent after:via-white/35 after:to-transparent after:transition-transform after:duration-700 after:content-[''] hover:after:translate-x-[160%]",
+          "bg-primary bg-linear-to-b from-white/10 to-transparent text-primary-foreground shadow-e1 hover:-translate-y-px hover:brightness-[1.04] hover:shadow-e2 active:not-aria-[haspopup]:translate-y-0",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-background shadow-e1 hover:bg-muted hover:text-foreground hover:shadow-e2 aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

@@ -78,7 +78,7 @@ export function InviteClient({
 
   if (!signedIn) {
     return (
-      <div className="animate-pop-in flex flex-col items-center gap-4 text-center">
+      <div className="animate-rise flex flex-col items-center gap-4 text-center">
         <p className="text-muted-foreground text-sm">{t("invite.subtitle", { name: groupName })}</p>
         <SignInButton redirectTo={`/invite/${code}`} />
       </div>
@@ -87,7 +87,7 @@ export function InviteClient({
 
   if (status === "error") {
     return (
-      <div className="animate-pop-in flex flex-col items-center gap-3 text-center">
+      <div className="animate-rise flex flex-col items-center gap-3 text-center">
         <p className="text-destructive text-sm">{t("invite.joinError")}</p>
         <Button variant="outline" onClick={() => router.push("/groups")}>
           {t("invite.goToGroups")}
@@ -106,7 +106,7 @@ export function InviteClient({
   }
 
   return (
-    <div className="animate-pop-in flex w-full max-w-sm flex-col gap-4 text-center">
+    <div className="animate-rise flex w-full max-w-sm flex-col gap-4 text-center">
       <div>
         <h2 className="font-heading text-lg font-semibold">{t("groups.joinStep2Title")}</h2>
         <p className="text-muted-foreground text-sm">{t("groups.joinStep2Hint")}</p>

@@ -64,7 +64,7 @@ export function ChatEntryCard({
     <Link
       href={`/groups/${groupId}/chat`}
       className={cn(
-        "bg-card ring-foreground/10 hover:ring-primary/40 relative flex items-center gap-3 overflow-hidden rounded-xl p-3 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm active:scale-[0.99]",
+        "bg-card ring-foreground/10 hover:ring-primary/40 hover:shadow-e1 relative flex items-center gap-3 overflow-hidden rounded-xl p-3 ring-1 transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.99]",
         unread && "ring-primary/25",
       )}
     >
@@ -72,7 +72,7 @@ export function ChatEntryCard({
         <MessageCircle className="h-4.5 w-4.5" />
         {unread && (
           <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
-            <span className="bg-destructive/70 animate-unread-ping absolute inline-flex h-full w-full rounded-full" />
+            <span className="bg-destructive/70 animate-breathe absolute inline-flex h-full w-full rounded-full" />
             <span className="bg-destructive ring-card relative inline-flex h-2.5 w-2.5 rounded-full ring-2" />
           </span>
         )}

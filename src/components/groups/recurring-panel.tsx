@@ -91,7 +91,7 @@ function RuleRow({
               : t("recurring.paused")}
           </span>
         </div>
-        <span className="shrink-0 font-semibold">
+        <span className="tabular-money shrink-0 font-semibold">
           {formatMoney(rule.amountMinor, rule.currency)}
         </span>
       </div>

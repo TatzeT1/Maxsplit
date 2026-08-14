@@ -69,7 +69,7 @@ function FeatureCard({
         position.className,
       )}
     >
-      <div className="bg-card border-border/60 rounded-3xl border p-2 shadow-lg shadow-black/5 dark:shadow-black/20">
+      <div className="bg-card border-border/60 shadow-e2 rounded-3xl border p-2">
         <Pin className="text-muted-foreground/40 mx-auto mb-4 size-5" />
         <div
           className={cn(

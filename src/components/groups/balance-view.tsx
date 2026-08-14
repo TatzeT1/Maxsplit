@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, CheckCircle2, Copy, Download, Scale, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { type CSSProperties, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
 import { getOrCreateSettlementShareToken } from "@/lib/actions/settlement-share";
@@ -128,7 +128,10 @@ export function BalanceView({
   return (
     <div
       className={cn(
-        "animate-pop-in relative flex flex-col gap-3 overflow-hidden rounded-xl border-l-4 p-4 ring-1 transition-colors",
+        // Entrance timing comes from the parent's `.stagger-sections`, so this
+        // card carries no `animate-*` of its own — only the internal cascade
+        // of its balance lines, which is offset to land after the card itself.
+        "shadow-e1 relative flex flex-col gap-3 overflow-hidden rounded-xl border-l-4 p-4 ring-1 transition-colors duration-(--duration-base)",
         isSettled
           ? "bg-card ring-foreground/10 border-l-success"
           : youAreOwed
@@ -161,13 +164,20 @@ export function BalanceView({
         </div>
       ) : (
         <ul className="flex flex-col gap-1.5">
-          {lines.map((line) => (
+          {/*
+            The cascade is capped at eight steps. Past that the delay stops
+            reading as one gesture and the last rows in a large group would
+            visibly wait their turn — the tail of a long list should catch up,
+            not queue.
+          */}
+          {lines.map((line, index) => (
             <li
               key={line.uid}
               className={cn(
-                "font-heading flex items-center gap-2 text-base font-medium",
+                "font-heading animate-rise tabular-money flex items-center gap-2 text-base font-medium",
                 line.youOwe ? "text-destructive" : "text-success",
               )}
+              style={{ "--stagger": Math.min(index, 8) + 3 } as CSSProperties}
             >
               <MemberChip name={line.name} />
               {line.text}
@@ -184,7 +194,7 @@ export function BalanceView({
           </p>
           <ul className="flex flex-col gap-1.5">
             {simplifiedTransfers.map((transfer, index) => (
-              <li key={index} className="flex items-center gap-2 text-sm">
+              <li key={index} className="tabular-money flex items-center gap-2 text-sm">
                 <MemberChip name={members[transfer.fromUid]?.displayName ?? "?"} />
                 {t("balances.transferSuggestion", {
                   from: members[transfer.fromUid]?.displayName ?? "?",

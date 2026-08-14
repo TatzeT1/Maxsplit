@@ -16,9 +16,9 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
       <h1 className="text-xl font-semibold">{t("profile.title")}</h1>
-      <div className="animate-pop-in flex items-center gap-4">
+      <div className="animate-rise flex items-center gap-4">
         <div
-          className={`bg-linear-to-br ${avatarGradient(name)} ring-card flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold text-white shadow-sm ring-2`}
+          className={`bg-linear-to-br ${avatarGradient(name)} ring-card shadow-e1 flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold text-white ring-2`}
         >
           {name.charAt(0).toUpperCase()}
         </div>

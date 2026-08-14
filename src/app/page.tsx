@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { LanguageToggle } from "@/components/language-toggle";
 import { SignInButton } from "@/components/sign-in-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { FeaturePins } from "@/components/ui/feature-pins";
 import { Hero10 } from "@/components/ui/hero-10";
 import { InstallAppButton } from "@/components/install-app-button";
@@ -23,7 +24,7 @@ export default async function Home() {
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
       >
         <span className="font-heading flex items-center gap-2 text-lg font-semibold">
-          <span className="shadow-primary/30 flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 text-white shadow-md">
+          <span className="shadow-primary/30 shadow-e1 flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 text-white">
             <Wallet className="size-4" />
           </span>
           {t("app.name")}
@@ -35,13 +36,7 @@ export default async function Home() {
         </div>
       </header>
 
-      {/* Animated gradient-mesh background: warm & teal blobs drifting behind a subtle paper-dot texture. */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-paper-texture absolute inset-0 opacity-[0.35]" />
-        <div className="motion-safe:animate-float-a absolute -top-24 -left-24 size-72 rounded-full bg-orange-400/30 blur-3xl dark:bg-orange-500/20" />
-        <div className="motion-safe:animate-float-b absolute top-1/3 -right-20 size-80 rounded-full bg-teal-400/25 blur-3xl dark:bg-teal-500/20" />
-        <div className="motion-safe:animate-float-a absolute -bottom-28 left-1/4 size-72 rounded-full bg-fuchsia-400/20 blur-3xl [animation-delay:2s] dark:bg-fuchsia-500/15" />
-      </div>
+      <AmbientBackdrop />
 
       <main className="relative z-10 flex flex-1 flex-col items-center justify-center px-4">
         <Hero10
@@ -61,7 +56,7 @@ export default async function Home() {
           primaryCTA={{ ctaEnabled: false, text: "" }}
         />
         <div
-          className="motion-safe:animate-pop-in -mt-2 flex flex-col items-center gap-2 pb-16 text-center"
+          className="motion-safe:animate-rise -mt-2 flex flex-col items-center gap-2 pb-16 text-center"
           style={{ animationDelay: "260ms" }}
         >
           <SignInButton />

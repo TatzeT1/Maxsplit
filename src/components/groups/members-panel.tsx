@@ -46,7 +46,7 @@ function CopyChip({ label, value }: { label: string; value: string }) {
           : "border-input hover:bg-accent hover:text-accent-foreground",
       )}
     >
-      {copied ? <Check className="animate-pop-in h-3 w-3" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="animate-rise h-3 w-3" /> : <Copy className="h-3 w-3" />}
       {label}
     </button>
   );
@@ -171,7 +171,7 @@ function MemberRow({
       <div className="flex items-center gap-3">
         <div
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-sm font-medium text-white shadow-sm",
+            "shadow-e1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-sm font-medium text-white",
             avatarGradient(member.displayName),
           )}
         >

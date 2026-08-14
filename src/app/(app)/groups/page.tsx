@@ -3,10 +3,11 @@
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { ChevronRight, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { JoinGroupDialog } from "@/components/groups/join-group-dialog";
 import { useT } from "@/components/locale-provider";
+import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
 import { formatDate } from "@/lib/format/date";
@@ -72,11 +73,7 @@ export default function GroupsPage() {
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="bg-paper-texture absolute inset-0 opacity-[0.25]" />
-        <div className="motion-safe:animate-float-a absolute -top-24 -right-20 size-72 rounded-full bg-orange-400/20 blur-3xl dark:bg-orange-500/15" />
-        <div className="motion-safe:animate-float-b absolute top-1/2 -left-24 size-72 rounded-full bg-teal-400/15 blur-3xl dark:bg-teal-500/10" />
-      </div>
+      <AmbientBackdrop />
 
       <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -107,18 +104,18 @@ export default function GroupsPage() {
             {groups.map((group, index) => (
               <li
                 key={group.id}
-                className="animate-pop-in"
-                style={{ animationDelay: `${Math.min(index, 8) * 45}ms` }}
+                className="animate-rise"
+                style={{ "--stagger": Math.min(index, 8) } as CSSProperties}
               >
                 <Link
                   href={`/groups/${group.id}`}
-                  className="group bg-card ring-foreground/10 hover:ring-primary/40 relative flex items-center gap-4 overflow-hidden rounded-2xl p-4 ring-1 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.99] dark:hover:shadow-black/20"
+                  className="group bg-card ring-foreground/10 hover:ring-primary/40 shadow-e1 hover:shadow-e2 active:shadow-e1 ease-spring relative flex items-center gap-4 overflow-hidden rounded-2xl p-4 ring-1 transition-[transform,box-shadow,--tw-ring-color] duration-(--duration-fast) hover:-translate-y-0.5 active:scale-[0.995]"
                 >
                   <div
                     className={`absolute inset-0 bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.06] transition-opacity duration-200 group-hover:opacity-[0.12]`}
                   />
                   <div
-                    className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold text-white shadow-sm ring-2`}
+                    className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card shadow-e1 relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold text-white ring-2`}
                   >
                     {group.icon || group.name.charAt(0).toUpperCase() || "?"}
                   </div>

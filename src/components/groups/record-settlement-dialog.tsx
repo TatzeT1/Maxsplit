@@ -1,7 +1,7 @@
 "use client";
 
-import { PartyPopper } from "lucide-react";
 import { type FormEvent, useState } from "react";
+import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,39 +16,74 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useT } from "@/components/locale-provider";
 import { editSettlement, recordSettlement } from "@/lib/actions/settlements";
-import { formatMoney, parseMoneyInput } from "@/lib/format/money";
+import { parseMoneyInput } from "@/lib/format/money";
 import type { GroupMember, Settlement } from "@/lib/types";
 
-const CONFETTI_PIECES = [
-  { left: "8%", color: "bg-orange-400", delay: "0ms", rotate: "-15deg" },
-  { left: "20%", color: "bg-teal-400", delay: "80ms", rotate: "10deg" },
-  { left: "32%", color: "bg-rose-400", delay: "40ms", rotate: "25deg" },
-  { left: "44%", color: "bg-amber-400", delay: "120ms", rotate: "-20deg" },
-  { left: "56%", color: "bg-violet-400", delay: "20ms", rotate: "15deg" },
-  { left: "68%", color: "bg-emerald-400", delay: "100ms", rotate: "-10deg" },
-  { left: "80%", color: "bg-sky-400", delay: "60ms", rotate: "20deg" },
-  { left: "92%", color: "bg-fuchsia-400", delay: "140ms", rotate: "-25deg" },
-  { left: "14%", color: "bg-amber-400", delay: "160ms", rotate: "30deg" },
-  { left: "62%", color: "bg-rose-400", delay: "180ms", rotate: "-30deg" },
-];
-
-function SettlementCelebration({ text }: { text: string }) {
+/**
+ * The one orchestrated moment in the app: a payment landing.
+ *
+ * Ten falling confetti particles and a party-popper glyph used to live here.
+ * They were replaced rather than removed, because the beat itself is right —
+ * settling a debt is the payoff the whole screen exists for and deserves to be
+ * marked. What changed is the register. Confetti is a birthday; a debt being
+ * cleared is a receipt being stamped, and the second one is what this app is
+ * about.
+ *
+ * Four things run on one shared clock, in sequence rather than at once:
+ * a glow blooms out from behind the disc, a single hairline ring expands and
+ * fades, the checkmark draws itself stroke-first the way a pen would, and the
+ * amount counts up. Sequencing is the whole trick — the same four effects fired
+ * simultaneously read as a burst of noise, while staged over ~700ms they read
+ * as one deliberate gesture with a beginning and an end.
+ *
+ * The checkmark's `pathLength="1"` normalises the stroke to a length of 1
+ * regardless of the path's real geometry, so the dash offset that draws it does
+ * not have to be recomputed if the path is ever edited.
+ */
+function SettlementCelebration({
+  label,
+  amountMinor,
+  currency,
+}: {
+  label: string;
+  amountMinor: number;
+  currency: string;
+}) {
   return (
-    <div className="flex flex-col items-center gap-4 py-10">
+    <div className="flex flex-col items-center gap-5 py-10">
       <div className="relative flex size-20 items-center justify-center">
-        <span className="border-success/60 animate-ring-burst absolute inset-0 rounded-full border-2" />
-        <span className="bg-success text-success-foreground animate-celebrate-pop relative flex size-16 items-center justify-center rounded-full shadow-lg">
-          <PartyPopper className="size-7" />
+        <span
+          className="bg-success/25 animate-bloom absolute inset-0 rounded-full blur-xl"
+          aria-hidden="true"
+        />
+        <span
+          className="border-success/50 animate-settle-ring absolute inset-0 rounded-full border"
+          aria-hidden="true"
+          style={{ animationDelay: "120ms" }}
+        />
+        <span className="bg-success text-success-foreground shadow-e2 animate-rise relative flex size-16 items-center justify-center rounded-full">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="size-7"
+            aria-hidden="true"
+          >
+            <path
+              d="M5 13l4 4L19 7"
+              pathLength={1}
+              className="animate-draw-stroke [--stroke-length:1]"
+              style={{ animationDelay: "180ms" }}
+            />
+          </svg>
         </span>
-        {CONFETTI_PIECES.map((piece, index) => (
-          <span
-            key={index}
-            className={`animate-confetti-fall absolute top-2 size-1.5 rounded-sm ${piece.color}`}
-            style={{ left: piece.left, animationDelay: piece.delay, rotate: piece.rotate }}
-          />
-        ))}
       </div>
-      <p className="font-heading animate-pop-in text-center text-lg font-medium">{text}</p>
+      <p className="font-heading animate-rise text-center text-lg font-medium [--stagger:6]">
+        {label} <AnimatedMoney amountMinor={amountMinor} currency={currency} countOnMount />
+      </p>
     </div>
   );
 }
@@ -143,6 +178,10 @@ export function RecordSettlementDialog({
     }
 
     setCelebrating(true);
+    // Long enough for the sequence to finish rather than get cut off partway:
+    // ring and checkmark land by ~700ms and the amount finishes counting at
+    // ~880ms, so the result is legible and still on screen for a beat before
+    // the dialog dismisses itself.
     setTimeout(() => {
       setCelebrating(false);
       setOpen(false);
@@ -151,7 +190,7 @@ export function RecordSettlementDialog({
         setDate(todayIsoDate());
         setNote("");
       }
-    }, 1100);
+    }, 1600);
   }
 
   return (
@@ -160,7 +199,9 @@ export function RecordSettlementDialog({
       <DialogContent showCloseButton={!celebrating}>
         {celebrating ? (
           <SettlementCelebration
-            text={`${t("settlements.celebrateTitle")} ${formatMoney(parseMoneyInput(amountInput) ?? 0, currency)}`}
+            label={t("settlements.celebrateTitle")}
+            amountMinor={parseMoneyInput(amountInput) ?? 0}
+            currency={currency}
           />
         ) : (
           <form onSubmit={handleSubmit}>

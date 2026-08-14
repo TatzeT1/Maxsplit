@@ -143,7 +143,7 @@ function ImageFan({
             custom={slot}
             variants={fanCard}
             className={cn(
-              "relative shrink-0 overflow-hidden rounded-xl shadow-xl outline outline-black/10 dark:outline-white/10",
+              "shadow-e2 relative shrink-0 overflow-hidden rounded-xl outline outline-black/10 dark:outline-white/10",
               cardAspect,
               slot.width,
               slot.layout,

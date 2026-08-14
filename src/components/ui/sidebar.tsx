@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 import Link, { type LinkProps } from "next/link";
 import React, { useState, createContext, useContext } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { Menu, X } from "lucide-react";
 
 interface Links {
@@ -117,7 +117,7 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
         aria-label="Open menu"
         aria-hidden={open}
         tabIndex={open ? -1 : 0}
-        className="text-sidebar-foreground touch-manipulation z-20 flex size-11 items-center justify-center"
+        className="text-sidebar-foreground z-20 flex size-11 touch-manipulation items-center justify-center"
         onClick={() => setOpen(true)}
       >
         <Menu className="size-5" />
@@ -144,7 +144,7 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
             <button
               type="button"
               aria-label="Close menu"
-              className="text-sidebar-foreground touch-manipulation absolute top-6 right-6 z-50 flex size-11 items-center justify-center"
+              className="text-sidebar-foreground absolute top-6 right-6 z-50 flex size-11 touch-manipulation items-center justify-center"
               style={{ top: "calc(env(safe-area-inset-top) + 1.5rem)" }}
               onClick={() => setOpen(false)}
             >
@@ -175,7 +175,7 @@ export const SidebarLink = ({
       aria-label={link.label}
       aria-current={link.active ? "page" : undefined}
       className={cn(
-        "group/sidebar touch-manipulation flex items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors",
+        "group/sidebar flex touch-manipulation items-center justify-start gap-3 rounded-lg px-2 py-2 transition-colors",
         link.active
           ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
