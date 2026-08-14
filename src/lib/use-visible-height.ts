@@ -22,6 +22,22 @@ const MIN_FRAME_HEIGHT = 200;
  * already layout-viewport-relative, so neither needs `window.scrollY` added.
  * The visible band spans `[offsetTop, offsetTop + height]`, so the room below
  * `elementTop` is `height + offsetTop - elementTop`.
+ *
+ * The result is clamped at both ends, and both clamps are load-bearing:
+ *
+ * - **Floor** (`MIN_FRAME_HEIGHT`): below it the header and composer no longer
+ *   fit and `overflow-hidden` clips the send button.
+ * - **Cap** (`visualHeight`): nothing can occupy more of the visible area than
+ *   the visible area has. Without it a *negative* `elementTop` — the frame
+ *   scrolled partly off the top, which iOS does by leaving a non-zero body
+ *   scroll with the keyboard up in a standalone PWA — is subtracted as a
+ *   negative and *adds* the scrolled-away distance to the frame. That
+ *   overshoot feeds itself: a taller frame makes the document scrollable,
+ *   which permits more scroll, which measures taller still, until the header
+ *   is above the fold and the composer is behind the keyboard.
+ *
+ * The floor is applied last, so on a viewport too short for both it wins —
+ * clipping a control is the worse of the two failures.
  */
 export function computeVisibleHeight(
   visualHeight: number,
@@ -30,7 +46,8 @@ export function computeVisibleHeight(
 ): number {
   const available = visualHeight + visualOffsetTop - elementTop;
   if (!Number.isFinite(available)) return MIN_FRAME_HEIGHT;
-  return Math.max(MIN_FRAME_HEIGHT, Math.round(available));
+  const capped = Math.min(Math.round(available), Math.round(visualHeight));
+  return Math.max(MIN_FRAME_HEIGHT, capped);
 }
 
 /**
