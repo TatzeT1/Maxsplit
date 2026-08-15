@@ -55,6 +55,23 @@ export const en: Dictionary = {
     errorInvalidIban: "Please enter a valid IBAN.",
     errorInvalidPaypalMeHandle:
       'Please enter just your PayPal.Me username, e.g. "maxrobin" — no spaces or link.',
+    guideTitle: "How does this work?",
+    guideIntro: "Three ways your roommates can pay you back — set up one or more of them.",
+    guidePaypalMeTitle: "PayPal.Me link",
+    guidePaypalMeBadge: "Fastest",
+    guidePaypalMeSummary: "One tap, amount already filled in.",
+    guidePaypalMeDetail:
+      'Create a personal username at paypal.me if you don\'t already have one. Enter just the username here, e.g. "maxrobin" — no "https://" or spaces. Members with an open balance then see a "Pay now" button with the amount already filled in, opening PayPal in a new tab.',
+    guidePaypalMeExampleHandle: "maxrobin",
+    guidePaypalMeSetupLink: "Set up PayPal.Me",
+    guidePaypalEmailTitle: "PayPal email",
+    guidePaypalEmailSummary: "For a manual payment in the PayPal app.",
+    guidePaypalEmailDetail:
+      'Enter the email address you use to sign in to PayPal — you\'ll find it in your PayPal profile under "Account settings". Members copy it with a tap and paste it into PayPal as the recipient by hand.',
+    guideIbanTitle: "IBAN",
+    guideIbanSummary: "For a classic bank transfer.",
+    guideIbanDetail:
+      "Open your banking app, copy your IBAN, and paste it here. Members who owe you money only see it on their own screen and can copy it with a tap to paste into their own transfer.",
   },
   theme: {
     light: "Light",

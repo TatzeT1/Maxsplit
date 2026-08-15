@@ -54,6 +54,24 @@ export const de = {
     errorInvalidIban: "Bitte gib eine gültige IBAN ein.",
     errorInvalidPaypalMeHandle:
       "Bitte nur deinen PayPal.Me-Nutzernamen eingeben, z. B. „maxrobin“ — ohne Leerzeichen oder Link.",
+    guideTitle: "Wie funktioniert das?",
+    guideIntro:
+      "Drei Wege, wie dich deine Mitbewohner:innen zurückzahlen können — richte ein oder mehrere davon ein.",
+    guidePaypalMeTitle: "PayPal.Me-Link",
+    guidePaypalMeBadge: "Am schnellsten",
+    guidePaypalMeSummary: "Ein Klick, Betrag ist schon eingetragen.",
+    guidePaypalMeDetail:
+      "Leg dir unter paypal.me einen persönlichen Nutzernamen an, falls du noch keinen hast. Trag hier nur den Namen ein, z. B. „maxrobin“ — ohne „https://“ oder Leerzeichen. Mitglieder sehen dann bei offenen Salden direkt einen „Jetzt bezahlen“-Button mit bereits eingetragenem Betrag, der PayPal in einem neuen Tab öffnet.",
+    guidePaypalMeExampleHandle: "maxrobin",
+    guidePaypalMeSetupLink: "PayPal.Me einrichten",
+    guidePaypalEmailTitle: "PayPal-E-Mail",
+    guidePaypalEmailSummary: "Für eine manuelle Zahlung in der PayPal-App.",
+    guidePaypalEmailDetail:
+      "Trag die E-Mail-Adresse ein, mit der du bei PayPal angemeldet bist — du findest sie in deinem PayPal-Profil unter „Kontoeinstellungen“. Mitglieder kopieren sie mit einem Tap und fügen sie in der PayPal-App von Hand als Empfänger ein.",
+    guideIbanTitle: "IBAN",
+    guideIbanSummary: "Für eine klassische Überweisung von deiner Bank.",
+    guideIbanDetail:
+      "Öffne deine Banking-App, kopiere deine IBAN und füg sie hier ein. Mitglieder, die dir Geld schulden, sehen sie nur bei sich und können sie mit einem Tap kopieren, um sie in ihrer eigenen Überweisung einzufügen.",
   },
   theme: {
     light: "Hell",
