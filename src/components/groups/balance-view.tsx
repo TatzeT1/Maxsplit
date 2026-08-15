@@ -207,37 +207,35 @@ export function BalanceView({
         </div>
       )}
 
-      {!isSettled && (
-        <div className="border-border/70 flex flex-col gap-1.5 border-t pt-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="w-fit"
-            disabled={pdfState === "pending"}
-            onClick={handleDownloadPdf}
-          >
-            <Download className="h-3.5 w-3.5" />
-            {pdfState === "pending" ? t("balances.downloadPdfPending") : t("balances.downloadPdf")}
-          </Button>
-          {pdfState === "error" && (
-            <p className="text-destructive text-xs">{t("balances.downloadPdfError")}</p>
-          )}
-          {shareUrl && (
-            <div className="flex flex-col gap-1">
-              <button
-                type="button"
-                onClick={handleCopyShareLink}
-                className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1.5 text-xs"
-              >
-                {linkCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {linkCopied ? t("balances.linkCopied") : t("balances.copyLink")}
-              </button>
-              <p className="text-muted-foreground text-xs">{t("balances.shareLinkHint")}</p>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="border-border/70 flex flex-col gap-1.5 border-t pt-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-fit"
+          disabled={pdfState === "pending"}
+          onClick={handleDownloadPdf}
+        >
+          <Download className="h-3.5 w-3.5" />
+          {pdfState === "pending" ? t("balances.downloadPdfPending") : t("balances.downloadPdf")}
+        </Button>
+        {pdfState === "error" && (
+          <p className="text-destructive text-xs">{t("balances.downloadPdfError")}</p>
+        )}
+        {shareUrl && (
+          <div className="flex flex-col gap-1">
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              className="text-muted-foreground hover:text-foreground flex w-fit items-center gap-1.5 text-xs"
+            >
+              {linkCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              {linkCopied ? t("balances.linkCopied") : t("balances.copyLink")}
+            </button>
+            <p className="text-muted-foreground text-xs">{t("balances.shareLinkHint")}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
