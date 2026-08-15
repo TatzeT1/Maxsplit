@@ -44,8 +44,8 @@ export const de = {
     paymentDetailsTitle: "Zahlungsdaten",
     paypalEmailLabel: "PayPal-E-Mail",
     paypalEmailPlaceholder: "du@beispiel.de",
-    paypalMeHandleLabel: "PayPal.Me Nutzername",
-    paypalMeHandlePlaceholder: "z. B. maxrobin",
+    paypalMeHandleLabel: "PayPal.Me-Link",
+    paypalMeHandlePlaceholder: "z. B. https://paypal.me/maxrobin",
     ibanLabel: "IBAN",
     ibanPlaceholder: "z. B. DE89 3704 0044 0532 0130 00",
     paymentDetailsHint:
@@ -53,16 +53,16 @@ export const de = {
     errorInvalidPaypalEmail: "Bitte gib eine gültige E-Mail-Adresse ein.",
     errorInvalidIban: "Bitte gib eine gültige IBAN ein.",
     errorInvalidPaypalMeHandle:
-      "Bitte nur deinen PayPal.Me-Nutzernamen eingeben, z. B. „maxrobin“ — ohne Leerzeichen oder Link.",
+      "Bitte füg deinen kompletten PayPal.Me-Link ein, z. B. „https://paypal.me/maxrobin“ — dein Nutzername allein geht auch.",
     guideTitle: "Wie funktioniert das?",
     guideIntro:
       "Drei Wege, wie dich deine Mitbewohner:innen zurückzahlen können — richte ein oder mehrere davon ein.",
     guidePaypalMeTitle: "PayPal.Me-Link",
     guidePaypalMeBadge: "Am schnellsten",
-    guidePaypalMeSummary: "Ein Klick, Betrag ist schon eingetragen.",
+    guidePaypalMeSummary: "Link rein, fertig — Betrag ist schon eingetragen.",
     guidePaypalMeDetail:
-      "Leg dir unter paypal.me einen persönlichen Nutzernamen an, falls du noch keinen hast. Trag hier nur den Namen ein, z. B. „maxrobin“ — ohne „https://“ oder Leerzeichen. Mitglieder sehen dann bei offenen Salden direkt einen „Jetzt bezahlen“-Button mit bereits eingetragenem Betrag, der PayPal in einem neuen Tab öffnet.",
-    guidePaypalMeExampleHandle: "maxrobin",
+      "Öffne dein PayPal.Me-Profil (leg dir unter paypal.me einen Nutzernamen an, falls du noch keinen hast) und kopier den kompletten Link. Füg ihn hier komplett ein, so wie du ihn kopiert hast — dein bloßer Nutzername funktioniert genauso. Mitglieder sehen dann bei offenen Salden direkt einen „Jetzt bezahlen“-Button mit bereits eingetragenem Betrag, der PayPal in einem neuen Tab öffnet.",
+    guidePaypalMeExampleLink: "https://paypal.me/maxrobin",
     guidePaypalMeSetupLink: "PayPal.Me einrichten",
     guidePaypalEmailTitle: "PayPal-E-Mail",
     guidePaypalEmailSummary: "Für eine manuelle Zahlung in der PayPal-App.",

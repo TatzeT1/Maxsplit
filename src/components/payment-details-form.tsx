@@ -78,10 +78,10 @@ export function PaymentDetailsForm({
           id="profile-paypal-me-handle"
           value={handle}
           onChange={(event) => {
-            // Alphanumeric only, as typed — a pasted URL or space never
-            // becomes part of the value, so there's nothing invalid to
-            // reject on submit.
-            setHandle(event.target.value.replace(/[^A-Za-z0-9]/g, "").slice(0, 20));
+            // No live character filtering here — the field accepts a
+            // pasted full link (https://paypal.me/…), which the server
+            // action normalizes down to the bare username on save.
+            setHandle(event.target.value);
             setStatus("idle");
           }}
           placeholder={t("profile.paypalMeHandlePlaceholder")}

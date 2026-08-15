@@ -8,6 +8,7 @@ import {
   isValidIban,
   isValidPaypalMeHandle,
   normalizeIban,
+  normalizePaypalMeHandle,
 } from "@/lib/payment/validate";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -56,7 +57,9 @@ export async function updateDisplayName(input: {
  * denormalization `updateDisplayName` above uses — see MembersPanel, which
  * reads from there so co-members can copy them without a `users/{uid}` read
  * (that doc is only readable by its own owner, see firestore.rules). An
- * empty string clears a field.
+ * empty string clears a field. `paypalMeHandle` accepts either a bare
+ * username or a full PayPal.Me link (see normalizePaypalMeHandle) and always
+ * stores the bare username.
  */
 export async function updatePaymentDetails(input: {
   paypalEmail: string;
@@ -76,7 +79,9 @@ export async function updatePaymentDetails(input: {
     return { ok: false, error: "invalid-iban" };
   }
 
-  const paypalMeHandle = input.paypalMeHandle.trim();
+  const paypalMeHandle = input.paypalMeHandle.trim()
+    ? normalizePaypalMeHandle(input.paypalMeHandle)
+    : "";
   if (paypalMeHandle && !isValidPaypalMeHandle(paypalMeHandle)) {
     return { ok: false, error: "invalid-paypal-me-handle" };
   }

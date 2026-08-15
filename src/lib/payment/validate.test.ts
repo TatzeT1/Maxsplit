@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isValidEmail, isValidIban, isValidPaypalMeHandle, normalizeIban } from "./validate";
+import {
+  isValidEmail,
+  isValidIban,
+  isValidPaypalMeHandle,
+  normalizeIban,
+  normalizePaypalMeHandle,
+} from "./validate";
 
 describe("normalizeIban", () => {
   it("strips whitespace and uppercases", () => {
@@ -67,5 +73,51 @@ describe("isValidPaypalMeHandle", () => {
   it("rejects handles longer than 20 characters", () => {
     expect(isValidPaypalMeHandle("a".repeat(21))).toBe(false);
     expect(isValidPaypalMeHandle("a".repeat(20))).toBe(true);
+  });
+});
+
+describe("normalizePaypalMeHandle", () => {
+  it("passes a bare handle through unchanged", () => {
+    expect(normalizePaypalMeHandle("maxrobin")).toBe("maxrobin");
+  });
+
+  it("extracts the handle from a full link, preserving its case", () => {
+    expect(normalizePaypalMeHandle("https://www.paypal.me/MaximilianTietz448")).toBe(
+      "MaximilianTietz448",
+    );
+  });
+
+  it("accepts variations in scheme and www.", () => {
+    expect(normalizePaypalMeHandle("http://paypal.me/maxrobin")).toBe("maxrobin");
+    expect(normalizePaypalMeHandle("https://paypal.me/maxrobin")).toBe("maxrobin");
+    expect(normalizePaypalMeHandle("www.paypal.me/maxrobin")).toBe("maxrobin");
+    expect(normalizePaypalMeHandle("paypal.me/maxrobin")).toBe("maxrobin");
+  });
+
+  it("is case-insensitive on the domain", () => {
+    expect(normalizePaypalMeHandle("https://PayPal.Me/maxrobin")).toBe("maxrobin");
+  });
+
+  it("strips a trailing slash", () => {
+    expect(normalizePaypalMeHandle("https://paypal.me/maxrobin/")).toBe("maxrobin");
+  });
+
+  it("strips a trailing query string", () => {
+    expect(normalizePaypalMeHandle("https://paypal.me/maxrobin?locale.x=de_DE")).toBe("maxrobin");
+  });
+
+  it("trims surrounding whitespace", () => {
+    expect(normalizePaypalMeHandle("  https://paypal.me/maxrobin  ")).toBe("maxrobin");
+  });
+
+  it("leaves an unrelated URL untouched, so validation rejects it", () => {
+    expect(normalizePaypalMeHandle("https://example.com/maxrobin")).toBe(
+      "https://example.com/maxrobin",
+    );
+  });
+
+  it("leaves empty input untouched", () => {
+    expect(normalizePaypalMeHandle("")).toBe("");
+    expect(normalizePaypalMeHandle("   ")).toBe("");
   });
 });

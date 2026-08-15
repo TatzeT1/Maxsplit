@@ -150,7 +150,7 @@ export function PaymentMethodsGuide() {
           footer={
             <div className="mt-1 flex flex-wrap items-center gap-3">
               <code className="bg-muted rounded-md px-2 py-1 text-xs">
-                paypal.me/{t("profile.guidePaypalMeExampleHandle")}
+                {t("profile.guidePaypalMeExampleLink")}
               </code>
               <a
                 href="https://paypal.me"
