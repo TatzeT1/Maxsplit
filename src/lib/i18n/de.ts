@@ -59,9 +59,9 @@ export const de = {
       "Drei Wege, wie dich deine Mitbewohner:innen zurückzahlen können — richte ein oder mehrere davon ein.",
     guidePaypalMeTitle: "PayPal.Me-Link",
     guidePaypalMeBadge: "Am schnellsten",
-    guidePaypalMeSummary: "Link rein, fertig — Betrag ist schon eingetragen.",
+    guidePaypalMeSummary: "Ein Klick zur richtigen Person — der Betrag steht mit im Link.",
     guidePaypalMeDetail:
-      "Öffne dein PayPal.Me-Profil (leg dir unter paypal.me einen Nutzernamen an, falls du noch keinen hast) und kopier den kompletten Link. Füg ihn hier komplett ein, so wie du ihn kopiert hast — dein bloßer Nutzername funktioniert genauso. Mitglieder sehen dann bei offenen Salden direkt einen „Jetzt bezahlen“-Button mit bereits eingetragenem Betrag, der PayPal in einem neuen Tab öffnet.",
+      "Öffne dein PayPal.Me-Profil (leg dir unter paypal.me einen Nutzernamen an, falls du noch keinen hast) und kopier den kompletten Link. Füg ihn hier komplett ein, so wie du ihn kopiert hast — dein bloßer Nutzername funktioniert genauso. Mitglieder sehen dann bei offenen Salden direkt einen „Jetzt bezahlen“-Button, der PayPal mit dem passenden Betrag im Link öffnet. Ob PayPal den Betrag automatisch einträgt, entscheidet PayPal: Im Browser klappt das meist, öffnet sich stattdessen die PayPal-App, muss er manchmal von Hand nachgetragen werden.",
     guidePaypalMeExampleLink: "https://paypal.me/maxrobin",
     guidePaypalMeSetupLink: "PayPal.Me einrichten",
     guidePaypalEmailTitle: "PayPal-E-Mail",

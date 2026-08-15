@@ -59,9 +59,9 @@ export const en: Dictionary = {
     guideIntro: "Three ways your roommates can pay you back — set up one or more of them.",
     guidePaypalMeTitle: "PayPal.Me link",
     guidePaypalMeBadge: "Fastest",
-    guidePaypalMeSummary: "Paste the link, done — amount already filled in.",
+    guidePaypalMeSummary: "One tap to the right person — the amount is baked into the link.",
     guidePaypalMeDetail:
-      'Open your PayPal.Me profile (create a username at paypal.me if you don\'t already have one) and copy the full link. Paste it here exactly as copied — just your bare username works too. Members with an open balance then see a "Pay now" button with the amount already filled in, opening PayPal in a new tab.',
+      'Open your PayPal.Me profile (create a username at paypal.me if you don\'t already have one) and copy the full link. Paste it here exactly as copied — just your bare username works too. Members with an open balance then see a "Pay now" button that opens PayPal with the right amount baked into the link. Whether PayPal actually fills it in is up to PayPal: it usually works in a browser, but if the PayPal app opens instead, you may need to enter the amount by hand.',
     guidePaypalMeExampleLink: "https://paypal.me/maxrobin",
     guidePaypalMeSetupLink: "Set up PayPal.Me",
     guidePaypalEmailTitle: "PayPal email",
