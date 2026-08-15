@@ -44,12 +44,16 @@ export const de = {
     paymentDetailsTitle: "Zahlungsdaten",
     paypalEmailLabel: "PayPal-E-Mail",
     paypalEmailPlaceholder: "du@beispiel.de",
+    paypalMeHandleLabel: "PayPal.Me Nutzername",
+    paypalMeHandlePlaceholder: "z. B. maxrobin",
     ibanLabel: "IBAN",
     ibanPlaceholder: "z. B. DE89 3704 0044 0532 0130 00",
     paymentDetailsHint:
       "Wird deinen Gruppenmitgliedern angezeigt, damit sie dich zurückzahlen können. Leer lassen, um ein Feld auszublenden.",
     errorInvalidPaypalEmail: "Bitte gib eine gültige E-Mail-Adresse ein.",
     errorInvalidIban: "Bitte gib eine gültige IBAN ein.",
+    errorInvalidPaypalMeHandle:
+      "Bitte nur deinen PayPal.Me-Nutzernamen eingeben, z. B. „maxrobin“ — ohne Leerzeichen oder Link.",
   },
   theme: {
     light: "Hell",
@@ -273,6 +277,10 @@ export const de = {
     linkCopied: "Link kopiert",
     shareLinkHint:
       "Dieser Link funktioniert auch ohne Split-Konto — zum Teilen mit allen Beteiligten.",
+    payNow: "Jetzt bezahlen",
+    copyPaypalEmail: "PayPal-E-Mail kopieren",
+    paypalEmailCopied: "PayPal-E-Mail kopiert",
+    noPaypalMeHint: "Kein PayPal.Me hinterlegt",
   },
   settlements: {
     record: "Zahlung eintragen",

@@ -22,6 +22,18 @@ export function formatMoney(amountMinor: number, currency: string): string {
 }
 
 /**
+ * Converts an integer minor-units amount to a plain major-units number (e.g.
+ * 2550 -> 25.5 for EUR), respecting each currency's actual minor-unit
+ * exponent the same way formatMoney does. For feeding a raw amount into
+ * something that isn't Intl-formatted, like buildPaypalMeLink.
+ */
+export function minorToMajor(amountMinor: number, currency: string): number {
+  const formatter = getFormatter(currency);
+  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+  return amountMinor / 10 ** digits;
+}
+
+/**
  * Parses a German-locale money input like "12,50" or "1.234,56" into integer
  * minor units (1250, 123456). Returns null for anything that isn't a plain
  * non-negative amount with at most two decimal digits — never guesses.

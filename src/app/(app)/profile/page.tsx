@@ -40,7 +40,11 @@ export default async function ProfilePage() {
         <h2 className="text-lg font-semibold">{t("profile.paymentDetailsTitle")}</h2>
         <Card>
           <CardContent>
-            <PaymentDetailsForm paypalEmail={session.paypalEmail ?? ""} iban={session.iban ?? ""} />
+            <PaymentDetailsForm
+              paypalEmail={session.paypalEmail ?? ""}
+              iban={session.iban ?? ""}
+              paypalMeHandle={session.paypalMeHandle ?? ""}
+            />
           </CardContent>
         </Card>
       </div>

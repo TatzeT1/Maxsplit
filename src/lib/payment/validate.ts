@@ -1,5 +1,9 @@
 const IBAN_FORMAT = /^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$/;
 const EMAIL_FORMAT = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// PayPal.me handles are 1-20 characters, letters and digits only — no
+// slashes, spaces, or scheme, so a pasted full URL is rejected rather than
+// silently accepted.
+const PAYPAL_ME_HANDLE_FORMAT = /^[A-Za-z0-9]{1,20}$/;
 
 export function normalizeIban(input: string): string {
   return input.replace(/\s+/g, "").toUpperCase();
@@ -26,4 +30,8 @@ export function isValidIban(input: string): boolean {
 
 export function isValidEmail(input: string): boolean {
   return EMAIL_FORMAT.test(input.trim());
+}
+
+export function isValidPaypalMeHandle(input: string): boolean {
+  return PAYPAL_ME_HANDLE_FORMAT.test(input.trim());
 }

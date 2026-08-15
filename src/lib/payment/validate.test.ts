@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidEmail, isValidIban, normalizeIban } from "./validate";
+import { isValidEmail, isValidIban, isValidPaypalMeHandle, normalizeIban } from "./validate";
 
 describe("normalizeIban", () => {
   it("strips whitespace and uppercases", () => {
@@ -38,5 +38,34 @@ describe("isValidEmail", () => {
     expect(isValidEmail("not-an-email")).toBe(false);
     expect(isValidEmail("missing@tld")).toBe(false);
     expect(isValidEmail("")).toBe(false);
+  });
+});
+
+describe("isValidPaypalMeHandle", () => {
+  it("accepts a plain alphanumeric handle", () => {
+    expect(isValidPaypalMeHandle("maxrobin")).toBe(true);
+    expect(isValidPaypalMeHandle("Max123")).toBe(true);
+  });
+
+  it("rejects a full paypal.me URL", () => {
+    expect(isValidPaypalMeHandle("https://paypal.me/maxrobin")).toBe(false);
+    expect(isValidPaypalMeHandle("paypal.me/maxrobin")).toBe(false);
+  });
+
+  it("rejects spaces and other punctuation", () => {
+    expect(isValidPaypalMeHandle("max robin")).toBe(false);
+    expect(isValidPaypalMeHandle("max-robin")).toBe(false);
+    expect(isValidPaypalMeHandle("max_robin")).toBe(false);
+    expect(isValidPaypalMeHandle("max.robin")).toBe(false);
+  });
+
+  it("rejects empty input", () => {
+    expect(isValidPaypalMeHandle("")).toBe(false);
+    expect(isValidPaypalMeHandle("   ")).toBe(false);
+  });
+
+  it("rejects handles longer than 20 characters", () => {
+    expect(isValidPaypalMeHandle("a".repeat(21))).toBe(false);
+    expect(isValidPaypalMeHandle("a".repeat(20))).toBe(true);
   });
 });

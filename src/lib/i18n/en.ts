@@ -45,12 +45,16 @@ export const en: Dictionary = {
     paymentDetailsTitle: "Payment details",
     paypalEmailLabel: "PayPal email",
     paypalEmailPlaceholder: "you@example.com",
+    paypalMeHandleLabel: "PayPal.Me username",
+    paypalMeHandlePlaceholder: "e.g. maxrobin",
     ibanLabel: "IBAN",
     ibanPlaceholder: "e.g. DE89 3704 0044 0532 0130 00",
     paymentDetailsHint:
       "Shown to your group members so they can pay you back. Leave a field empty to hide it.",
     errorInvalidPaypalEmail: "Please enter a valid email address.",
     errorInvalidIban: "Please enter a valid IBAN.",
+    errorInvalidPaypalMeHandle:
+      'Please enter just your PayPal.Me username, e.g. "maxrobin" — no spaces or link.',
   },
   theme: {
     light: "Light",
@@ -272,6 +276,10 @@ export const en: Dictionary = {
     copyLink: "Copy link",
     linkCopied: "Link copied",
     shareLinkHint: "This link works without a Split account — share it with everyone involved.",
+    payNow: "Pay now",
+    copyPaypalEmail: "Copy PayPal email",
+    paypalEmailCopied: "PayPal email copied",
+    noPaypalMeHint: "No PayPal.Me on file",
   },
   settlements: {
     record: "Record payment",
