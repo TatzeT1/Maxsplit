@@ -8,26 +8,12 @@ import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { updatePaymentDetails } from "@/lib/actions/profile";
 
-export function PaymentDetailsForm({
-  paypalEmail,
-  iban,
-  paypalMeHandle,
-}: {
-  paypalEmail: string;
-  iban: string;
-  paypalMeHandle: string;
-}) {
+export function PaymentDetailsForm({ paypalEmail, iban }: { paypalEmail: string; iban: string }) {
   const [email, setEmail] = useState(paypalEmail);
   const [ibanValue, setIbanValue] = useState(iban);
-  const [handle, setHandle] = useState(paypalMeHandle);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<
-    | "idle"
-    | "success"
-    | "error"
-    | "invalid-paypal-email"
-    | "invalid-iban"
-    | "invalid-paypal-me-handle"
+    "idle" | "success" | "error" | "invalid-paypal-email" | "invalid-iban"
   >("idle");
   const router = useRouter();
   const t = useT();
@@ -36,17 +22,11 @@ export function PaymentDetailsForm({
     event.preventDefault();
     setLoading(true);
     setStatus("idle");
-    const result = await updatePaymentDetails({
-      paypalEmail: email,
-      iban: ibanValue,
-      paypalMeHandle: handle,
-    });
+    const result = await updatePaymentDetails({ paypalEmail: email, iban: ibanValue });
     setLoading(false);
     if (!result.ok) {
       setStatus(
-        result.error === "invalid-paypal-email" ||
-          result.error === "invalid-iban" ||
-          result.error === "invalid-paypal-me-handle"
+        result.error === "invalid-paypal-email" || result.error === "invalid-iban"
           ? result.error
           : "error",
       );
@@ -73,22 +53,6 @@ export function PaymentDetailsForm({
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor="profile-paypal-me-handle">{t("profile.paypalMeHandleLabel")}</Label>
-        <Input
-          id="profile-paypal-me-handle"
-          value={handle}
-          onChange={(event) => {
-            // No live character filtering here — the field accepts a
-            // pasted full link (https://paypal.me/…), which the server
-            // action normalizes down to the bare username on save.
-            setHandle(event.target.value);
-            setStatus("idle");
-          }}
-          placeholder={t("profile.paypalMeHandlePlaceholder")}
-          autoComplete="off"
-        />
-      </div>
-      <div className="flex flex-col gap-2">
         <Label htmlFor="profile-iban">{t("profile.ibanLabel")}</Label>
         <Input
           id="profile-iban"
@@ -107,9 +71,6 @@ export function PaymentDetailsForm({
       )}
       {status === "invalid-iban" && (
         <p className="text-destructive text-sm">{t("profile.errorInvalidIban")}</p>
-      )}
-      {status === "invalid-paypal-me-handle" && (
-        <p className="text-destructive text-sm">{t("profile.errorInvalidPaypalMeHandle")}</p>
       )}
       {status === "error" && <p className="text-destructive text-sm">{t("profile.saveError")}</p>}
       {status === "success" && (

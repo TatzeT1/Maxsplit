@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMoney, minorToMajor, parseMoneyInput } from "./money";
+import { formatMoney, parseMoneyInput } from "./money";
 
 // Intl inserts a non-breaking space (U+00A0) between amount and currency symbol.
 const NBSP = " ";
@@ -49,15 +49,5 @@ describe("parseMoneyInput", () => {
 
   it("returns null for empty input", () => {
     expect(parseMoneyInput("  ")).toBeNull();
-  });
-});
-
-describe("minorToMajor", () => {
-  it("converts EUR cents to euros", () => {
-    expect(minorToMajor(2550, "EUR")).toBe(25.5);
-  });
-
-  it("respects currencies with no minor unit exponent", () => {
-    expect(minorToMajor(1234, "JPY")).toBe(1234);
   });
 });

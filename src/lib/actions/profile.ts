@@ -3,13 +3,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
-import {
-  isValidEmail,
-  isValidIban,
-  isValidPaypalMeHandle,
-  normalizeIban,
-  normalizePaypalMeHandle,
-} from "@/lib/payment/validate";
+import { isValidEmail, isValidIban, normalizeIban } from "@/lib/payment/validate";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -51,20 +45,16 @@ export async function updateDisplayName(input: {
 }
 
 /**
- * Updates the user's own PayPal email / IBAN / PayPal.Me handle and
- * propagates them to every group's per-member snapshot
- * (`group.members[uid].paypalEmail`/`.iban`/`.paypalMeHandle`), the same
- * denormalization `updateDisplayName` above uses — see MembersPanel, which
- * reads from there so co-members can copy them without a `users/{uid}` read
- * (that doc is only readable by its own owner, see firestore.rules). An
- * empty string clears a field. `paypalMeHandle` accepts either a bare
- * username or a full PayPal.Me link (see normalizePaypalMeHandle) and always
- * stores the bare username.
+ * Updates the user's own PayPal email / IBAN and propagates them to every
+ * group's per-member snapshot (`group.members[uid].paypalEmail`/`.iban`), the
+ * same denormalization `updateDisplayName` above uses — see MembersPanel,
+ * which reads from there so co-members can copy them without a `users/{uid}`
+ * read (that doc is only readable by its own owner, see firestore.rules).
+ * An empty string clears the field.
  */
 export async function updatePaymentDetails(input: {
   paypalEmail: string;
   iban: string;
-  paypalMeHandle: string;
 }): Promise<ActionResult<null>> {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
@@ -79,18 +69,10 @@ export async function updatePaymentDetails(input: {
     return { ok: false, error: "invalid-iban" };
   }
 
-  const paypalMeHandle = input.paypalMeHandle.trim()
-    ? normalizePaypalMeHandle(input.paypalMeHandle)
-    : "";
-  if (paypalMeHandle && !isValidPaypalMeHandle(paypalMeHandle)) {
-    return { ok: false, error: "invalid-paypal-me-handle" };
-  }
-
   await adminDb.doc(`users/${session.uid}`).set(
     {
       paypalEmail: paypalEmail || FieldValue.delete(),
       iban: iban || FieldValue.delete(),
-      paypalMeHandle: paypalMeHandle || FieldValue.delete(),
     },
     { merge: true },
   );
@@ -106,7 +88,6 @@ export async function updatePaymentDetails(input: {
       batch.update(doc.ref, {
         [`members.${session.uid}.paypalEmail`]: paypalEmail || FieldValue.delete(),
         [`members.${session.uid}.iban`]: iban || FieldValue.delete(),
-        [`members.${session.uid}.paypalMeHandle`]: paypalMeHandle || FieldValue.delete(),
       });
     }
     await batch.commit();

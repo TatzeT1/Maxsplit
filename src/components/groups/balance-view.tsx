@@ -5,67 +5,10 @@ import { type CSSProperties, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
 import { getOrCreateSettlementShareToken } from "@/lib/actions/settlement-share";
-import { formatMoney, minorToMajor } from "@/lib/format/money";
+import { formatMoney } from "@/lib/format/money";
 import { simplifyDebts } from "@/lib/money/balances";
-import { buildPaypalMeLink } from "@/lib/payment/paypal-me";
-import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
-
-/**
- * Only rendered for a "you owe" line (see BalanceView.lines) — never for
- * money owed to the current user, per the balances.payNow spec. Prefers a
- * direct PayPal.Me payment link; falls back to copying the recipient's
- * PayPal email (the pre-existing behavior) when no handle is on file.
- */
-function PayNowAction({
-  member,
-  amountMinor,
-  currency,
-}: {
-  member: GroupMember | undefined;
-  amountMinor: number;
-  currency: string;
-}) {
-  const t = useT();
-  const { copied, copy } = useCopyToClipboard();
-
-  if (member?.paypalMeHandle) {
-    const handle = member.paypalMeHandle;
-    const href = buildPaypalMeLink(handle, minorToMajor(amountMinor, currency), currency);
-    return (
-      <Button asChild variant="outline" size="sm" className="text-foreground shrink-0">
-        <a href={href} target="_blank" rel="noopener noreferrer">
-          {t("balances.payNow")}
-        </a>
-      </Button>
-    );
-  }
-
-  if (member?.paypalEmail) {
-    const email = member.paypalEmail;
-    return (
-      <div className="flex shrink-0 items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => copy(email)}
-          className={cn(
-            "flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium transition-all duration-200 active:scale-95",
-            copied
-              ? "border-success/40 bg-success/10 text-success"
-              : "border-input text-foreground hover:bg-accent hover:text-accent-foreground",
-          )}
-        >
-          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-          {copied ? t("balances.paypalEmailCopied") : t("balances.copyPaypalEmail")}
-        </button>
-        <span className="text-muted-foreground text-xs">{t("balances.noPaypalMeHint")}</span>
-      </div>
-    );
-  }
-
-  return null;
-}
 
 function MemberChip({ name }: { name: string }) {
   return (
@@ -134,7 +77,6 @@ export function BalanceView({
         uid,
         name,
         youOwe,
-        amountMinor: transfer.amountMinor,
         text: youOwe
           ? t("balances.youOwe", { name, amount: formatMoney(transfer.amountMinor, currency) })
           : t("balances.owesYou", { name, amount: formatMoney(transfer.amountMinor, currency) }),
@@ -232,22 +174,13 @@ export function BalanceView({
             <li
               key={line.uid}
               className={cn(
-                "font-heading animate-rise tabular-money flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-base font-medium",
+                "font-heading animate-rise tabular-money flex items-center gap-2 text-base font-medium",
                 line.youOwe ? "text-destructive" : "text-success",
               )}
               style={{ "--stagger": Math.min(index, 8) + 3 } as CSSProperties}
             >
-              <span className="flex items-center gap-2">
-                <MemberChip name={line.name} />
-                {line.text}
-              </span>
-              {line.youOwe && (
-                <PayNowAction
-                  member={members[line.uid]}
-                  amountMinor={line.amountMinor}
-                  currency={currency}
-                />
-              )}
+              <MemberChip name={line.name} />
+              {line.text}
             </li>
           ))}
         </ul>
