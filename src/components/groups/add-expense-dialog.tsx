@@ -13,10 +13,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { QueuedForSync } from "@/components/ui/queued-for-sync";
 import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
-import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
+import { editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
   categoryColorClasses,
@@ -27,6 +28,8 @@ import { EXPENSE_EMOJIS } from "@/lib/emoji";
 import { formatMoney, parseMoneyInput } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
+import { submitCreateAction } from "@/lib/offline/action-queue";
+import { TIMEOUT } from "@/lib/offline/with-timeout";
 import { cn } from "@/lib/utils";
 import type { CategoryId, Expense, GroupMember, SplitMode } from "@/lib/types";
 
@@ -211,6 +214,7 @@ export function AddExpenseDialog({
 
   const [loading, setLoading] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
+  const [queued, setQueued] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
 
@@ -310,14 +314,30 @@ export function AddExpenseDialog({
       splitInputs,
     };
 
-    const result = expenseToEdit
-      ? await editExpense({ ...payload, expenseId: expenseToEdit.id })
-      : await addExpense(payload);
-
-    setLoading(false);
-    if (!result.ok) {
-      setError(expenseErrorMessage(result.error, t));
-      return;
+    if (expenseToEdit) {
+      const result = await editExpense({ ...payload, expenseId: expenseToEdit.id });
+      setLoading(false);
+      if (!result.ok) {
+        setError(expenseErrorMessage(result.error, t));
+        return;
+      }
+      setQueued(false);
+    } else {
+      // A client-generated id, not a server round trip: if this submission
+      // gets retried — by Next's offline retry, or by the outbox once the
+      // app reopens — addExpense reuses the same expense id instead of
+      // creating a second one. See ExpenseInput.clientMutationId.
+      const createPayload = { ...payload, clientMutationId: crypto.randomUUID() };
+      const outcome = await submitCreateAction("add-expense", createPayload);
+      setLoading(false);
+      if (outcome === TIMEOUT) {
+        setQueued(true);
+      } else if (outcome.ok) {
+        setQueued(false);
+      } else {
+        setError(expenseErrorMessage(outcome.error, t));
+        return;
+      }
     }
 
     setCelebrating(true);
@@ -327,6 +347,7 @@ export function AddExpenseDialog({
     // the dialog dismisses itself.
     setTimeout(() => {
       setCelebrating(false);
+      setQueued(false);
       setOpen(false);
       if (!expenseToEdit) {
         setDescription("");
@@ -350,11 +371,20 @@ export function AddExpenseDialog({
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent showCloseButton={!celebrating}>
         {celebrating ? (
-          <SaveCelebration
-            label={t("expenses.celebrateTitle")}
-            amountMinor={amountMinor}
-            currency={currency}
-          />
+          queued ? (
+            <QueuedForSync
+              label={t("common.savedOfflineTitle")}
+              caption={t("common.savedOfflineCaption")}
+              amountMinor={amountMinor}
+              currency={currency}
+            />
+          ) : (
+            <SaveCelebration
+              label={t("expenses.celebrateTitle")}
+              amountMinor={amountMinor}
+              currency={currency}
+            />
+          )
         ) : (
           <form onSubmit={handleSubmit}>
             <DialogHeader>

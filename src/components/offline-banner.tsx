@@ -1,51 +1,73 @@
 "use client";
 
-import { WifiOff } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { RotateCw, WifiOff, X } from "lucide-react";
+import { useEffect } from "react";
+import { useOffline } from "next/offline";
 import { useT } from "@/components/locale-provider";
-
-function subscribe(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
-}
-
-function getSnapshot() {
-  return navigator.onLine;
-}
-
-// The server has no network state of its own — assume online so the first
-// paint matches what SSR always renders (nothing), and let the client
-// snapshot correct it immediately after hydration if the device is offline.
-function getServerSnapshot() {
-  return true;
-}
+import { useQueuedActions } from "@/lib/offline/use-queued-actions";
 
 /**
- * Split has no offline write queue (see AGENTS.md: writes are Server
- * Actions, not direct client Firestore writes, so there's nothing for the
- * browser to replay on reconnect). Without this, losing signal mid-session
- * looks identical to everything working — a save silently does nothing and
- * `onSnapshot` listeners just stop updating. This banner is the minimum fix:
- * make the offline state visible instead of indistinguishable from normal.
+ * `useOffline` (from Next's `experimental.useOffline`, enabled in
+ * next.config.ts) tracks both the browser's offline event *and* a failed
+ * framework fetch, which catches the "looks connected but isn't" case
+ * `navigator.onLine` alone would miss — see
+ * node_modules/next/dist/docs/01-app/02-guides/offline-support.md. It only
+ * covers the current page session, though: a closed tab or a killed iOS PWA
+ * loses anything still pending. The IndexedDB outbox in lib/offline is the
+ * durability layer for that gap, and this banner surfaces both — the
+ * device's connectivity, and any queued action that's stuck or been
+ * rejected outright — so neither state is silently indistinguishable from
+ * "everything's fine."
  */
 export function OfflineBanner() {
-  const isOnline = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const isOffline = useOffline();
+  const { actions, discard, retry } = useQueuedActions();
   const t = useT();
 
-  if (isOnline) return null;
+  useEffect(() => {
+    void navigator.storage?.persist?.();
+  }, []);
+
+  const failed = actions.filter((action) => action.error);
+  const hasPending = actions.length > failed.length;
+
+  if (!isOffline && failed.length === 0) return null;
 
   return (
     <div
       role="status"
-      className="bg-secondary text-secondary-foreground animate-rise sticky top-0 z-50 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium"
+      className="bg-secondary text-secondary-foreground animate-rise sticky top-0 z-50 flex flex-col gap-1.5 px-3 py-2 text-sm font-medium"
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}
     >
-      <WifiOff className="size-4 shrink-0" aria-hidden="true" />
-      {t("common.offline")}
+      {isOffline && (
+        <div className="flex items-center justify-center gap-2">
+          <WifiOff className="size-4 shrink-0" aria-hidden="true" />
+          <span>{hasPending ? t("common.offlineWithPending") : t("common.offline")}</span>
+        </div>
+      )}
+      {failed.map((action) => (
+        <div key={action.id} className="flex items-center justify-center gap-3">
+          <span className="text-destructive">
+            {action.kind === "add-expense" ? t("expenses.syncFailed") : t("settlements.syncFailed")}
+          </span>
+          <button
+            type="button"
+            onClick={() => retry(action)}
+            className="hover:text-foreground flex items-center gap-1 underline underline-offset-2"
+          >
+            <RotateCw className="size-3.5" aria-hidden="true" />
+            {t("common.retry")}
+          </button>
+          <button
+            type="button"
+            onClick={() => discard(action.id)}
+            className="hover:text-foreground flex items-center gap-1 underline underline-offset-2"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+            {t("common.discard")}
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
