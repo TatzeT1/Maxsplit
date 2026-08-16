@@ -47,13 +47,13 @@ Rules language.
 
 ### Rationale against the alternatives
 
-| Criterion              | (A) Client-only                                                                                                                            | (B) Server-only                                                                          | (C) Hybrid — chosen                                               |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| Money-math correctness | Rules can't express largest-remainder rounding; math would live in untested, unenforceable rule expressions or (worse) trusted client code | Fully server-validated, easy to unit test                                                | Fully server-validated, easy to unit test                         |
-| Firestore read cost    | Cheapest — listeners only pay for changed docs                                                                                             | More expensive — every read is a function invocation + Admin SDK read, no listener reuse | Cheapest for reads — same as (A)                                  |
-| Realtime UX            | Best, free                                                                                                                                 | Requires polling or a custom pub/sub layer to fake realtime                              | Best, free — same as (A)                                          |
-| Vercel cold starts     | None — no server round-trip for reads                                                                                                      | Every read _and_ write pays a cold start                                                 | Only writes pay a cold start; reads are unaffected                |
-| Testability            | Business logic scattered into rules + client code, hard to unit test                                                                       | Easiest — all logic in one place, plain functions                                        | Easiest — write logic isolated in Server Actions, plain functions |
+| Criterion | (A) Client-only | (B) Server-only | (C) Hybrid — chosen |
+|---|---|---|---|
+| Money-math correctness | Rules can't express largest-remainder rounding; math would live in untested, unenforceable rule expressions or (worse) trusted client code | Fully server-validated, easy to unit test | Fully server-validated, easy to unit test |
+| Firestore read cost | Cheapest — listeners only pay for changed docs | More expensive — every read is a function invocation + Admin SDK read, no listener reuse | Cheapest for reads — same as (A) |
+| Realtime UX | Best, free | Requires polling or a custom pub/sub layer to fake realtime | Best, free — same as (A) |
+| Vercel cold starts | None — no server round-trip for reads | Every read *and* write pays a cold start | Only writes pay a cold start; reads are unaffected |
+| Testability | Business logic scattered into rules + client code, hard to unit test | Easiest — all logic in one place, plain functions | Easiest — write logic isolated in Server Actions, plain functions |
 
 (B) was rejected mainly on realtime UX and cost: turning every balance/activity read into a
 serverless function call adds latency and Vercel invocation cost for no correctness benefit,
@@ -77,57 +77,9 @@ non-negotiable that money math is never trusted from the client.
 ### What would make us reverse this
 
 - If Server Action cold starts on Vercel become a measured UX problem for common write paths
-  (e.g. adding an expense feels laggy on 4G), we'd consider moving the _validation logic
-  only_ into a callable Cloud Function kept warm, while keeping the "server, not client,
+  (e.g. adding an expense feels laggy on 4G), we'd consider moving the *validation logic
+  only* into a callable Cloud Function kept warm, while keeping the "server, not client,
   computes money" rule intact.
 - If Firestore Rules gain a real expression language capable of safely validating
   largest-remainder splits (unlikely), pure client writes for expenses could be
   reconsidered — but settlements and balance math would still need a trusted recompute step.
-
-## ADR-002: PayPal.Me payment links with pre-filled amount — reverted
-
-**Status:** Reverted
-**Date:** 2026-08-16
-
-### Context
-
-Members already stored a bare PayPal email / IBAN for others to copy and paste into PayPal
-by hand. We tried replacing that with a direct "Jetzt bezahlen" button: a member's PayPal.Me
-username (`paypalMeHandle`, denormalized onto `GroupMember` the same way `paypalEmail`/`iban`
-are) fed into `buildPaypalMeLink(handle, amount, currency)`, producing
-`https://paypal.me/<handle>/<amount><currency>` — PayPal's own documented link format for
-pre-filling the amount on their payment page.
-
-### What we found
-
-The amount is genuinely present in the link, but whether PayPal actually pre-fills it with
-that amount is entirely up to PayPal, not the page that links to it:
-
-- Multiple PayPal Community threads report that a `paypal.me/<handle>/<amount><currency>`
-  link pre-fills correctly in a desktop/mobile **browser**, but when the OS instead hands the
-  link to the installed **PayPal native app** (iOS/Android Universal/App Links — a decision
-  made by the OS, not the linking web page), the app opens straight to the recipient's
-  profile and drops the amount, leaving the payer to type it in by hand.
-- Testing against this app's own deployment went further: even opening the link as an
-  installed **PWA on iOS**, which should behave like a browser rather than trigger the native
-  app's own handoff, still didn't carry the amount over.
-
-There is no reliable client-side fix: a web page cannot force iOS/Android to keep a
-Universal/App Link inside the browser once the OS decides to hand it to an installed app, and
-even PayPal's own web flow isn't consistently honoring the amount segment.
-
-### Decision
-
-Reverted the feature (commits `1b7e176`, `05d8862`, `d8333f7`, `dc44255`, `14466d0`) rather
-than keep a button whose label ("Jetzt bezahlen" with an amount already filled in) silently
-didn't do what it implied. Without a reliably pre-filled amount, the button had no real
-advantage left over the existing "copy PayPal email, paste it in by hand" flow it was meant
-to improve on.
-
-### What would change this
-
-Worth revisiting only if PayPal ships a documented, reliable way to carry an amount through
-to their **native app** on both iOS and Android — not just their web flow — or if the payment
-method gets redesigned around something that doesn't depend on their public URL scheme at all
-(e.g. a real PayPal Checkout/Payouts API integration, which is materially bigger in scope than
-a payment link).

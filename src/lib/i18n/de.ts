@@ -50,12 +50,34 @@ export const de = {
     paymentDetailsTitle: "Zahlungsdaten",
     paypalEmailLabel: "PayPal-E-Mail",
     paypalEmailPlaceholder: "du@beispiel.de",
+    paypalMeHandleLabel: "PayPal.Me-Link",
+    paypalMeHandlePlaceholder: "z. B. https://paypal.me/maxrobin",
     ibanLabel: "IBAN",
     ibanPlaceholder: "z. B. DE89 3704 0044 0532 0130 00",
     paymentDetailsHint:
       "Wird deinen Gruppenmitgliedern angezeigt, damit sie dich zurückzahlen können. Leer lassen, um ein Feld auszublenden.",
     errorInvalidPaypalEmail: "Bitte gib eine gültige E-Mail-Adresse ein.",
     errorInvalidIban: "Bitte gib eine gültige IBAN ein.",
+    errorInvalidPaypalMeHandle:
+      "Bitte füg deinen kompletten PayPal.Me-Link ein, z. B. „https://paypal.me/maxrobin“ — dein Nutzername allein geht auch.",
+    guideTitle: "Wie funktioniert das?",
+    guideIntro:
+      "Drei Wege, wie dich deine Mitbewohner:innen zurückzahlen können — richte ein oder mehrere davon ein.",
+    guidePaypalMeTitle: "PayPal.Me-Link",
+    guidePaypalMeBadge: "Am schnellsten",
+    guidePaypalMeSummary: "Ein Klick, direkt zur richtigen Person.",
+    guidePaypalMeDetail:
+      "Öffne dein PayPal.Me-Profil (leg dir unter paypal.me einen Nutzernamen an, falls du noch keinen hast) und kopier den kompletten Link. Füg ihn hier komplett ein, so wie du ihn kopiert hast — dein bloßer Nutzername funktioniert genauso. Mitglieder sehen dann bei offenen Salden direkt einen „Jetzt bezahlen“-Button, der PayPal öffnet und dich direkt als Empfänger vorschlägt — den Betrag trägt die zahlende Person dort noch selbst ein.",
+    guidePaypalMeExampleLink: "https://paypal.me/maxrobin",
+    guidePaypalMeSetupLink: "PayPal.Me einrichten",
+    guidePaypalEmailTitle: "PayPal-E-Mail",
+    guidePaypalEmailSummary: "Für eine manuelle Zahlung in der PayPal-App.",
+    guidePaypalEmailDetail:
+      "Trag die E-Mail-Adresse ein, mit der du bei PayPal angemeldet bist — du findest sie in deinem PayPal-Profil unter „Kontoeinstellungen“. Mitglieder kopieren sie mit einem Tap und fügen sie in der PayPal-App von Hand als Empfänger ein.",
+    guideIbanTitle: "IBAN",
+    guideIbanSummary: "Für eine klassische Überweisung von deiner Bank.",
+    guideIbanDetail:
+      "Öffne deine Banking-App, kopiere deine IBAN und füg sie hier ein. Mitglieder, die dir Geld schulden, sehen sie nur bei sich und können sie mit einem Tap kopieren, um sie in ihrer eigenen Überweisung einzufügen.",
   },
   theme: {
     light: "Hell",
@@ -281,6 +303,10 @@ export const de = {
     linkCopied: "Link kopiert",
     shareLinkHint:
       "Dieser Link funktioniert auch ohne Split-Konto — zum Teilen mit allen Beteiligten.",
+    payNow: "Jetzt bezahlen",
+    copyPaypalEmail: "PayPal-E-Mail kopieren",
+    paypalEmailCopied: "PayPal-E-Mail kopiert",
+    noPaypalMeHint: "Kein PayPal.Me hinterlegt",
   },
   settlements: {
     record: "Zahlung eintragen",

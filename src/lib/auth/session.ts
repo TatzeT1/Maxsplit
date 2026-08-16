@@ -19,6 +19,7 @@ export interface Session {
   photoURL: string | null;
   paypalEmail: string | null;
   iban: string | null;
+  paypalMeHandle: string | null;
 }
 
 /**
@@ -49,6 +50,7 @@ export async function getSession(): Promise<Session | null> {
       photoURL: (profile?.photoURL as string | undefined) || decoded.picture || null,
       paypalEmail: (profile?.paypalEmail as string | undefined) || null,
       iban: (profile?.iban as string | undefined) || null,
+      paypalMeHandle: (profile?.paypalMeHandle as string | undefined) || null,
     };
   } catch {
     return null;

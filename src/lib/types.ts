@@ -19,6 +19,8 @@ export interface GroupMember {
   paypalEmail?: string;
   /** @see paypalEmail */
   iban?: string;
+  /** PayPal.Me username only (e.g. "maxrobin"), no URL — see buildPaypalMeLink (lib/payment/paypal-me.ts). @see paypalEmail */
+  paypalMeHandle?: string;
 }
 
 export interface Group {

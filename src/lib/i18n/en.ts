@@ -50,12 +50,33 @@ export const en: Dictionary = {
     paymentDetailsTitle: "Payment details",
     paypalEmailLabel: "PayPal email",
     paypalEmailPlaceholder: "you@example.com",
+    paypalMeHandleLabel: "PayPal.Me link",
+    paypalMeHandlePlaceholder: "e.g. https://paypal.me/maxrobin",
     ibanLabel: "IBAN",
     ibanPlaceholder: "e.g. DE89 3704 0044 0532 0130 00",
     paymentDetailsHint:
       "Shown to your group members so they can pay you back. Leave a field empty to hide it.",
     errorInvalidPaypalEmail: "Please enter a valid email address.",
     errorInvalidIban: "Please enter a valid IBAN.",
+    errorInvalidPaypalMeHandle:
+      'Please enter your full PayPal.Me link, e.g. "https://paypal.me/maxrobin" — just your username also works.',
+    guideTitle: "How does this work?",
+    guideIntro: "Three ways your roommates can pay you back — set up one or more of them.",
+    guidePaypalMeTitle: "PayPal.Me link",
+    guidePaypalMeBadge: "Fastest",
+    guidePaypalMeSummary: "One tap, straight to the right person.",
+    guidePaypalMeDetail:
+      'Open your PayPal.Me profile (create a username at paypal.me if you don\'t already have one) and copy the full link. Paste it here exactly as copied — just your bare username works too. Members with an open balance then see a "Pay now" button that opens PayPal and suggests you as the recipient — the person paying still enters the amount themselves there.',
+    guidePaypalMeExampleLink: "https://paypal.me/maxrobin",
+    guidePaypalMeSetupLink: "Set up PayPal.Me",
+    guidePaypalEmailTitle: "PayPal email",
+    guidePaypalEmailSummary: "For a manual payment in the PayPal app.",
+    guidePaypalEmailDetail:
+      'Enter the email address you use to sign in to PayPal — you\'ll find it in your PayPal profile under "Account settings". Members copy it with a tap and paste it into PayPal as the recipient by hand.',
+    guideIbanTitle: "IBAN",
+    guideIbanSummary: "For a classic bank transfer.",
+    guideIbanDetail:
+      "Open your banking app, copy your IBAN, and paste it here. Members who owe you money only see it on their own screen and can copy it with a tap to paste into their own transfer.",
   },
   theme: {
     light: "Light",
@@ -279,6 +300,10 @@ export const en: Dictionary = {
     copyLink: "Copy link",
     linkCopied: "Link copied",
     shareLinkHint: "This link works without a Split account — share it with everyone involved.",
+    payNow: "Pay now",
+    copyPaypalEmail: "Copy PayPal email",
+    paypalEmailCopied: "PayPal email copied",
+    noPaypalMeHint: "No PayPal.Me on file",
   },
   settlements: {
     record: "Record payment",
