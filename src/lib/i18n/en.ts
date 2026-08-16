@@ -23,6 +23,7 @@ export const en: Dictionary = {
     moreActions: "More actions",
     somethingWentWrong: "Something went wrong.",
     unsavedChanges: "You have unsaved changes.",
+    offline: "No connection — changes aren't being saved right now.",
   },
   nav: {
     groups: "Groups",

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { LocaleProvider } from "@/components/locale-provider";
+import { OfflineBanner } from "@/components/offline-banner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getLocale, getServerT } from "@/lib/i18n/server";
 import "./globals.css";
@@ -77,7 +78,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {THEME_INIT_SCRIPT}
         </Script>
         <LocaleProvider initialLocale={locale}>
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider>
+            <OfflineBanner />
+            {children}
+          </ThemeProvider>
         </LocaleProvider>
       </body>
     </html>

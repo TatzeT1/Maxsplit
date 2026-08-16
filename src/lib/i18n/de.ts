@@ -22,6 +22,7 @@ export const de = {
     moreActions: "Weitere Aktionen",
     somethingWentWrong: "Da ist etwas schiefgelaufen.",
     unsavedChanges: "Du hast ungespeicherte Änderungen.",
+    offline: "Keine Verbindung — Änderungen werden gerade nicht gespeichert.",
   },
   nav: {
     groups: "Gruppen",
