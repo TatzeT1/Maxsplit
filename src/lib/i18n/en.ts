@@ -263,6 +263,7 @@ export const en: Dictionary = {
     errorInvalidParticipants: "Choose at least one participant.",
     errorNotOwner: "You can only edit or delete your own expenses.",
     deleteError: "Couldn't delete the expense.",
+    celebrateTitle: "Expense saved!",
   },
   categories: {
     groceries: "Groceries",
@@ -308,7 +309,7 @@ export const en: Dictionary = {
     dateLabel: "Date",
     noteLabel: "Note (optional)",
     notePlaceholder: "e.g. via PayPal",
-    celebrateTitle: "Payment sent!",
+    celebrateTitle: "Payment recorded!",
     saveError: "Couldn't save the payment.",
     deleteConfirm: "Really delete this payment?",
     deleteConfirmBody: "This can't be undone.",

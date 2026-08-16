@@ -264,6 +264,7 @@ export const de = {
     errorInvalidParticipants: "Wähl mindestens eine teilnehmende Person aus.",
     errorNotOwner: "Du kannst nur eigene Ausgaben bearbeiten oder löschen.",
     deleteError: "Ausgabe konnte nicht gelöscht werden.",
+    celebrateTitle: "Ausgabe gespeichert!",
   },
   categories: {
     groceries: "Lebensmittel",
@@ -310,7 +311,7 @@ export const de = {
     dateLabel: "Datum",
     noteLabel: "Notiz (optional)",
     notePlaceholder: "z. B. per PayPal",
-    celebrateTitle: "Zahlung verschickt!",
+    celebrateTitle: "Zahlung eingetragen!",
     saveError: "Zahlung konnte nicht gespeichert werden.",
     deleteConfirm: "Zahlung wirklich löschen?",
     deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",

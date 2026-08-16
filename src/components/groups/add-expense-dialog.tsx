@@ -1,6 +1,5 @@
 "use client";
 
-import { Check } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
@@ -210,7 +210,7 @@ export function AddExpenseDialog({
   );
 
   const [loading, setLoading] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
 
@@ -320,9 +320,13 @@ export function AddExpenseDialog({
       return;
     }
 
-    setSaved(true);
+    setCelebrating(true);
+    // Long enough for the sequence to finish rather than get cut off partway:
+    // ring and checkmark land by ~700ms and the amount finishes counting at
+    // ~880ms, so the result is legible and still on screen for a beat before
+    // the dialog dismisses itself.
     setTimeout(() => {
-      setSaved(false);
+      setCelebrating(false);
       setOpen(false);
       if (!expenseToEdit) {
         setDescription("");
@@ -338,271 +342,275 @@ export function AddExpenseDialog({
         setPercentInputs({});
         setExactInputs({});
       }
-    }, 500);
+    }, 1600);
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={celebrating ? undefined : setOpen}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent>
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>
-              {expenseToEdit ? t("expenses.editTitle") : t("expenses.addTitle")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto py-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-description">{t("expenses.descriptionLabel")}</Label>
-              <Input
-                id="expense-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder={t("expenses.descriptionPlaceholder")}
-                autoFocus
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-amount">{t("expenses.amountLabel")}</Label>
-              <Input
-                id="expense-amount"
-                value={amountInput}
-                onChange={(event) => setAmountInput(event.target.value)}
-                placeholder={`0,00 ${currency}`}
-                inputMode="decimal"
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-date">{t("expenses.dateLabel")}</Label>
-              <Input
-                id="expense-date"
-                type="date"
-                value={date}
-                onChange={(event) => setDate(event.target.value)}
-                required
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="expense-category">{t("expenses.categoryLabel")}</Label>
-              <div className="flex items-center gap-2">
-                <EmojiPicker
-                  value={emoji}
-                  onChange={setEmoji}
-                  emojis={EXPENSE_EMOJIS}
-                  fallback={categoryIconElement(category, "h-4 w-4")}
-                  colorClassName={categoryColorClasses(category)}
-                  ariaLabel={t("expenses.emojiPickerLabel")}
-                  resetLabel={t("expenses.emojiReset")}
+      <DialogContent showCloseButton={!celebrating}>
+        {celebrating ? (
+          <SaveCelebration
+            label={t("expenses.celebrateTitle")}
+            amountMinor={amountMinor}
+            currency={currency}
+          />
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle>
+                {expenseToEdit ? t("expenses.editTitle") : t("expenses.addTitle")}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto py-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="expense-description">{t("expenses.descriptionLabel")}</Label>
+                <Input
+                  id="expense-description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder={t("expenses.descriptionPlaceholder")}
+                  autoFocus
+                  required
                 />
-                <div className="flex-1">
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="expense-amount">{t("expenses.amountLabel")}</Label>
+                <Input
+                  id="expense-amount"
+                  value={amountInput}
+                  onChange={(event) => setAmountInput(event.target.value)}
+                  placeholder={`0,00 ${currency}`}
+                  inputMode="decimal"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="expense-date">{t("expenses.dateLabel")}</Label>
+                <Input
+                  id="expense-date"
+                  type="date"
+                  value={date}
+                  onChange={(event) => setDate(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="expense-category">{t("expenses.categoryLabel")}</Label>
+                <div className="flex items-center gap-2">
+                  <EmojiPicker
+                    value={emoji}
+                    onChange={setEmoji}
+                    emojis={EXPENSE_EMOJIS}
+                    fallback={categoryIconElement(category, "h-4 w-4")}
+                    colorClassName={categoryColorClasses(category)}
+                    ariaLabel={t("expenses.emojiPickerLabel")}
+                    resetLabel={t("expenses.emojiReset")}
+                  />
+                  <div className="flex-1">
+                    <Select
+                      id="expense-category"
+                      value={category ?? ""}
+                      onChange={(event) =>
+                        setCategory((event.target.value || null) as CategoryId | null)
+                      }
+                    >
+                      <option value="">{t("expenses.categoryPlaceholder")}</option>
+                      {CATEGORY_IDS.map((id) => (
+                        <option key={id} value={id}>
+                          {categoryLabel(id, t)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <Label>{t("expenses.paidByLabel")}</Label>
+                  <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={multiplePayers}
+                      onChange={(event) => setMultiplePayers(event.target.checked)}
+                      className="accent-primary size-4"
+                    />
+                    {t("expenses.multiplePayers")}
+                  </label>
+                </div>
+                {multiplePayers ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-muted-foreground text-sm">
+                      {t("expenses.payerAmountsHint")}
+                    </p>
+                    {memberUids.map((uid) => (
+                      <div key={uid} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                          {members[uid].displayName}
+                        </span>
+                        <Input
+                          value={payerAmounts[uid] ?? ""}
+                          onChange={(event) =>
+                            setPayerAmounts((current) => ({
+                              ...current,
+                              [uid]: event.target.value,
+                            }))
+                          }
+                          placeholder={`0,00 ${currency}`}
+                          inputMode="decimal"
+                        />
+                      </div>
+                    ))}
+                    <MoneyBalanceHint
+                      targetMinor={amountMinor}
+                      currentMinor={sumMoneyInputs(payerAmounts)}
+                      currency={currency}
+                    />
+                  </div>
+                ) : (
                   <Select
-                    id="expense-category"
-                    value={category ?? ""}
-                    onChange={(event) =>
-                      setCategory((event.target.value || null) as CategoryId | null)
-                    }
+                    id="expense-paid-by"
+                    value={payerUid}
+                    onChange={(event) => setPayerUid(event.target.value)}
                   >
-                    <option value="">{t("expenses.categoryPlaceholder")}</option>
-                    {CATEGORY_IDS.map((id) => (
-                      <option key={id} value={id}>
-                        {categoryLabel(id, t)}
+                    {memberUids.map((uid) => (
+                      <option key={uid} value={uid}>
+                        {members[uid].displayName}
                       </option>
                     ))}
                   </Select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <Label>{t("expenses.paidByLabel")}</Label>
-                <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={multiplePayers}
-                    onChange={(event) => setMultiplePayers(event.target.checked)}
-                    className="accent-primary size-4"
-                  />
-                  {t("expenses.multiplePayers")}
-                </label>
-              </div>
-              {multiplePayers ? (
-                <div className="flex flex-col gap-2">
-                  <p className="text-muted-foreground text-sm">{t("expenses.payerAmountsHint")}</p>
-                  {memberUids.map((uid) => (
-                    <div key={uid} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
-                        {members[uid].displayName}
-                      </span>
-                      <Input
-                        value={payerAmounts[uid] ?? ""}
-                        onChange={(event) =>
-                          setPayerAmounts((current) => ({ ...current, [uid]: event.target.value }))
-                        }
-                        placeholder={`0,00 ${currency}`}
-                        inputMode="decimal"
-                      />
-                    </div>
-                  ))}
-                  <MoneyBalanceHint
-                    targetMinor={amountMinor}
-                    currentMinor={sumMoneyInputs(payerAmounts)}
-                    currency={currency}
-                  />
-                </div>
-              ) : (
-                <Select
-                  id="expense-paid-by"
-                  value={payerUid}
-                  onChange={(event) => setPayerUid(event.target.value)}
-                >
-                  {memberUids.map((uid) => (
-                    <option key={uid} value={uid}>
-                      {members[uid].displayName}
-                    </option>
-                  ))}
-                </Select>
-              )}
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label>{t("expenses.splitModeLabel")}</Label>
-              <div className="flex gap-1 rounded-lg border p-1">
-                {SPLIT_MODES.map(({ mode, labelKey }) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => handleSelectSplitMode(mode)}
-                    className={cn(
-                      "flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95",
-                      splitMode === mode
-                        ? "bg-primary text-primary-foreground shadow-primary/30 shadow-e1"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                    )}
-                  >
-                    {t(labelKey)}
-                  </button>
-                ))}
+                )}
               </div>
 
-              {splitMode === "equal" && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-muted-foreground text-sm">{t("expenses.splitEqualHint")}</p>
-                  {memberUids.map((uid) => (
-                    <label
-                      key={uid}
-                      className="flex cursor-pointer items-center gap-2 py-1 text-sm"
+              <div className="flex flex-col gap-2">
+                <Label>{t("expenses.splitModeLabel")}</Label>
+                <div className="flex gap-1 rounded-lg border p-1">
+                  {SPLIT_MODES.map(({ mode, labelKey }) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => handleSelectSplitMode(mode)}
+                      className={cn(
+                        "flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95",
+                        splitMode === mode
+                          ? "bg-primary text-primary-foreground shadow-primary/30 shadow-e1"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
                     >
-                      <input
-                        type="checkbox"
-                        checked={participantUids.includes(uid)}
-                        onChange={() => toggleParticipant(uid)}
-                        className="accent-primary size-4"
-                      />
-                      {members[uid].displayName}
-                    </label>
+                      {t(labelKey)}
+                    </button>
                   ))}
                 </div>
-              )}
 
-              {splitMode === "shares" && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-muted-foreground text-sm">{t("expenses.splitSharesHint")}</p>
-                  {memberUids.map((uid) => (
-                    <div key={uid} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                {splitMode === "equal" && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-muted-foreground text-sm">{t("expenses.splitEqualHint")}</p>
+                    {memberUids.map((uid) => (
+                      <label
+                        key={uid}
+                        className="flex cursor-pointer items-center gap-2 py-1 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={participantUids.includes(uid)}
+                          onChange={() => toggleParticipant(uid)}
+                          className="accent-primary size-4"
+                        />
                         {members[uid].displayName}
-                      </span>
-                      <Input
-                        value={shareInputs[uid] ?? ""}
-                        onChange={(event) =>
-                          setShareInputs((current) => ({ ...current, [uid]: event.target.value }))
-                        }
-                        placeholder="0"
-                        inputMode="numeric"
-                      />
-                      <span className="text-muted-foreground shrink-0 text-sm">
-                        {t("expenses.sharesUnit")}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+                      </label>
+                    ))}
+                  </div>
+                )}
 
-              {splitMode === "percent" && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-muted-foreground text-sm">{t("expenses.splitPercentHint")}</p>
-                  {memberUids.map((uid) => (
-                    <div key={uid} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
-                        {members[uid].displayName}
-                      </span>
-                      <Input
-                        value={percentInputs[uid] ?? ""}
-                        onChange={(event) =>
-                          setPercentInputs((current) => ({ ...current, [uid]: event.target.value }))
-                        }
-                        placeholder="0"
-                        inputMode="decimal"
-                      />
-                      <span className="text-muted-foreground shrink-0 text-sm">%</span>
-                    </div>
-                  ))}
-                  <PercentBalanceHint current={sumNumberInputs(percentInputs)} />
-                </div>
-              )}
+                {splitMode === "shares" && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-muted-foreground text-sm">{t("expenses.splitSharesHint")}</p>
+                    {memberUids.map((uid) => (
+                      <div key={uid} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                          {members[uid].displayName}
+                        </span>
+                        <Input
+                          value={shareInputs[uid] ?? ""}
+                          onChange={(event) =>
+                            setShareInputs((current) => ({ ...current, [uid]: event.target.value }))
+                          }
+                          placeholder="0"
+                          inputMode="numeric"
+                        />
+                        <span className="text-muted-foreground shrink-0 text-sm">
+                          {t("expenses.sharesUnit")}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-              {splitMode === "exact" && (
-                <div className="flex flex-col gap-2">
-                  <p className="text-muted-foreground text-sm">{t("expenses.splitExactHint")}</p>
-                  {memberUids.map((uid) => (
-                    <div key={uid} className="flex items-center gap-2">
-                      <span className="w-20 shrink-0 truncate text-sm sm:w-24">
-                        {members[uid].displayName}
-                      </span>
-                      <Input
-                        value={exactInputs[uid] ?? ""}
-                        onChange={(event) =>
-                          setExactInputs((current) => ({ ...current, [uid]: event.target.value }))
-                        }
-                        placeholder={`0,00 ${currency}`}
-                        inputMode="decimal"
-                      />
-                    </div>
-                  ))}
-                  <MoneyBalanceHint
-                    targetMinor={amountMinor}
-                    currentMinor={sumMoneyInputs(exactInputs)}
-                    currency={currency}
-                  />
-                </div>
-              )}
+                {splitMode === "percent" && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-muted-foreground text-sm">
+                      {t("expenses.splitPercentHint")}
+                    </p>
+                    {memberUids.map((uid) => (
+                      <div key={uid} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                          {members[uid].displayName}
+                        </span>
+                        <Input
+                          value={percentInputs[uid] ?? ""}
+                          onChange={(event) =>
+                            setPercentInputs((current) => ({
+                              ...current,
+                              [uid]: event.target.value,
+                            }))
+                          }
+                          placeholder="0"
+                          inputMode="decimal"
+                        />
+                        <span className="text-muted-foreground shrink-0 text-sm">%</span>
+                      </div>
+                    ))}
+                    <PercentBalanceHint current={sumNumberInputs(percentInputs)} />
+                  </div>
+                )}
+
+                {splitMode === "exact" && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-muted-foreground text-sm">{t("expenses.splitExactHint")}</p>
+                    {memberUids.map((uid) => (
+                      <div key={uid} className="flex items-center gap-2">
+                        <span className="w-20 shrink-0 truncate text-sm sm:w-24">
+                          {members[uid].displayName}
+                        </span>
+                        <Input
+                          value={exactInputs[uid] ?? ""}
+                          onChange={(event) =>
+                            setExactInputs((current) => ({ ...current, [uid]: event.target.value }))
+                          }
+                          placeholder={`0,00 ${currency}`}
+                          inputMode="decimal"
+                        />
+                      </div>
+                    ))}
+                    <MoneyBalanceHint
+                      targetMinor={amountMinor}
+                      currentMinor={sumMoneyInputs(exactInputs)}
+                      currency={currency}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
-
-            {error && <p className="text-destructive text-sm">{error}</p>}
-          </div>
-          <DialogFooter>
-            <Button
-              type="submit"
-              size="lg"
-              className={cn("w-full", saved && "bg-success hover:bg-success")}
-              disabled={loading || saved}
-            >
-              {saved ? (
-                <>
-                  <Check className="animate-rise size-4" />
-                  {t("common.save")}
-                </>
-              ) : loading ? (
-                t("common.loading")
-              ) : (
-                t("common.save")
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
+            <DialogFooter>
+              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                {loading ? t("common.loading") : t("common.save")}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
