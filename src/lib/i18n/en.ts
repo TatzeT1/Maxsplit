@@ -23,11 +23,7 @@ export const en: Dictionary = {
     moreActions: "More actions",
     somethingWentWrong: "Something went wrong.",
     unsavedChanges: "You have unsaved changes.",
-    offline: "No connection.",
-    offlineWithPending: "No connection — saved locally, will sync once you're back online.",
-    discard: "Discard",
-    savedOfflineTitle: "Saved offline:",
-    savedOfflineCaption: "Syncs automatically once you're back online.",
+    offline: "No connection — changes aren't being saved right now.",
   },
   nav: {
     groups: "Groups",
@@ -269,7 +265,6 @@ export const en: Dictionary = {
     errorNotOwner: "You can only edit or delete your own expenses.",
     deleteError: "Couldn't delete the expense.",
     celebrateTitle: "Expense saved!",
-    syncFailed: "An offline-saved expense couldn't be synced.",
   },
   categories: {
     groceries: "Groceries",
@@ -316,7 +311,6 @@ export const en: Dictionary = {
     noteLabel: "Note (optional)",
     notePlaceholder: "e.g. via PayPal",
     celebrateTitle: "Payment recorded!",
-    syncFailed: "An offline-saved payment couldn't be synced.",
     saveError: "Couldn't save the payment.",
     deleteConfirm: "Really delete this payment?",
     deleteConfirmBody: "This can't be undone.",

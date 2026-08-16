@@ -22,12 +22,7 @@ export const de = {
     moreActions: "Weitere Aktionen",
     somethingWentWrong: "Da ist etwas schiefgelaufen.",
     unsavedChanges: "Du hast ungespeicherte Änderungen.",
-    offline: "Keine Verbindung.",
-    offlineWithPending:
-      "Keine Verbindung — wird lokal gespeichert und synchronisiert, sobald du wieder online bist.",
-    discard: "Verwerfen",
-    savedOfflineTitle: "Offline gespeichert:",
-    savedOfflineCaption: "Wird automatisch synchronisiert, sobald du wieder online bist.",
+    offline: "Keine Verbindung — Änderungen werden gerade nicht gespeichert.",
   },
   nav: {
     groups: "Gruppen",
@@ -271,7 +266,6 @@ export const de = {
     errorNotOwner: "Du kannst nur eigene Ausgaben bearbeiten oder löschen.",
     deleteError: "Ausgabe konnte nicht gelöscht werden.",
     celebrateTitle: "Ausgabe gespeichert!",
-    syncFailed: "Eine offline gespeicherte Ausgabe konnte nicht synchronisiert werden.",
   },
   categories: {
     groceries: "Lebensmittel",
@@ -319,7 +313,6 @@ export const de = {
     noteLabel: "Notiz (optional)",
     notePlaceholder: "z. B. per PayPal",
     celebrateTitle: "Zahlung eingetragen!",
-    syncFailed: "Eine offline gespeicherte Zahlung konnte nicht synchronisiert werden.",
     saveError: "Zahlung konnte nicht gespeichert werden.",
     deleteConfirm: "Zahlung wirklich löschen?",
     deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",

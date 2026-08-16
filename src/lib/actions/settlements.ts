@@ -2,7 +2,6 @@
 
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
-import { createIdempotent } from "@/lib/firebase/idempotent-create";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import type { ActivityLogEntry, Group, Settlement } from "@/lib/types";
@@ -16,15 +15,6 @@ export interface SettlementInput {
   currency: string;
   date: string;
   note: string;
-  /**
-   * Client-generated id for a create-only submission that might get retried
-   * — by Next's `experimental.useOffline`, or by the offline outbox in
-   * lib/offline — without the caller finding out whether the first attempt
-   * actually landed. When present, `recordSettlement` uses it as the
-   * document id so a retry can't create a duplicate. Absent for edits, which
-   * are never retried this way.
-   */
-  clientMutationId?: string;
 }
 
 type MembershipResult =
@@ -81,14 +71,6 @@ export async function recordSettlement(
     createdBy: session.uid,
     createdAt: new Date().toISOString(),
   };
-
-  if (input.clientMutationId) {
-    const settlementId = await createIdempotent(
-      groupRef.collection("settlements").doc(input.clientMutationId),
-      settlement,
-    );
-    return { ok: true, data: { settlementId } };
-  }
 
   const docRef = await groupRef.collection("settlements").add(settlement);
   return { ok: true, data: { settlementId: docRef.id } };

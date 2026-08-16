@@ -31,15 +31,6 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  experimental: {
-    // Holds a Server Action (or navigation/prefetch) pending instead of
-    // throwing when the network drops, and retries it once connectivity
-    // returns — see node_modules/next/dist/docs/01-app/02-guides/offline-support.md.
-    // Only covers the current page session; a closed tab or a killed iOS PWA
-    // still loses the pending write, which is what the IndexedDB outbox in
-    // src/lib/offline is for (see OfflineBanner / action-queue.ts).
-    useOffline: true,
-  },
   async headers() {
     return [
       {

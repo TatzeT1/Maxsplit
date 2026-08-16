@@ -2,13 +2,7 @@
 
 import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
-import {
-  connectFirestoreEmulator,
-  initializeFirestore,
-  memoryLocalCache,
-  persistentLocalCache,
-  persistentMultipleTabManager,
-} from "firebase/firestore";
+import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
 import { getFirebaseClientConfig, useFirebaseEmulators } from "./config";
 
@@ -18,31 +12,9 @@ function getClientApp(): FirebaseApp {
   return initializeApp(getFirebaseClientConfig());
 }
 
-/**
- * Persistent (IndexedDB-backed) local cache, so `onSnapshot` listeners keep
- * serving the last-known balances/expenses/chat while offline instead of
- * going silent. This only covers reads — writes still go through Server
- * Actions (ADR-001), which Firestore's client-side offline queue has no
- * visibility into; see OfflineActionQueue for the write-side counterpart.
- *
- * Falls back to the default in-memory cache when IndexedDB isn't available
- * (SSR, where this "use client" module still runs once for the initial HTML;
- * or the emulator suite, where a persisted cache would otherwise show stale
- * data across emulator restarts).
- */
-function getClientFirestore(app: FirebaseApp) {
-  const canPersist =
-    typeof window !== "undefined" && "indexedDB" in window && !useFirebaseEmulators;
-  return initializeFirestore(app, {
-    localCache: canPersist
-      ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
-      : memoryLocalCache(),
-  });
-}
-
 export const app = getClientApp();
 export const auth = getAuth(app);
-export const db = getClientFirestore(app);
+export const db = getFirestore(app);
 export const storage = getStorage(app);
 
 // Connecting an emulator twice throws, so guard with a module-level flag —

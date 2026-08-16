@@ -2,7 +2,6 @@
 
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
-import { createIdempotent } from "@/lib/firebase/idempotent-create";
 import { isGroupManager } from "@/lib/groups/permissions";
 import {
   splitByPercent,
@@ -35,15 +34,6 @@ export interface ExpenseInput {
   participantUids: string[];
   /** Raw per-uid input for "shares" (share count), "percent" (0-100), or "exact" (minor units). */
   splitInputs: Record<string, number>;
-  /**
-   * Client-generated id for a create-only submission that might get retried
-   * — by Next's `experimental.useOffline`, or by the offline outbox in
-   * lib/offline — without the caller finding out whether the first attempt
-   * actually landed. When present, `addExpense` uses it as the document id
-   * so a retry can't create a duplicate. Absent for edits, which are never
-   * retried this way.
-   */
-  clientMutationId?: string;
 }
 
 type MembershipResult =
@@ -166,14 +156,6 @@ export async function addExpense(
     updatedAt: now,
     deletedAt: null,
   };
-
-  if (input.clientMutationId) {
-    const expenseId = await createIdempotent(
-      groupRef.collection("expenses").doc(input.clientMutationId),
-      expense,
-    );
-    return { ok: true, data: { expenseId } };
-  }
 
   const docRef = await groupRef.collection("expenses").add(expense);
   return { ok: true, data: { expenseId: docRef.id } };

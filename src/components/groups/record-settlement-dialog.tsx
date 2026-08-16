@@ -13,13 +13,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { QueuedForSync } from "@/components/ui/queued-for-sync";
 import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
-import { editSettlement } from "@/lib/actions/settlements";
+import { editSettlement, recordSettlement } from "@/lib/actions/settlements";
 import { parseMoneyInput } from "@/lib/format/money";
-import { submitCreateAction } from "@/lib/offline/action-queue";
-import { TIMEOUT } from "@/lib/offline/with-timeout";
 import type { GroupMember, Settlement } from "@/lib/types";
 
 function todayIsoDate(): string {
@@ -83,7 +80,6 @@ export function RecordSettlementDialog({
   const [note, setNote] = useState(settlementToEdit?.note ?? "");
   const [loading, setLoading] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
-  const [queued, setQueued] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
 
@@ -102,31 +98,14 @@ export function RecordSettlementDialog({
     setLoading(true);
     setError(null);
     const payload = { groupId, fromUid, toUid, amountMinor, currency, date, note };
+    const result = settlementToEdit
+      ? await editSettlement({ ...payload, settlementId: settlementToEdit.id })
+      : await recordSettlement(payload);
+    setLoading(false);
 
-    if (settlementToEdit) {
-      const result = await editSettlement({ ...payload, settlementId: settlementToEdit.id });
-      setLoading(false);
-      if (!result.ok) {
-        setError(settlementErrorMessage(result.error, t));
-        return;
-      }
-      setQueued(false);
-    } else {
-      // A client-generated id, not a server round trip: if this submission
-      // gets retried — by Next's offline retry, or by the outbox once the
-      // app reopens — recordSettlement reuses the same payment id instead of
-      // creating a second one. See SettlementInput.clientMutationId.
-      const createPayload = { ...payload, clientMutationId: crypto.randomUUID() };
-      const outcome = await submitCreateAction("add-settlement", createPayload);
-      setLoading(false);
-      if (outcome === TIMEOUT) {
-        setQueued(true);
-      } else if (outcome.ok) {
-        setQueued(false);
-      } else {
-        setError(settlementErrorMessage(outcome.error, t));
-        return;
-      }
+    if (!result.ok) {
+      setError(settlementErrorMessage(result.error, t));
+      return;
     }
 
     setCelebrating(true);
@@ -136,7 +115,6 @@ export function RecordSettlementDialog({
     // the dialog dismisses itself.
     setTimeout(() => {
       setCelebrating(false);
-      setQueued(false);
       setOpen(false);
       if (!settlementToEdit) {
         setAmountInput("");
@@ -151,20 +129,11 @@ export function RecordSettlementDialog({
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent showCloseButton={!celebrating}>
         {celebrating ? (
-          queued ? (
-            <QueuedForSync
-              label={t("common.savedOfflineTitle")}
-              caption={t("common.savedOfflineCaption")}
-              amountMinor={parseMoneyInput(amountInput) ?? 0}
-              currency={currency}
-            />
-          ) : (
-            <SaveCelebration
-              label={t("settlements.celebrateTitle")}
-              amountMinor={parseMoneyInput(amountInput) ?? 0}
-              currency={currency}
-            />
-          )
+          <SaveCelebration
+            label={t("settlements.celebrateTitle")}
+            amountMinor={parseMoneyInput(amountInput) ?? 0}
+            currency={currency}
+          />
         ) : (
           <form onSubmit={handleSubmit}>
             <DialogHeader>
