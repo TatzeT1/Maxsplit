@@ -36,7 +36,7 @@ function GoogleLogo() {
   );
 }
 
-export function SignInButton({ redirectTo = "/groups" }: { redirectTo?: string }) {
+export function SignInButton({ redirectTo = "/onboarding" }: { redirectTo?: string }) {
   const [loading, setLoading] = useState(false);
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
   const [showEmail, setShowEmail] = useState(false);

@@ -73,6 +73,29 @@ export const de = {
     guideIbanSummary: "Für eine klassische Überweisung von deiner Bank.",
     guideIbanDetail:
       "Öffne deine Banking-App, kopiere deine IBAN und füg sie hier ein. Mitglieder, die dir Geld schulden, sehen sie nur bei sich und können sie mit einem Tap kopieren, um sie in ihrer eigenen Überweisung einzufügen.",
+    onboardingReplayLink: "Setup-Guide erneut ansehen",
+  },
+  onboarding: {
+    skip: "Überspringen",
+    stepLabel: "Schritt {{current}} von {{total}}",
+    welcomeTitle: "Willkommen bei Split, {{name}}!",
+    welcomeSubtitle: "Kurz gezeigt, wie's funktioniert — dauert nur eine Minute.",
+    featureGroupsTitle: "Gruppe erstellen oder beitreten",
+    featureGroupsDescription:
+      "Leg eine Gruppe an oder tritt per Link bei — für WG, Reise oder Freundeskreis.",
+    featureSplitTitle: "Ausgaben aufteilen",
+    featureSplitDescription:
+      "Trag eine Ausgabe ein — Split rechnet automatisch aus, wer wem was schuldet.",
+    featureBalanceTitle: "Salden ausgleichen",
+    featureBalanceDescription:
+      "Behalt den Überblick und gleich offene Beträge direkt per PayPal oder Überweisung aus.",
+    continueButton: "Weiter",
+    backButton: "Zurück",
+    paymentTitle: "Zahlungsdaten einrichten",
+    paymentSubtitle:
+      "Damit dich deine Mitbewohner:innen easy zurückzahlen können. Du kannst das jederzeit im Profil ändern.",
+    paymentFinish: "Fertig",
+    laterHint: "Kein Stress — du findest das später jederzeit unter „Profil“.",
   },
   theme: {
     light: "Hell",

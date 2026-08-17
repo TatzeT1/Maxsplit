@@ -73,6 +73,28 @@ export const en: Dictionary = {
     guideIbanSummary: "For a classic bank transfer.",
     guideIbanDetail:
       "Open your banking app, copy your IBAN, and paste it here. Members who owe you money only see it on their own screen and can copy it with a tap to paste into their own transfer.",
+    onboardingReplayLink: "Watch the setup guide again",
+  },
+  onboarding: {
+    skip: "Skip",
+    stepLabel: "Step {{current}} of {{total}}",
+    welcomeTitle: "Welcome to Split, {{name}}!",
+    welcomeSubtitle: "A quick look at how it works — takes about a minute.",
+    featureGroupsTitle: "Create or join a group",
+    featureGroupsDescription:
+      "Start a group or join one via a link — for a shared flat, a trip, or friends.",
+    featureSplitTitle: "Split expenses",
+    featureSplitDescription: "Add an expense — Split automatically works out who owes whom what.",
+    featureBalanceTitle: "Settle up balances",
+    featureBalanceDescription:
+      "Keep track and settle open amounts directly via PayPal or bank transfer.",
+    continueButton: "Continue",
+    backButton: "Back",
+    paymentTitle: "Set up payment details",
+    paymentSubtitle:
+      "So your roommates can pay you back easily. You can change this in your profile anytime.",
+    paymentFinish: "Done",
+    laterHint: 'No rush — you\'ll always find this under "Profile" later.',
   },
   theme: {
     light: "Light",

@@ -20,6 +20,8 @@ export interface Session {
   paypalEmail: string | null;
   iban: string | null;
   paypalMeHandle: string | null;
+  /** ISO timestamp once the user has finished or skipped the onboarding setup guide; null until then. @see completeOnboarding in lib/actions/onboarding.ts */
+  onboardingCompletedAt: string | null;
 }
 
 /**
@@ -51,6 +53,7 @@ export async function getSession(): Promise<Session | null> {
       paypalEmail: (profile?.paypalEmail as string | undefined) || null,
       iban: (profile?.iban as string | undefined) || null,
       paypalMeHandle: (profile?.paypalMeHandle as string | undefined) || null,
+      onboardingCompletedAt: (profile?.onboardingCompletedAt as string | undefined) || null,
     };
   } catch {
     return null;

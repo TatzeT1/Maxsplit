@@ -1,3 +1,5 @@
+import { Sparkles } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { PaymentDetailsForm } from "@/components/payment-details-form";
@@ -38,7 +40,16 @@ export default async function ProfilePage() {
         </CardContent>
       </Card>
       <div className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">{t("profile.paymentDetailsTitle")}</h2>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">{t("profile.paymentDetailsTitle")}</h2>
+          <Link
+            href="/onboarding?replay=1"
+            className="text-primary inline-flex items-center gap-1 text-xs font-medium hover:underline"
+          >
+            <Sparkles className="size-3.5" />
+            {t("profile.onboardingReplayLink")}
+          </Link>
+        </div>
         <PaymentMethodsGuide />
         <Card>
           <CardContent>

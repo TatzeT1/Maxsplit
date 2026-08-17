@@ -12,10 +12,16 @@ export function PaymentDetailsForm({
   paypalEmail,
   iban,
   paypalMeHandle,
+  submitLabel,
+  onSaved,
 }: {
   paypalEmail: string;
   iban: string;
   paypalMeHandle: string;
+  /** Overrides the submit button's label, e.g. "Fertig" when embedded in the onboarding flow. Defaults to "profile.save". */
+  submitLabel?: string;
+  /** Called after a successful save, in addition to the usual `router.refresh()` — lets the onboarding flow advance to the next step. */
+  onSaved?: () => void;
 }) {
   const [email, setEmail] = useState(paypalEmail);
   const [ibanValue, setIbanValue] = useState(iban);
@@ -54,6 +60,7 @@ export function PaymentDetailsForm({
     }
     setStatus("success");
     router.refresh();
+    onSaved?.();
   }
 
   return (
@@ -116,7 +123,7 @@ export function PaymentDetailsForm({
         <p className="text-muted-foreground text-sm">{t("profile.saveSuccess")}</p>
       )}
       <Button type="submit" disabled={loading}>
-        {loading ? t("common.loading") : t("profile.save")}
+        {loading ? t("common.loading") : (submitLabel ?? t("profile.save"))}
       </Button>
     </form>
   );
