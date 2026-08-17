@@ -8,6 +8,7 @@ export interface AdminUserSummary {
   displayName: string | null;
   createdAt: string | null;
   banned: boolean;
+  onboardingCompletedAt: string | null;
 }
 
 export async function listUsers(): Promise<AdminUserSummary[]> {
@@ -20,6 +21,7 @@ export async function listUsers(): Promise<AdminUserSummary[]> {
       displayName: (data.displayName as string | undefined) ?? null,
       createdAt: (data.createdAt as string | undefined) ?? null,
       banned: data.banned === true,
+      onboardingCompletedAt: (data.onboardingCompletedAt as string | undefined) ?? null,
     };
   });
 }
@@ -67,6 +69,7 @@ export async function getUserDetail(uid: string): Promise<AdminUserDetail | null
     defaultCurrency: (data.defaultCurrency as string | undefined) ?? null,
     createdAt: (data.createdAt as string | undefined) ?? null,
     banned: data.banned === true,
+    onboardingCompletedAt: (data.onboardingCompletedAt as string | undefined) ?? null,
     groups,
   };
 }

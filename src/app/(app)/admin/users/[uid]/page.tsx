@@ -33,6 +33,12 @@ export default async function AdminUserPage({ params }: { params: Promise<{ uid:
         <dd className={user.banned ? "text-destructive font-medium" : undefined}>
           {user.banned ? "Banned" : "Active"}
         </dd>
+        <dt className="text-muted-foreground">Onboarding</dt>
+        <dd>
+          {user.onboardingCompletedAt
+            ? `Done (${new Date(user.onboardingCompletedAt).toLocaleString()})`
+            : "Not done yet"}
+        </dd>
       </dl>
 
       <div className="flex flex-col gap-3">
@@ -62,7 +68,11 @@ export default async function AdminUserPage({ params }: { params: Promise<{ uid:
         )}
       </div>
 
-      <AdminUserActions uid={user.uid} banned={user.banned} />
+      <AdminUserActions
+        uid={user.uid}
+        banned={user.banned}
+        onboardingCompletedAt={user.onboardingCompletedAt}
+      />
     </div>
   );
 }

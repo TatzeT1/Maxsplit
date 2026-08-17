@@ -14,12 +14,33 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { adminSetUserBanned } from "@/lib/actions/admin";
+import { adminResetOnboarding, adminSetUserBanned } from "@/lib/actions/admin";
 
-export function AdminUserActions({ uid, banned }: { uid: string; banned: boolean }) {
+export function AdminUserActions({
+  uid,
+  banned,
+  onboardingCompletedAt,
+}: {
+  uid: string;
+  banned: boolean;
+  onboardingCompletedAt: string | null;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  async function handleResetOnboarding() {
+    setBusy(true);
+    setError(null);
+    const result = await adminResetOnboarding({ uid });
+    if (!result.ok) {
+      setError("Failed to reset onboarding.");
+      setBusy(false);
+      return;
+    }
+    router.refresh();
+    setBusy(false);
+  }
 
   async function handleUnban() {
     setBusy(true);
@@ -85,6 +106,11 @@ export function AdminUserActions({ uid, banned }: { uid: string; banned: boolean
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        )}
+        {onboardingCompletedAt && (
+          <Button variant="outline" size="sm" disabled={busy} onClick={handleResetOnboarding}>
+            Reset onboarding
+          </Button>
         )}
       </div>
       {error && <p className="text-destructive text-xs">{error}</p>}

@@ -61,6 +61,11 @@ export default async function AdminPage() {
                       {user.banned && (
                         <span className="text-destructive ml-2 text-xs font-normal">banned</span>
                       )}
+                      {!user.onboardingCompletedAt && (
+                        <span className="text-muted-foreground ml-2 text-xs font-normal">
+                          onboarding pending
+                        </span>
+                      )}
                     </span>
                     <span className="text-muted-foreground truncate text-xs">
                       {user.email ?? "—"}

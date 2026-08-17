@@ -1,5 +1,6 @@
 "use server";
 
+import { FieldValue } from "firebase-admin/firestore";
 import { isAdminEmail, isAdminSession } from "@/lib/auth/admin";
 import { getSession, type Session } from "@/lib/auth/session";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
@@ -80,5 +81,23 @@ export async function adminSetUserBanned(input: {
     { merge: true },
   );
 
+  return { ok: true, data: null };
+}
+
+/**
+ * Clears a user's onboarding-completed flag so the setup guide (see
+ * completeOnboarding in lib/actions/onboarding.ts) auto-shows again on their
+ * next sign-in, exactly like a brand-new account — mainly for support and
+ * for testing the first-run flow against a real account.
+ */
+export async function adminResetOnboarding(input: { uid: string }): Promise<ActionResult<null>> {
+  const session = await requireAdminActionSession();
+  if (!session) return { ok: false, error: "forbidden" };
+
+  const userRef = adminDb.doc(`users/${input.uid}`);
+  const userSnap = await userRef.get();
+  if (!userSnap.exists) return { ok: false, error: "not-found" };
+
+  await userRef.set({ onboardingCompletedAt: FieldValue.delete() }, { merge: true });
   return { ok: true, data: null };
 }
