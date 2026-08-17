@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
+import { ExpenseDetailDialog } from "@/components/groups/expense-detail-dialog";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { RowActions } from "@/components/groups/row-actions";
 import { useT } from "@/components/locale-provider";
@@ -90,6 +91,7 @@ function ExpenseRow({
   const [editOpen, setEditOpen] = useState(false);
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const t = useT();
@@ -116,8 +118,22 @@ function ExpenseRow({
       <div className={cn("absolute inset-0 -z-10", categoryRowTintClass(expense.category))} />
       {/* Tight gaps and a menu pulled into the card's own padding: the
           description competes with the amount for a phone's width, and every
-          pixel spent here truncates a shopping list item instead. */}
-      <div className="relative flex items-center gap-2.5">
+          pixel spent here truncates a shopping list item instead. Opens the
+          read-only detail sheet on tap — role="button" rather than a native
+          <button> because it wraps RowActions, itself an interactive
+          trigger, and buttons can't nest buttons. */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setDetailOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setDetailOpen(true);
+          }
+        }}
+        className="relative flex cursor-pointer items-center gap-2.5"
+      >
         <div
           className={cn(
             "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
@@ -143,28 +159,33 @@ function ExpenseRow({
         <span className="font-heading tabular-money shrink-0 text-base font-semibold">
           {formatMoney(expense.amountMinor, expense.currency)}
         </span>
-        <RowActions>
-          <DropdownMenuItem onSelect={() => setDuplicateOpen(true)}>
-            <Copy className="h-3.5 w-3.5" />
-            {t("expenses.duplicate")}
-          </DropdownMenuItem>
-          {canEdit && (
-            <>
-              <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-                <Pencil className="h-3.5 w-3.5" />
-                {t("common.edit")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={deleting}
-                onSelect={() => setDeleteOpen(true)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                {t("common.delete")}
-              </DropdownMenuItem>
-            </>
-          )}
-        </RowActions>
+        {/* Keeps every menu interaction — including items rendered into the
+            portaled dropdown, which still bubble through the React tree —
+            from also triggering the row's onClick above. */}
+        <span onClick={(event) => event.stopPropagation()}>
+          <RowActions>
+            <DropdownMenuItem onSelect={() => setDuplicateOpen(true)}>
+              <Copy className="h-3.5 w-3.5" />
+              {t("expenses.duplicate")}
+            </DropdownMenuItem>
+            {canEdit && (
+              <>
+                <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  {t("common.edit")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={deleting}
+                  onSelect={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  {t("common.delete")}
+                </DropdownMenuItem>
+              </>
+            )}
+          </RowActions>
+        </span>
       </div>
       {/* Controlled rather than trigger-based: a Radix AlertDialogTrigger nested
           inside a DropdownMenuItem fights the menu over focus as it unmounts. */}
@@ -200,6 +221,12 @@ function ExpenseRow({
         duplicateFrom={expense}
         open={duplicateOpen}
         onOpenChange={setDuplicateOpen}
+      />
+      <ExpenseDetailDialog
+        expense={expense}
+        members={members}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
       />
     </li>
   );

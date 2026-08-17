@@ -4,6 +4,7 @@ import { Check, CheckCircle2, Copy, Download, Scale, Sparkles } from "lucide-rea
 import { type CSSProperties, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
+import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { getOrCreateSettlementShareToken } from "@/lib/actions/settlement-share";
 import { formatMoney, minorToMajor } from "@/lib/format/money";
 import { simplifyDebts } from "@/lib/money/balances";
@@ -99,6 +100,9 @@ export function BalanceView({
   const [pdfState, setPdfState] = useState<"idle" | "pending" | "error">("idle");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [settleTarget, setSettleTarget] = useState<{ toUid: string; amountMinor: number } | null>(
+    null,
+  );
   const t = useT();
 
   // "Before" count: every outstanding debtor->creditor pair in the group,
@@ -242,11 +246,23 @@ export function BalanceView({
                 {line.text}
               </span>
               {line.youOwe && (
-                <PayNowAction
-                  member={members[line.uid]}
-                  amountMinor={line.amountMinor}
-                  currency={currency}
-                />
+                <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      setSettleTarget({ toUid: line.uid, amountMinor: line.amountMinor })
+                    }
+                  >
+                    {t("balances.markPaid")}
+                  </Button>
+                  <PayNowAction
+                    member={members[line.uid]}
+                    amountMinor={line.amountMinor}
+                    currency={currency}
+                  />
+                </div>
               )}
             </li>
           ))}
@@ -303,6 +319,23 @@ export function BalanceView({
           </div>
         )}
       </div>
+
+      {settleTarget && (
+        <RecordSettlementDialog
+          key={settleTarget.toUid}
+          groupId={groupId}
+          members={members}
+          currency={currency}
+          currentUid={currentUid}
+          prefillFromUid={currentUid}
+          prefillToUid={settleTarget.toUid}
+          prefillAmountMinor={settleTarget.amountMinor}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setSettleTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }

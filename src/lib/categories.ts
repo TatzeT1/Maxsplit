@@ -81,6 +81,24 @@ export function categoryRowTintClass(category: CategoryId | null): string {
   return category ? CATEGORY_ROW_TINTS[category] : CATEGORY_ROW_TINTS.other;
 }
 
+/** Solid fill for the spending-analytics bar chart — same hues as `categoryColorClasses`, full saturation since a hand-rolled bar needs to read at a glance, not sit behind text. */
+const CATEGORY_BAR_COLORS: Record<CategoryId, string> = {
+  groceries: "bg-emerald-500",
+  restaurant: "bg-orange-500",
+  transport: "bg-sky-500",
+  housing: "bg-violet-500",
+  utilities: "bg-amber-500",
+  entertainment: "bg-pink-500",
+  travel: "bg-cyan-500",
+  shopping: "bg-fuchsia-500",
+  health: "bg-rose-500",
+  other: "bg-slate-500",
+};
+
+export function categoryBarColorClass(category: CategoryId | null): string {
+  return category ? CATEGORY_BAR_COLORS[category] : CATEGORY_BAR_COLORS.other;
+}
+
 /** Renders a category's icon as an element, avoiding a dynamic JSX tag reference. */
 export function categoryIconElement(category: CategoryId | null, className?: string): ReactElement {
   return createElement(categoryIcon(category), { className });

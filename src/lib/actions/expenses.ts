@@ -3,6 +3,7 @@
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import {
   splitByPercent,
   splitByShares,
@@ -158,6 +159,7 @@ export async function addExpense(
   };
 
   const docRef = await groupRef.collection("expenses").add(expense);
+  await recomputeGroupBalances(groupRef);
   return { ok: true, data: { expenseId: docRef.id } };
 }
 
@@ -200,6 +202,7 @@ export async function editExpense(
     createdAt: now,
   };
   await groupRef.collection("activityLog").add(logEntry);
+  await recomputeGroupBalances(groupRef);
 
   return { ok: true, data: { expenseId: input.expenseId } };
 }
@@ -234,6 +237,7 @@ export async function deleteExpense(input: {
     createdAt: now,
   };
   await groupRef.collection("activityLog").add(logEntry);
+  await recomputeGroupBalances(groupRef);
 
   return { ok: true, data: null };
 }

@@ -197,6 +197,9 @@ export const de = {
     memberCountSingular: "1 Mitglied",
     memberSince: "Dabei seit {{date}}",
     createdOn: "Seit {{date}}",
+    balanceSettled: "Ausgeglichen",
+    balanceOwedToYouLabel: "Du bekommst",
+    balanceYouOweLabel: "Du schuldest",
     moreMembers: "+{{count}}",
     roleOwner: "Ersteller",
     roleAdmin: "Admin",
@@ -289,6 +292,8 @@ export const de = {
     errorNotOwner: "Du kannst nur eigene Ausgaben bearbeiten oder löschen.",
     deleteError: "Ausgabe konnte nicht gelöscht werden.",
     celebrateTitle: "Ausgabe gespeichert!",
+    detailPaidBy: "Bezahlt von",
+    detailSplit: "Aufgeteilt auf",
   },
   categories: {
     groceries: "Lebensmittel",
@@ -301,6 +306,13 @@ export const de = {
     shopping: "Shopping",
     health: "Gesundheit",
     other: "Sonstiges",
+  },
+  analytics: {
+    title: "Ausgabenübersicht",
+    byCategory: "Nach Kategorie",
+    byMember: "Bezahlt vs. Anteil",
+    paid: "bezahlt",
+    share: "Anteil",
   },
   balances: {
     title: "Salden",
@@ -321,6 +333,7 @@ export const de = {
     shareLinkHint:
       "Dieser Link funktioniert auch ohne Split-Konto — zum Teilen mit allen Beteiligten.",
     payNow: "Jetzt bezahlen",
+    markPaid: "Bezahlt eintragen",
     copyPaypalEmail: "PayPal-E-Mail kopieren",
     paypalEmailCopied: "PayPal-E-Mail kopiert",
     noPaypalMeHint: "Kein PayPal.Me hinterlegt",

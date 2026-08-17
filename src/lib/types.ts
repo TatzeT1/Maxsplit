@@ -41,6 +41,16 @@ export interface Group {
    * request — absent until then, never regenerated automatically.
    */
   settlementShareToken?: string;
+  /**
+   * Cached copy of `computeBalances(expenses, settlements)`, keyed by uid —
+   * a display-only convenience so the groups list can show "you owe X"
+   * without subscribing to every group's full ledger. Written exclusively by
+   * `recomputeGroupBalances` (lib/money/balance-cache.ts) from the Server
+   * Actions that mutate expenses/settlements; never a source of truth (the
+   * group detail page still recomputes from the live ledger). Absent on
+   * groups created before this field existed, until their next mutation.
+   */
+  balancesMinor?: Record<string, number>;
 }
 
 export interface ExpenseSplit {

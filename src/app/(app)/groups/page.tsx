@@ -11,12 +11,51 @@ import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
 import { formatDate } from "@/lib/format/date";
+import { formatMoney } from "@/lib/format/money";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
-import { avatarGradient } from "@/lib/utils";
+import { avatarGradient, cn } from "@/lib/utils";
 import type { Group } from "@/lib/types";
 
 const MAX_VISIBLE_AVATARS = 4;
+
+/**
+ * Reads the cached `balancesMinor` (see types.ts) written by
+ * recomputeGroupBalances — never recomputed here from the ledger, since that
+ * would mean subscribing to every group's full expense subcollection just to
+ * render a list. Renders nothing for a group created before that field
+ * existed; it fills in on that group's next expense/settlement mutation.
+ */
+function GroupBalanceBadge({ group, uid }: { group: Group; uid: string }) {
+  const t = useT();
+  const amountMinor = group.balancesMinor?.[uid];
+  if (amountMinor === undefined) return null;
+
+  if (amountMinor === 0) {
+    return (
+      <span className="text-success shrink-0 text-xs font-medium">
+        {t("groups.balanceSettled")}
+      </span>
+    );
+  }
+
+  const isOwedToYou = amountMinor > 0;
+  return (
+    <div
+      className={cn(
+        "flex shrink-0 flex-col items-end gap-0.5",
+        isOwedToYou ? "text-success" : "text-destructive",
+      )}
+    >
+      <span className="font-heading tabular-money text-sm font-semibold">
+        {formatMoney(Math.abs(amountMinor), group.currency)}
+      </span>
+      <span className="text-[10px] font-medium tracking-wide uppercase opacity-80">
+        {isOwedToYou ? t("groups.balanceOwedToYouLabel") : t("groups.balanceYouOweLabel")}
+      </span>
+    </div>
+  );
+}
 
 function MemberAvatarStack({ group }: { group: Group }) {
   const t = useT();
@@ -138,6 +177,7 @@ export default function GroupsPage() {
                       </span>
                     </div>
                   </div>
+                  {user && <GroupBalanceBadge group={group} uid={user.uid} />}
                   <ChevronRight className="text-muted-foreground group-hover:text-primary relative h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
                 </Link>
               </li>

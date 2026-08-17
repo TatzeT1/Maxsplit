@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import type { ActivityLogEntry, Group, Settlement } from "@/lib/types";
 import type { ActionResult } from "./groups";
 
@@ -73,6 +74,7 @@ export async function recordSettlement(
   };
 
   const docRef = await groupRef.collection("settlements").add(settlement);
+  await recomputeGroupBalances(groupRef);
   return { ok: true, data: { settlementId: docRef.id } };
 }
 
@@ -114,6 +116,7 @@ export async function editSettlement(
     createdAt: now,
   };
   await groupRef.collection("activityLog").add(logEntry);
+  await recomputeGroupBalances(groupRef);
 
   return { ok: true, data: { settlementId: input.settlementId } };
 }
@@ -148,6 +151,7 @@ export async function deleteSettlement(input: {
     createdAt: now,
   };
   await groupRef.collection("activityLog").add(logEntry);
+  await recomputeGroupBalances(groupRef);
 
   return { ok: true, data: null };
 }

@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { generateInviteCode, normalizeInviteCode } from "@/lib/groups/invite-code";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { computeBalances } from "@/lib/money/balances";
 import type { Expense, Group, GroupMember, GroupRole, Settlement } from "@/lib/types";
 
@@ -296,6 +297,7 @@ async function claimPlaceholder(
   });
 
   await batch.commit();
+  await recomputeGroupBalances(groupRef);
   return null;
 }
 

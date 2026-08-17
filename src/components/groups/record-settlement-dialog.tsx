@@ -51,6 +51,9 @@ export function RecordSettlementDialog({
   currency,
   currentUid,
   settlementToEdit,
+  prefillFromUid,
+  prefillToUid,
+  prefillAmountMinor,
   trigger,
   open: controlledOpen,
   onOpenChange,
@@ -60,6 +63,10 @@ export function RecordSettlementDialog({
   currency: string;
   currentUid: string;
   settlementToEdit?: Settlement;
+  /** Seeds the form for a specific debt (e.g. a "you owe" line's "Bezahlt" button) — ignored once settlementToEdit is set. */
+  prefillFromUid?: string;
+  prefillToUid?: string;
+  prefillAmountMinor?: number;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -71,10 +78,16 @@ export function RecordSettlementDialog({
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
 
-  const [fromUid, setFromUid] = useState(settlementToEdit?.fromUid ?? currentUid);
-  const [toUid, setToUid] = useState(settlementToEdit?.toUid ?? otherUids[0] ?? currentUid);
+  const [fromUid, setFromUid] = useState(settlementToEdit?.fromUid ?? prefillFromUid ?? currentUid);
+  const [toUid, setToUid] = useState(
+    settlementToEdit?.toUid ?? prefillToUid ?? otherUids[0] ?? currentUid,
+  );
   const [amountInput, setAmountInput] = useState(
-    settlementToEdit ? moneyToInput(settlementToEdit.amountMinor) : "",
+    settlementToEdit
+      ? moneyToInput(settlementToEdit.amountMinor)
+      : prefillAmountMinor
+        ? moneyToInput(prefillAmountMinor)
+        : "",
   );
   const [date, setDate] = useState(settlementToEdit?.date ?? todayIsoDate());
   const [note, setNote] = useState(settlementToEdit?.note ?? "");

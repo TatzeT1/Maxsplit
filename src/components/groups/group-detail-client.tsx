@@ -11,6 +11,7 @@ import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
 import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { RecurringPanel } from "@/components/groups/recurring-panel";
+import { SpendingAnalytics } from "@/components/groups/spending-analytics";
 import { useT } from "@/components/locale-provider";
 import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Button } from "@/components/ui/button";
@@ -260,6 +261,8 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
           currency={group.currency}
           currentUid={user.uid}
         />
+
+        <SpendingAnalytics expenses={expenses} members={group.members} currency={group.currency} />
 
         <ActivityFeed
           expenses={expenses}
