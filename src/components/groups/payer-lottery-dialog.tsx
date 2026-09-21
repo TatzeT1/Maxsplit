@@ -13,25 +13,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { cn } from "@/lib/utils";
+import { playAppliedSound, playLaughSound, playTapSound } from "@/lib/sound/lottery-sounds";
 import type { GroupMember } from "@/lib/types";
 
 type Outcome = "pay" | "safe";
 
-interface LotteryCard {
-  uid: string;
+interface LotteryCell {
   outcome: Outcome;
   revealed: boolean;
+  tappedByUid: string | null;
 }
 
-/** Fisher-Yates shuffle of `payCount` "pay" outcomes among `total` cards, using crypto randomness so the draw can't be predicted or replayed. */
+const GRID_SIZE_OPTIONS = [16, 20, 24, 28, 32];
+
+function randomBytes(length: number): Uint32Array {
+  const bytes = new Uint32Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+/** Like the source party game: the grid is always 16-32 anonymous faces, independent of how many people are actually playing. */
+function randomGridSize(): number {
+  const bytes = randomBytes(1);
+  return GRID_SIZE_OPTIONS[bytes[0] % GRID_SIZE_OPTIONS.length];
+}
+
+/** Fisher-Yates shuffle of `payCount` "pay" outcomes among `total` cells, using crypto randomness so the draw can't be predicted or replayed. */
 function shuffledOutcomes(total: number, payCount: number): Outcome[] {
   const outcomes: Outcome[] = Array.from({ length: total }, (_, index) =>
     index < payCount ? "pay" : "safe",
   );
-  const randomBytes = new Uint32Array(outcomes.length);
-  crypto.getRandomValues(randomBytes);
+  const bytes = randomBytes(outcomes.length);
   for (let i = outcomes.length - 1; i > 0; i--) {
-    const j = randomBytes[i] % (i + 1);
+    const j = bytes[i] % (i + 1);
     [outcomes[i], outcomes[j]] = [outcomes[j], outcomes[i]];
   }
   return outcomes;
@@ -40,11 +54,13 @@ function shuffledOutcomes(total: number, payCount: number): Outcome[] {
 type Step = "setup" | "playing";
 
 /**
- * "Pass the phone" lottery for picking who pays an expense: everyone in the
- * pool gets one face-down card, a fixed number of which are secretly "pay" —
- * tapping a card reveals only that person's own outcome. Resolves to a list
- * of payer uids that the caller wires into `paidBy`; it never touches
- * `splits`, which stays governed by the expense's own split mode.
+ * "Pass the phone" lottery for picking who pays an expense, modeled on the
+ * tap-to-reveal party game it's inspired by: a grid of 16-32 anonymous faces
+ * (always that many, regardless of how many people are actually playing),
+ * everyone in the pool taps one face per turn in round-robin order, until a
+ * fixed number of "laughing" faces have been found. Whoever tapped one pays.
+ * Resolves to a list of payer uids that the caller wires into `paidBy`; it
+ * never touches `splits`, which stays governed by the expense's own split mode.
  */
 export function PayerLotteryDialog({
   open,
@@ -63,7 +79,9 @@ export function PayerLotteryDialog({
   const [step, setStep] = useState<Step>("setup");
   const [poolUids, setPoolUids] = useState<string[]>(memberUids);
   const [payerCountInput, setPayerCountInput] = useState("1");
-  const [cards, setCards] = useState<LotteryCard[]>([]);
+  const [targetPayerCount, setTargetPayerCount] = useState(1);
+  const [cells, setCells] = useState<LotteryCell[]>([]);
+  const [turnIndex, setTurnIndex] = useState(0);
 
   function togglePoolMember(uid: string) {
     setPoolUids((current) =>
@@ -73,34 +91,53 @@ export function PayerLotteryDialog({
 
   function startGame() {
     const requested = Number.parseInt(payerCountInput, 10) || 1;
-    const payerCount = Math.min(Math.max(requested, 1), poolUids.length);
-    const outcomes = shuffledOutcomes(poolUids.length, payerCount);
-    setCards(poolUids.map((uid, index) => ({ uid, outcome: outcomes[index], revealed: false })));
+    const target = Math.min(Math.max(requested, 1), poolUids.length);
+    const size = randomGridSize();
+    const outcomes = shuffledOutcomes(size, target);
+    setCells(outcomes.map((outcome) => ({ outcome, revealed: false, tappedByUid: null })));
+    setTargetPayerCount(target);
+    setTurnIndex(0);
     setStep("playing");
   }
 
-  function revealCard(uid: string) {
-    setCards((current) =>
-      current.map((card) => (card.uid === uid ? { ...card, revealed: true } : card)),
-    );
-  }
+  const payerUids = [
+    ...new Set(
+      cells
+        .filter((cell) => cell.revealed && cell.outcome === "pay")
+        .map((cell) => cell.tappedByUid as string),
+    ),
+  ];
+  const gameOver = payerUids.length >= targetPayerCount;
+  const currentTurnUid = poolUids[turnIndex % poolUids.length];
 
-  function revealAll() {
-    setCards((current) => current.map((card) => ({ ...card, revealed: true })));
+  function tapCell(index: number) {
+    if (gameOver) return;
+    const cell = cells[index];
+    if (cell.revealed) return;
+
+    const tapperUid = currentTurnUid;
+    setCells((current) =>
+      current.map((c, i) => (i === index ? { ...c, revealed: true, tappedByUid: tapperUid } : c)),
+    );
+    if (cell.outcome === "pay") {
+      playLaughSound();
+    } else {
+      playTapSound();
+    }
+    setTurnIndex((i) => i + 1);
   }
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
       setStep("setup");
-      setCards([]);
+      setCells([]);
+      setTurnIndex(0);
     }
     onOpenChange(nextOpen);
   }
 
-  const allRevealed = cards.length > 0 && cards.every((card) => card.revealed);
-  const payerUids = cards.filter((card) => card.outcome === "pay").map((card) => card.uid);
-
   function applyResult() {
+    playAppliedSound();
     onResolve(payerUids);
     handleOpenChange(false);
   }
@@ -140,48 +177,68 @@ export function PayerLotteryDialog({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-4 py-2">
-            <p className="text-muted-foreground text-sm">{t("expenses.lotteryTapHint")}</p>
-            <div className="grid grid-cols-3 gap-3">
-              {cards.map((card) => (
+          <div className="flex flex-col gap-3 py-2">
+            {!gameOver ? (
+              <div className="flex flex-col gap-1">
+                <p className="text-center text-sm font-medium">
+                  {t("expenses.lotteryTurnLabel", { name: members[currentTurnUid].displayName })}
+                </p>
+                <p className="text-muted-foreground text-center text-xs">
+                  {t("expenses.lotteryTapAnyHint")}
+                </p>
+                <p className="text-muted-foreground text-center text-xs">
+                  {t("expenses.lotteryProgress", {
+                    found: payerUids.length,
+                    target: targetPayerCount,
+                  })}
+                </p>
+              </div>
+            ) : (
+              <p className="text-center text-sm font-medium">
+                {payerUids.length === 1
+                  ? t("expenses.lotteryResultOne", {
+                      name: members[payerUids[0]].displayName,
+                    })
+                  : t("expenses.lotteryResultMultiple", {
+                      names: payerUids.map((uid) => members[uid].displayName).join(", "),
+                    })}
+              </p>
+            )}
+
+            <div className="grid grid-cols-6 gap-1.5">
+              {cells.map((cell, index) => (
                 <button
-                  key={card.uid}
+                  key={index}
                   type="button"
-                  onClick={() => revealCard(card.uid)}
-                  disabled={card.revealed}
+                  onClick={() => tapCell(index)}
+                  disabled={cell.revealed || gameOver}
+                  aria-label={
+                    cell.revealed
+                      ? cell.outcome === "pay"
+                        ? t("expenses.lotteryRevealPay")
+                        : t("expenses.lotterySafe")
+                      : undefined
+                  }
                   className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-all duration-200 active:scale-95",
-                    card.revealed
-                      ? card.outcome === "pay"
+                    "flex aspect-square items-center justify-center rounded-md border text-lg transition-all duration-200 active:scale-90",
+                    cell.revealed
+                      ? cell.outcome === "pay"
                         ? "border-destructive bg-destructive/10"
                         : "border-border bg-muted"
-                      : "border-border bg-background hover:bg-muted",
+                      : gameOver
+                        ? "border-border bg-background opacity-40"
+                        : "border-border bg-background hover:bg-muted",
                   )}
                 >
                   <span
-                    key={card.revealed ? "revealed" : "hidden"}
-                    className="animate-in zoom-in-50 fade-in text-3xl duration-300"
+                    key={cell.revealed ? "revealed" : "hidden"}
+                    className="animate-in zoom-in-50 fade-in duration-200"
                   >
-                    {card.revealed ? (card.outcome === "pay" ? "😂" : "🙂") : "❓"}
+                    {cell.revealed ? (cell.outcome === "pay" ? "😂" : "🙂") : "❓"}
                   </span>
-                  <span className="w-full truncate text-xs font-medium">
-                    {members[card.uid].displayName}
-                  </span>
-                  {card.revealed && (
-                    <span className="text-xs font-semibold">
-                      {card.outcome === "pay"
-                        ? t("expenses.lotteryRevealPay")
-                        : t("expenses.lotterySafe")}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
-            {!allRevealed && (
-              <Button type="button" variant="outline" onClick={revealAll}>
-                {t("expenses.lotteryRevealAll")}
-              </Button>
-            )}
           </div>
         )}
 
@@ -196,36 +253,18 @@ export function PayerLotteryDialog({
               {t("expenses.lotteryStart")}
             </Button>
           ) : (
-            <div className="flex w-full flex-col gap-2">
-              {allRevealed && (
-                <p className="text-center text-sm font-medium">
-                  {payerUids.length === 1
-                    ? t("expenses.lotteryResultOne", {
-                        name: members[payerUids[0]].displayName,
-                      })
-                    : t("expenses.lotteryResultMultiple", {
-                        names: payerUids.map((uid) => members[uid].displayName).join(", "),
-                      })}
-                </p>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => setStep("setup")}
-                >
-                  {t("expenses.lotteryPlayAgain")}
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1"
-                  disabled={!allRevealed}
-                  onClick={applyResult}
-                >
-                  {t("expenses.lotteryApply")}
-                </Button>
-              </div>
+            <div className="flex w-full gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                onClick={() => setStep("setup")}
+              >
+                {t("expenses.lotteryPlayAgain")}
+              </Button>
+              <Button type="button" className="flex-1" disabled={!gameOver} onClick={applyResult}>
+                {t("expenses.lotteryApply")}
+              </Button>
             </div>
           )}
         </DialogFooter>
