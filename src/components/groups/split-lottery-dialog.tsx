@@ -54,15 +54,19 @@ function shuffledOutcomes(total: number, payCount: number): Outcome[] {
 type Step = "setup" | "playing";
 
 /**
- * "Pass the phone" lottery for picking who pays an expense, modeled on the
- * tap-to-reveal party game it's inspired by: a grid of 16-32 anonymous faces
- * (always that many, regardless of how many people are actually playing),
- * everyone in the pool taps one face per turn in round-robin order, until a
- * fixed number of "laughing" faces have been found. Whoever tapped one pays.
- * Resolves to a list of payer uids that the caller wires into `paidBy`; it
- * never touches `splits`, which stays governed by the expense's own split mode.
+ * "Pass the phone" lottery for deciding who ends up owing an expense —
+ * modeled on the tap-to-reveal party game it's inspired by: a grid of 16-32
+ * anonymous faces (always that many, regardless of how many people are
+ * actually playing), everyone in the pool taps one face per turn in
+ * round-robin order, until a fixed number of "laughing" faces have been
+ * found. Whoever tapped one owes the bill.
+ *
+ * Resolves to a list of "loser" uids the caller wires into an exact split —
+ * they split the full amount between themselves, everyone else owes
+ * nothing. It never touches `paidBy`: who actually fronted the money stays
+ * a separate, manual choice, since the game only decides who owes it back.
  */
-export function PayerLotteryDialog({
+export function SplitLotteryDialog({
   open,
   onOpenChange,
   members,
@@ -73,13 +77,13 @@ export function PayerLotteryDialog({
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
-  onResolve: (payerUids: string[]) => void;
+  onResolve: (loserUids: string[]) => void;
 }) {
   const t = useT();
   const [step, setStep] = useState<Step>("setup");
   const [poolUids, setPoolUids] = useState<string[]>(memberUids);
-  const [payerCountInput, setPayerCountInput] = useState("1");
-  const [targetPayerCount, setTargetPayerCount] = useState(1);
+  const [loserCountInput, setLoserCountInput] = useState("1");
+  const [targetLoserCount, setTargetLoserCount] = useState(1);
   const [cells, setCells] = useState<LotteryCell[]>([]);
   const [turnIndex, setTurnIndex] = useState(0);
 
@@ -90,24 +94,24 @@ export function PayerLotteryDialog({
   }
 
   function startGame() {
-    const requested = Number.parseInt(payerCountInput, 10) || 1;
+    const requested = Number.parseInt(loserCountInput, 10) || 1;
     const target = Math.min(Math.max(requested, 1), poolUids.length);
     const size = randomGridSize();
     const outcomes = shuffledOutcomes(size, target);
     setCells(outcomes.map((outcome) => ({ outcome, revealed: false, tappedByUid: null })));
-    setTargetPayerCount(target);
+    setTargetLoserCount(target);
     setTurnIndex(0);
     setStep("playing");
   }
 
-  const payerUids = [
+  const loserUids = [
     ...new Set(
       cells
         .filter((cell) => cell.revealed && cell.outcome === "pay")
         .map((cell) => cell.tappedByUid as string),
     ),
   ];
-  const gameOver = payerUids.length >= targetPayerCount;
+  const gameOver = loserUids.length >= targetLoserCount;
   const currentTurnUid = poolUids[turnIndex % poolUids.length];
 
   function tapCell(index: number) {
@@ -138,7 +142,7 @@ export function PayerLotteryDialog({
 
   function applyResult() {
     playAppliedSound();
-    onResolve(payerUids);
+    onResolve(loserUids);
     handleOpenChange(false);
   }
 
@@ -167,11 +171,11 @@ export function PayerLotteryDialog({
               ))}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="lottery-payer-count">{t("expenses.lotteryCountLabel")}</Label>
+              <Label htmlFor="lottery-loser-count">{t("expenses.lotteryCountLabel")}</Label>
               <Input
-                id="lottery-payer-count"
-                value={payerCountInput}
-                onChange={(event) => setPayerCountInput(event.target.value)}
+                id="lottery-loser-count"
+                value={loserCountInput}
+                onChange={(event) => setLoserCountInput(event.target.value)}
                 inputMode="numeric"
               />
             </div>
@@ -188,19 +192,19 @@ export function PayerLotteryDialog({
                 </p>
                 <p className="text-muted-foreground text-center text-xs">
                   {t("expenses.lotteryProgress", {
-                    found: payerUids.length,
-                    target: targetPayerCount,
+                    found: loserUids.length,
+                    target: targetLoserCount,
                   })}
                 </p>
               </div>
             ) : (
               <p className="text-center text-sm font-medium">
-                {payerUids.length === 1
+                {loserUids.length === 1
                   ? t("expenses.lotteryResultOne", {
-                      name: members[payerUids[0]].displayName,
+                      name: members[loserUids[0]].displayName,
                     })
                   : t("expenses.lotteryResultMultiple", {
-                      names: payerUids.map((uid) => members[uid].displayName).join(", "),
+                      names: loserUids.map((uid) => members[uid].displayName).join(", "),
                     })}
               </p>
             )}

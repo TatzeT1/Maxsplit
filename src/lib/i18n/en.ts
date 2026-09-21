@@ -260,7 +260,6 @@ export const en: Dictionary = {
     paidByMultiple: "{{names}} paid",
     multiplePayers: "Multiple people paid",
     payerAmountsHint: "Enter how much each person paid.",
-    lotteryButton: "Draw lots",
     lotteryTitle: "Who pays?",
     lotteryIntro:
       "Pass the phone around: a grid of 16 to 32 faces appears. Everyone taps one in turn. Whoever gets a laughing face pays.",
@@ -281,6 +280,7 @@ export const en: Dictionary = {
     splitShares: "Shares",
     splitPercent: "Percent",
     splitExact: "Exact amount",
+    splitGame: "Game",
     splitEqualHint: "Split equally among all members.",
     splitSharesHint: "Split by shares, e.g. 2 shares for Anna, 1 for Ben.",
     splitPercentHint: "The percentages must add up to 100%.",

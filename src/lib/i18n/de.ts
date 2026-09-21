@@ -262,7 +262,6 @@ export const de = {
     paidByMultiple: "{{names}} haben bezahlt",
     multiplePayers: "Mehrere haben bezahlt",
     payerAmountsHint: "Trag ein, wie viel jede Person bezahlt hat.",
-    lotteryButton: "Losen",
     lotteryTitle: "Wer zahlt?",
     lotteryIntro:
       "Handy rumreichen: Ein Feld aus 16 bis 32 Gesichtern erscheint. Reihum tippt jede Person auf eines. Wer ein lachendes Gesicht erwischt, zahlt.",
@@ -283,6 +282,7 @@ export const de = {
     splitShares: "Anteile",
     splitPercent: "Prozent",
     splitExact: "Genauer Betrag",
+    splitGame: "Spiel",
     splitEqualHint: "Wird zu gleichen Teilen auf alle Mitglieder aufgeteilt.",
     splitSharesHint: "Wird nach Anteilen aufgeteilt, z. B. 2 Anteile für Anna, 1 für Ben.",
     splitPercentHint: "Die Prozentsätze müssen zusammen 100 % ergeben.",

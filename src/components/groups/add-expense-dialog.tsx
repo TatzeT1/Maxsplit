@@ -16,7 +16,7 @@ import { Select } from "@/components/ui/select";
 import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
-import { PayerLotteryDialog } from "@/components/groups/payer-lottery-dialog";
+import { SplitLotteryDialog } from "@/components/groups/split-lottery-dialog";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -213,24 +213,20 @@ export function AddExpenseDialog({
   const [loading, setLoading] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lotteryOpen, setLotteryOpen] = useState(false);
+  const [splitLotteryOpen, setSplitLotteryOpen] = useState(false);
   const t = useT();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
 
-  function handleLotteryResolve(resolvedPayerUids: string[]) {
-    if (resolvedPayerUids.length <= 1) {
-      setMultiplePayers(false);
-      setPayerUid(resolvedPayerUids[0] ?? currentUid);
-      return;
-    }
-    setMultiplePayers(true);
-    const amounts = amountMinor > 0 ? splitEqual(amountMinor, resolvedPayerUids) : {};
-    setPayerAmounts(
+  /** The game decides who owes the bill, not who fronted it — it fills in an exact split, `paidBy` is untouched. */
+  function handleSplitLotteryResolve(loserUids: string[]) {
+    const amounts = amountMinor > 0 ? splitEqual(amountMinor, loserUids) : {};
+    setExactInputs(
       Object.fromEntries(
-        resolvedPayerUids.map((uid) => [uid, amounts[uid] ? moneyToInput(amounts[uid]) : ""]),
+        loserUids.map((uid) => [uid, amounts[uid] ? moneyToInput(amounts[uid]) : ""]),
       ),
     );
+    setSplitMode("exact");
   }
 
   function toggleParticipant(uid: string) {
@@ -444,26 +440,17 @@ export function AddExpenseDialog({
               </div>
 
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between">
                   <Label>{t("expenses.paidByLabel")}</Label>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setLotteryOpen(true)}
-                      className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm font-medium"
-                    >
-                      🎲 {t("expenses.lotteryButton")}
-                    </button>
-                    <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={multiplePayers}
-                        onChange={(event) => setMultiplePayers(event.target.checked)}
-                        className="accent-primary size-4"
-                      />
-                      {t("expenses.multiplePayers")}
-                    </label>
-                  </div>
+                  <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={multiplePayers}
+                      onChange={(event) => setMultiplePayers(event.target.checked)}
+                      className="accent-primary size-4"
+                    />
+                    {t("expenses.multiplePayers")}
+                  </label>
                 </div>
                 {multiplePayers ? (
                   <div className="flex flex-col gap-2">
@@ -527,6 +514,13 @@ export function AddExpenseDialog({
                       {t(labelKey)}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => setSplitLotteryOpen(true)}
+                    className="text-muted-foreground hover:bg-muted hover:text-foreground flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95"
+                  >
+                    🎲 {t("expenses.splitGame")}
+                  </button>
                 </div>
 
                 {splitMode === "equal" && (
@@ -638,12 +632,12 @@ export function AddExpenseDialog({
           </form>
         )}
       </DialogContent>
-      <PayerLotteryDialog
-        open={lotteryOpen}
-        onOpenChange={setLotteryOpen}
+      <SplitLotteryDialog
+        open={splitLotteryOpen}
+        onOpenChange={setSplitLotteryOpen}
         members={members}
         memberUids={memberUids}
-        onResolve={handleLotteryResolve}
+        onResolve={handleSplitLotteryResolve}
       />
     </Dialog>
   );
