@@ -16,6 +16,92 @@ import { cn } from "@/lib/utils";
 import { playAppliedSound, playLaughSound, playTapSound } from "@/lib/sound/lottery-sounds";
 import type { GroupMember } from "@/lib/types";
 
+/**
+ * Original cartoon faces for the grid — drawn from scratch, not styled
+ * after any particular game's character art. Same head shape and palette
+ * for both so a revealed cell reads as "the same face, different mood."
+ */
+function SafeFace() {
+  return (
+    <svg viewBox="0 0 40 40" className="size-6" aria-hidden="true">
+      <circle cx="20" cy="21" r="15" fill="#f0c397" stroke="#3a2a1a" strokeWidth="1.5" />
+      <path
+        d="M8 14c2-4 6-6 12-6s10 2 12 6"
+        fill="none"
+        stroke="#3a2a1a"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.5 13.5q3-2 6 0"
+        fill="none"
+        stroke="#3a2a1a"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M23.5 13.5q3-2 6 0"
+        fill="none"
+        stroke="#3a2a1a"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+      <circle cx="13.5" cy="17.5" r="1.4" fill="#3a2a1a" />
+      <circle cx="26.5" cy="17.5" r="1.4" fill="#3a2a1a" />
+      <path
+        d="M15 27q5 3 10 0"
+        fill="none"
+        stroke="#7a3b2e"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function LaughFace() {
+  return (
+    <svg viewBox="0 0 40 40" className="size-6" aria-hidden="true">
+      <circle cx="20" cy="21" r="15" fill="#f6d29a" stroke="#3a2a1a" strokeWidth="1.5" />
+      <path
+        d="M8 14c2-4 6-6 12-6s10 2 12 6"
+        fill="none"
+        stroke="#3a2a1a"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10 15q2.5 2.5 5 0"
+        fill="none"
+        stroke="#3a2a1a"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M25 15q2.5 2.5 5 0"
+        fill="none"
+        stroke="#3a2a1a"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M13 24c1.5 6 12 6 14 0c-3 2-11 2-14 0Z"
+        fill="#7a2e22"
+        stroke="#3a2a1a"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14.5 25.2c3 1.6 8 1.6 11 0"
+        fill="none"
+        stroke="#ffffff"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 type Outcome = "pay" | "safe";
 
 interface LotteryCell {
@@ -238,7 +324,7 @@ export function SplitLotteryDialog({
                     key={cell.revealed ? "revealed" : "hidden"}
                     className="animate-in zoom-in-50 fade-in duration-200"
                   >
-                    {cell.revealed ? (cell.outcome === "pay" ? "😂" : "🙂") : "❓"}
+                    {cell.revealed ? cell.outcome === "pay" ? <LaughFace /> : <SafeFace /> : "❓"}
                   </span>
                 </button>
               ))}
