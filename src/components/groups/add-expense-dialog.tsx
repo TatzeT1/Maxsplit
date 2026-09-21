@@ -16,6 +16,7 @@ import { Select } from "@/components/ui/select";
 import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
+import { PayerLotteryDialog } from "@/components/groups/payer-lottery-dialog";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -212,9 +213,25 @@ export function AddExpenseDialog({
   const [loading, setLoading] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lotteryOpen, setLotteryOpen] = useState(false);
   const t = useT();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
+
+  function handleLotteryResolve(resolvedPayerUids: string[]) {
+    if (resolvedPayerUids.length <= 1) {
+      setMultiplePayers(false);
+      setPayerUid(resolvedPayerUids[0] ?? currentUid);
+      return;
+    }
+    setMultiplePayers(true);
+    const amounts = amountMinor > 0 ? splitEqual(amountMinor, resolvedPayerUids) : {};
+    setPayerAmounts(
+      Object.fromEntries(
+        resolvedPayerUids.map((uid) => [uid, amounts[uid] ? moneyToInput(amounts[uid]) : ""]),
+      ),
+    );
+  }
 
   function toggleParticipant(uid: string) {
     setParticipantUids((current) =>
@@ -427,17 +444,26 @@ export function AddExpenseDialog({
               </div>
 
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <Label>{t("expenses.paidByLabel")}</Label>
-                  <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={multiplePayers}
-                      onChange={(event) => setMultiplePayers(event.target.checked)}
-                      className="accent-primary size-4"
-                    />
-                    {t("expenses.multiplePayers")}
-                  </label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setLotteryOpen(true)}
+                      className="text-muted-foreground hover:text-foreground flex items-center gap-1 text-sm font-medium"
+                    >
+                      🎲 {t("expenses.lotteryButton")}
+                    </button>
+                    <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={multiplePayers}
+                        onChange={(event) => setMultiplePayers(event.target.checked)}
+                        className="accent-primary size-4"
+                      />
+                      {t("expenses.multiplePayers")}
+                    </label>
+                  </div>
                 </div>
                 {multiplePayers ? (
                   <div className="flex flex-col gap-2">
@@ -612,6 +638,13 @@ export function AddExpenseDialog({
           </form>
         )}
       </DialogContent>
+      <PayerLotteryDialog
+        open={lotteryOpen}
+        onOpenChange={setLotteryOpen}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleLotteryResolve}
+      />
     </Dialog>
   );
 }
