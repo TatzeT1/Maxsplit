@@ -45,13 +45,43 @@ export function playTapSound(): void {
   tone(ctx, 420, ctx.currentTime, 0.08, "square", 0.05);
 }
 
-/** Playful ascending bounce for a "pay" reveal — evokes a laugh, not a jump-scare. */
+/** One "ha" burst: a sawtooth that dips in pitch through a vocal-range bandpass filter, the way an exhaled syllable does. */
+function playHa(ctx: AudioContext, startTime: number, baseFreq: number): void {
+  const duration = 0.11;
+
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(baseFreq * 1.5, startTime);
+  osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.85, startTime + duration);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = "bandpass";
+  filter.frequency.setValueAtTime(1000, startTime);
+  filter.Q.value = 3;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(0.18, startTime + 0.015);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+/** A "ha-ha-ha-ha" burst for a "pay" reveal — rhythmic vocal-range pulses, not a musical jingle. */
 export function playLaughSound(): void {
   const ctx = getContext();
   if (!ctx) return;
-  const now = ctx.currentTime;
-  const notes = [660, 550, 660, 780, 880];
-  notes.forEach((freq, i) => tone(ctx, freq, now + i * 0.09, 0.14, "triangle", 0.1));
+  const haCount = 4 + Math.round(Math.random());
+  let time = ctx.currentTime;
+  for (let i = 0; i < haCount; i++) {
+    const baseFreq = 260 + Math.random() * 40;
+    playHa(ctx, time, baseFreq);
+    time += 0.13 + Math.random() * 0.02;
+  }
 }
 
 /** Short two-note chime when a result is applied to the expense form. */
