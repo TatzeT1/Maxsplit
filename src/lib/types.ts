@@ -88,6 +88,14 @@ export interface Expense {
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
+  /**
+   * True when this expense's split was decided by the 🎲 Split Lottery game
+   * (split-lottery-dialog.tsx) rather than chosen manually. Only set going
+   * forward — expenses split via the lottery before this field existed have
+   * no such marker, so the "vergambelt" leaderboard starts counting from
+   * here, not retroactively. Absent (not false) on older expenses.
+   */
+  viaLottery?: boolean;
 }
 
 export interface Settlement {

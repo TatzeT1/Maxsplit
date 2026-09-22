@@ -214,6 +214,9 @@ export function AddExpenseDialog({
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [splitLotteryOpen, setSplitLotteryOpen] = useState(false);
+  // Only inherited on an actual edit, never on duplicate — a duplicated
+  // expense reuses the split numbers, but no lottery round was played for it.
+  const [viaLottery, setViaLottery] = useState(expenseToEdit?.viaLottery ?? false);
   const t = useT();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
@@ -227,6 +230,7 @@ export function AddExpenseDialog({
       ),
     );
     setSplitMode("exact");
+    setViaLottery(true);
   }
 
   function toggleParticipant(uid: string) {
@@ -237,6 +241,9 @@ export function AddExpenseDialog({
 
   function handleSelectSplitMode(mode: SplitMode) {
     setSplitMode(mode);
+    // Picking a mode by hand, even "exact" again, means the split is no
+    // longer (only) what the lottery decided.
+    setViaLottery(false);
     if (mode === "shares" && Object.keys(shareInputs).length === 0) {
       setShareInputs(Object.fromEntries(memberUids.map((uid) => [uid, "1"])));
     }
@@ -321,6 +328,7 @@ export function AddExpenseDialog({
       splitMode,
       participantUids,
       splitInputs,
+      viaLottery,
     };
 
     const result = expenseToEdit
@@ -354,6 +362,7 @@ export function AddExpenseDialog({
         setShareInputs({});
         setPercentInputs({});
         setExactInputs({});
+        setViaLottery(false);
       }
     }, 1600);
   }
@@ -605,9 +614,13 @@ export function AddExpenseDialog({
                         </span>
                         <Input
                           value={exactInputs[uid] ?? ""}
-                          onChange={(event) =>
-                            setExactInputs((current) => ({ ...current, [uid]: event.target.value }))
-                          }
+                          onChange={(event) => {
+                            setExactInputs((current) => ({
+                              ...current,
+                              [uid]: event.target.value,
+                            }));
+                            setViaLottery(false);
+                          }}
                           placeholder={`0,00 ${currency}`}
                           inputMode="decimal"
                         />

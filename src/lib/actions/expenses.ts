@@ -35,6 +35,8 @@ export interface ExpenseInput {
   participantUids: string[];
   /** Raw per-uid input for "shares" (share count), "percent" (0-100), or "exact" (minor units). */
   splitInputs: Record<string, number>;
+  /** True when `splitInputs` came from the 🎲 Split Lottery game rather than a manual entry — see Expense.viaLottery. */
+  viaLottery: boolean;
 }
 
 type MembershipResult =
@@ -156,6 +158,7 @@ export async function addExpense(
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
+    viaLottery: input.viaLottery,
   };
 
   const docRef = await groupRef.collection("expenses").add(expense);
@@ -193,6 +196,7 @@ export async function editExpense(
     splitMode: input.splitMode,
     splits,
     updatedAt: now,
+    viaLottery: input.viaLottery,
   });
 
   const logEntry: Omit<ActivityLogEntry, "id"> = {

@@ -8,6 +8,7 @@ import { ActivityFeed } from "@/components/groups/activity-feed";
 import { BalanceView } from "@/components/groups/balance-view";
 import { ChatEntryCard } from "@/components/groups/chat-entry-card";
 import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
+import { LotteryOverview } from "@/components/groups/lottery-overview";
 import { MembersPanel } from "@/components/groups/members-panel";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { RecurringPanel } from "@/components/groups/recurring-panel";
@@ -263,6 +264,8 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         />
 
         <SpendingAnalytics expenses={expenses} members={group.members} currency={group.currency} />
+
+        <LotteryOverview expenses={expenses} members={group.members} currency={group.currency} />
 
         <ActivityFeed
           expenses={expenses}
