@@ -1,7 +1,8 @@
 "use client";
 
 import { Check, Minus, Plus } from "lucide-react";
-import { type CSSProperties, useState } from "react";
+import Image from "next/image";
+import { type CSSProperties, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,145 +18,49 @@ import { avatarGradient, cn } from "@/lib/utils";
 import { playAppliedSound, playLaughSound, playTapSound } from "@/lib/sound/lottery-sounds";
 import type { GroupMember } from "@/lib/types";
 
-/*
- * Illustration palette for the faces.
- *
- * Deliberately literal hex rather than theme tokens: these are a drawing, not
- * chrome. The same painted characters have to read as themselves in both
- * themes, and a skin tone that inverts with the theme stops being a face. The
- * surfaces *around* them — card, border, tint — are theme tokens, so the cards
- * still belong to whichever theme is active.
- */
-const SKIN = "#f2c89b";
-const INK = "#3f2d1e";
-const HAIR = "#5b4128";
-const BLUSH = "#e4836b";
-const MOUTH = "#7d2b20";
-const TONGUE = "#d8654f";
-const TEAR = "#7cc4e8";
-
 /**
- * The head both faces share — ears, skull, a top-left highlight and a fringe.
- *
- * Sharing the head is the point: a revealed cell has to read as "the same
- * person, different mood", so only the features change between the two. The
- * faces are drawn from scratch and are deliberately generic — no likeness of
- * any existing character, franchise or person.
+ * The cast: real (generated, non-photographic) character portraits, each as
+ * a calm/laughing pair so a revealed cell reads as "the same person, a
+ * different mood" — one random cast member headlines each round. Generic
+ * drawn characters, not a likeness of any real or existing person.
  */
-function FaceHead() {
-  return (
-    <>
-      <circle cx="9" cy="26" r="3.4" fill={SKIN} stroke={INK} strokeWidth="1.6" />
-      <circle cx="39" cy="26" r="3.4" fill={SKIN} stroke={INK} strokeWidth="1.6" />
-      <circle cx="24" cy="25" r="17" fill={SKIN} stroke={INK} strokeWidth="1.8" />
-      {/* One soft highlight where the light lands — enough to round the head off. */}
-      <ellipse
-        cx="16.5"
-        cy="17"
-        rx="7"
-        ry="4.6"
-        fill="#ffffff"
-        opacity="0.25"
-        transform="rotate(-28 16.5 17)"
-      />
-      <path d="M7 22A17.3 17.3 0 0 1 41 22C37 15.6 31 12.8 24 12.8S11 15.6 7 22Z" fill={HAIR} />
-    </>
-  );
+interface LotteryCharacter {
+  id: string;
+  calmSrc: string;
+  laughSrc: string;
 }
 
-/** Dodged it: eyes open, easy closed-mouth smile. */
-function SafeFace({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" className={cn("size-6", className)} aria-hidden="true">
-      <FaceHead />
-      <path
-        d="M13.5 19.8q4-2.6 8 0"
-        fill="none"
-        stroke={INK}
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <path
-        d="M26.5 19.8q4-2.6 8 0"
-        fill="none"
-        stroke={INK}
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-      <ellipse cx="12.8" cy="30" rx="3.2" ry="1.9" fill={BLUSH} opacity="0.45" />
-      <ellipse cx="35.2" cy="30" rx="3.2" ry="1.9" fill={BLUSH} opacity="0.45" />
-      <circle cx="17.5" cy="25" r="2.1" fill={INK} />
-      <circle cx="30.5" cy="25" r="2.1" fill={INK} />
-      <circle cx="18.3" cy="24.2" r="0.75" fill="#ffffff" />
-      <circle cx="31.3" cy="24.2" r="0.75" fill="#ffffff" />
-      <path
-        d="M18 32.5q6 4.5 12 0"
-        fill="none"
-        stroke={MOUTH}
-        strokeWidth="2.1"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+const CHARACTERS: LotteryCharacter[] = [
+  {
+    id: "char1",
+    calmSrc: "/lottery-faces/char1-calm.png",
+    laughSrc: "/lottery-faces/char1-laugh.png",
+  },
+  {
+    id: "char3",
+    calmSrc: "/lottery-faces/char3-calm.png",
+    laughSrc: "/lottery-faces/char3-laugh.png",
+  },
+  {
+    id: "char4",
+    calmSrc: "/lottery-faces/char4-calm.png",
+    laughSrc: "/lottery-faces/char4-laugh.png",
+  },
+  {
+    id: "char5",
+    calmSrc: "/lottery-faces/char5-calm.png",
+    laughSrc: "/lottery-faces/char5-laugh.png",
+  },
+  {
+    id: "char6",
+    calmSrc: "/lottery-faces/char6-calm.png",
+    laughSrc: "/lottery-faces/char6-laugh.png",
+  },
+];
 
-/** Caught one: head tipped back, eyes squeezed shut, laughing until it hurts. */
-function LaughFace({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" className={cn("size-6", className)} aria-hidden="true">
-      <g transform="rotate(-6 24 27)">
-        <FaceHead />
-        <path
-          d="M13 19q4.2-3 8.4-0.6"
-          fill="none"
-          stroke={INK}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-        <path
-          d="M26.6 18.4q4.2-2.4 8.4 0.6"
-          fill="none"
-          stroke={INK}
-          strokeWidth="1.6"
-          strokeLinecap="round"
-        />
-        <ellipse cx="35.6" cy="30.4" rx="3.2" ry="1.9" fill={BLUSH} opacity="0.5" />
-        <path
-          d="M13.8 25.6q3.7-4.4 7.4 0"
-          fill="none"
-          stroke={INK}
-          strokeWidth="2.1"
-          strokeLinecap="round"
-        />
-        <path
-          d="M26.8 25.6q3.7-4.4 7.4 0"
-          fill="none"
-          stroke={INK}
-          strokeWidth="2.1"
-          strokeLinecap="round"
-        />
-        <path
-          d="M15.2 29.4c2.9-1.5 14.7-1.5 17.6 0 0 6.2-3.8 9.4-8.8 9.4s-8.8-3.2-8.8-9.4Z"
-          fill={MOUTH}
-          stroke={INK}
-          strokeWidth="1.5"
-          strokeLinejoin="round"
-        />
-        <path d="M17 30.3c2.5-0.9 11.5-0.9 14 0v2.5c-2.7-0.9-11.3-0.9-14 0Z" fill="#ffffff" />
-        <path
-          d="M19.8 35.3c1.1-1.6 7.3-1.6 8.4 0 0.5 1.1-1.6 2.7-4.2 2.7s-4.7-1.6-4.2-2.7Z"
-          fill={TONGUE}
-        />
-        <path
-          d="M10.6 27.2c1.6 2.6 2.4 4.1 2.4 5a2.4 2.4 0 0 1-4.8 0c0-0.9 0.8-2.4 2.4-5Z"
-          fill={TEAR}
-          stroke={INK}
-          strokeWidth="1.1"
-          strokeLinejoin="round"
-        />
-      </g>
-    </svg>
-  );
+function randomCharacter(): LotteryCharacter {
+  const bytes = randomBytes(1);
+  return CHARACTERS[bytes[0] % CHARACTERS.length];
 }
 
 /**
@@ -253,6 +158,7 @@ function shuffledOutcomes(total: number, payCount: number): Outcome[] {
  */
 function LotteryCard({
   cell,
+  character,
   stagger,
   boardLocked,
   label,
@@ -260,6 +166,7 @@ function LotteryCard({
   onTap,
 }: {
   cell: LotteryCell;
+  character: LotteryCharacter;
   stagger: number;
   boardLocked: boolean;
   label: string;
@@ -307,7 +214,15 @@ function LotteryCard({
                 : "border-success/35 bg-success/10",
             )}
           >
-            {isPay ? <LaughFace className="size-[80%]" /> : <SafeFace className="size-[74%]" />}
+            <span className="relative size-[78%]">
+              <Image
+                src={isPay ? character.laughSrc : character.calmSrc}
+                alt=""
+                fill
+                sizes="120px"
+                className="object-contain"
+              />
+            </span>
             {isPay && tapperName && (
               <span
                 className={cn(
@@ -360,6 +275,9 @@ export function SplitLotteryDialog({
   const [targetLoserCount, setTargetLoserCount] = useState(1);
   const [cells, setCells] = useState<LotteryCell[]>([]);
   const [turnIndex, setTurnIndex] = useState(0);
+  const [character, setCharacter] = useState<LotteryCharacter>(CHARACTERS[0]);
+  const [flashCharacter, setFlashCharacter] = useState<LotteryCharacter | null>(null);
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function togglePoolMember(uid: string) {
     setPoolUids((current) =>
@@ -375,6 +293,7 @@ export function SplitLotteryDialog({
     setCells(outcomes.map((outcome) => ({ outcome, revealed: false, tappedByUid: null })));
     setTargetLoserCount(target);
     setTurnIndex(0);
+    setCharacter(randomCharacter());
     setStep("playing");
   }
 
@@ -416,6 +335,11 @@ export function SplitLotteryDialog({
     );
     if (cell.outcome === "pay") {
       playLaughSound();
+      // Re-triggers even if a previous flash's timeout hasn't fired yet, so
+      // back-to-back catches each get their own full-length takeover.
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+      setFlashCharacter(character);
+      flashTimeoutRef.current = setTimeout(() => setFlashCharacter(null), 900);
     } else {
       playTapSound();
     }
@@ -427,6 +351,8 @@ export function SplitLotteryDialog({
       setStep("setup");
       setCells([]);
       setTurnIndex(0);
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+      setFlashCharacter(null);
     }
     onOpenChange(nextOpen);
   }
@@ -446,6 +372,22 @@ export function SplitLotteryDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
+        {flashCharacter && (
+          <div
+            aria-hidden="true"
+            className="bg-popover/95 animate-in fade-in zoom-in-75 pointer-events-none absolute inset-0 z-50 flex items-center justify-center rounded-xl duration-200"
+          >
+            <span className="relative size-[85%]">
+              <Image
+                src={flashCharacter.laughSrc}
+                alt=""
+                fill
+                sizes="400px"
+                className="object-contain drop-shadow-2xl"
+              />
+            </span>
+          </div>
+        )}
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎲</span>
@@ -541,7 +483,15 @@ export function SplitLotteryDialog({
                   >
                     {loserCount}
                   </span>
-                  <LaughFace className="size-7" />
+                  <span className="relative size-7 shrink-0">
+                    <Image
+                      src={CHARACTERS[0].laughSrc}
+                      alt=""
+                      fill
+                      sizes="28px"
+                      className="object-contain"
+                    />
+                  </span>
                 </div>
                 <Button
                   type="button"
@@ -648,7 +598,15 @@ export function SplitLotteryDialog({
                     )}
                   >
                     {found ? (
-                      <LaughFace className="size-5" />
+                      <span className="relative size-5">
+                        <Image
+                          src={character.laughSrc}
+                          alt=""
+                          fill
+                          sizes="20px"
+                          className="object-contain"
+                        />
+                      </span>
                     ) : (
                       <span className="bg-muted-foreground/25 size-1.5 rounded-full" />
                     )}
@@ -674,6 +632,7 @@ export function SplitLotteryDialog({
                   <LotteryCard
                     key={index}
                     cell={cell}
+                    character={character}
                     stagger={index * 0.35}
                     boardLocked={gameOver}
                     label={
