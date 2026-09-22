@@ -56,6 +56,11 @@ const CHARACTERS: LotteryCharacter[] = [
     calmSrc: "/lottery-faces/char6-calm.png",
     laughSrc: "/lottery-faces/char6-laugh.png",
   },
+  {
+    id: "char7",
+    calmSrc: "/lottery-faces/char7-calm.png",
+    laughSrc: "/lottery-faces/char7-laugh.png",
+  },
 ];
 
 function randomCharacter(): LotteryCharacter {
