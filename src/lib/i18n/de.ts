@@ -276,7 +276,7 @@ export const de = {
     lotteryTurnLabel: "Dran: {{name}}",
     lotteryTapAnyHint: "Tipp auf ein beliebiges Gesicht.",
     lotteryProgress: "{{found}} von {{target}} gefunden",
-    lotteryCardHidden: "Verdecktes Gesicht",
+    lotteryCardUntapped: "Gesicht antippen",
     lotteryRevealPay: "Zahlt!",
     lotterySafe: "Sicher!",
     lotteryResultEyebrow: "Ergebnis",

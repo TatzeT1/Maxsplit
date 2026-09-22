@@ -274,7 +274,7 @@ export const en: Dictionary = {
     lotteryTurnLabel: "{{name}}'s turn",
     lotteryTapAnyHint: "Tap any face.",
     lotteryProgress: "{{found}} of {{target}} found",
-    lotteryCardHidden: "Face-down card",
+    lotteryCardUntapped: "Tap this face",
     lotteryRevealPay: "Pays!",
     lotterySafe: "Safe!",
     lotteryResultEyebrow: "Result",

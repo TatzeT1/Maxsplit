@@ -38,11 +38,36 @@ function tone(
   osc.stop(startTime + duration);
 }
 
-/** Short neutral click for a "safe" reveal. */
-export function playTapSound(): void {
+/** One downward "womp" glide: a muted triangle tone sliding from high to low pitch. */
+function playWomp(ctx: AudioContext, startTime: number, startFreq: number, duration: number): void {
+  const osc = ctx.createOscillator();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(startFreq, startTime);
+  osc.frequency.exponentialRampToValueAtTime(startFreq * 0.4, startTime + duration);
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(900, startTime);
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(0.14, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+/** Classic comedy-fail "womp womp": two descending glides, the second lower than the first, for a "safe" tap that whiffs. */
+export function playMissSound(): void {
   const ctx = getContext();
   if (!ctx) return;
-  tone(ctx, 420, ctx.currentTime, 0.08, "square", 0.05);
+  const now = ctx.currentTime;
+  playWomp(ctx, now, 330, 0.16);
+  playWomp(ctx, now + 0.17, 247, 0.22);
 }
 
 /** One "ha" burst: a sawtooth that dips in pitch through a vocal-range bandpass filter, the way an exhaled syllable does. */

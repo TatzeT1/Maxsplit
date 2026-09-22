@@ -15,14 +15,15 @@ import {
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { avatarGradient, cn } from "@/lib/utils";
-import { playAppliedSound, playLaughSound, playTapSound } from "@/lib/sound/lottery-sounds";
+import { playAppliedSound, playLaughSound, playMissSound } from "@/lib/sound/lottery-sounds";
 import type { GroupMember } from "@/lib/types";
 
 /**
- * The cast: real (generated, non-photographic) character portraits, each as
- * a calm/laughing pair so a revealed cell reads as "the same person, a
- * different mood" — one random cast member headlines each round. Generic
- * drawn characters, not a likeness of any real or existing person.
+ * The cast: mostly generated character portraits plus a couple of real,
+ * consented photos, each as a calm/laughing pair so tapping a face reads as
+ * "the same person, a different mood". Each grid cell gets its own random
+ * cast member at game start — a colourful mix across the board, not one
+ * face repeated.
  */
 interface LotteryCharacter {
   id: string;
@@ -73,25 +74,6 @@ function randomCharacter(): LotteryCharacter {
   return CHARACTERS[bytes[0] % CHARACTERS.length];
 }
 
-/**
- * The card back: the silhouette of the same head, in the current text color.
- *
- * A face-shaped back says "a person is hiding under here" and makes the flip
- * land as a reveal of *who*, which a question mark never did.
- */
-function HiddenFaceMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" className={cn("size-6", className)} aria-hidden="true">
-      <circle cx="24" cy="25" r="16" fill="currentColor" opacity="0.18" />
-      <path
-        d="M7.5 22.5A16.8 16.8 0 0 1 40.5 22.5C36.7 16.5 30.8 13.7 24 13.7S11.3 16.5 7.5 22.5Z"
-        fill="currentColor"
-        opacity="0.32"
-      />
-    </svg>
-  );
-}
-
 /** The app's deterministic name-colored initial chip, at whatever size the caller needs. */
 function PlayerAvatar({ name, className }: { name: string; className?: string }) {
   return (
@@ -112,6 +94,7 @@ type Outcome = "pay" | "safe";
 
 interface LotteryCell {
   outcome: Outcome;
+  character: LotteryCharacter;
   revealed: boolean;
   tappedByUid: string | null;
 }
@@ -157,18 +140,14 @@ function shuffledOutcomes(total: number, payCount: number): Outcome[] {
 }
 
 /**
- * One face-down card.
- *
- * The reveal is a real 180° flip rather than a swap: two faces stacked back to
- * back inside a `preserve-3d` wrapper, the back hidden once the card turns
- * past 90°. That is what makes tapping feel like turning a card over instead
- * of watching a cell change color. `prefers-reduced-motion` collapses the
- * transition globally (see globals.css), which lands the card on its final
- * state instantly rather than leaving it mid-flip.
+ * One face, visible from the start — nothing is hidden under a card back.
+ * The mystery is only which face is secretly wired to "pay"; tapping either
+ * settles it permanently into a laugh (bigger, tinted, a tapper badge) or a
+ * miss (shrinks away to an empty dashed slot). `prefers-reduced-motion`
+ * collapses the transition globally (see globals.css).
  */
 function LotteryCard({
   cell,
-  character,
   stagger,
   boardLocked,
   label,
@@ -176,7 +155,6 @@ function LotteryCard({
   onTap,
 }: {
   cell: LotteryCell;
-  character: LotteryCharacter;
   stagger: number;
   boardLocked: boolean;
   label: string;
@@ -184,6 +162,9 @@ function LotteryCard({
   onTap: () => void;
 }) {
   const isPay = cell.outcome === "pay";
+  const laughing = cell.revealed && isPay;
+  const vanished = cell.revealed && !isPay;
+
   return (
     <button
       type="button"
@@ -194,56 +175,48 @@ function LotteryCard({
         "focus-visible:ring-ring/50 ease-spring relative aspect-square touch-manipulation rounded-lg transition-[transform,opacity] duration-(--duration-fast) outline-none focus-visible:ring-3",
         !cell.revealed && (boardLocked ? "opacity-40" : "hover:-translate-y-0.5 active:scale-95"),
         // Keeps the tapper's badge above the neighbouring cards it overhangs.
-        cell.revealed && isPay && "z-10",
+        laughing && "z-10",
       )}
     >
-      {/*
-        Three nested spans, each owning exactly one transform: the deal-in
-        rise, the flip, and the press/hover on the button itself. Collapsing
-        any two of them means one animation's `both` fill freezes the other.
-      */}
       <span
-        className="animate-rise absolute inset-0 [perspective:700px]"
+        className="animate-rise absolute inset-0"
         style={{ "--stagger": stagger } as CSSProperties}
       >
         <span
           className={cn(
-            "ease-spring absolute inset-0 transition-transform duration-(--duration-slow) transform-3d",
-            cell.revealed && "rotate-y-180",
+            "ease-spring absolute inset-0 flex items-center justify-center overflow-hidden rounded-lg border transition-colors duration-(--duration-base)",
+            laughing
+              ? "border-destructive/45 bg-destructive/10 shadow-e1"
+              : vanished
+                ? "border-border/40 border-dashed"
+                : "border-border/70 bg-card shadow-e1",
           )}
         >
-          <span className="border-border/70 bg-card shadow-e1 text-primary absolute inset-0 flex items-center justify-center overflow-hidden rounded-lg border backface-hidden">
-            <span aria-hidden="true" className="bg-paper-texture absolute inset-0 opacity-70" />
-            <HiddenFaceMark className="relative size-[62%]" />
-          </span>
           <span
             className={cn(
-              "absolute inset-0 flex rotate-y-180 items-center justify-center rounded-lg border backface-hidden",
-              isPay
-                ? "border-destructive/45 bg-destructive/10 shadow-e1"
-                : "border-success/35 bg-success/10",
+              "ease-spring relative size-[78%] transition-all duration-(--duration-base)",
+              laughing && "scale-110",
+              vanished && "scale-50 opacity-0",
             )}
           >
-            <span className="relative size-[78%]">
-              <Image
-                src={isPay ? character.laughSrc : character.calmSrc}
-                alt=""
-                fill
-                sizes="120px"
-                className="object-contain"
-              />
-            </span>
-            {isPay && tapperName && (
-              <span
-                className={cn(
-                  "ring-popover absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-linear-to-br text-[9px] leading-none font-semibold text-white ring-2",
-                  avatarGradient(tapperName),
-                )}
-              >
-                {tapperName.charAt(0).toUpperCase() || "?"}
-              </span>
-            )}
+            <Image
+              src={laughing ? cell.character.laughSrc : cell.character.calmSrc}
+              alt=""
+              fill
+              sizes="120px"
+              className="object-contain"
+            />
           </span>
+          {laughing && tapperName && (
+            <span
+              className={cn(
+                "ring-popover absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full bg-linear-to-br text-[9px] leading-none font-semibold text-white ring-2",
+                avatarGradient(tapperName),
+              )}
+            >
+              {tapperName.charAt(0).toUpperCase() || "?"}
+            </span>
+          )}
         </span>
       </span>
     </button>
@@ -285,7 +258,6 @@ export function SplitLotteryDialog({
   const [targetLoserCount, setTargetLoserCount] = useState(1);
   const [cells, setCells] = useState<LotteryCell[]>([]);
   const [turnIndex, setTurnIndex] = useState(0);
-  const [character, setCharacter] = useState<LotteryCharacter>(CHARACTERS[0]);
   const [flashCharacter, setFlashCharacter] = useState<LotteryCharacter | null>(null);
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -300,10 +272,19 @@ export function SplitLotteryDialog({
     const target = Math.min(Math.max(requested, 1), poolUids.length);
     const size = randomGridSize();
     const outcomes = shuffledOutcomes(size, target);
-    setCells(outcomes.map((outcome) => ({ outcome, revealed: false, tappedByUid: null })));
+    // Each cell gets its own random cast member — a colourful mix, not one
+    // face repeated — so every face on the board is visible from the start;
+    // nothing is hidden under a card back.
+    setCells(
+      outcomes.map((outcome) => ({
+        outcome,
+        character: randomCharacter(),
+        revealed: false,
+        tappedByUid: null,
+      })),
+    );
     setTargetLoserCount(target);
     setTurnIndex(0);
-    setCharacter(randomCharacter());
     setStep("playing");
   }
 
@@ -324,14 +305,15 @@ export function SplitLotteryDialog({
     setLoserCountInput(String(Math.min(Math.max(loserCount + delta, 1), maxLoserCount)));
   }
 
-  const loserUids = [
-    ...new Set(
-      cells
-        .filter((cell) => cell.revealed && cell.outcome === "pay")
-        .map((cell) => cell.tappedByUid as string),
-    ),
-  ];
-  const gameOver = loserUids.length >= targetLoserCount;
+  const revealedPayCells = cells.filter((cell) => cell.revealed && cell.outcome === "pay");
+  // Dedup by tapper for the result/split (one person can catch more than one
+  // "pay" face). Ending the game on *cells* found, not distinct people, is
+  // what guarantees termination: the grid only ever has exactly
+  // `targetLoserCount` pay cells in it, so tapping keeps finding them even if
+  // they all land on the same unlucky player's turns — gating on distinct
+  // people instead could make the target unreachable.
+  const loserUids = [...new Set(revealedPayCells.map((cell) => cell.tappedByUid as string))];
+  const gameOver = revealedPayCells.length >= targetLoserCount;
   const currentTurnUid = poolUids[turnIndex % poolUids.length];
 
   function tapCell(index: number) {
@@ -348,10 +330,10 @@ export function SplitLotteryDialog({
       // Re-triggers even if a previous flash's timeout hasn't fired yet, so
       // back-to-back catches each get their own full-length takeover.
       if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-      setFlashCharacter(character);
+      setFlashCharacter(cell.character);
       flashTimeoutRef.current = setTimeout(() => setFlashCharacter(null), 900);
     } else {
-      playTapSound();
+      playMissSound();
     }
     setTurnIndex((i) => i + 1);
   }
@@ -590,12 +572,12 @@ export function SplitLotteryDialog({
             <div className="flex flex-wrap items-center justify-center gap-1.5">
               <span className="sr-only">
                 {t("expenses.lotteryProgress", {
-                  found: loserUids.length,
+                  found: revealedPayCells.length,
                   target: targetLoserCount,
                 })}
               </span>
               {Array.from({ length: targetLoserCount }, (_, index) => {
-                const found = index < loserUids.length;
+                const found = index < revealedPayCells.length;
                 return (
                   <span
                     key={index}
@@ -610,7 +592,7 @@ export function SplitLotteryDialog({
                     {found ? (
                       <span className="relative size-5">
                         <Image
-                          src={character.laughSrc}
+                          src={CHARACTERS[0].laughSrc}
                           alt=""
                           fill
                           sizes="20px"
@@ -642,7 +624,6 @@ export function SplitLotteryDialog({
                   <LotteryCard
                     key={index}
                     cell={cell}
-                    character={character}
                     stagger={index * 0.35}
                     boardLocked={gameOver}
                     label={
@@ -650,7 +631,7 @@ export function SplitLotteryDialog({
                         ? cell.outcome === "pay"
                           ? t("expenses.lotteryRevealPay")
                           : t("expenses.lotterySafe")
-                        : t("expenses.lotteryCardHidden")
+                        : t("expenses.lotteryCardUntapped")
                     }
                     tapperName={
                       cell.tappedByUid ? (members[cell.tappedByUid]?.displayName ?? null) : null
