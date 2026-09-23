@@ -1,4 +1,4 @@
-# Split
+# Split max
 
 A self-hosted, free alternative to Splitwise — a shared-expense tracker for groups (flatmates,
 couples, trips). German UI, no paywalls.
