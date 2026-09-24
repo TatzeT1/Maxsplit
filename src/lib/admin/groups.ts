@@ -1,6 +1,7 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
 import { computeBalances } from "@/lib/money/balances";
+import { computeLotteryTotals, type LotteryTotal } from "@/lib/money/lottery-totals";
 import type {
   ChatMessage,
   Expense,
@@ -58,6 +59,8 @@ export interface AdminGroupDetail extends AdminGroupSummary {
   recurringRules: RecurringRule[];
   /** Net balance per uid, computed fresh from the live (non-deleted) ledger — same math as `group.balancesMinor`, but never stale. */
   balancesMinor: Record<string, number>;
+  /** Per-uid 🎲 Split Lottery losses (amount + rounds), same figures as the member-facing LotteryOverview — see computeLotteryTotals. */
+  lotteryTotals: Record<string, LotteryTotal>;
   /** Most recent messages, oldest first, capped at MAX_ADMIN_CHAT_MESSAGES. */
   messages: ChatMessage[];
   /** True chat message count, which may exceed `messages.length` once a group's history is longer than the cap. */
@@ -101,17 +104,17 @@ export async function getGroupDetail(groupId: string): Promise<AdminGroupDetail 
     .map((doc) => ({ id: doc.id, ...doc.data() }) as ChatMessage)
     .reverse();
 
+  const liveExpenses = expenses.filter((expense) => !expense.deletedAt);
   const balancesMinor = computeBalances(
-    expenses
-      .filter((expense) => !expense.deletedAt)
-      .map((expense) => ({
-        paidBy: expense.paidBy,
-        splits: Object.fromEntries(
-          Object.entries(expense.splits).map(([uid, split]) => [uid, split.amountMinor]),
-        ),
-      })),
+    liveExpenses.map((expense) => ({
+      paidBy: expense.paidBy,
+      splits: Object.fromEntries(
+        Object.entries(expense.splits).map(([uid, split]) => [uid, split.amountMinor]),
+      ),
+    })),
     settlements,
   );
+  const lotteryTotals = computeLotteryTotals(liveExpenses);
 
   return {
     groupId,
@@ -130,6 +133,7 @@ export async function getGroupDetail(groupId: string): Promise<AdminGroupDetail 
     settlements,
     recurringRules,
     balancesMinor,
+    lotteryTotals,
     messages,
     messageCount: messagesCountSnap.data().count,
   };

@@ -36,11 +36,23 @@ function splitSummary(
     .join(", ");
 }
 
+const RANK_MEDALS = ["🥇", "🥈", "🥉"];
+
 export default async function AdminGroupPage({ params }: { params: Promise<{ groupId: string }> }) {
   await requireAdminSession();
   const { groupId } = await params;
   const group = await getGroupDetail(groupId);
   if (!group) notFound();
+
+  const lotteryRanked = group.members
+    .map((member) => ({
+      uid: member.uid,
+      name: member.displayName,
+      amountMinor: group.lotteryTotals[member.uid]?.amountMinor ?? 0,
+      roundsLost: group.lotteryTotals[member.uid]?.roundsLost ?? 0,
+    }))
+    .filter((entry) => entry.roundsLost > 0)
+    .sort((a, b) => b.amountMinor - a.amountMinor);
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
@@ -118,6 +130,35 @@ export default async function AdminGroupPage({ params }: { params: Promise<{ gro
           })}
         </ul>
       </div>
+
+      {lotteryRanked.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <h2 className="flex items-center gap-1.5 text-sm font-medium">
+            <span aria-hidden>🎲</span>
+            Split Lottery
+          </h2>
+          <ul className="bg-card ring-foreground/10 flex flex-col gap-2.5 rounded-xl p-3 ring-1">
+            {lotteryRanked.map((entry, index) => (
+              <li key={entry.uid} className="flex items-center justify-between gap-2 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <span className="w-5 shrink-0 text-center text-xs" aria-hidden>
+                    {RANK_MEDALS[index] ?? `#${index + 1}`}
+                  </span>
+                  <span className="truncate">{entry.name || "(unnamed)"}</span>
+                </span>
+                <span className="flex shrink-0 flex-col items-end gap-0.5">
+                  <span className="font-medium tabular-nums">
+                    {formatMoney(entry.amountMinor, group.currency)}
+                  </span>
+                  <span className="text-muted-foreground text-xs">
+                    {entry.roundsLost} round{entry.roundsLost === 1 ? "" : "s"} lost
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-medium">Expenses ({group.expenseCount})</h2>
