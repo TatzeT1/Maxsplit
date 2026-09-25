@@ -419,6 +419,55 @@
   }
 
   /*
+   * A slip torn off a till roll: zig-zag teeth along the top and bottom edge.
+   *
+   * Two conic-gradient mask layers, one per edge, each covering just over
+   * half the height so they overlap in the middle. Each tile's opaque region
+   * is a 90° cone from the edge's midpoint, which leaves a triangle of
+   * transparency either side of it — the tooth. It's a mask, so it clips
+   * `box-shadow` too: put elevation on a wrapper as `drop-shadow`, which
+   * follows the teeth.
+   */
+  .receipt-edges {
+    --tooth: 12px;
+    --receipt-mask:
+      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--tooth) 51%
+        repeat-x,
+      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom /
+        var(--tooth) 51% repeat-x;
+    -webkit-mask: var(--receipt-mask);
+    mask: var(--receipt-mask);
+  }
+
+  /*
+   * Till paper is an object, not a surface: it stays cream in the dark theme,
+   * the way a photo or a lottery face does. Re-declaring the light theme's
+   * ink and paper tokens on the slip and everything stamped onto it gives
+   * the whole subtree (text, muted text, avatar rings, the stamp's
+   * `color-mix` ink) the light values without a single per-element override.
+   */
+  .paper-tokens {
+    --card: oklch(0.995 0.008 75);
+    --foreground: oklch(0.24 0.035 250);
+    --muted-foreground: oklch(0.51 0.03 245);
+    color: var(--foreground);
+  }
+
+  /*
+   * Worn rubber-stamp ink: the same turbulence noise as `.bg-grain`, pushed
+   * through a steep alpha curve so the densest specks punch clean holes.
+   * A stamp with perfectly even ink reads as a sticker; a few gaps read as a
+   * real impression on real paper.
+   */
+  .stamp-ink {
+    --stamp-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -3.2 2.55'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
+    -webkit-mask-image: var(--stamp-mask);
+    mask-image: var(--stamp-mask);
+    -webkit-mask-size: 96px 96px;
+    mask-size: 96px 96px;
+  }
+
+  /*
    * Money and other figures that sit in a column or change in place.
    *
    * Tabular figures keep every digit the same width, so an amount animating

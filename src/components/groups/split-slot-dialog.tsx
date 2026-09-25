@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
@@ -21,10 +22,17 @@ import { memberColor } from "@/lib/games/member-colors";
 import { drawOne } from "@/lib/games/random";
 import {
   playAppliedSound,
-  playCoinSound,
+  playGiggleSound,
   playLeverSound,
-  playMissSound,
+  playReelStopSound,
+  playStampSound,
 } from "@/lib/sound/game-sounds";
+import {
+  CATCH_FLASH_HOLD_MS,
+  CatchFlash,
+  STAMP_IMPACT_S,
+  useImpactShake,
+} from "@/components/groups/split-game/celebration";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { GamePoolChecklist } from "@/components/groups/split-game/game-pool-checklist";
 import type { GroupMember } from "@/lib/types";
@@ -44,17 +52,28 @@ const OVERSHOOT = ROW_HEIGHT * 0.22;
 const TARGET_Y = -(WINNER_INDEX - 1) * ROW_HEIGHT;
 /** Common stake sizes offered as one-tap presets, in minor units. Filtered down to whatever the bill can afford. */
 const STAKE_PRESETS_MINOR = [10, 50, 100, 500, 1000];
-/** How long the win badge holds before fading — long enough for the bloom, sparkles and bounce to actually finish. */
-const HOLD_MS = 1350;
-/** Fixed positional classes for the sparkle flourish — plain top/left/right/bottom offsets, deliberately not transform-based, so they never fight the scale/opacity animation on the same elements. */
-const SPARKLE_POSITIONS = [
-  "top-3 left-8",
-  "top-6 right-10",
-  "bottom-8 left-12",
-  "bottom-4 right-8",
-  "top-1/2 left-3",
-  "top-1/3 right-4",
-];
+/** The last spin of a round holds a beat longer, so its bigger confetti burst gets to land. */
+const FINALE_EXTRA_HOLD_MS = 400;
+/**
+ * The lever's resting and pulled angles. It pivots from the housing like the
+ * handle of a desk stamp or a hole punch, swinging down through an arc, rather
+ * than sliding down a track the way a one-armed bandit's does.
+ */
+const LEVER_REST_DEG = -34;
+const LEVER_PULLED_DEG = 32;
+/** A loose spring for the lever snapping back up: it should visibly bounce, like a real return spring. */
+const LEVER_RETURN_SPRING = { type: "spring", stiffness: 320, damping: 11, mass: 0.8 } as const;
+
+/**
+ * The stake on the till slip is the headline, so it's set as large as the
+ * slip allows. It steps down for long amounts: at 390px wide the slip has
+ * about 200px for "+1.234,56 €", which only fits in Fraunces at 24px.
+ */
+function stakeSizeClass(formatted: string): string {
+  if (formatted.length <= 7) return "text-4xl";
+  if (formatted.length <= 9) return "text-3xl";
+  return "text-2xl";
+}
 
 /**
  * Filler symbols above and below the winner are purely decorative — the
@@ -71,13 +90,17 @@ function buildReelStrip(winnerUid: string, fillerPool: string[]): string[] {
   return strip;
 }
 
-function ReelSymbol({ name }: { name: string }) {
+/**
+ * One reel row: the person's ordinary avatar chip, the same gradient they
+ * wear everywhere else in the app, rather than a slot-machine symbol. The
+ * winner's chip does the lottery's "caught" wobble as its reel locks in.
+ */
+function ReelSymbol({ name, landed }: { name: string; landed: boolean }) {
   return (
-    <span
-      className="flex shrink-0 items-center justify-center text-lg font-bold text-white"
-      style={{ height: ROW_HEIGHT, backgroundColor: memberColor(name) }}
-    >
-      {name.charAt(0).toUpperCase() || "?"}
+    <span className="flex shrink-0 items-center justify-center" style={{ height: ROW_HEIGHT }}>
+      <span className={cn("block rounded-full", landed && "animate-laugh-land")}>
+        <GameAvatar name={name} className="shadow-e1 size-10 text-base" />
+      </span>
     </span>
   );
 }
@@ -114,9 +137,11 @@ function TallyList({
             <GameAvatar name={members[uid].displayName} className="size-7 shrink-0 text-xs" />
             <span className="truncate">{members[uid].displayName}</span>
           </span>
-          <span className="tabular-money shrink-0 text-base font-semibold">
-            {formatMoney(amount, currency)}
-          </span>
+          <AnimatedMoney
+            amountMinor={amount}
+            currency={currency}
+            className="shrink-0 text-base font-semibold"
+          />
         </li>
       ))}
     </ul>
@@ -127,6 +152,8 @@ interface FlashState {
   id: number;
   amount: number;
   uid: string;
+  /** This spin used up the rest of the bill. */
+  finale: boolean;
 }
 
 /**
@@ -171,6 +198,13 @@ export function SplitSlotDialog({
   const pendingSpinRef = useRef<{ uid: string; amount: number } | null>(null);
   const flashIdRef = useRef(0);
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+
+  useEffect(() => {
+    return () => {
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    };
+  }, []);
 
   function togglePoolMember(uid: string) {
     setPoolUids((current) =>
@@ -218,6 +252,10 @@ export function SplitSlotDialog({
 
   function pull() {
     if (pulling || done || effectiveStake <= 0 || poolUids.length === 0) return;
+    // Pulling again mid-celebration clears the slip at once, so the new spin
+    // is never hidden behind the previous one's scrim.
+    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+    setFlash(null);
     const winner = drawOne(poolUids);
     pendingSpinRef.current = { uid: winner, amount: effectiveStake };
     setReels([
@@ -238,13 +276,10 @@ export function SplitSlotDialog({
       next[index] = true;
       return next;
     });
-    if (index < 2) {
-      playMissSound();
-      return;
-    }
+    playReelStopSound();
+    if (index < 2) return;
 
     // Last reel: settle the pending spin into the tallies.
-    playCoinSound();
     setPulling(false);
     const pending = pendingSpinRef.current;
     pendingSpinRef.current = null;
@@ -255,10 +290,19 @@ export function SplitSlotDialog({
     }));
     setLastSpin(pending);
 
+    // Presentation only, read after the tally update above is already queued:
+    // does this spin close out the bill? If so it gets the bigger finale.
+    const finale = pending.amount >= remaining;
+    playStampSound(STAMP_IMPACT_S);
+    playGiggleSound(STAMP_IMPACT_S + 0.12);
+    shakeStage(finale ? 1.4 : 1);
     if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
     flashIdRef.current += 1;
-    setFlash({ id: flashIdRef.current, amount: pending.amount, uid: pending.uid });
-    flashTimeoutRef.current = setTimeout(() => setFlash(null), HOLD_MS);
+    setFlash({ id: flashIdRef.current, amount: pending.amount, uid: pending.uid, finale });
+    flashTimeoutRef.current = setTimeout(
+      () => setFlash(null),
+      CATCH_FLASH_HOLD_MS + (finale ? FINALE_EXTRA_HOLD_MS : 0),
+    );
   }
 
   function applyResult() {
@@ -278,7 +322,12 @@ export function SplitSlotDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      {/*
+        x-clipped: the impact shake jolts the play area sideways, and without
+        this the scrim and cards would briefly overhang the scroll box and
+        flash a horizontal scrollbar.
+      */}
+      <DialogContent className="overflow-x-hidden sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎰</span>
@@ -300,7 +349,7 @@ export function SplitSlotDialog({
             )}
           </div>
         ) : (
-          <div className="relative flex flex-col gap-3">
+          <div ref={stageRef} className="relative flex flex-col gap-3">
             <p aria-live="polite" className="sr-only">
               {liveText}
             </p>
@@ -361,17 +410,21 @@ export function SplitSlotDialog({
                   <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
                     {t("expenses.slotRemainingLabel")}
                   </span>
-                  <span className="font-heading tabular-money text-2xl leading-none font-semibold">
-                    {formatMoney(remaining, currency)}
-                  </span>
+                  <AnimatedMoney
+                    amountMinor={remaining}
+                    currency={currency}
+                    className="font-heading text-2xl leading-none font-semibold"
+                  />
                 </div>
                 <div className="flex flex-col items-end gap-0.5 text-right">
                   <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
                     {t("expenses.slotAllocatedLabel")}
                   </span>
-                  <span className="font-heading tabular-money text-2xl leading-none font-semibold">
-                    {formatMoney(allocated, currency)}
-                  </span>
+                  <AnimatedMoney
+                    amountMinor={allocated}
+                    currency={currency}
+                    className="font-heading text-2xl leading-none font-semibold"
+                  />
                 </div>
               </div>
               <div className="bg-border relative h-1.5 overflow-hidden rounded-full">
@@ -393,150 +446,149 @@ export function SplitSlotDialog({
               <TallyList tallies={tallies} members={members} currency={currency} />
             </div>
 
-            <div className="flex items-center justify-center gap-3 py-1">
-              <div>
-                <div
-                  aria-hidden="true"
-                  className="bg-foreground/90 shadow-e2 relative flex gap-1.5 rounded-xl p-2"
-                >
-                  {[0, 1, 2].map((reelIndex) => (
-                    <div
-                      key={reelIndex}
-                      className="relative overflow-hidden rounded-md bg-black/20"
-                      style={{ width: ROW_HEIGHT, height: ROW_HEIGHT * VISIBLE_ROWS }}
-                    >
-                      <motion.div
-                        key={`${pullId}-${reelIndex}`}
-                        className={cn(
-                          "flex flex-col transition-[filter] duration-150",
-                          !reelStopped[reelIndex] && "blur-[2px]",
-                        )}
-                        initial={{ y: 0 }}
-                        animate={{
-                          y: reels[reelIndex].length > 0 ? [0, TARGET_Y - OVERSHOOT, TARGET_Y] : 0,
-                        }}
-                        transition={
-                          reduceMotion
-                            ? { duration: 0 }
-                            : {
-                                duration: REEL_DURATIONS[reelIndex],
-                                times: [0, 0.86, 1],
-                                ease: [
-                                  [0.12, 0.68, 0.12, 1],
-                                  [0.34, 1.56, 0.64, 1],
-                                ],
-                              }
-                        }
-                        onAnimationComplete={() => handleReelStop(reelIndex)}
-                      >
-                        {reels[reelIndex].map((uid, rowIndex) => (
-                          <ReelSymbol key={rowIndex} name={members[uid]?.displayName ?? "?"} />
-                        ))}
-                      </motion.div>
-                      {/* Payline: the middle row is the one that counts. */}
+            <div className="flex items-center justify-center py-1">
+              {/*
+                The housing is a paper card like every other surface in the
+                app, not a black cabinet: reels sit in pressed-in wells, fade
+                toward their top and bottom edges the way a drum curves away,
+                and the payline is marked with two small notches in the app's
+                primary ink.
+              */}
+              <div
+                aria-hidden="true"
+                className="bg-card shadow-e2 ring-foreground/10 relative rounded-2xl px-3.5 py-2 ring-1"
+              >
+                <span className="bg-paper-texture pointer-events-none absolute inset-0 rounded-2xl opacity-70" />
+                <span className="border-l-primary absolute top-1/2 left-1 -translate-y-1/2 border-y-[6px] border-l-[7px] border-y-transparent" />
+                <span className="border-r-primary absolute top-1/2 right-1 -translate-y-1/2 border-y-[6px] border-r-[7px] border-y-transparent" />
+                <div className="relative flex gap-1.5">
+                  {[0, 1, 2].map((reelIndex) => {
+                    const stopped = reelStopped[reelIndex] && reels[reelIndex].length > 0;
+                    const landedUid = stopped ? reels[reelIndex][WINNER_INDEX] : null;
+                    return (
                       <div
-                        aria-hidden="true"
-                        className={cn(
-                          "border-primary/70 pointer-events-none absolute inset-x-0 border-y-2 transition-[box-shadow] duration-300",
-                          "shadow-[0_0_0_9999px_rgba(0,0,0,0.15)]",
-                          !pulling && lastSpin && "animate-settle-ring",
+                        key={reelIndex}
+                        className="bg-muted shadow-pressed relative overflow-hidden rounded-lg"
+                        style={{ width: ROW_HEIGHT, height: ROW_HEIGHT * VISIBLE_ROWS }}
+                      >
+                        <motion.div
+                          key={`${pullId}-${reelIndex}`}
+                          className={cn(
+                            "flex flex-col transition-[filter] duration-150",
+                            !reelStopped[reelIndex] && "blur-[2px]",
+                          )}
+                          initial={{ y: 0 }}
+                          animate={{
+                            y:
+                              reels[reelIndex].length > 0 ? [0, TARGET_Y - OVERSHOOT, TARGET_Y] : 0,
+                          }}
+                          transition={
+                            reduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  duration: REEL_DURATIONS[reelIndex],
+                                  times: [0, 0.86, 1],
+                                  ease: [
+                                    [0.12, 0.68, 0.12, 1],
+                                    [0.34, 1.56, 0.64, 1],
+                                  ],
+                                }
+                          }
+                          onAnimationComplete={() => handleReelStop(reelIndex)}
+                        >
+                          {reels[reelIndex].map((uid, rowIndex) => (
+                            <ReelSymbol
+                              key={rowIndex}
+                              name={members[uid]?.displayName ?? "?"}
+                              landed={stopped && rowIndex === WINNER_INDEX}
+                            />
+                          ))}
+                        </motion.div>
+                        {/* The drum curving away: rows fade into the well toward its edges. */}
+                        <span className="from-muted pointer-events-none absolute inset-x-0 top-0 h-9 bg-linear-to-b to-transparent" />
+                        <span className="from-muted pointer-events-none absolute inset-x-0 bottom-0 h-9 bg-linear-to-t to-transparent" />
+                        {/* Payline: the middle row is the one that counts. */}
+                        <span
+                          className="border-primary/45 pointer-events-none absolute inset-x-0 border-y"
+                          style={{ top: ROW_HEIGHT, height: ROW_HEIGHT }}
+                        />
+                        {landedUid && (
+                          <span
+                            key={pullId}
+                            className="animate-settle-ring pointer-events-none absolute left-1/2 size-11 -translate-x-1/2 rounded-full border-2"
+                            style={{
+                              top: ROW_HEIGHT + (ROW_HEIGHT - 44) / 2,
+                              borderColor: memberColor(members[landedUid]?.displayName ?? "?"),
+                            }}
+                          />
                         )}
-                        style={{ top: ROW_HEIGHT, height: ROW_HEIGHT }}
-                      />
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
-              {/* Decorative lever — purely a visual echo of the pull, not its own control. */}
-              <div
-                aria-hidden="true"
-                className="flex h-full flex-col items-center justify-center gap-0.5"
-              >
-                <span className="bg-foreground/20 h-16 w-1.5 rounded-full" />
+              {/*
+                Decorative lever: purely a visual echo of the pull, not its own
+                control. It pivots from the housing's flank and swings through
+                an arc, like the handle of a desk stamp, then bounces back up
+                on a loose spring when the reels land.
+              */}
+              <div aria-hidden="true" className="relative h-24 w-14 shrink-0">
+                <span className="bg-card ring-foreground/10 shadow-e1 absolute top-1/2 left-0 h-12 w-3.5 -translate-y-1/2 rounded-r-lg ring-1" />
                 <motion.span
-                  className="bg-destructive ring-popover shadow-e1 -mt-[4.6rem] size-5 rounded-full ring-2"
-                  animate={{ y: pulling ? 44 : 0 }}
-                  transition={reduceMotion ? { duration: 0 } : springs.snappy}
-                />
+                  className="absolute top-1/2 left-1.5 block h-2 w-11 origin-left -translate-y-1/2"
+                  initial={false}
+                  animate={{ rotate: pulling ? LEVER_PULLED_DEG : LEVER_REST_DEG }}
+                  transition={
+                    reduceMotion ? { duration: 0 } : pulling ? springs.snappy : LEVER_RETURN_SPRING
+                  }
+                >
+                  <span className="bg-foreground/25 absolute inset-y-0 right-2 left-0 rounded-full" />
+                  <span className="bg-primary ring-card shadow-e1 absolute top-1/2 right-0 h-7 w-4 -translate-y-1/2 rounded-full ring-2" />
+                </motion.span>
+                <span className="bg-card ring-foreground/20 shadow-e1 absolute top-1/2 left-0.5 size-3.5 -translate-y-1/2 rounded-full ring-1" />
               </div>
             </div>
 
             {/*
-              Casino win flourish: a dark scrim over the *whole* playing area
-              (not just the reels) guarantees the amount reads clearly no
-              matter what colors happen to be behind it, plus a bloom, a few
-              sparkles and a bouncy scale-in — the "fancy casino" reveal for
-              every stake that lands.
+              The catch: a till slip with the person and the stake on it, a
+              rubber stamp in their ink, confetti in their colors, and the
+              whole play area jolting on impact (see split-game/celebration).
+              The paper scrim over the *whole* play area keeps the amount
+              legible whatever colors happen to be behind it.
             */}
             <AnimatePresence>
               {flash && (
-                <motion.div
+                <CatchFlash
                   key={flash.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0, transition: { duration: 0.25 } }}
-                  className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
-                >
-                  <motion.span
-                    aria-hidden="true"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="bg-background/75 absolute inset-0 rounded-xl backdrop-blur-[1px]"
-                  />
-                  <motion.span
-                    aria-hidden="true"
-                    initial={{ opacity: 0, scale: 0.3 }}
-                    animate={
-                      reduceMotion
-                        ? { opacity: 0.5, scale: 1 }
-                        : { opacity: [0, 0.9, 0], scale: [0.3, 1.7, 2] }
-                    }
-                    transition={{ duration: reduceMotion ? 0.3 : 0.9, ease: "easeOut" }}
-                    className="absolute size-32 rounded-full bg-amber-400/40 blur-2xl"
-                  />
-                  {!reduceMotion &&
-                    SPARKLE_POSITIONS.map((position, index) => (
-                      <motion.span
-                        key={index}
-                        aria-hidden="true"
-                        initial={{ opacity: 0, scale: 0 }}
-                        animate={{ opacity: [0, 1, 0], scale: [0, 1, 0.6] }}
-                        transition={{ duration: 0.8, delay: 0.05 * index, ease: "easeOut" }}
-                        className={cn("absolute text-base", position)}
+                  seed={flash.id}
+                  name={members[flash.uid].displayName}
+                  stampLabel={t("expenses.gameCaughtStamp")}
+                  finale={flash.finale}
+                  caption={
+                    <span className="flex flex-col items-center gap-1">
+                      <span
+                        className={cn(
+                          "font-heading leading-none font-semibold whitespace-nowrap",
+                          stakeSizeClass(formatMoney(flash.amount, currency)),
+                        )}
                       >
-                        ✨
-                      </motion.span>
-                    ))}
-                  <motion.div
-                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.5, rotate: -6 }}
-                    animate={
-                      reduceMotion
-                        ? { opacity: 1 }
-                        : { opacity: 1, scale: [0.5, 1.15, 1], rotate: [-6, 3, 0] }
-                    }
-                    transition={{
-                      duration: reduceMotion ? 0.3 : 0.5,
-                      times: reduceMotion ? undefined : [0, 0.6, 1],
-                    }}
-                    className="relative flex flex-col items-center gap-1 rounded-2xl border-2 border-amber-400 bg-neutral-900 px-6 py-4 shadow-[0_0_28px_rgba(251,191,36,0.55)]"
-                  >
-                    <span className="text-[11px] font-bold tracking-[0.18em] text-amber-300 uppercase">
-                      🎰 {t("expenses.slotHitLabel")}
+                        +
+                        <AnimatedMoney
+                          amountMinor={flash.amount}
+                          currency={currency}
+                          countOnMount
+                        />
+                      </span>
+                      {flash.finale && (
+                        <span className="text-muted-foreground text-xs font-medium">
+                          {t("expenses.slotFullyAllocated")}
+                        </span>
+                      )}
                     </span>
-                    <span className="font-heading tabular-money text-3xl font-bold text-amber-300 [text-shadow:0_0_12px_rgba(251,191,36,0.7)]">
-                      +{formatMoney(flash.amount, currency)}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-sm font-medium text-white">
-                      <GameAvatar
-                        name={members[flash.uid].displayName}
-                        className="size-5 text-[10px]"
-                      />
-                      {members[flash.uid].displayName}
-                    </span>
-                  </motion.div>
-                </motion.div>
+                  }
+                />
               )}
             </AnimatePresence>
           </div>

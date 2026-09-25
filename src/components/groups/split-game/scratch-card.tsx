@@ -1,20 +1,26 @@
 "use client";
 
 import { Eye } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef } from "react";
 import { useT } from "@/components/locale-provider";
-import { cn } from "@/lib/utils";
+import { cn, nameHash } from "@/lib/utils";
+import { memberPalette } from "@/lib/games/member-colors";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
+import { ConfettiBurst, InkStamp } from "@/components/groups/split-game/celebration";
 
 /** Fraction of the foil that has to be scratched away before the rest auto-clears. */
 const REVEAL_THRESHOLD = 0.45;
 /** Scratch brush radius, in CSS pixels. */
 const BRUSH_RADIUS = 18;
+/** The foil's own two tones, reused for the flakes it sheds when it comes off. */
+const FOIL_LIGHT = "#cbd5e1";
+const FOIL_DARK = "#94a3b8";
 
 function paintFoil(ctx: CanvasRenderingContext2D, width: number, height: number) {
   const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, "#cbd5e1");
-  gradient.addColorStop(1, "#94a3b8");
+  gradient.addColorStop(0, FOIL_LIGHT);
+  gradient.addColorStop(1, FOIL_DARK);
   ctx.globalCompositeOperation = "source-over";
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
@@ -33,6 +39,11 @@ function paintFoil(ctx: CanvasRenderingContext2D, width: number, height: number)
  * caller before any scratching happens — the canvas is purely a foil layer
  * being erased, it never decides the outcome. Erasing enough of it (by drag
  * or, for keyboard/a11y, the explicit reveal button) auto-clears the rest.
+ *
+ * The reveal is a small celebration of its own: whatever foil is left drops
+ * off the card and a puff of foil flakes (plus the card owner's colors) goes
+ * up from it. A losing card then gets a rubber stamp in the owner's ink; the
+ * dialog layers the full takeover on top of that.
  */
 export function ScratchCard({
   name,
@@ -46,6 +57,7 @@ export function ScratchCard({
   onReveal: () => void;
 }) {
   const t = useT();
+  const reduceMotion = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const drawingRef = useRef(false);
@@ -123,6 +135,8 @@ export function ScratchCard({
     checkErasedFraction();
   }
 
+  const [from, to] = memberPalette(name);
+
   return (
     <div
       ref={containerRef}
@@ -131,29 +145,79 @@ export function ScratchCard({
       <div
         className={cn(
           "absolute inset-0 flex flex-col items-center justify-center gap-1 p-2 text-center",
-          isLoser ? "bg-destructive/10" : "bg-muted/30",
+          !isLoser && "bg-muted/30",
         )}
+        style={
+          isLoser ? { backgroundColor: `color-mix(in oklch, ${from} 16%, var(--card))` } : undefined
+        }
       >
-        <GameAvatar name={name} className="size-8 text-sm" />
-        <span className="w-full truncate text-xs font-medium">{name}</span>
-        <span
-          className={cn(
-            "font-heading text-sm font-semibold",
-            isLoser ? "text-destructive" : "text-muted-foreground",
-          )}
-        >
-          {isLoser ? t("expenses.scratchResultPay") : t("expenses.scratchResultSafe")}
+        <span className={cn("block rounded-full", scratched && isLoser && "animate-laugh-land")}>
+          <GameAvatar name={name} className="size-8 text-sm" />
         </span>
+        <span className="w-full truncate text-xs font-medium">{name}</span>
+        {isLoser ? (
+          scratched ? (
+            <InkStamp
+              label={t("expenses.scratchResultPay")}
+              name={name}
+              size="sm"
+              className="mt-0.5"
+            />
+          ) : (
+            // Holds the stamp's space while the foil is still on, so the
+            // reveal never shifts the card's contents.
+            <span className="h-6" />
+          )
+        ) : (
+          <span
+            className={cn(
+              "font-heading text-muted-foreground text-sm font-semibold",
+              scratched && "animate-rise",
+            )}
+          >
+            {t("expenses.scratchResultSafe")}
+          </span>
+        )}
       </div>
-      {!scratched && (
-        <canvas
-          ref={canvasRef}
-          className="absolute inset-0 size-full touch-none"
+      {scratched && isLoser && (
+        <span
           aria-hidden="true"
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
+          className="animate-settle-ring pointer-events-none absolute inset-2 rounded-lg border-2"
+          style={{ borderColor: from }}
+        />
+      )}
+      <AnimatePresence>
+        {!scratched && (
+          <motion.canvas
+            key="foil"
+            ref={canvasRef}
+            className="absolute inset-0 size-full touch-none"
+            aria-hidden="true"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            // What's left of the foil comes away in one piece and drops,
+            // tipping as it goes, instead of blinking out.
+            exit={
+              reduceMotion
+                ? { opacity: 0, transition: { duration: 0 } }
+                : {
+                    opacity: 0,
+                    y: 36,
+                    rotate: nameHash(name) % 2 === 0 ? 9 : -9,
+                    scale: 0.9,
+                    transition: { duration: 0.38, ease: [0.4, 0, 1, 1] },
+                  }
+            }
+          />
+        )}
+      </AnimatePresence>
+      {!scratched && (
+        // A slow sheen sweeping over the foil, inviting a thumb onto it.
+        <span
+          aria-hidden="true"
+          className="animate-shimmer pointer-events-none absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent"
         />
       )}
       {!scratched && (
@@ -165,6 +229,15 @@ export function ScratchCard({
         >
           <Eye className="size-3.5" aria-hidden="true" />
         </button>
+      )}
+      {scratched && (
+        <ConfettiBurst
+          anchorRef={containerRef}
+          seed={nameHash(name)}
+          colors={[FOIL_LIGHT, FOIL_DARK, FOIL_LIGHT, from, to]}
+          count={isLoser ? 14 : 20}
+          power={0.55}
+        />
       )}
     </div>
   );
