@@ -32,7 +32,7 @@ import {
   categoryLabel,
 } from "@/lib/categories";
 import { EXPENSE_EMOJIS } from "@/lib/emoji";
-import { formatMoney, parseMoneyInput } from "@/lib/format/money";
+import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
 import { cn } from "@/lib/utils";
@@ -40,10 +40,6 @@ import type { CategoryId, Expense, GroupMember, SplitMode } from "@/lib/types";
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function moneyToInput(amountMinor: number): string {
-  return (amountMinor / 100).toFixed(2).replace(".", ",");
 }
 
 function parseNumberInput(input: string): number | null {
@@ -246,6 +242,23 @@ export function AddExpenseDialog({
     setExactInputs(
       Object.fromEntries(
         loserUids.map((uid) => [uid, amounts[uid] ? moneyToInput(amounts[uid]) : ""]),
+      ),
+    );
+    setSplitMode("exact");
+    setViaLottery(true);
+  }
+
+  /**
+   * The slot machine's staked spins can land different amounts on different
+   * people (repeat losers, changed stakes mid-game), so it hands back exact
+   * amounts directly rather than a loser list for `splitEqual` to divide.
+   */
+  function handleSplitGameResolveAmounts(amountsByUid: Record<string, number>) {
+    setExactInputs(
+      Object.fromEntries(
+        Object.entries(amountsByUid)
+          .filter(([, amount]) => amount > 0)
+          .map(([uid, amount]) => [uid, moneyToInput(amount)]),
       ),
     );
     setSplitMode("exact");
@@ -688,7 +701,9 @@ export function AddExpenseDialog({
         onOpenChange={setSplitSlotOpen}
         members={members}
         memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
+        amountMinor={amountMinor}
+        currency={currency}
+        onResolve={handleSplitGameResolveAmounts}
       />
       <SplitScratchDialog
         open={splitScratchOpen}

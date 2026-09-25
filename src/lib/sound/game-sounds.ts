@@ -163,3 +163,21 @@ export function playAppliedSound(): void {
   tone(ctx, 523.25, now, 0.12, "sine", 0.08);
   tone(ctx, 659.25, now + 0.1, 0.16, "sine", 0.08);
 }
+
+/** A short mechanical "clunk" for pulling the slot machine's lever. */
+export function playLeverSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  tone(ctx, 90, now, 0.09, "square", 0.06);
+  breathNoise(ctx, now, 0.04, 0.05);
+}
+
+/** A bright two-note "cha-ching" for a spin landing a stake on someone. */
+export function playCoinSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  tone(ctx, 1046.5, now, 0.09, "triangle", 0.07);
+  tone(ctx, 1318.5, now + 0.06, 0.14, "triangle", 0.07);
+}

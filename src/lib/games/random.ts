@@ -11,6 +11,12 @@ function randomBytes(length: number): Uint32Array {
   return bytes;
 }
 
+/** Picks one item uniformly at random from `items`, using crypto randomness — draws with replacement, so the same item can come up again on the next call. */
+export function drawOne<T>(items: T[]): T {
+  const [byte] = randomBytes(1);
+  return items[byte % items.length];
+}
+
 /** Fisher-Yates shuffle of `items`, using crypto randomness so the order can't be predicted. */
 export function secureShuffle<T>(items: T[]): T[] {
   const shuffled = [...items];

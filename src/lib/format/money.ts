@@ -47,3 +47,8 @@ export function parseMoneyInput(input: string): number | null {
 
   return Math.round(Number.parseFloat(normalized) * 100);
 }
+
+/** Formats an integer minor-units amount as an editable German-locale decimal string, e.g. `moneyToInput(2550)` -> "25,50". The inverse of `parseMoneyInput`. */
+export function moneyToInput(amountMinor: number): string {
+  return (amountMinor / 100).toFixed(2).replace(".", ",");
+}
