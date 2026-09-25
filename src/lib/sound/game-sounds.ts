@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Tiny synthesized sound effects for the payer lottery — no audio assets,
- * just short Web Audio bursts built from oscillators, filters and noise.
- * Safe to call from a click handler (the only context that can start an
- * AudioContext on iOS Safari).
+ * Tiny synthesized sound effects for the "who pays" split mini-games — no
+ * audio assets, just short Web Audio bursts built from oscillators, filters
+ * and noise. Safe to call from a click handler (the only context that can
+ * start an AudioContext on iOS Safari).
  */
 
 let audioCtx: AudioContext | null = null;

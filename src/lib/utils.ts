@@ -17,8 +17,13 @@ const AVATAR_GRADIENTS = [
   "from-lime-400 to-emerald-500",
 ];
 
-export function avatarGradient(seed: string): string {
+/** Same hash for every "deterministic color from a name" spot in the app, so a person's avatar, wheel wedge, etc. all agree on which color family is "theirs". */
+export function nameHash(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
-  return AVATAR_GRADIENTS[hash % AVATAR_GRADIENTS.length];
+  return hash;
+}
+
+export function avatarGradient(seed: string): string {
+  return AVATAR_GRADIENTS[nameHash(seed) % AVATAR_GRADIENTS.length];
 }

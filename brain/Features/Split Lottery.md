@@ -4,9 +4,13 @@ tags: [feature, split-lottery, fun]
 
 # Split Lottery (🎲)
 
-UI: `src/components/groups/split-lottery-dialog.tsx`. Sound:
-`src/lib/sound/lottery-sounds.ts`. Stats: `src/lib/money/lottery-totals.ts`. Launcher:
-`lottery-overview.tsx`.
+> [!note] One of four
+> The lottery is the original split mini-game; it now sits alongside a wheel, a slot machine
+> and scratch cards behind a shared picker — see [[Split Games]] for the family overview and
+> the shared engine the other three sit on. This note covers what's specific to the lottery.
+
+UI: `src/components/groups/split-lottery-dialog.tsx`. Sound: `src/lib/sound/game-sounds.ts`.
+Stats: `src/lib/money/lottery-totals.ts`. Leaderboard: `lottery-overview.tsx`.
 
 ## What it is
 
@@ -45,4 +49,4 @@ repeated. Sound effects (`playAppliedSound`, `playLaughSound`, `playMissSound`) 
 surface there.
 
 ## Related
-[[Expenses and Splitting]] · [[Money Invariants]] · [[Design System and Theming]]
+[[Split Games]] · [[Expenses and Splitting]] · [[Money Invariants]] · [[Design System and Theming]]

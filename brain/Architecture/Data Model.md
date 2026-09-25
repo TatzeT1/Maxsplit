@@ -68,9 +68,10 @@ copy** of the owning user's profile data, kept in sync by `updatePaymentDetails`
 - `deletedAt: string | null` — **soft delete**. Every read that aggregates expenses
   (balances, PDF export, activity) filters `!expense.deletedAt`. Deleted expenses are never
   hard-removed, so the activity log and history stay coherent.
-- `viaLottery?: boolean` — set when the split came from the 🎲 Split Lottery game (see
-  [[Split Lottery]]) rather than manual entry. Forward-only marker; older lottery rounds
-  aren't retroactively flagged.
+- `viaLottery?: boolean` — set when the split came from any of the 🎲🎡🎰🎫 split mini-games
+  (see [[Split Games]]) rather than manual entry. The name predates the wheel/slot/scratch
+  games and is kept as-is rather than migrated. Forward-only marker; rounds played before a
+  given game shipped aren't retroactively flagged.
 
 ## `Settlement`
 

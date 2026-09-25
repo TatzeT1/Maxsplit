@@ -83,4 +83,4 @@ until the next write. See [[Data Model]] for why this field is display-only, nev
 of truth.
 
 ## Related
-[[Data Access Pattern]] · [[Expenses and Splitting]] · [[Balances and Settlements]] · [[Split Lottery]]
+[[Data Access Pattern]] · [[Expenses and Splitting]] · [[Balances and Settlements]] · [[Split Games]]

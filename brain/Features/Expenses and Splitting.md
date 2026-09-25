@@ -71,4 +71,4 @@ a separate, optional **user override** shown instead of the category icon — un
 `category` itself.
 
 ## Related
-[[Money Invariants]] · [[Groups and Members]] · [[Split Lottery]] (an alternate way to pick a split) · [[Data Model]]
+[[Money Invariants]] · [[Groups and Members]] · [[Split Games]] (alternate, gamified ways to pick a split) · [[Data Model]]

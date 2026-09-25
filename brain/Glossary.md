@@ -15,7 +15,7 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Schulden vereinfachen | "Simplify debts" | `simplifyDebts`, opt-in per-group debt-simplification toggle — [[Money Invariants]], [[Balances and Settlements]] |
 | Du schuldest Anna 12,50 € | "You owe Anna 12.50 €" | pairwise debt display — `computePairwiseDebts` |
 | Schuldenausgleich | "Debt settlement" | filename `schuldenausgleich.pdf` from the [[Settlement PDF Export]] route |
-| vergambelt | roughly "gambled away" | informal term for the [[Split Lottery]] leaderboard of who's lost the most via the lottery |
+| vergambelt | roughly "gambled away" | informal term for the [[Split Games]] leaderboard of who's lost the most across the split mini-games |
 | Überspringen | "Skip" | the onboarding skip action — see [[Onboarding and Payment Details]] |
 | Mit Google anmelden | "Sign in with Google" | the sign-in button label, incl. in the emulator's fake account picker |
 | Ausgaben teilen, ohne Kopfrechnen | "Split expenses without mental math" | the app's tagline (`app.tagline` in `de.ts`) |

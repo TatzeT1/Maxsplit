@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { springs } from "@/lib/motion";
 import { avatarGradient, cn } from "@/lib/utils";
-import { playAppliedSound, playLaughSound, playMissSound } from "@/lib/sound/lottery-sounds";
+import { playAppliedSound, playLaughSound, playMissSound } from "@/lib/sound/game-sounds";
 import type { GroupMember } from "@/lib/types";
 
 /**
@@ -481,8 +481,8 @@ export function SplitLotteryDialog({
   const loserNames = loserUids.map((uid) => members[uid].displayName);
   const resultText =
     loserNames.length === 1
-      ? t("expenses.lotteryResultOne", { name: loserNames[0] })
-      : t("expenses.lotteryResultMultiple", { names: loserNames.join(", ") });
+      ? t("expenses.gameResultOne", { name: loserNames[0] })
+      : t("expenses.gameResultMultiple", { names: loserNames.join(", ") });
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -559,7 +559,7 @@ export function SplitLotteryDialog({
                 className="flex flex-col gap-4"
               >
                 <div className="flex flex-col gap-2">
-                  <Label id="lottery-pool-label">{t("expenses.lotteryPoolLabel")}</Label>
+                  <Label id="lottery-pool-label">{t("expenses.gamePoolLabel")}</Label>
                   <div
                     role="group"
                     aria-labelledby="lottery-pool-label"
@@ -632,14 +632,12 @@ export function SplitLotteryDialog({
                     })}
                   </div>
                   {poolUids.length < 2 && (
-                    <p className="text-muted-foreground text-xs">
-                      {t("expenses.lotteryPoolMinHint")}
-                    </p>
+                    <p className="text-muted-foreground text-xs">{t("expenses.gamePoolMinHint")}</p>
                   )}
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <Label id="lottery-count-label">{t("expenses.lotteryCountLabel")}</Label>
+                  <Label id="lottery-count-label">{t("expenses.gameCountLabel")}</Label>
                   <div
                     role="group"
                     aria-labelledby="lottery-count-label"
@@ -649,7 +647,7 @@ export function SplitLotteryDialog({
                       type="button"
                       variant="outline"
                       size="icon-lg"
-                      aria-label={t("expenses.lotteryCountDecrease")}
+                      aria-label={t("expenses.gameCountDecrease")}
                       disabled={loserCount <= 1}
                       onClick={() => stepLoserCount(-1)}
                     >
@@ -699,7 +697,7 @@ export function SplitLotteryDialog({
                       type="button"
                       variant="outline"
                       size="icon-lg"
-                      aria-label={t("expenses.lotteryCountIncrease")}
+                      aria-label={t("expenses.gameCountIncrease")}
                       disabled={loserCount >= maxLoserCount}
                       onClick={() => stepLoserCount(1)}
                     >
@@ -746,7 +744,7 @@ export function SplitLotteryDialog({
                       className="bg-primary/25 animate-bloom pointer-events-none absolute -top-10 left-1/2 size-28 -translate-x-1/2 rounded-full blur-2xl"
                     />
                     <span className="text-muted-foreground relative text-[11px] font-semibold tracking-[0.12em] uppercase">
-                      {t("expenses.lotteryResultEyebrow")}
+                      {t("expenses.gameResultEyebrow")}
                     </span>
                     <div className="relative flex -space-x-2">
                       {loserNames.map((name, index) => (
@@ -918,7 +916,7 @@ export function SplitLotteryDialog({
                   disabled={poolUids.length < 2}
                   onClick={startGame}
                 >
-                  {t("expenses.lotteryStart")}
+                  {t("expenses.gameStart")}
                 </Button>
               ) : gameOver ? (
                 <>
@@ -929,10 +927,10 @@ export function SplitLotteryDialog({
                     className="flex-1"
                     onClick={goToSetup}
                   >
-                    {t("expenses.lotteryPlayAgain")}
+                    {t("expenses.gamePlayAgain")}
                   </Button>
                   <Button type="button" size="lg" className="flex-1" onClick={applyResult}>
-                    {t("expenses.lotteryApply")}
+                    {t("expenses.gameApply")}
                   </Button>
                 </>
               ) : (
@@ -943,7 +941,7 @@ export function SplitLotteryDialog({
                   className="flex-1"
                   onClick={goToSetup}
                 >
-                  {t("expenses.lotteryPlayAgain")}
+                  {t("expenses.gamePlayAgain")}
                 </Button>
               )}
             </motion.div>

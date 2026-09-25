@@ -17,6 +17,13 @@ import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
 import { SplitLotteryDialog } from "@/components/groups/split-lottery-dialog";
+import { SplitWheelDialog } from "@/components/groups/split-wheel-dialog";
+import { SplitSlotDialog } from "@/components/groups/split-slot-dialog";
+import { SplitScratchDialog } from "@/components/groups/split-scratch-dialog";
+import {
+  SplitGamePickerDialog,
+  type SplitGameId,
+} from "@/components/groups/split-game-picker-dialog";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -213,16 +220,28 @@ export function AddExpenseDialog({
   const [loading, setLoading] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [gamePickerOpen, setGamePickerOpen] = useState(false);
   const [splitLotteryOpen, setSplitLotteryOpen] = useState(false);
+  const [splitWheelOpen, setSplitWheelOpen] = useState(false);
+  const [splitSlotOpen, setSplitSlotOpen] = useState(false);
+  const [splitScratchOpen, setSplitScratchOpen] = useState(false);
   // Only inherited on an actual edit, never on duplicate — a duplicated
-  // expense reuses the split numbers, but no lottery round was played for it.
+  // expense reuses the split numbers, but no game round was played for it.
   const [viaLottery, setViaLottery] = useState(expenseToEdit?.viaLottery ?? false);
   const t = useT();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
 
-  /** The game decides who owes the bill, not who fronted it — it fills in an exact split, `paidBy` is untouched. */
-  function handleSplitLotteryResolve(loserUids: string[]) {
+  function handleSelectGame(game: SplitGameId) {
+    setGamePickerOpen(false);
+    if (game === "lottery") setSplitLotteryOpen(true);
+    if (game === "wheel") setSplitWheelOpen(true);
+    if (game === "slot") setSplitSlotOpen(true);
+    if (game === "scratch") setSplitScratchOpen(true);
+  }
+
+  /** Whichever mini-game decides who owes the bill, not who fronted it — it fills in an exact split, `paidBy` is untouched. */
+  function handleSplitGameResolve(loserUids: string[]) {
     const amounts = amountMinor > 0 ? splitEqual(amountMinor, loserUids) : {};
     setExactInputs(
       Object.fromEntries(
@@ -525,10 +544,10 @@ export function AddExpenseDialog({
                   ))}
                   <button
                     type="button"
-                    onClick={() => setSplitLotteryOpen(true)}
+                    onClick={() => setGamePickerOpen(true)}
                     className="text-muted-foreground hover:bg-muted hover:text-foreground flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95"
                   >
-                    🎲 {t("expenses.splitGame")}
+                    🎮 {t("expenses.splitGame")}
                   </button>
                 </div>
 
@@ -645,12 +664,38 @@ export function AddExpenseDialog({
           </form>
         )}
       </DialogContent>
+      <SplitGamePickerDialog
+        open={gamePickerOpen}
+        onOpenChange={setGamePickerOpen}
+        onSelectGame={handleSelectGame}
+      />
       <SplitLotteryDialog
         open={splitLotteryOpen}
         onOpenChange={setSplitLotteryOpen}
         members={members}
         memberUids={memberUids}
-        onResolve={handleSplitLotteryResolve}
+        onResolve={handleSplitGameResolve}
+      />
+      <SplitWheelDialog
+        open={splitWheelOpen}
+        onOpenChange={setSplitWheelOpen}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleSplitGameResolve}
+      />
+      <SplitSlotDialog
+        open={splitSlotOpen}
+        onOpenChange={setSplitSlotOpen}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleSplitGameResolve}
+      />
+      <SplitScratchDialog
+        open={splitScratchOpen}
+        onOpenChange={setSplitScratchOpen}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleSplitGameResolve}
       />
     </Dialog>
   );
