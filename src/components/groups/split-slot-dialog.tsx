@@ -44,7 +44,17 @@ const OVERSHOOT = ROW_HEIGHT * 0.22;
 const TARGET_Y = -(WINNER_INDEX - 1) * ROW_HEIGHT;
 /** Common stake sizes offered as one-tap presets, in minor units. Filtered down to whatever the bill can afford. */
 const STAKE_PRESETS_MINOR = [10, 50, 100, 500, 1000];
-const HOLD_MS = 900;
+/** How long the win badge holds before fading — long enough for the bloom, sparkles and bounce to actually finish. */
+const HOLD_MS = 1350;
+/** Fixed positional classes for the sparkle flourish — plain top/left/right/bottom offsets, deliberately not transform-based, so they never fight the scale/opacity animation on the same elements. */
+const SPARKLE_POSITIONS = [
+  "top-3 left-8",
+  "top-6 right-10",
+  "bottom-8 left-12",
+  "bottom-4 right-8",
+  "top-1/2 left-3",
+  "top-1/3 right-4",
+];
 
 /**
  * Filler symbols above and below the winner are purely decorative — the
@@ -104,7 +114,7 @@ function TallyList({
             <GameAvatar name={members[uid].displayName} className="size-7 shrink-0 text-xs" />
             <span className="truncate">{members[uid].displayName}</span>
           </span>
-          <span className="tabular-money shrink-0 font-medium">
+          <span className="tabular-money shrink-0 text-base font-semibold">
             {formatMoney(amount, currency)}
           </span>
         </li>
@@ -116,6 +126,7 @@ function TallyList({
 interface FlashState {
   id: number;
   amount: number;
+  uid: string;
 }
 
 /**
@@ -246,7 +257,7 @@ export function SplitSlotDialog({
 
     if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
     flashIdRef.current += 1;
-    setFlash({ id: flashIdRef.current, amount: pending.amount });
+    setFlash({ id: flashIdRef.current, amount: pending.amount, uid: pending.uid });
     flashTimeoutRef.current = setTimeout(() => setFlash(null), HOLD_MS);
   }
 
@@ -289,12 +300,17 @@ export function SplitSlotDialog({
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="relative flex flex-col gap-3">
             <p aria-live="polite" className="sr-only">
               {liveText}
             </p>
 
-            {!done && (
+            {done ? (
+              <div className="border-primary/30 bg-primary/5 animate-rise flex items-center justify-center gap-1.5 rounded-xl border p-2 text-sm font-medium">
+                <span aria-hidden="true">✓</span>
+                {t("expenses.slotFullyAllocated")}
+              </div>
+            ) : (
               <div className="flex flex-col gap-2">
                 <Label id="slot-stake-label">{t("expenses.slotStakeLabel")}</Label>
                 <div
@@ -339,18 +355,35 @@ export function SplitSlotDialog({
               </div>
             )}
 
-            <div className="bg-muted/40 flex items-center justify-between gap-2 rounded-xl border p-3 text-sm">
-              <span className="text-muted-foreground">
-                {done
-                  ? t("expenses.slotFullyAllocated")
-                  : t("expenses.slotRemaining", {
-                      amount: formatMoney(remaining, currency),
-                      total: formatMoney(amountMinor, currency),
-                    })}
-              </span>
-              <span className="font-heading tabular-money text-lg font-medium">
-                {formatMoney(allocated, currency)}
-              </span>
+            <div className="bg-muted/40 flex flex-col gap-2.5 rounded-xl border p-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
+                    {t("expenses.slotRemainingLabel")}
+                  </span>
+                  <span className="font-heading tabular-money text-2xl leading-none font-semibold">
+                    {formatMoney(remaining, currency)}
+                  </span>
+                </div>
+                <div className="flex flex-col items-end gap-0.5 text-right">
+                  <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
+                    {t("expenses.slotAllocatedLabel")}
+                  </span>
+                  <span className="font-heading tabular-money text-2xl leading-none font-semibold">
+                    {formatMoney(allocated, currency)}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-border relative h-1.5 overflow-hidden rounded-full">
+                <motion.div
+                  className="bg-primary absolute inset-y-0 left-0 rounded-full"
+                  animate={{
+                    width:
+                      amountMinor > 0 ? `${Math.min((allocated / amountMinor) * 100, 100)}%` : "0%",
+                  }}
+                  transition={reduceMotion ? { duration: 0 } : springs.weighted}
+                />
+              </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -361,7 +394,7 @@ export function SplitSlotDialog({
             </div>
 
             <div className="flex items-center justify-center gap-3 py-1">
-              <div className="relative">
+              <div>
                 <div
                   aria-hidden="true"
                   className="bg-foreground/90 shadow-e2 relative flex gap-1.5 rounded-xl p-2"
@@ -413,23 +446,6 @@ export function SplitSlotDialog({
                     </div>
                   ))}
                 </div>
-
-                <AnimatePresence>
-                  {flash && (
-                    <motion.div
-                      key={flash.id}
-                      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 0, scale: 0.7 }}
-                      animate={
-                        reduceMotion ? { opacity: 1 } : { opacity: [0, 1, 1, 0], y: -48, scale: 1 }
-                      }
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: reduceMotion ? 0.4 : 1.1, times: [0, 0.15, 0.75, 1] }}
-                      className="text-destructive pointer-events-none absolute inset-x-0 top-1/2 z-20 text-center text-xl font-bold drop-shadow"
-                    >
-                      +{formatMoney(flash.amount, currency)}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
 
               {/* Decorative lever — purely a visual echo of the pull, not its own control. */}
@@ -445,6 +461,84 @@ export function SplitSlotDialog({
                 />
               </div>
             </div>
+
+            {/*
+              Casino win flourish: a dark scrim over the *whole* playing area
+              (not just the reels) guarantees the amount reads clearly no
+              matter what colors happen to be behind it, plus a bloom, a few
+              sparkles and a bouncy scale-in — the "fancy casino" reveal for
+              every stake that lands.
+            */}
+            <AnimatePresence>
+              {flash && (
+                <motion.div
+                  key={flash.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, transition: { duration: 0.25 } }}
+                  className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
+                >
+                  <motion.span
+                    aria-hidden="true"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-background/75 absolute inset-0 rounded-xl backdrop-blur-[1px]"
+                  />
+                  <motion.span
+                    aria-hidden="true"
+                    initial={{ opacity: 0, scale: 0.3 }}
+                    animate={
+                      reduceMotion
+                        ? { opacity: 0.5, scale: 1 }
+                        : { opacity: [0, 0.9, 0], scale: [0.3, 1.7, 2] }
+                    }
+                    transition={{ duration: reduceMotion ? 0.3 : 0.9, ease: "easeOut" }}
+                    className="absolute size-32 rounded-full bg-amber-400/40 blur-2xl"
+                  />
+                  {!reduceMotion &&
+                    SPARKLE_POSITIONS.map((position, index) => (
+                      <motion.span
+                        key={index}
+                        aria-hidden="true"
+                        initial={{ opacity: 0, scale: 0 }}
+                        animate={{ opacity: [0, 1, 0], scale: [0, 1, 0.6] }}
+                        transition={{ duration: 0.8, delay: 0.05 * index, ease: "easeOut" }}
+                        className={cn("absolute text-base", position)}
+                      >
+                        ✨
+                      </motion.span>
+                    ))}
+                  <motion.div
+                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.5, rotate: -6 }}
+                    animate={
+                      reduceMotion
+                        ? { opacity: 1 }
+                        : { opacity: 1, scale: [0.5, 1.15, 1], rotate: [-6, 3, 0] }
+                    }
+                    transition={{
+                      duration: reduceMotion ? 0.3 : 0.5,
+                      times: reduceMotion ? undefined : [0, 0.6, 1],
+                    }}
+                    className="relative flex flex-col items-center gap-1 rounded-2xl border-2 border-amber-400 bg-neutral-900 px-6 py-4 shadow-[0_0_28px_rgba(251,191,36,0.55)]"
+                  >
+                    <span className="text-[11px] font-bold tracking-[0.18em] text-amber-300 uppercase">
+                      🎰 {t("expenses.slotHitLabel")}
+                    </span>
+                    <span className="font-heading tabular-money text-3xl font-bold text-amber-300 [text-shadow:0_0_12px_rgba(251,191,36,0.7)]">
+                      +{formatMoney(flash.amount, currency)}
+                    </span>
+                    <span className="flex items-center gap-1.5 text-sm font-medium text-white">
+                      <GameAvatar
+                        name={members[flash.uid].displayName}
+                        className="size-5 text-[10px]"
+                      />
+                      {members[flash.uid].displayName}
+                    </span>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 

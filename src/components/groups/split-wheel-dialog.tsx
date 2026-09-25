@@ -25,14 +25,30 @@ type Step = "setup" | "playing";
 
 /** Wheel diameter in px. */
 const WHEEL_SIZE = 240;
-const SPIN_DURATION = 2.6;
-/** Full turns of visual flourish added to every spin, on top of landing on the winner. */
-const EXTRA_SPINS = 4;
+/** Every spin gets its own duration and turn count in these ranges, so no two spins feel the same — a wheel that always spins for exactly the same length reads as a slot reading off a fixed answer, not a game of chance. */
+const MIN_SPIN_DURATION = 3.6;
+const MAX_SPIN_DURATION = 6.2;
+const MIN_EXTRA_SPINS = 5;
+const MAX_EXTRA_SPINS = 11;
 
 function randomJitterDegrees(maxDegrees: number): number {
   const bytes = new Uint32Array(1);
   crypto.getRandomValues(bytes);
   return (bytes[0] / 0xffffffff) * maxDegrees * 2 - maxDegrees;
+}
+
+/**
+ * How long this spin lasts and how many extra full turns it takes are pure
+ * presentation — the winner already came from `useSequentialDraw`'s
+ * crypto-random draw, so `Math.random` here can't affect who actually pays,
+ * only how long the reveal takes to get there.
+ */
+function randomSpinDuration(): number {
+  return MIN_SPIN_DURATION + Math.random() * (MAX_SPIN_DURATION - MIN_SPIN_DURATION);
+}
+
+function randomExtraSpins(): number {
+  return Math.round(MIN_EXTRA_SPINS + Math.random() * (MAX_EXTRA_SPINS - MIN_EXTRA_SPINS));
 }
 
 /**
@@ -63,6 +79,7 @@ export function SplitWheelDialog({
   const [stepperDirection, setStepperDirection] = useState<1 | -1>(1);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
+  const [spinDuration, setSpinDuration] = useState(MIN_SPIN_DURATION);
   const draw = useSequentialDraw();
 
   function togglePoolMember(uid: string) {
@@ -121,8 +138,9 @@ export function SplitWheelDialog({
     // reverses.
     const targetMid = winnerIndex * segAngle + segAngle / 2 + randomJitterDegrees(segAngle * 0.3);
     const targetMod = ((-targetMid % 360) + 360) % 360;
-    const base = rotation - (rotation % 360) + 360 * EXTRA_SPINS + targetMod;
+    const base = rotation - (rotation % 360) + 360 * randomExtraSpins() + targetMod;
     setRotation(base <= rotation ? base + 360 : base);
+    setSpinDuration(randomSpinDuration());
     setSpinning(true);
   }
 
@@ -231,7 +249,7 @@ export function SplitWheelDialog({
                   transition={
                     reduceMotion
                       ? { duration: 0 }
-                      : { duration: SPIN_DURATION, ease: [0.12, 0.67, 0.12, 1] }
+                      : { duration: spinDuration, ease: [0.1, 0.6, 0.1, 1] }
                   }
                   onAnimationComplete={handleSpinComplete}
                 >
