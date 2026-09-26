@@ -19,6 +19,9 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Überspringen | "Skip" | the onboarding skip action — see [[Onboarding and Payment Details]] |
 | Mit Google anmelden | "Sign in with Google" | the sign-in button label, incl. in the emulator's fake account picker |
 | Ausgaben teilen, ohne Kopfrechnen | "Split expenses without mental math" | the app's tagline (`app.tagline` in `de.ts`) |
+| Glücksspiele | "Games of chance" | the picker's luck-based category (🎲🎡🎰🎫) — [[Split Games]] |
+| Minispiele | "Minigames" | the picker's skill-based, 1-vs-1 duel category (⭕🔴🧠⚡) — [[Split Games]] |
+| K.-o.-Modus | "Knockout mode" | the picker's name for the knockout-ladder mechanic that scales a duel game to a pool bigger than 2 — [[Split Games]] |
 
 ## Domain vocabulary
 

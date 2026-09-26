@@ -20,6 +20,10 @@ import { SplitLotteryDialog } from "@/components/groups/split-lottery-dialog";
 import { SplitWheelDialog } from "@/components/groups/split-wheel-dialog";
 import { SplitSlotDialog } from "@/components/groups/split-slot-dialog";
 import { SplitScratchDialog } from "@/components/groups/split-scratch-dialog";
+import { SplitTicTacToeDialog } from "@/components/groups/split-tic-tac-toe-dialog";
+import { SplitConnectFourDialog } from "@/components/groups/split-connect-four-dialog";
+import { SplitMemoryDialog } from "@/components/groups/split-memory-dialog";
+import { SplitReactionDialog } from "@/components/groups/split-reaction-dialog";
 import {
   SplitGamePickerDialog,
   type SplitGameId,
@@ -217,10 +221,10 @@ export function AddExpenseDialog({
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gamePickerOpen, setGamePickerOpen] = useState(false);
-  const [splitLotteryOpen, setSplitLotteryOpen] = useState(false);
-  const [splitWheelOpen, setSplitWheelOpen] = useState(false);
-  const [splitSlotOpen, setSplitSlotOpen] = useState(false);
-  const [splitScratchOpen, setSplitScratchOpen] = useState(false);
+  // Which game dialog (if any) is open — a game dialog is only ever mounted
+  // "open" for the one currently active id, so this replaces what would
+  // otherwise be eight parallel booleans as the picker's tile list grows.
+  const [activeGame, setActiveGame] = useState<SplitGameId | null>(null);
   // Only inherited on an actual edit, never on duplicate — a duplicated
   // expense reuses the split numbers, but no game round was played for it.
   const [viaLottery, setViaLottery] = useState(expenseToEdit?.viaLottery ?? false);
@@ -230,10 +234,7 @@ export function AddExpenseDialog({
 
   function handleSelectGame(game: SplitGameId) {
     setGamePickerOpen(false);
-    if (game === "lottery") setSplitLotteryOpen(true);
-    if (game === "wheel") setSplitWheelOpen(true);
-    if (game === "slot") setSplitSlotOpen(true);
-    if (game === "scratch") setSplitScratchOpen(true);
+    setActiveGame(game);
   }
 
   /** Whichever mini-game decides who owes the bill, not who fronted it — it fills in an exact split, `paidBy` is untouched. */
@@ -683,22 +684,22 @@ export function AddExpenseDialog({
         onSelectGame={handleSelectGame}
       />
       <SplitLotteryDialog
-        open={splitLotteryOpen}
-        onOpenChange={setSplitLotteryOpen}
+        open={activeGame === "lottery"}
+        onOpenChange={(next) => setActiveGame(next ? "lottery" : null)}
         members={members}
         memberUids={memberUids}
         onResolve={handleSplitGameResolve}
       />
       <SplitWheelDialog
-        open={splitWheelOpen}
-        onOpenChange={setSplitWheelOpen}
+        open={activeGame === "wheel"}
+        onOpenChange={(next) => setActiveGame(next ? "wheel" : null)}
         members={members}
         memberUids={memberUids}
         onResolve={handleSplitGameResolve}
       />
       <SplitSlotDialog
-        open={splitSlotOpen}
-        onOpenChange={setSplitSlotOpen}
+        open={activeGame === "slot"}
+        onOpenChange={(next) => setActiveGame(next ? "slot" : null)}
         members={members}
         memberUids={memberUids}
         amountMinor={amountMinor}
@@ -706,8 +707,36 @@ export function AddExpenseDialog({
         onResolve={handleSplitGameResolveAmounts}
       />
       <SplitScratchDialog
-        open={splitScratchOpen}
-        onOpenChange={setSplitScratchOpen}
+        open={activeGame === "scratch"}
+        onOpenChange={(next) => setActiveGame(next ? "scratch" : null)}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleSplitGameResolve}
+      />
+      <SplitTicTacToeDialog
+        open={activeGame === "tictactoe"}
+        onOpenChange={(next) => setActiveGame(next ? "tictactoe" : null)}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleSplitGameResolve}
+      />
+      <SplitConnectFourDialog
+        open={activeGame === "connectfour"}
+        onOpenChange={(next) => setActiveGame(next ? "connectfour" : null)}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleSplitGameResolve}
+      />
+      <SplitMemoryDialog
+        open={activeGame === "memory"}
+        onOpenChange={(next) => setActiveGame(next ? "memory" : null)}
+        members={members}
+        memberUids={memberUids}
+        onResolve={handleSplitGameResolve}
+      />
+      <SplitReactionDialog
+        open={activeGame === "reaction"}
+        onOpenChange={(next) => setActiveGame(next ? "reaction" : null)}
         members={members}
         memberUids={memberUids}
         onResolve={handleSplitGameResolve}

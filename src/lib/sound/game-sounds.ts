@@ -256,6 +256,24 @@ export function playStampSound(delaySeconds = 0): void {
   noiseBurst(ctx, at + 0.03, 0.16, 0.05, "highpass", 3200, 0.7);
 }
 
+/** A short, bright two-tone chime for the reaction duel's "Los!" signal — distinct from the mechanical sounds above, so it reads as "go" rather than as a machine noise. */
+export function playGoSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  tone(ctx, 880, now, 0.09, "triangle", 0.12);
+  tone(ctx, 1318.5, now + 0.06, 0.14, "triangle", 0.12);
+}
+
+/** A short, low buzz for a false start — deliberately flat and a little harsh, the opposite of the "Los!" chime. */
+export function playBuzzerSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  tone(ctx, 140, now, 0.22, "sawtooth", 0.08);
+  noiseBurst(ctx, now, 0.05, 0.05, "lowpass", 400, 0.8);
+}
+
 /** Two or three quick, high "ha"s — a lighter laugh for the slot machine's many small hits. */
 export function playGiggleSound(delaySeconds = 0): void {
   const ctx = getContext();

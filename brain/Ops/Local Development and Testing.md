@@ -46,10 +46,12 @@ Google anmelden") — no real Google account needed.
   `src/lib/money/{split,balances,category-totals,lottery-totals}.test.ts`,
   `src/lib/payment/{validate,paypal-me}.test.ts`, `src/lib/groups/invite-code.test.ts`,
   `src/lib/recurring/schedule.test.ts`, `src/lib/i18n/translate.test.ts`,
-  `src/lib/firebase/config.test.ts`, `src/lib/use-visible-height.test.ts`. This is where
-  [[Money Invariants]]' guarantees (rounding remainders, multi-payer attribution, zero-sum) are
-  actually pinned down — read these before changing split/balance logic, they encode the
-  invariants as concrete cases, not just prose.
+  `src/lib/firebase/config.test.ts`, `src/lib/use-visible-height.test.ts`,
+  `src/lib/games/{knockout-ladder,use-knockout-ladder,tic-tac-toe,connect-four,memory-duel,reaction-duel}.test.ts`
+  (see [[Split Games]] for what each pure module encodes). This is where [[Money Invariants]]'
+  guarantees (rounding remainders, multi-payer attribution, zero-sum) are actually pinned down —
+  read these before changing split/balance logic, they encode the invariants as concrete cases,
+  not just prose.
 - **`pnpm test:rules`** (`vitest.rules.config.ts`) — `firebase emulators:exec --only
   firestore,storage "vitest run --config vitest.rules.config.ts"`. Exercises
   `src/lib/firebase/firestore.rules.test.ts` against a real emulator instance, using

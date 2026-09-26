@@ -28,3 +28,14 @@ export function secureShuffle<T>(items: T[]): T[] {
   }
   return shuffled;
 }
+
+/**
+ * A crypto-random integer in `[min, max]` (inclusive both ends) — used for
+ * the reaction duel's "how long to wait before the signal" delay, where a
+ * predictable gap would let a player anticipate it instead of reacting to it.
+ */
+export function randomInt(min: number, max: number): number {
+  const span = max - min + 1;
+  const [byte] = randomBytes(1);
+  return min + (byte % span);
+}

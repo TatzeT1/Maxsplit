@@ -40,7 +40,8 @@ re-deriving it from scratch by reading every file.
 - [[Settlement PDF Export]] — the public, tokenized, on-demand PDF link
 - [[Recurring Expenses]] — cron-driven materialization with catch-up
 - [[Chat]] — per-group text chat and read receipts
-- [[Split Games]] — the 🎲🎡🎰🎫 gamified split pickers (Lottery, Wheel, Slot Machine, Scratch Cards)
+- [[Split Games]] — the gamified split pickers: four luck-based (🎲🎡🎰🎫) and four skill-based
+  1-vs-1 duels (⭕🔴🧠⚡) on a shared knockout-ladder engine
 - [[Admin Panel]] — the single hardcoded admin email, ban, group moderation
 - [[Onboarding and Payment Details]] — first-run guide, PayPal/IBAN details
 

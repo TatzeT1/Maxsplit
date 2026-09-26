@@ -46,3 +46,18 @@ export function memberPalette(seed: string): readonly [string, string] {
 export function memberInk(seed: string): string {
   return `color-mix(in oklch, ${memberPalette(seed)[1]} 76%, var(--foreground))`;
 }
+
+/**
+ * The two colors for a 1-vs-1 duel board (Tic-Tac-Toe marks, Connect Four
+ * discs, Memory claim rings): each player's own `memberColor`, unless both
+ * names hash to the same palette slot — a duel where both marks look
+ * identical is unreadable — in which case the second player is bumped to a
+ * palette on the opposite side of the wheel.
+ */
+export function duelPalettes(nameA: string, nameB: string): [string, string] {
+  const a = memberColor(nameA);
+  const b = memberColor(nameB);
+  if (a !== b) return [a, b];
+  const bumpedIndex = (nameHash(nameB) + MEMBER_PALETTES.length / 2) % MEMBER_PALETTES.length;
+  return [a, MEMBER_PALETTES[bumpedIndex][0]];
+}
