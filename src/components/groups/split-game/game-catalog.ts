@@ -9,6 +9,8 @@ export interface SplitGameInfo {
   id: SplitGameId;
   category: SplitGameCategory;
   emoji: string;
+  /** Cartoon tile illustration, `public/game-tiles/<id>.jpg` — the emoji stays on as a small corner badge over it. */
+  imageSrc: string;
   nameKey: TranslationKey;
   blurbKey: TranslationKey;
   /** The longer "how it works" paragraph shown on the picker's preview step. */
@@ -44,6 +46,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "lottery",
     category: "luck",
     emoji: "🎲",
+    imageSrc: "/game-tiles/lottery.jpg",
     nameKey: "expenses.gameNameLottery",
     blurbKey: "expenses.gameBlurbLottery",
     howKey: "expenses.gameHowLottery",
@@ -52,6 +55,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "wheel",
     category: "luck",
     emoji: "🎡",
+    imageSrc: "/game-tiles/wheel.jpg",
     nameKey: "expenses.gameNameWheel",
     blurbKey: "expenses.gameBlurbWheel",
     howKey: "expenses.gameHowWheel",
@@ -60,6 +64,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "slot",
     category: "luck",
     emoji: "🎰",
+    imageSrc: "/game-tiles/slot.jpg",
     nameKey: "expenses.gameNameSlot",
     blurbKey: "expenses.gameBlurbSlot",
     howKey: "expenses.gameHowSlot",
@@ -68,6 +73,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "scratch",
     category: "luck",
     emoji: "🎫",
+    imageSrc: "/game-tiles/scratch.jpg",
     nameKey: "expenses.gameNameScratch",
     blurbKey: "expenses.gameBlurbScratch",
     howKey: "expenses.gameHowScratch",
@@ -76,6 +82,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "tictactoe",
     category: "skill",
     emoji: "⭕",
+    imageSrc: "/game-tiles/tic-tac-toe.jpg",
     nameKey: "expenses.gameNameTicTacToe",
     blurbKey: "expenses.gameBlurbTicTacToe",
     howKey: "expenses.gameHowTicTacToe",
@@ -84,6 +91,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "connectfour",
     category: "skill",
     emoji: "🔴",
+    imageSrc: "/game-tiles/connect-four.jpg",
     nameKey: "expenses.gameNameConnectFour",
     blurbKey: "expenses.gameBlurbConnectFour",
     howKey: "expenses.gameHowConnectFour",
@@ -92,6 +100,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "memory",
     category: "skill",
     emoji: "🧠",
+    imageSrc: "/game-tiles/memory.jpg",
     nameKey: "expenses.gameNameMemory",
     blurbKey: "expenses.gameBlurbMemory",
     howKey: "expenses.gameHowMemory",
@@ -100,6 +109,7 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     id: "reaction",
     category: "skill",
     emoji: "⚡",
+    imageSrc: "/game-tiles/reaction.jpg",
     nameKey: "expenses.gameNameReaction",
     blurbKey: "expenses.gameBlurbReaction",
     howKey: "expenses.gameHowReaction",

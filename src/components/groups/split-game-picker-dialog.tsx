@@ -20,6 +20,7 @@ import {
   type SplitGameId,
 } from "@/components/groups/split-game/game-catalog";
 import { SplitGamePreview } from "@/components/groups/split-game/game-preview";
+import { GameTileImage } from "@/components/groups/split-game/game-tile-image";
 
 export type { SplitGameId } from "@/components/groups/split-game/game-catalog";
 
@@ -144,11 +145,9 @@ export function SplitGamePickerDialog({
                         key={game.id}
                         type="button"
                         onClick={() => openPreview(game.id)}
-                        className="has-focus-visible:ring-ring/50 ease-spring active:shadow-pressed border-border bg-background hover:bg-muted flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-[background-color,border-color,transform,box-shadow] duration-(--duration-fast) select-none active:scale-[0.98] has-focus-visible:ring-3"
+                        className="has-focus-visible:ring-ring/50 ease-spring active:shadow-pressed border-border bg-background hover:bg-muted flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-[background-color,border-color,transform,box-shadow] duration-(--duration-fast) select-none hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] has-focus-visible:ring-3"
                       >
-                        <span aria-hidden="true" className="text-2xl">
-                          {game.emoji}
-                        </span>
+                        <GameTileImage src={game.imageSrc} emoji={game.emoji} />
                         <span className="font-heading text-sm font-medium">{t(game.nameKey)}</span>
                         <span className="text-muted-foreground text-xs">{t(game.blurbKey)}</span>
                       </button>
