@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/locale-provider";
+import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { useKnockoutLadder } from "@/lib/games/use-knockout-ladder";
 import { maxDuelLoserCount } from "@/lib/games/knockout-ladder";
@@ -291,7 +292,12 @@ export function DuelGameDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-x-hidden sm:max-w-md">
+      <DialogContent
+        className={cn(
+          "overflow-x-hidden",
+          step === "playing" && mode === "tournament" ? "sm:max-w-2xl" : "sm:max-w-md",
+        )}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">{config.emoji}</span>

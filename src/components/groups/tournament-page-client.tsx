@@ -52,7 +52,7 @@ export function TournamentPageClient({
 
   if (user && errorCode) {
     return (
-      <div className="mx-auto w-full max-w-lg p-4">
+      <div className="mx-auto w-full max-w-2xl p-4">
         <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
           <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
           <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
@@ -63,7 +63,7 @@ export function TournamentPageClient({
 
   if (!group || !tournament || !user) {
     return (
-      <div className="mx-auto flex w-full max-w-lg flex-col gap-3 p-4">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 p-4">
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -88,7 +88,7 @@ export function TournamentPageClient({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4">
       <div className="flex items-center gap-3">
         <Link
           href={`/groups/${groupId}`}
