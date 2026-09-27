@@ -47,13 +47,13 @@ Rules language.
 
 ### Rationale against the alternatives
 
-| Criterion | (A) Client-only | (B) Server-only | (C) Hybrid — chosen |
-|---|---|---|---|
-| Money-math correctness | Rules can't express largest-remainder rounding; math would live in untested, unenforceable rule expressions or (worse) trusted client code | Fully server-validated, easy to unit test | Fully server-validated, easy to unit test |
-| Firestore read cost | Cheapest — listeners only pay for changed docs | More expensive — every read is a function invocation + Admin SDK read, no listener reuse | Cheapest for reads — same as (A) |
-| Realtime UX | Best, free | Requires polling or a custom pub/sub layer to fake realtime | Best, free — same as (A) |
-| Vercel cold starts | None — no server round-trip for reads | Every read *and* write pays a cold start | Only writes pay a cold start; reads are unaffected |
-| Testability | Business logic scattered into rules + client code, hard to unit test | Easiest — all logic in one place, plain functions | Easiest — write logic isolated in Server Actions, plain functions |
+| Criterion              | (A) Client-only                                                                                                                            | (B) Server-only                                                                          | (C) Hybrid — chosen                                               |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Money-math correctness | Rules can't express largest-remainder rounding; math would live in untested, unenforceable rule expressions or (worse) trusted client code | Fully server-validated, easy to unit test                                                | Fully server-validated, easy to unit test                         |
+| Firestore read cost    | Cheapest — listeners only pay for changed docs                                                                                             | More expensive — every read is a function invocation + Admin SDK read, no listener reuse | Cheapest for reads — same as (A)                                  |
+| Realtime UX            | Best, free                                                                                                                                 | Requires polling or a custom pub/sub layer to fake realtime                              | Best, free — same as (A)                                          |
+| Vercel cold starts     | None — no server round-trip for reads                                                                                                      | Every read _and_ write pays a cold start                                                 | Only writes pay a cold start; reads are unaffected                |
+| Testability            | Business logic scattered into rules + client code, hard to unit test                                                                       | Easiest — all logic in one place, plain functions                                        | Easiest — write logic isolated in Server Actions, plain functions |
 
 (B) was rejected mainly on realtime UX and cost: turning every balance/activity read into a
 serverless function call adds latency and Vercel invocation cost for no correctness benefit,
@@ -77,8 +77,8 @@ non-negotiable that money math is never trusted from the client.
 ### What would make us reverse this
 
 - If Server Action cold starts on Vercel become a measured UX problem for common write paths
-  (e.g. adding an expense feels laggy on 4G), we'd consider moving the *validation logic
-  only* into a callable Cloud Function kept warm, while keeping the "server, not client,
+  (e.g. adding an expense feels laggy on 4G), we'd consider moving the _validation logic
+  only_ into a callable Cloud Function kept warm, while keeping the "server, not client,
   computes money" rule intact.
 - If Firestore Rules gain a real expression language capable of safely validating
   largest-remainder splits (unlikely), pure client writes for expenses could be
@@ -133,28 +133,28 @@ Within that, three narrower calls:
   a Firestore transaction, exactly like every other money-adjacent write in this app.
 - **Match play itself stays local — only the bracket state is live-synced.** Two players in
   one match still share one phone (the same handoff-card UX the ladder already has); what's
-  new is that *different pairs* can do this on *different phones at the same time*, because
+  new is that _different pairs_ can do this on _different phones at the same time_, because
   a bracket's matches within a round are structurally independent (unlike the ladder's single
   "current" match). A device "claims" a ready match (`claim: {byUid, claimId, claimedAt}`)
   before playing it, which is also the one mechanism behind a closed tab or a stuck match:
   another device can "take over" a claim, invalidating the old one. Full move-by-move sync
   (syncing individual Connect-Four drops between two phones in different rooms) was
   explicitly out of scope — it would need a materially bigger realtime layer for a use case
-  (remote 1-vs-1 play) nobody asked for; the ask was parallel *pairs*, not remote opponents.
+  (remote 1-vs-1 play) nobody asked for; the ask was parallel _pairs_, not remote opponents.
 
 ### Rationale against the alternatives
 
-| Criterion | Field on `Group` | One doc per match | Chosen: one doc per tournament |
-|---|---|---|---|
-| Listener count per device | 1 (already subscribed to the group) | N (one per live match) | 1 |
-| Write contention | Every match result rewrites the whole group doc | None across matches, but no single source of truth for "is the tournament done" | Contained to one small doc; a Firestore transaction serializes concurrent claims/results on it |
-| Matches this app's existing shape | No — every other subcollection is its own doc | Partially | Yes — same shape as `expenses`/`messages` |
-| Cost for a tiny bracket (<=31 matches) | N/A | 31+ reads to render one bracket | 1 read |
+| Criterion                              | Field on `Group`                                | One doc per match                                                               | Chosen: one doc per tournament                                                                 |
+| -------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Listener count per device              | 1 (already subscribed to the group)             | N (one per live match)                                                          | 1                                                                                              |
+| Write contention                       | Every match result rewrites the whole group doc | None across matches, but no single source of truth for "is the tournament done" | Contained to one small doc; a Firestore transaction serializes concurrent claims/results on it |
+| Matches this app's existing shape      | No — every other subcollection is its own doc   | Partially                                                                       | Yes — same shape as `expenses`/`messages`                                                      |
+| Cost for a tiny bracket (<=31 matches) | N/A                                             | 31+ reads to render one bracket                                                 | 1 read                                                                                         |
 
 A field on `Group` was rejected because a tournament is its own lifecycle (created,
 played, finished/cancelled) unrelated to the group's own fields, and would force every
 group-doc read (the whole app's most-subscribed listener) to also carry bracket data. One
-document per match was rejected because rendering the *bracket* — the whole point of this
+document per match was rejected because rendering the _bracket_ — the whole point of this
 feature — needs every match at once, and there is no single document to hold "is the
 tournament finished" without an extra parent doc anyway, which is just this design with
 extra steps.
@@ -167,9 +167,11 @@ extra steps.
 - `recursiveDelete` on `deleteGroup` already covers unknown subcollections, so no separate
   tournament cleanup was needed.
 - The knockout ladder is untouched and stays the default for a quick, one-phone round; the
-  tournament is an opt-in "Turnier" toggle per game (`DuelGameConfig.tournament`), currently
-  only turned on for Vier gewinnt while the claim/takeover/cancel machinery gets real usage
-  before the other three duel games get it too.
+  tournament is an opt-in "Turnier" toggle per game (`DuelGameConfig.tournament`). It shipped
+  for Vier gewinnt first while the claim/takeover/cancel machinery got real usage, then turned
+  on for Tic-Tac-Toe, Memory-Duell and Reaktionsduell too once it held up — each was a one-line
+  config change, not new code, since every duel board already speaks the same `DuelBoardProps`
+  contract `TournamentMatchRunner` drives (the same one the ladder already used).
 - Applying a finished tournament's result to an actual expense still only happens from
   within the `AddExpenseDialog` that created it (Phase 1) — the standalone tournament page
   (`/groups/[groupId]/tournaments/[tournamentId]`) is for watching and playing matches, not

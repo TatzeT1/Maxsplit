@@ -27,21 +27,21 @@ The slot machine is the exception — see below.
 
 The eight games split into two categories, each with its own resolution engine:
 
-| Category | Games | How "who pays" is decided |
-| --- | --- | --- |
-| **Glücksspiele** (luck) | 🎲 Lottery, 🎡 Wheel, 🎰 Slot, 🎫 Scratch | A crypto-random draw — see `useSequentialDraw` below |
-| **Minispiele** (skill) | ⭕ Tic-Tac-Toe, 🔴 Vier gewinnt, 🧠 Memory-Duell, ⚡ Reaktionsduell | A 1-vs-1 duel, scaled to any pool size by a knockout ladder — see below |
+| Category                | Games                                                               | How "who pays" is decided                                               |
+| ----------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Glücksspiele** (luck) | 🎲 Lottery, 🎡 Wheel, 🎰 Slot, 🎫 Scratch                           | A crypto-random draw — see `useSequentialDraw` below                    |
+| **Minispiele** (skill)  | ⭕ Tic-Tac-Toe, 🔴 Vier gewinnt, 🧠 Memory-Duell, ⚡ Reaktionsduell | A 1-vs-1 duel, scaled to any pool size by a knockout ladder — see below |
 
-| Game | Dialog | Mechanic |
-| --- | --- | --- |
-| 🎲 [[Split Lottery]] | `split-lottery-dialog.tsx` | Tap-to-reveal grid, turn-based, up to 32 anonymous faces |
-| 🎡 Glücksrad | `split-wheel-dialog.tsx` | Spin a wheel of the remaining pool; the needle picks the loser |
-| 🎰 Spielautomat | `split-slot-dialog.tsx` | Pick a stake, pull the lever, repeat until the bill is fully allocated |
-| 🎫 Rubbellos | `split-scratch-dialog.tsx` | Everyone scratches their own card; whoever gets a blank pays |
-| ⭕ Tic-Tac-Toe | `split-tic-tac-toe-dialog.tsx` | 3×3 grid, alternating marks; a draw replays and escalates to a vanishing "sudden death" variant |
-| 🔴 Vier gewinnt | `split-connect-four-dialog.tsx` | 7×6 drop board, classic Connect Four rules; a draw (rare) just replays |
-| 🧠 Memory-Duell | `split-memory-dialog.tsx` | 9 pairs (18 cards) — an odd pair count makes an exact tie impossible |
-| ⚡ Reaktionsduell | `split-reaction-dialog.tsx` | Both tap "ready", then race a random-delay "Los!" signal; an early tap is a false start |
+| Game                 | Dialog                          | Mechanic                                                                                        |
+| -------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 🎲 [[Split Lottery]] | `split-lottery-dialog.tsx`      | Tap-to-reveal grid, turn-based, up to 32 anonymous faces                                        |
+| 🎡 Glücksrad         | `split-wheel-dialog.tsx`        | Spin a wheel of the remaining pool; the needle picks the loser                                  |
+| 🎰 Spielautomat      | `split-slot-dialog.tsx`         | Pick a stake, pull the lever, repeat until the bill is fully allocated                          |
+| 🎫 Rubbellos         | `split-scratch-dialog.tsx`      | Everyone scratches their own card; whoever gets a blank pays                                    |
+| ⭕ Tic-Tac-Toe       | `split-tic-tac-toe-dialog.tsx`  | 3×3 grid, alternating marks; a draw replays and escalates to a vanishing "sudden death" variant |
+| 🔴 Vier gewinnt      | `split-connect-four-dialog.tsx` | 7×6 drop board, classic Connect Four rules; a draw (rare) just replays                          |
+| 🧠 Memory-Duell      | `split-memory-dialog.tsx`       | 9 pairs (18 cards) — an odd pair count makes an exact tie impossible                            |
+| ⚡ Reaktionsduell    | `split-reaction-dialog.tsx`     | Both tap "ready", then race a random-delay "Los!" signal; an early tap is a false start         |
 
 ## The shared draw engine (wheel + scratch)
 
@@ -65,7 +65,7 @@ isn't "done" until everyone has scratched theirs, not just once the losers are f
 The slot machine deliberately does **not** sit on `useSequentialDraw` — it isn't "pick N
 distinct losers once", it's a real one-armed bandit: pick a stake (presets or a custom amount,
 `expenses.slotStakeLabel`), pull the lever, and whoever the reels land on (`drawOne` from
-`random.ts`, uniform draw *with* replacement) owes that stake. The same person can lose several
+`random.ts`, uniform draw _with_ replacement) owes that stake. The same person can lose several
 spins in a row — that's the point, a fixed distinct-draw guarantee would make it feel rigged
 rather than like gambling. Each spin's stake is capped to whatever's left of the expense's
 `amountMinor` (`effectiveStake = Math.min(stakeValue, remaining)`), so repeated spins always
@@ -91,7 +91,7 @@ queue.
 `useKnockoutLadder` (`use-knockout-ladder.ts`) is the React wrapper — the duel equivalent of
 `useSequentialDraw` above — exposing `current` (the match to play right now), `losers` (which
 is exactly the `loserUids` shape `onResolve` expects), and `reportWin`/`reportDraw` for a board
-to call once a match is decided. Only the *pairing order* is randomized (crypto-shuffled, same
+to call once a match is decided. Only the _pairing order_ is randomized (crypto-shuffled, same
 reasoning as the luck games — who plays whom first must not be gameable); a match's actual
 outcome is never randomized, since these are skill games.
 
@@ -116,7 +116,7 @@ Per-game notes:
 
 - **Tic-Tac-Toe** (`tic-tac-toe.ts` + `tic-tac-toe-board.tsx`) — classic rules can force a draw
   between two competent players, which a knockout ladder can't tolerate (every match needs a
-  loser). The first draw replays as-is; from the *second* draw onward
+  loser). The first draw replays as-is; from the _second_ draw onward
   (`TIC_TAC_TOE_SUDDEN_DEATH_ATTEMPT`), the match switches to a "vanishing" variant: once a
   player has three marks down, placing a fourth removes their oldest one first. That shrinks the
   state space enough that the match reliably resolves, while staying pure skill.
@@ -129,7 +129,7 @@ Per-game notes:
 - **Reaktionsduell** (`reaction-duel.ts` + `reaction-board.tsx`) — both players tap their half of
   the screen when ready; after a random delay (`REACTION_MIN_DELAY_MS`–`REACTION_MAX_DELAY_MS`)
   a "Los!" signal appears. A tap before the signal is a false start (instant loss); the faster
-  *valid* tap otherwise wins. Taps within `REACTION_TIE_WINDOW_MS` of each other can't be
+  _valid_ tap otherwise wins. Taps within `REACTION_TIE_WINDOW_MS` of each other can't be
   honestly ordered by touch hardware, so `judgeReaction` calls it "too close" and the shell
   replays the match — this is the one duel game where a draw doesn't mean incompetence, just
   hardware precision.
@@ -137,10 +137,14 @@ Per-game notes:
 ## Turniermodus: a live, parallel bracket for the duel games
 
 Added after the ladder: an opt-in "Turnier" toggle in `DuelGameDialog`'s setup step,
-shown for a pool of 3 or more when `DuelGameConfig.tournament` is `true` — currently only
-Vier gewinnt (`split-connect-four-dialog.tsx`), while the claim/takeover/cancel machinery
-gets real use before the other three duel games get it too. The ladder stays the default
-and is completely untouched by this.
+shown for a pool of 3 or more when `DuelGameConfig.tournament` is `true` — now on for all
+four duel games (shipped for Vier gewinnt first, then turned on for the other three once
+the claim/takeover/cancel machinery held up). Turning it on for a game is a one-line config
+change in that game's own `split-*-dialog.tsx` wrapper, not new code, because every board
+already speaks the same `DuelBoardProps` contract (`players`, `members`, `attempt`, `locked`,
+`onWin`, `onDraw`) that `TournamentMatchRunner` drives — the same one the ladder already
+used, so a board never knows or cares which mode is running it. The ladder stays the
+default and is completely untouched by this.
 
 The ladder's "winner stays on" chain only ever has one match in flight — great for one
 shared phone, useless for "10 people, several games at once." A tournament is a real
@@ -171,9 +175,10 @@ advance — that part is decided only when a result comes in.
 
 **Who pays picks itself**, from how many people should pay (`targetLoserCount`) relative to
 the pool:
+
 - `targetLoserCount <= poolSize / 2` → **`"loser"` mode** ("Verlierer spielt weiter"): a
   match's winner is safe and done; the loser keeps playing. The pool splits into
-  `targetLoserCount` trees, and each tree's *final* loser pays — so everyone plays at
+  `targetLoserCount` trees, and each tree's _final_ loser pays — so everyone plays at
   least once, unlike the ladder, where a low target count can leave most of the pool never
   playing at all.
 - `targetLoserCount > poolSize / 2` → **`"winner"` mode** (classic single-elimination): a
@@ -199,7 +204,7 @@ Deliberately in scope from the first version — without it, one closed tab bloc
 tournament from ever finishing.
 
 **Explicitly out of scope:** syncing individual moves between two phones in different
-rooms. The ask was parallel *pairs*, not remote 1-vs-1 play — see ADR-002's "what would
+rooms. The ask was parallel _pairs_, not remote 1-vs-1 play — see ADR-002's "what would
 make us reverse this" for what a real remote-play version would need instead.
 
 ### Where it lives on screen
@@ -277,5 +282,6 @@ title ("Wer hat wie viel vergambelt?") now also counts skill-game losses, which 
 oddly for a game of pure competence — a wording nuance, not a bug, and out of scope to fix here.
 
 ## Related
+
 [[Split Lottery]] · [[Expenses and Splitting]] · [[Money Invariants]] · [[Design System and Theming]]
 · [[Local Development and Testing]] · [[Data Model]] · [[Firestore Rules]] · [[Routing Map]]

@@ -27,6 +27,7 @@ re-deriving it from scratch by reading every file.
 ## Map of Content
 
 ### Architecture — the load-bearing decisions
+
 - [[Data Access Pattern]] — ADR-001: client reads / server writes, and why
 - [[Two Auth States]] — the bug class that has burned a full debugging session
 - [[Data Model]] — Firestore collections, documents, and field-level gotchas
@@ -34,6 +35,7 @@ re-deriving it from scratch by reading every file.
 - [[Money Invariants]] — largest-remainder splitting, zero-sum balances
 
 ### Features — what the app does, and where
+
 - [[Groups and Members]] — creation, invite codes, roles, placeholder members
 - [[Expenses and Splitting]] — the four split modes, multi-payer, validation
 - [[Balances and Settlements]] — net balances, pairwise debts, debt simplification
@@ -42,22 +44,25 @@ re-deriving it from scratch by reading every file.
 - [[Chat]] — per-group text chat and read receipts
 - [[Split Games]] — the gamified split pickers: four luck-based (🎲🎡🎰🎫) and four skill-based
   1-vs-1 duels (⭕🔴🧠⚡) on a shared knockout-ladder engine, plus an opt-in live tournament
-  bracket (currently Vier gewinnt only) that syncs across every player's own phone
+  bracket for all four duel games, syncing across every player's own phone
 - [[Admin Panel]] — the single hardcoded admin email, ban, group moderation
 - [[Onboarding and Payment Details]] — first-run guide, PayPal/IBAN details
 
 ### Frontend — how the UI is built
+
 - [[i18n]] — the single German dictionary, `t()`, and why English exists too
 - [[Mobile iOS Quirks]] — the two rules that only show up on a real iPhone
 - [[Design System and Theming]] — fonts, dark mode, shadcn/ui, motion
 - [[Routing Map]] — the App Router tree and what guards each segment
 
 ### Ops — running, testing, shipping
+
 - [[Environment and Config]] — every env var, the emulator switch, build-time inlining
 - [[Local Development and Testing]] — pnpm scripts, emulators, Vitest layout
 - [[Deployment and Production Debugging]] — Vercel, cron, headers, how to debug prod
 
 ### Reference
+
 - [[Conventions]] — code style, commit style, patterns repeated across the codebase
 - [[Glossary]] — German UI terms, domain vocabulary, abbreviations used in code
 
@@ -70,19 +75,19 @@ use. **Reads** happen straight from the browser via the Firestore client SDK wit
 `onSnapshot` — realtime, cheap, gated by `firestore.rules`. **Writes** happen exclusively
 through Next.js Server Actions (`"use server"`, files under `src/lib/actions/`) using
 `firebase-admin`, which bypasses rules entirely — so rules are a read-gate plus a
-write-*backstop*, not the source of write authorization. Money is always integer minor
+write-_backstop_, not the source of write authorization. Money is always integer minor
 units (cents); the largest-remainder method guarantees split sums are exact. See
 [[Data Access Pattern]] for the full reasoning and the two rejected alternatives.
 
 ## Quick facts
 
-| | |
-|---|---|
-| Framework | Next.js 16 (App Router), React 19, TypeScript strict |
-| Styling | Tailwind CSS v4 + shadcn/ui (`components.json`, `radix-ui`) |
-| Backend | Firebase: Auth, Firestore. **Not** actively using Storage (receipts were never built — see [[Settlement PDF Export]] for why the PDF avoids it too). |
-| Package manager | pnpm (`packageManager` pinned in `package.json`) |
-| Hosting | Vercel, `vercel.json` defines one cron job |
-| Tests | Vitest (`pnpm test`), separate emulator-backed rules suite (`pnpm test:rules`, not in the default gate) |
-| UI language | German (`de-DE`) only, single dictionary at `src/lib/i18n/de.ts` |
-| Admin | One hardcoded email in `src/lib/auth/admin.ts`, gated on `emailVerified` |
+|                 |                                                                                                                                                      |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework       | Next.js 16 (App Router), React 19, TypeScript strict                                                                                                 |
+| Styling         | Tailwind CSS v4 + shadcn/ui (`components.json`, `radix-ui`)                                                                                          |
+| Backend         | Firebase: Auth, Firestore. **Not** actively using Storage (receipts were never built — see [[Settlement PDF Export]] for why the PDF avoids it too). |
+| Package manager | pnpm (`packageManager` pinned in `package.json`)                                                                                                     |
+| Hosting         | Vercel, `vercel.json` defines one cron job                                                                                                           |
+| Tests           | Vitest (`pnpm test`), separate emulator-backed rules suite (`pnpm test:rules`, not in the default gate)                                              |
+| UI language     | German (`de-DE`) only, single dictionary at `src/lib/i18n/de.ts`                                                                                     |
+| Admin           | One hardcoded email in `src/lib/auth/admin.ts`, gated on `emailVerified`                                                                             |

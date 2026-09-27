@@ -273,7 +273,7 @@ export const de = {
     gamePreviewBack: "Zurück",
     gameLadderTitle: "Mehr als zwei dabei?",
     gameLadderExplainer:
-      "Dann läuft's im K.-o.-Modus: Wer ein Duell verliert, zahlt und ist raus. Wer gewinnt, bleibt drin und tritt gegen die nächste ausgeloste Person an — bis genug Zahler feststehen.",
+      "Dann läuft's im K.-o.-Modus: Wer ein Duell verliert, zahlt und ist raus. Wer gewinnt, bleibt drin und tritt gegen die nächste ausgeloste Person an — bis genug Zahler feststehen. Ab drei Leuten gibt's beim Start auch einen Turniermodus mit echtem Turnierbaum, den alle live auf ihrem Handy mitverfolgen können.",
     gameNameLottery: "Wer zahlt?",
     gameBlurbLottery: "Gesichter tippen, bis es wen erwischt.",
     gameNameWheel: "Glücksrad",

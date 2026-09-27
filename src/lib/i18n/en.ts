@@ -271,7 +271,7 @@ export const en: Dictionary = {
     gamePreviewBack: "Back",
     gameLadderTitle: "More than two playing?",
     gameLadderExplainer:
-      "Then it runs as a knockout ladder: whoever loses a duel pays and is out. Whoever wins stays on and faces the next drawn challenger — until enough payers are decided.",
+      "Then it runs as a knockout ladder: whoever loses a duel pays and is out. Whoever wins stays on and faces the next drawn challenger — until enough payers are decided. From three people on, starting the game also offers a tournament mode with a real bracket everyone can follow live on their own phone.",
     gameNameLottery: "Who pays?",
     gameBlurbLottery: "Tap faces until one catches someone.",
     gameNameWheel: "Wheel of fortune",

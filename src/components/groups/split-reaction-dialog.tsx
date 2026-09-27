@@ -13,6 +13,7 @@ const CONFIG: DuelGameConfig = {
   introKey: "expenses.reactionIntro",
   Board: ReactionBoard,
   gameId: "reaction",
+  tournament: true,
 };
 
 export function SplitReactionDialog(props: SplitGameDialogProps) {
