@@ -490,7 +490,7 @@ export function TournamentView({
 
   if (showRunner) {
     return (
-      <div ref={rootRef} className="scroll-mt-16">
+      <div ref={rootRef} className="min-w-0 scroll-mt-16">
         <TournamentMatchRunner
           groupId={groupId}
           tournamentId={tournament.id}
@@ -547,7 +547,7 @@ export function TournamentView({
     progress.totalCount > 0 ? Math.round((progress.doneCount / progress.totalCount) * 100) : 0;
 
   return (
-    <div ref={rootRef} className="flex scroll-mt-16 flex-col gap-5">
+    <div ref={rootRef} className="flex min-w-0 scroll-mt-16 flex-col gap-5">
       {/* Where things stand overall, plus the invite link. */}
       <div className="flex flex-col gap-2.5">
         <div className="flex items-start justify-between gap-3">
@@ -746,7 +746,7 @@ export function TournamentView({
         </>
       )}
 
-      <section className="flex flex-col gap-3 border-t pt-5">
+      <section className="flex min-w-0 flex-col gap-3 border-t pt-5">
         <SectionTitle>{t("expenses.tournamentBracketTitle")}</SectionTitle>
         <p className="text-muted-foreground -mt-1 text-xs">
           {tournament.advance === "loser"

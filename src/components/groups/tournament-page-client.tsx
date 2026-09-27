@@ -88,7 +88,7 @@ export function TournamentPageClient({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-4 p-4">
       <div className="flex items-center gap-3">
         <Link
           href={`/groups/${groupId}`}

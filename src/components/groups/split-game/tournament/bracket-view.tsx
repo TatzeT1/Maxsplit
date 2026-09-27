@@ -280,7 +280,7 @@ function TreeBracket({
   const overflows = edges.start || edges.end;
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex min-w-0 flex-col gap-1.5">
       {(multipleTrees || overflows) && (
         <div className="flex min-h-8 items-center justify-between gap-2">
           {multipleTrees ? (
@@ -322,7 +322,7 @@ function TreeBracket({
       )}
       <div
         ref={scrollRef}
-        className="-mx-2 overflow-x-auto overscroll-x-contain"
+        className="-mx-2 min-w-0 overflow-x-auto overscroll-x-contain"
         style={fadeMask ? { maskImage: fadeMask, WebkitMaskImage: fadeMask } : undefined}
       >
         <div style={{ width: width + PAD * 2, padding: PAD }} className="flex flex-col gap-2">
@@ -411,7 +411,7 @@ export function BracketView({
   currentUid?: string;
 }) {
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-5">
       {tournament.trees.map((tree, treeIndex) => (
         <TreeBracket
           key={tree.finalMatchId}

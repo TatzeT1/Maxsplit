@@ -356,7 +356,7 @@ export function DuelGameDialog({
             )}
           </div>
         ) : mode === "tournament" ? (
-          <div className="flex flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-3">
             {tournamentErrorCode ? (
               <p className="text-destructive text-sm">
                 {t("errors.dataLoadFailed")} ({tournamentErrorCode})
