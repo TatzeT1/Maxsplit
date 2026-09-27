@@ -19,6 +19,7 @@ groups/{groupId}
   groups/{groupId}/activityLog/{logId}
   groups/{groupId}/messages/{messageId}
   groups/{groupId}/chatReads/{uid}        (doc id == uid)
+  groups/{groupId}/tournaments/{tournamentId}
 ```
 
 All money is **integer minor units** (cents) plus an ISO-4217 `currency` string. Never a
@@ -89,6 +90,18 @@ scheduling fields (`frequency`, `startDate`, `nextRunDate`, `active`). See
 Only `expense_edited | expense_deleted | settlement_edited | settlement_deleted` are logged
 — **"added" is deliberately not logged**, because the new row itself already signals that;
 duplicating it in the log would be noise right next to the thing it describes.
+
+## `Tournament`
+
+One document per live bracket (ADR-002, `docs/DECISIONS.md`), holding every match in
+`matches: Record<string, TournamentMatch>` — small enough (≤31 matches at the 32-entrant
+cap) to stay one document rather than a sub-subcollection. Written exclusively by
+`lib/actions/tournaments.ts`; every device (creator, players, spectators) reads the same
+document live via `onSnapshot`. See [[Split Games]] for the full mechanics (bracket shape,
+who-pays modes, claim/takeover). `entrants` is a name snapshot taken at creation, so the
+bracket still renders correctly if a member later leaves the group or a placeholder gets
+claimed — the same "denormalized, not source of truth" pattern `GroupMember`'s payment
+fields already use.
 
 ## `ChatMessage` / `ChatRead`
 

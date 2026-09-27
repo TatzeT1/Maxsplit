@@ -12,6 +12,7 @@ const CONFIG: DuelGameConfig = {
   titleKey: "expenses.memoryTitle",
   introKey: "expenses.memoryIntro",
   Board: MemoryBoard,
+  gameId: "memory",
 };
 
 export function SplitMemoryDialog(props: SplitGameDialogProps) {

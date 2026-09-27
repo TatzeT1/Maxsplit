@@ -83,3 +83,105 @@ non-negotiable that money math is never trusted from the client.
 - If Firestore Rules gain a real expression language capable of safely validating
   largest-remainder splits (unlikely), pure client writes for expenses could be
   reconsidered — but settlements and balance math would still need a trusted recompute step.
+
+## ADR-002: Tournament brackets as a new Firestore collection, synced live
+
+**Status:** Accepted
+**Date:** 2026-09-27
+
+### Context
+
+The four 1-vs-1 duel split mini-games (Tic-Tac-Toe, Vier gewinnt, Memory-Duell,
+Reaktionsduell) previously scaled to a pool bigger than two players with only the
+knockout ladder (`lib/games/knockout-ladder.ts`): a "winner stays on" chain, one match at a
+time, on one shared phone passed between players.
+
+The ask was a real tournament bracket ("Turnierbaum") that (a) shows an actual bracket
+tree rather than a flat chain, and (b) lets several pairs play their own matches on their
+own phones at the same time — the concrete example given was 10 people, several games
+running simultaneously — with everyone watching the bracket fill in live.
+
+That "watch it fill in live, from any phone" requirement is the one this ADR is about: it
+needs state that outlives any single device's local React state and syncs across devices,
+which the ladder never needed (it lives entirely in one `useState` on one phone for the
+duration of one sitting).
+
+### Decision
+
+**A new subcollection, `groups/{groupId}/tournaments/{tournamentId}`, one document per
+tournament**, following the same shape every other feature already uses (ADR-001): the
+bracket document is created and mutated exclusively by Server Actions
+(`lib/actions/tournaments.ts`) using `firebase-admin`, and read by every device directly via
+the client SDK's `onSnapshot`, gated by a `firestore.rules` membership check identical in
+shape to `expenses`/`messages`/`activityLog`.
+
+Within that, three narrower calls:
+
+- **The bracket is one document, not one per match.** A tournament tops out at 32 entrants
+  (`MAX_TOURNAMENT_ENTRANTS`), so at most 31 matches — comfortably small (a few KB) to hold
+  as one Firestore document (`Tournament.matches: Record<string, TournamentMatch>`) rather
+  than a sub-subcollection. One document also means every device subscribes with a single
+  listener and every mutation is one transaction, instead of coordinating writes across many
+  match documents.
+- **The bracket engine is pure, server-validated, and client-agnostic**
+  (`lib/games/tournament-bracket.ts`): building the tree, advancing a result, and deciding
+  who pays are plain, `Date.now()`-free, randomness-free functions — the same pattern
+  `knockout-ladder.ts` already uses — unit-testable with Vitest and safe to import from
+  both a Server Action and a client component (the standings/bracket display reuse
+  `bracketLoserUids` read-only). The client only ever reports "match X's winner is Y"; the
+  server (never the client) decides who advances and when the tournament is finished, inside
+  a Firestore transaction, exactly like every other money-adjacent write in this app.
+- **Match play itself stays local — only the bracket state is live-synced.** Two players in
+  one match still share one phone (the same handoff-card UX the ladder already has); what's
+  new is that *different pairs* can do this on *different phones at the same time*, because
+  a bracket's matches within a round are structurally independent (unlike the ladder's single
+  "current" match). A device "claims" a ready match (`claim: {byUid, claimId, claimedAt}`)
+  before playing it, which is also the one mechanism behind a closed tab or a stuck match:
+  another device can "take over" a claim, invalidating the old one. Full move-by-move sync
+  (syncing individual Connect-Four drops between two phones in different rooms) was
+  explicitly out of scope — it would need a materially bigger realtime layer for a use case
+  (remote 1-vs-1 play) nobody asked for; the ask was parallel *pairs*, not remote opponents.
+
+### Rationale against the alternatives
+
+| Criterion | Field on `Group` | One doc per match | Chosen: one doc per tournament |
+|---|---|---|---|
+| Listener count per device | 1 (already subscribed to the group) | N (one per live match) | 1 |
+| Write contention | Every match result rewrites the whole group doc | None across matches, but no single source of truth for "is the tournament done" | Contained to one small doc; a Firestore transaction serializes concurrent claims/results on it |
+| Matches this app's existing shape | No — every other subcollection is its own doc | Partially | Yes — same shape as `expenses`/`messages` |
+| Cost for a tiny bracket (<=31 matches) | N/A | 31+ reads to render one bracket | 1 read |
+
+A field on `Group` was rejected because a tournament is its own lifecycle (created,
+played, finished/cancelled) unrelated to the group's own fields, and would force every
+group-doc read (the whole app's most-subscribed listener) to also carry bracket data. One
+document per match was rejected because rendering the *bracket* — the whole point of this
+feature — needs every match at once, and there is no single document to hold "is the
+tournament finished" without an extra parent doc anyway, which is just this design with
+extra steps.
+
+### Consequences
+
+- A sixth Firestore subcollection to keep consistent with the deny-all-write /
+  membership-gated-read pattern — `firestore.rules` and its emulator test suite both got a
+  new `match /tournaments/{tournamentId}` block (see [[Firestore Rules]]).
+- `recursiveDelete` on `deleteGroup` already covers unknown subcollections, so no separate
+  tournament cleanup was needed.
+- The knockout ladder is untouched and stays the default for a quick, one-phone round; the
+  tournament is an opt-in "Turnier" toggle per game (`DuelGameConfig.tournament`), currently
+  only turned on for Vier gewinnt while the claim/takeover/cancel machinery gets real usage
+  before the other three duel games get it too.
+- Applying a finished tournament's result to an actual expense still only happens from
+  within the `AddExpenseDialog` that created it (Phase 1) — the standalone tournament page
+  (`/groups/[groupId]/tournaments/[tournamentId]`) is for watching and playing matches, not
+  for entering the expense. A page-side "enter as expense" fallback, for when that original
+  dialog is lost (tab closed, app backgrounded), is deliberately deferred rather than
+  guessed at.
+
+### What would make us reverse this
+
+- If a tournament ever needed to survive a `Group` being deleted independently (it
+  currently doesn't — it's meaningless without the group), the collection placement would
+  need to move.
+- If real move-by-move remote play becomes an actual request, the "claim, play locally,
+  report once" design here would need a materially different, heavier realtime layer per
+  match — this ADR's scope assumption (co-located pairs) would need revisiting first.

@@ -12,6 +12,7 @@ const CONFIG: DuelGameConfig = {
   titleKey: "expenses.ticTacToeTitle",
   introKey: "expenses.ticTacToeIntro",
   Board: TicTacToeBoard,
+  gameId: "tictactoe",
 };
 
 export function SplitTicTacToeDialog(props: SplitGameDialogProps) {

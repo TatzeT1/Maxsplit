@@ -39,6 +39,7 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
   activityLog/{id}   → read: isGroupMember(groupId). write: false.
   messages/{id}      → read: isGroupMember(groupId). write: false.
   chatReads/{uid}    → read: isSignedIn() && !isBanned() && auth.uid == uid && isGroupMember(groupId). write: false.
+  tournaments/{id}   → read: isGroupMember(groupId). write: false. See Split Games.
 
 {document=**}        → deny-all backstop for anything unmatched.
 ```

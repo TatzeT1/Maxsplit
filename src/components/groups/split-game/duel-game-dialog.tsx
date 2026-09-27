@@ -15,6 +15,9 @@ import { useT } from "@/components/locale-provider";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { useKnockoutLadder } from "@/lib/games/use-knockout-ladder";
 import { maxDuelLoserCount } from "@/lib/games/knockout-ladder";
+import { planBracket } from "@/lib/games/tournament-bracket";
+import { useTournament } from "@/lib/games/use-tournament";
+import { createTournament } from "@/lib/actions/tournaments";
 import { playAppliedSound, playLaughSound, playStampSound } from "@/lib/sound/game-sounds";
 import {
   CATCH_FLASH_HOLD_MS,
@@ -30,7 +33,8 @@ import {
   DuelHandoffCard,
   DuelLadderStrip,
 } from "@/components/groups/split-game/duel-ladder";
-import type { GroupMember } from "@/lib/types";
+import { TournamentView } from "@/components/groups/split-game/tournament/tournament-view";
+import type { DuelGameId, GroupMember } from "@/lib/types";
 
 /** How long a finished match holds its winning position before the "caught" takeover covers it. */
 const MATCH_END_BEAT_MS = 650;
@@ -43,6 +47,10 @@ export interface SplitGameDialogProps {
   members: Record<string, GroupMember>;
   memberUids: string[];
   onResolve: (loserUids: string[]) => void;
+  /** Needed only for tournament mode (live cross-device sync) — absent, the toggle never shows. */
+  groupId?: string;
+  currentUid?: string;
+  stake?: { description: string; amountMinor: number; currency: string } | null;
 }
 
 export interface DuelBoardProps {
@@ -64,6 +72,9 @@ export interface DuelGameConfig {
   titleKey: TranslationKey;
   introKey: TranslationKey;
   Board: ComponentType<DuelBoardProps>;
+  gameId: DuelGameId;
+  /** Whether the "Turnier" mode toggle shows in setup (pool >= 3) — off until a game's runner is verified end to end. */
+  tournament?: boolean;
 }
 
 type Step = "setup" | "playing";
@@ -94,6 +105,9 @@ export function DuelGameDialog({
   members,
   memberUids,
   onResolve,
+  groupId,
+  currentUid,
+  stake,
   config,
 }: SplitGameDialogProps & { config: DuelGameConfig }) {
   const t = useT();
@@ -110,6 +124,28 @@ export function DuelGameDialog({
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [stageRef, shakeStage] = useImpactShake();
   const ladder = useKnockoutLadder();
+
+  // Tournament mode: a live, cross-device bracket instead of the local
+  // knockout ladder. Only offered when the caller wired a groupId and the
+  // game's config opts in (see DuelGameConfig.tournament).
+  const [mode, setMode] = useState<"ladder" | "tournament">("ladder");
+  const [tournamentId, setTournamentId] = useState<string | null>(null);
+  const [tournamentStarting, setTournamentStarting] = useState(false);
+  const [tournamentStartError, setTournamentStartError] = useState<string | null>(null);
+  const { tournament, errorCode: tournamentErrorCode } = useTournament(groupId ?? "", tournamentId);
+  const canOfferTournament = !!(config.tournament && groupId && currentUid);
+
+  // The tournament was cancelled elsewhere (or by this device) — drop back to
+  // setup so the dialog doesn't sit on a dead bracket. Adjusted during render
+  // (React's pattern for reacting to a changed value without an effect):
+  // once handled, `tournament?.status` stops matching "cancelled" here — the
+  // tournamentId that made it so is already cleared — so this can't loop.
+  const [ackedCancelledId, setAckedCancelledId] = useState<string | null>(null);
+  if (tournament?.status === "cancelled" && tournamentId !== ackedCancelledId) {
+    setAckedCancelledId(tournamentId);
+    setTournamentId(null);
+    setStep("setup");
+  }
 
   useEffect(() => {
     return () => {
@@ -139,7 +175,30 @@ export function DuelGameDialog({
     setLoserCountInput(String(Math.min(Math.max(loserCount + delta, 1), maxLoserCount)));
   }
 
-  function startGame() {
+  async function startGame() {
+    if (mode === "tournament" && groupId) {
+      setTournamentStarting(true);
+      setTournamentStartError(null);
+      const result = await createTournament({
+        groupId,
+        gameId: config.gameId,
+        poolUids,
+        targetLoserCount: loserCount,
+        stake: stake ?? null,
+      });
+      setTournamentStarting(false);
+      if (!result.ok) {
+        setTournamentStartError(
+          result.error === "tournament-running"
+            ? t("expenses.tournamentAlreadyRunning")
+            : t("expenses.tournamentStartError"),
+        );
+        return;
+      }
+      setTournamentId(result.data.tournamentId);
+      setStep("playing");
+      return;
+    }
     ladder.start(poolUids, loserCount);
     setMatchPhase("handoff");
     setStep("playing");
@@ -155,8 +214,22 @@ export function DuelGameDialog({
     setStep("setup");
   }
 
+  /** A finished tournament's result, applied to the expense form exactly like the ladder's. */
+  function applyTournamentResult(loserUids: string[]) {
+    playAppliedSound();
+    onResolve(loserUids);
+    setTournamentId(null);
+    setMode("ladder");
+    resetAll();
+    onOpenChange(false);
+  }
+
   function handleOpenChange(nextOpen: boolean) {
-    if (!nextOpen) resetAll();
+    // A live tournament survives closing the dialog — reopening the same
+    // game shows it again, rather than losing it to a ladder-style reset.
+    const tournamentIsLive =
+      mode === "tournament" && tournamentId && tournament?.status === "running";
+    if (!nextOpen && !tournamentIsLive) resetAll();
     onOpenChange(nextOpen);
   }
 
@@ -228,18 +301,79 @@ export function DuelGameDialog({
         </DialogHeader>
 
         {step === "setup" ? (
-          <GamePoolSetupStep
-            memberUids={memberUids}
-            members={members}
-            poolUids={poolUids}
-            onTogglePoolMember={togglePoolMember}
-            loserCount={loserCount}
-            maxLoserCount={maxLoserCount}
-            onStepLoserCount={stepLoserCount}
-            stepperDirection={stepperDirection}
-            countHint={t("expenses.duelCountHint")}
-            countIcon={config.emoji}
-          />
+          <div className="flex flex-col gap-4">
+            {canOfferTournament && poolUids.length >= 3 && (
+              <div className="flex flex-col gap-2">
+                <div role="group" className="bg-muted/40 flex gap-1 rounded-xl border p-1">
+                  <Button
+                    type="button"
+                    variant={mode === "ladder" ? "default" : "ghost"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setMode("ladder")}
+                  >
+                    {t("expenses.tournamentModeLadder")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={mode === "tournament" ? "default" : "ghost"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setMode("tournament")}
+                  >
+                    {t("expenses.tournamentModeTournament")}
+                  </Button>
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  {mode === "tournament"
+                    ? (() => {
+                        const plan = planBracket(poolUids.length, loserCount);
+                        return t("expenses.tournamentPlanSummary", {
+                          rounds: plan.roundCount,
+                          matches: plan.matchCount,
+                          parallel: plan.maxParallel,
+                        });
+                      })()
+                    : t("expenses.gameLadderExplainer")}
+                </p>
+              </div>
+            )}
+            <GamePoolSetupStep
+              memberUids={memberUids}
+              members={members}
+              poolUids={poolUids}
+              onTogglePoolMember={togglePoolMember}
+              loserCount={loserCount}
+              maxLoserCount={maxLoserCount}
+              onStepLoserCount={stepLoserCount}
+              stepperDirection={stepperDirection}
+              countHint={t("expenses.duelCountHint")}
+              countIcon={config.emoji}
+            />
+            {tournamentStartError && (
+              <p className="text-destructive text-sm">{tournamentStartError}</p>
+            )}
+          </div>
+        ) : mode === "tournament" ? (
+          <div className="flex flex-col gap-3">
+            {tournamentErrorCode ? (
+              <p className="text-destructive text-sm">
+                {t("errors.dataLoadFailed")} ({tournamentErrorCode})
+              </p>
+            ) : !tournament ? (
+              <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
+            ) : (
+              <TournamentView
+                groupId={groupId!}
+                tournament={tournament}
+                members={members}
+                currentUid={currentUid!}
+                canManage={currentUid === tournament.createdBy}
+                config={config}
+                onApply={applyTournamentResult}
+              />
+            )}
+          </div>
         ) : (
           <div ref={stageRef} className="relative flex flex-col gap-3">
             <p aria-live="polite" className="sr-only">
@@ -309,19 +443,54 @@ export function DuelGameDialog({
           </div>
         )}
 
-        <DialogFooter>
-          {step === "setup" ? (
-            <Button
-              type="button"
-              size="lg"
-              className="flex-1"
-              disabled={poolUids.length < 2}
-              onClick={startGame}
-            >
-              {t("expenses.gameStart")}
-            </Button>
-          ) : showVerdict ? (
-            <>
+        {!(step === "playing" && mode === "tournament") && (
+          <DialogFooter>
+            {step === "setup" ? (
+              <Button
+                type="button"
+                size="lg"
+                className="flex-1"
+                disabled={poolUids.length < 2 || tournamentStarting}
+                onClick={() => void startGame()}
+              >
+                {tournamentStarting ? t("common.loading") : t("expenses.gameStart")}
+              </Button>
+            ) : showVerdict ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
+                  onClick={resetAll}
+                >
+                  {t("expenses.duelRestart")}
+                </Button>
+                <Button type="button" size="lg" className="flex-1" onClick={applyResult}>
+                  {t("expenses.gameApply")}
+                </Button>
+              </>
+            ) : matchPhase === "handoff" && !decided ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
+                  onClick={resetAll}
+                >
+                  {t("expenses.duelRestart")}
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => setMatchPhase("live")}
+                >
+                  {t("expenses.duelHandoffStart")}
+                </Button>
+              </>
+            ) : (
               <Button
                 type="button"
                 variant="outline"
@@ -331,36 +500,9 @@ export function DuelGameDialog({
               >
                 {t("expenses.duelRestart")}
               </Button>
-              <Button type="button" size="lg" className="flex-1" onClick={applyResult}>
-                {t("expenses.gameApply")}
-              </Button>
-            </>
-          ) : matchPhase === "handoff" && !decided ? (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                className="flex-1"
-                onClick={resetAll}
-              >
-                {t("expenses.duelRestart")}
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                className="flex-1"
-                onClick={() => setMatchPhase("live")}
-              >
-                {t("expenses.duelHandoffStart")}
-              </Button>
-            </>
-          ) : (
-            <Button type="button" variant="outline" size="lg" className="flex-1" onClick={resetAll}>
-              {t("expenses.duelRestart")}
-            </Button>
-          )}
-        </DialogFooter>
+            )}
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -179,4 +179,45 @@ describe("firestore.rules", () => {
     const bob = testEnv.authenticatedContext("bob").firestore();
     await assertFails(getDoc(doc(bob, "groups/group1/chatReads/bob")));
   });
+
+  it("allows a group member to read a tournament", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1")
+        .set({ gameId: "connectfour", status: "running" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertSucceeds(getDoc(doc(alice, "groups/group1/tournaments/t1")));
+  });
+
+  it("denies a non-member from reading a tournament", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1")
+        .set({ gameId: "connectfour", status: "running" });
+    });
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    await assertFails(getDoc(doc(bob, "groups/group1/tournaments/t1")));
+  });
+
+  it("denies a banned member from reading a tournament", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("users/alice").set({ displayName: "Alice", banned: true });
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1")
+        .set({ gameId: "connectfour", status: "running" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1/tournaments/t1")));
+  });
+
+  it("denies a client write to a tournament, even by a member", async () => {
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/tournaments/t1"), { gameId: "connectfour" }),
+    );
+  });
 });

@@ -12,6 +12,8 @@ const CONFIG: DuelGameConfig = {
   titleKey: "expenses.connectFourTitle",
   introKey: "expenses.connectFourIntro",
   Board: ConnectFourBoard,
+  gameId: "connectfour",
+  tournament: true,
 };
 
 export function SplitConnectFourDialog(props: SplitGameDialogProps) {

@@ -134,6 +134,93 @@ Per-game notes:
   replays the match — this is the one duel game where a draw doesn't mean incompetence, just
   hardware precision.
 
+## Turniermodus: a live, parallel bracket for the duel games
+
+Added after the ladder: an opt-in "Turnier" toggle in `DuelGameDialog`'s setup step,
+shown for a pool of 3 or more when `DuelGameConfig.tournament` is `true` — currently only
+Vier gewinnt (`split-connect-four-dialog.tsx`), while the claim/takeover/cancel machinery
+gets real use before the other three duel games get it too. The ladder stays the default
+and is completely untouched by this.
+
+The ladder's "winner stays on" chain only ever has one match in flight — great for one
+shared phone, useless for "10 people, several games at once." A tournament is a real
+bracket instead: matches within the same round are structurally independent, so different
+pairs can claim and play their own match on their own phone at the same time, while
+everyone — including people not currently playing — watches the whole tree update live.
+See ADR-002 (`docs/DECISIONS.md`) for why this needed a new Firestore collection
+(`groups/{groupId}/tournaments/{tournamentId}`, one small document per bracket — see
+[[Data Model]]) where the ladder never did: the ladder's state never needs to outlive one
+device's one sitting, a live cross-device bracket does.
+
+### The bracket engine (`lib/games/tournament-bracket.ts`)
+
+Pure, deterministic, no randomness and no `Date.now()` inside — same discipline as
+`knockout-ladder.ts` — so `createBracket`/`recordMatchResult`/etc. are fully covered by a
+property-based Vitest suite (every pool size 2..32 × every possible "how many should pay"
+count) rather than hand-picked examples. `lib/actions/tournaments.ts` is a thin,
+transaction-wrapped Server Action layer around it; the client only ever reports "match X's
+winner is Y" — the server decides who advances and when the bracket is finished, inside a
+Firestore transaction, the same trust boundary every money-adjacent write in this app
+already has (see [[Data Access Pattern]]).
+
+**Bracket shape.** The pool splits into one or more independent "trees" (contiguous chunks
+of a server-shuffled order), each a balanced binary tree of matches built by recursively
+halving the entrant list at the even size nearest half (a lone leftover entrant is a bye,
+free-advancing to its parent match). This shape is identical regardless of who "should"
+advance — that part is decided only when a result comes in.
+
+**Who pays picks itself**, from how many people should pay (`targetLoserCount`) relative to
+the pool:
+- `targetLoserCount <= poolSize / 2` → **`"loser"` mode** ("Verlierer spielt weiter"): a
+  match's winner is safe and done; the loser keeps playing. The pool splits into
+  `targetLoserCount` trees, and each tree's *final* loser pays — so everyone plays at
+  least once, unlike the ladder, where a low target count can leave most of the pool never
+  playing at all.
+- `targetLoserCount > poolSize / 2` → **`"winner"` mode** (classic single-elimination): a
+  match's loser is immediately locked in as a payer; the winner advances. The pool splits
+  into `poolSize - targetLoserCount` trees, and each tree's champion goes free.
+
+Both modes use the exact same tree shape and always produce exactly `targetLoserCount`
+payers — only `recordMatchResult`'s interpretation of a result differs.
+
+### Claim, play, report — never move-by-move sync
+
+A match's two players still share one phone to play it — the same handoff-card UX the
+ladder already has (`DuelHandoffCard`, reused as-is). What's new is that a device first
+**claims** a ready match (`claim: {byUid, claimId, claimedAt}`) before playing it; only the
+device holding the current `claimId` can report that match's result. A draw replays
+entirely locally (players swap, same as the ladder) and never touches the server — only
+the final winner and how many tries it took are ever reported.
+
+**Takeover** is the one mechanism behind "that phone's tab got closed" and "this match is
+stuck": any device can re-claim an already-claimed match, which issues a fresh `claimId`
+and silently invalidates the old one (a stale device's next report gets `claim-lost`).
+Deliberately in scope from the first version — without it, one closed tab blocks the whole
+tournament from ever finishing.
+
+**Explicitly out of scope:** syncing individual moves between two phones in different
+rooms. The ask was parallel *pairs*, not remote 1-vs-1 play — see ADR-002's "what would
+make us reverse this" for what a real remote-play version would need instead.
+
+### Where it lives on screen
+
+- Inside the game dialog itself (`DuelGameDialog` → `TournamentView`) on whichever device
+  started it — closing the dialog does **not** cancel the tournament or lose its id;
+  reopening the same game shows the same live bracket again.
+- `/groups/[groupId]/tournaments/[tournamentId]` (`TournamentPageClient`) — the route every
+  other player and spectator uses, reached from a `TournamentBanner` card on the group page
+  or a shared link. Falls back to the tournament's own `entrants` snapshot for a uid the
+  live group doc no longer has a member for.
+- `BracketView` draws the tree as rounds-in-columns per tree, each match card showing both
+  players and, once decided, who's safe/advancing/paying — driven by the same `advance`
+  field the engine uses, so the drawing and the payout logic can never disagree.
+
+Applying a finished tournament's result to an actual expense (`onResolve(loserUids)` →
+`viaLottery = true`, exactly like every other split game) currently only happens from
+inside the `AddExpenseDialog` that created it — the standalone page is for watching and
+playing, not for entering the expense. See ADR-002 for why that fallback was deferred
+rather than guessed at.
+
 ## The picker: two categories and a preview step
 
 `SplitGamePickerDialog` used to be a flat 2×2 tile grid that handed off straight into a game's
@@ -191,4 +278,4 @@ oddly for a game of pure competence — a wording nuance, not a bug, and out of 
 
 ## Related
 [[Split Lottery]] · [[Expenses and Splitting]] · [[Money Invariants]] · [[Design System and Theming]]
-· [[Local Development and Testing]]
+· [[Local Development and Testing]] · [[Data Model]] · [[Firestore Rules]] · [[Routing Map]]

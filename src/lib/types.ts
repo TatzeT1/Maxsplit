@@ -144,6 +144,81 @@ export interface ChatRead {
   lastReadAt: string;
 }
 
+/** The four 1-vs-1 duel split mini-games that can run as a tournament bracket — see [[Split Games]]. */
+export type DuelGameId = "tictactoe" | "connectfour" | "memory" | "reaction";
+
+export type TournamentStatus = "running" | "finished" | "cancelled";
+
+/**
+ * Which side of a match advances further into the bracket. "loser" ("Verlierer
+ * spielt weiter"): the match winner is safe and done, the loser keeps playing —
+ * whoever loses a tree's final match pays. "winner" (classic): the match
+ * winner advances, the loser is immediately locked in as a payer — whoever
+ * wins a tree's final goes free. `createBracket` (lib/games/tournament-bracket.ts)
+ * picks the mode automatically from how many people should pay.
+ */
+export type TournamentAdvance = "loser" | "winner";
+
+export type TournamentMatchStatus = "waiting" | "ready" | "playing" | "done";
+
+/** Where one of a match's two players comes from: a raw entrant (including a bye), or another match's advancing player. */
+export type TournamentSlotSource =
+  { kind: "entrant"; uid: string } | { kind: "match"; matchId: string };
+
+export interface TournamentMatch {
+  id: string;
+  treeIndex: number;
+  /** 1-based "height" in its tree — every match playable immediately at the start is round 1. Drives the bracket drawing's column. */
+  round: number;
+  sources: [TournamentSlotSource, TournamentSlotSource];
+  /** Resolved uids once known; `null` while waiting on a source match to finish. `players[0]` moves/goes first. */
+  players: [string | null, string | null];
+  /** Where this match's advancing player goes next; `null` for a tree's final match. */
+  next: { matchId: string; slot: 0 | 1 } | null;
+  status: TournamentMatchStatus;
+  /** The device currently holding this match, so a second phone can't start the same match twice. */
+  claim: { byUid: string; claimId: string; claimedAt: string } | null;
+  result: {
+    winnerUid: string;
+    loserUid: string;
+    /** How many tries (local draw replays + the deciding one) this match took. */
+    attempts: number;
+    reportedBy: string;
+    finishedAt: string;
+  } | null;
+}
+
+/**
+ * A live tournament bracket for one of the duel split mini-games
+ * (`groups/{groupId}/tournaments/{tournamentId}`) — see [[Split Games]].
+ * Every device subscribes to this one document via `onSnapshot`; the loser
+ * set it produces feeds into `resolveExpense`/`buildSplits` exactly like
+ * every other split mini-game's `onResolve(loserUids)`.
+ */
+export interface Tournament {
+  id: string;
+  gameId: DuelGameId;
+  status: TournamentStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+  cancelledAt: string | null;
+  cancelledBy: string | null;
+  /** Name snapshot at creation time, so the bracket still renders correctly if a member later leaves the group. */
+  entrants: Record<string, { displayName: string; isPlaceholder: boolean }>;
+  /** The server's crypto-shuffled draw order, kept for reference — who plays whom is derived from this, not re-randomized on the client. */
+  seedOrder: string[];
+  targetLoserCount: number;
+  advance: TournamentAdvance;
+  trees: { entrantUids: string[]; finalMatchId: string }[];
+  matches: Record<string, TournamentMatch>;
+  /** Set once every tree's final has a result — exactly the `loserUids` shape every other split mini-game resolves to. */
+  loserUids: string[] | null;
+  /** Display-only context for the tournament screen ("Pizza · 42,00 €"); not itself the expense split. */
+  stake: { description: string; amountMinor: number; currency: string } | null;
+}
+
 export type RecurringFrequency = "weekly" | "monthly";
 
 export interface RecurringRule {

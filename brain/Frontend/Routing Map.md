@@ -18,6 +18,8 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
   /groups                            group list (balancesMinor cache — see Data Model)
   /groups/[groupId]                  group detail: expenses, balances, members, activity
   /groups/[groupId]/chat             per-group chat — see Chat, Mobile iOS Quirks
+  /groups/[groupId]/tournaments/[tournamentId]
+                                      live tournament bracket — watch/play from any device, see Split Games
   /profile                           profile + payment details — see Onboarding and Payment Details
   /admin                             requireAdminSession() → notFound() if not admin
   /admin/groups/[groupId]            admin group moderation

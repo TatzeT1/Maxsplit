@@ -719,6 +719,9 @@ export function AddExpenseDialog({
         members={members}
         memberUids={memberUids}
         onResolve={handleSplitGameResolve}
+        groupId={groupId}
+        currentUid={currentUid}
+        stake={{ description, amountMinor, currency }}
       />
       <SplitConnectFourDialog
         open={activeGame === "connectfour"}
@@ -726,6 +729,9 @@ export function AddExpenseDialog({
         members={members}
         memberUids={memberUids}
         onResolve={handleSplitGameResolve}
+        groupId={groupId}
+        currentUid={currentUid}
+        stake={{ description, amountMinor, currency }}
       />
       <SplitMemoryDialog
         open={activeGame === "memory"}
@@ -733,6 +739,9 @@ export function AddExpenseDialog({
         members={members}
         memberUids={memberUids}
         onResolve={handleSplitGameResolve}
+        groupId={groupId}
+        currentUid={currentUid}
+        stake={{ description, amountMinor, currency }}
       />
       <SplitReactionDialog
         open={activeGame === "reaction"}
@@ -740,6 +749,9 @@ export function AddExpenseDialog({
         members={members}
         memberUids={memberUids}
         onResolve={handleSplitGameResolve}
+        groupId={groupId}
+        currentUid={currentUid}
+        stake={{ description, amountMinor, currency }}
       />
     </Dialog>
   );

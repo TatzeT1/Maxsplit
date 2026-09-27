@@ -24,11 +24,15 @@ import type { GroupMember } from "@/lib/types";
 export function GameResultBanner({
   loserUids,
   members,
+  inDialog = true,
 }: {
   loserUids: string[];
   members: Record<string, GroupMember>;
+  /** `DialogDescription` needs Dialog context — set false on a standalone page (the tournament route). */
+  inDialog?: boolean;
 }) {
   const t = useT();
+  const ResultText = inDialog ? DialogDescription : "p";
   const reduceMotion = useReducedMotion();
   const avatarsRef = useRef<HTMLDivElement | null>(null);
   const loserNames = loserUids.map((uid) => members[uid].displayName);
@@ -78,9 +82,9 @@ export function GameResultBanner({
           );
         })}
       </div>
-      <DialogDescription className="font-heading text-foreground relative text-lg font-medium">
+      <ResultText className="font-heading text-foreground relative text-lg font-medium">
         {resultText}
-      </DialogDescription>
+      </ResultText>
       <ConfettiBurst
         anchorRef={avatarsRef}
         seed={nameHash(loserNames.join("|"))}

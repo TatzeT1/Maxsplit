@@ -7,6 +7,7 @@ import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
 import { ActivityFeed } from "@/components/groups/activity-feed";
 import { BalanceView } from "@/components/groups/balance-view";
 import { ChatEntryCard } from "@/components/groups/chat-entry-card";
+import { TournamentBanner } from "@/components/groups/tournament-banner";
 import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
 import { LotteryOverview } from "@/components/groups/lottery-overview";
 import { MembersPanel } from "@/components/groups/members-panel";
@@ -252,6 +253,8 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         </div>
 
         <ChatEntryCard groupId={groupId} members={group.members} currentUid={user.uid} />
+
+        <TournamentBanner groupId={groupId} currentUid={user.uid} />
 
         <MembersPanel groupId={groupId} members={group.members} currentUid={user.uid} />
 
