@@ -136,8 +136,10 @@ Per-game notes:
 
 ## Turniermodus: a live, parallel bracket for the duel games
 
-Added after the ladder: an opt-in "Turnier" toggle in `DuelGameDialog`'s setup step,
-shown for a pool of 3 or more when `DuelGameConfig.tournament` is `true` — now on for all
+Added after the ladder: an opt-in "Turnier" choice in `DuelGameDialog`'s setup step
+(`DuelModePicker` — two cards, one phone vs. several; the tournament card is disabled below a
+pool of 3, and "Start" falls back to the ladder then) when `DuelGameConfig.tournament` is
+`true` — now on for all
 four duel games (shipped for Vier gewinnt first, then turned on for the other three once
 the claim/takeover/cancel machinery held up). Turning it on for a game is a one-line config
 change in that game's own `split-*-dialog.tsx` wrapper, not new code, because every board
@@ -218,7 +220,21 @@ make us reverse this" for what a real remote-play version would need instead.
   live group doc no longer has a member for.
 - `BracketView` draws the tree as rounds-in-columns per tree, each match card showing both
   players and, once decided, who's safe/advancing/paying — driven by the same `advance`
-  field the engine uses, so the drawing and the payout logic can never disagree.
+  field the engine uses, so the drawing and the payout logic can never disagree. The
+  viewer's own undecided match is tagged "Dein Match" and scrolled into view; a fade plus a
+  "Wischen für mehr" hint marks a tree wider than the screen.
+
+`TournamentView` is ordered by what a person needs first, not by data type: a slim progress
+strip (round, "x von y Matches gespielt", share link), then one "what about me?" card
+(`YourStatusCard` — your match to play, running elsewhere, who you're waiting on, or
+safe/pays), then other playable and live matches, and only then the bracket (with the mode's
+rule sentence and a legend) and grouped standings. Every per-person reading of the bracket —
+"safe", "pays", "plays on", where an entrant stands right now — comes from
+`lib/games/tournament-status.ts`, a pure restatement of the engine's own rules that's tested
+against `bracketLoserUids` at every step of every pool size, so the screen can't tell someone
+they're safe while the payout makes them pay. Safe is green, pays is red, and orange stays
+reserved for "ready / yours / act now"; `tournament-fate.tsx` keeps icon, color and label
+for each of those in one place.
 
 Applying a finished tournament's result to an actual expense (`onResolve(loserUids)` →
 `viaLottery = true`, exactly like every other split game) currently only happens from

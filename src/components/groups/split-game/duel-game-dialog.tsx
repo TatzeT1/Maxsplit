@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { useKnockoutLadder } from "@/lib/games/use-knockout-ladder";
 import { maxDuelLoserCount } from "@/lib/games/knockout-ladder";
-import { planBracket } from "@/lib/games/tournament-bracket";
 import { useTournament } from "@/lib/games/use-tournament";
 import { createTournament } from "@/lib/actions/tournaments";
 import { playAppliedSound, playLaughSound, playStampSound } from "@/lib/sound/game-sounds";
@@ -35,6 +34,11 @@ import {
   DuelLadderStrip,
 } from "@/components/groups/split-game/duel-ladder";
 import { TournamentView } from "@/components/groups/split-game/tournament/tournament-view";
+import {
+  DuelModePicker,
+  TournamentPlanCard,
+  type DuelMode,
+} from "@/components/groups/split-game/tournament/tournament-mode-picker";
 import type { DuelGameId, GroupMember } from "@/lib/types";
 
 /** How long a finished match holds its winning position before the "caught" takeover covers it. */
@@ -129,12 +133,17 @@ export function DuelGameDialog({
   // Tournament mode: a live, cross-device bracket instead of the local
   // knockout ladder. Only offered when the caller wired a groupId and the
   // game's config opts in (see DuelGameConfig.tournament).
-  const [mode, setMode] = useState<"ladder" | "tournament">("ladder");
+  const [mode, setMode] = useState<DuelMode>("ladder");
   const [tournamentId, setTournamentId] = useState<string | null>(null);
   const [tournamentStarting, setTournamentStarting] = useState(false);
   const [tournamentStartError, setTournamentStartError] = useState<string | null>(null);
   const { tournament, errorCode: tournamentErrorCode } = useTournament(groupId ?? "", tournamentId);
   const canOfferTournament = !!(config.tournament && groupId && currentUid);
+  const tournamentAvailable = canOfferTournament && poolUids.length >= 3;
+  // What "Start" will actually do: a tournament picked earlier falls back to
+  // the ladder if the pool has since shrunk below three, rather than quietly
+  // starting a two-person "tournament" behind a toggle that's no longer shown.
+  const setupMode: DuelMode = tournamentAvailable ? mode : "ladder";
 
   // The tournament was cancelled elsewhere (or by this device) — drop back to
   // setup so the dialog doesn't sit on a dead bracket. Adjusted during render
@@ -177,16 +186,18 @@ export function DuelGameDialog({
   }
 
   async function startGame() {
-    if (mode === "tournament" && groupId) {
+    if (setupMode === "tournament" && groupId) {
       setTournamentStarting(true);
       setTournamentStartError(null);
+      // A dropped connection throws instead of returning `ok: false` —
+      // without the catch the start button would sit on "Lädt …" for good.
       const result = await createTournament({
         groupId,
         gameId: config.gameId,
         poolUids,
         targetLoserCount: loserCount,
         stake: stake ?? null,
-      });
+      }).catch(() => ({ ok: false as const, error: "network" }));
       setTournamentStarting(false);
       if (!result.ok) {
         setTournamentStartError(
@@ -200,6 +211,7 @@ export function DuelGameDialog({
       setStep("playing");
       return;
     }
+    setMode("ladder");
     ladder.start(poolUids, loserCount);
     setMatchPhase("handoff");
     setStep("playing");
@@ -302,47 +314,23 @@ export function DuelGameDialog({
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">{config.emoji}</span>
             {t(config.titleKey)}
+            {step === "playing" && mode === "tournament" && (
+              <span className="bg-primary/10 text-primary rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.08em] uppercase">
+                {t("expenses.tournamentModeTournament")}
+              </span>
+            )}
           </DialogTitle>
           {step === "setup" && <DialogDescription>{t(config.introKey)}</DialogDescription>}
         </DialogHeader>
 
         {step === "setup" ? (
           <div className="flex flex-col gap-4">
-            {canOfferTournament && poolUids.length >= 3 && (
-              <div className="flex flex-col gap-2">
-                <div role="group" className="bg-muted/40 flex gap-1 rounded-xl border p-1">
-                  <Button
-                    type="button"
-                    variant={mode === "ladder" ? "default" : "ghost"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setMode("ladder")}
-                  >
-                    {t("expenses.tournamentModeLadder")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant={mode === "tournament" ? "default" : "ghost"}
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => setMode("tournament")}
-                  >
-                    {t("expenses.tournamentModeTournament")}
-                  </Button>
-                </div>
-                <p className="text-muted-foreground text-xs">
-                  {mode === "tournament"
-                    ? (() => {
-                        const plan = planBracket(poolUids.length, loserCount);
-                        return t("expenses.tournamentPlanSummary", {
-                          rounds: plan.roundCount,
-                          matches: plan.matchCount,
-                          parallel: plan.maxParallel,
-                        });
-                      })()
-                    : t("expenses.gameLadderExplainer")}
-                </p>
-              </div>
+            {canOfferTournament && (
+              <DuelModePicker
+                mode={setupMode}
+                onModeChange={setMode}
+                tournamentAvailable={tournamentAvailable}
+              />
             )}
             <GamePoolSetupStep
               memberUids={memberUids}
@@ -353,9 +341,16 @@ export function DuelGameDialog({
               maxLoserCount={maxLoserCount}
               onStepLoserCount={stepLoserCount}
               stepperDirection={stepperDirection}
-              countHint={t("expenses.duelCountHint")}
+              countHint={
+                setupMode === "tournament"
+                  ? t("expenses.tournamentCountHint")
+                  : t("expenses.duelCountHint")
+              }
               countIcon={config.emoji}
             />
+            {setupMode === "tournament" && (
+              <TournamentPlanCard poolSize={poolUids.length} loserCount={loserCount} />
+            )}
             {tournamentStartError && (
               <p className="text-destructive text-sm">{tournamentStartError}</p>
             )}
@@ -459,7 +454,11 @@ export function DuelGameDialog({
                 disabled={poolUids.length < 2 || tournamentStarting}
                 onClick={() => void startGame()}
               >
-                {tournamentStarting ? t("common.loading") : t("expenses.gameStart")}
+                {tournamentStarting
+                  ? t("common.loading")
+                  : setupMode === "tournament"
+                    ? t("expenses.tournamentStart")
+                    : t("expenses.gameStart")}
               </Button>
             ) : showVerdict ? (
               <>

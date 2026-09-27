@@ -93,13 +93,16 @@ export function TournamentPageClient({
         <Link
           href={`/groups/${groupId}`}
           aria-label={t("common.back")}
-          className="hover:bg-accent flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95"
+          className="hover:bg-accent -ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95"
         >
           <ArrowLeft className="h-4.5 w-4.5" />
         </Link>
-        <h1 className="font-heading flex items-center gap-2 text-lg font-semibold">
+        <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-semibold">
           <span aria-hidden="true">{config.emoji}</span>
-          {t(config.titleKey)}
+          <span className="truncate">{t(config.titleKey)}</span>
+          <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.08em] uppercase">
+            {t("expenses.tournamentModeTournament")}
+          </span>
         </h1>
       </div>
 
