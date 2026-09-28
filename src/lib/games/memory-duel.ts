@@ -10,21 +10,32 @@ import { secureShuffle } from "@/lib/games/random";
 export const MEMORY_PAIR_COUNT = 9;
 export const MEMORY_CARD_COUNT = MEMORY_PAIR_COUNT * 2;
 
-/** More than enough distinct faces that a shuffled deck rarely looks the same twice. */
+/**
+ * More than enough distinct faces that a shuffled deck rarely looks the same
+ * twice. Each is a key into `public/memory/faces/<face>.webp` — decks already
+ * stored in Firestore from before the illustrations still hold emoji, which
+ * `MemoryGrid` renders as plain text.
+ */
 export const MEMORY_FACES = [
-  "🍕",
-  "🍔",
-  "🍟",
-  "🌮",
-  "🍩",
-  "🍪",
-  "🍦",
-  "🍇",
-  "🍓",
-  "🍉",
-  "🥐",
-  "🧀",
+  "pizza",
+  "burger",
+  "fries",
+  "taco",
+  "donut",
+  "cookie",
+  "ice-cream",
+  "grapes",
+  "strawberry",
+  "watermelon",
+  "croissant",
+  "cheese",
 ] as const;
+
+export type MemoryFace = (typeof MEMORY_FACES)[number];
+
+export function isMemoryFace(face: string): face is MemoryFace {
+  return (MEMORY_FACES as readonly string[]).includes(face);
+}
 
 export interface MemoryCard {
   id: number;

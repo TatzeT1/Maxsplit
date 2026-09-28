@@ -1,13 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useT } from "@/components/locale-provider";
 import { duelPalettes } from "@/lib/games/member-colors";
 import {
+  MEMORY_FACES,
   MEMORY_PAIR_COUNT,
   buildMemoryDeck,
+  isMemoryFace,
   memoryOutcome,
   type MemoryCard,
+  type MemoryFace,
 } from "@/lib/games/memory-duel";
 import { playGiggleSound, playMissSound, playTickSound } from "@/lib/sound/game-sounds";
 import { DuelTurnBanner } from "@/components/groups/split-game/duel-turn-banner";
@@ -149,29 +153,97 @@ export function MemoryGrid({
   disabled: boolean;
   onFlip: (index: number) => void;
 }) {
-  const t = useT();
   return (
-    <div className="bg-muted/30 mx-auto grid w-full max-w-[340px] grid-cols-6 gap-1.5 rounded-xl border p-2">
-      {cards.map((card, index) => {
-        const faceUp = card.face !== null;
-        const claimerColor = card.claimedBy === null ? undefined : colors[card.claimedBy];
-        return (
-          <button
-            key={card.key}
-            type="button"
-            disabled={disabled || card.claimedBy !== null || faceUp}
-            onClick={() => onFlip(index)}
-            aria-label={faceUp ? t("expenses.memoryCardRevealed") : t("expenses.memoryCardHidden")}
-            className={cn(
-              "flex aspect-square touch-manipulation items-center justify-center rounded-lg border text-lg transition-[opacity,border-color] duration-(--duration-fast)",
-              card.claimedBy !== null ? "opacity-45" : "bg-card",
-            )}
-            style={claimerColor ? { borderColor: claimerColor, borderWidth: 2 } : undefined}
-          >
-            {faceUp ? card.face : <span className="text-muted-foreground text-xs">?</span>}
-          </button>
-        );
-      })}
+    <div
+      className="mx-auto grid w-full max-w-[340px] grid-cols-6 gap-1.5 rounded-xl border bg-cover bg-center p-2.5"
+      style={{ backgroundImage: "url(/memory/background.webp)" }}
+    >
+      {cards.map((card, index) => (
+        <MemoryCardButton
+          key={card.key}
+          card={card}
+          claimerColor={card.claimedBy === null ? undefined : colors[card.claimedBy]}
+          disabled={disabled}
+          onFlip={() => onFlip(index)}
+        />
+      ))}
+      {/* Faces only reach the grid once revealed, so fetch all twelve up front — otherwise the first flip of each face shows an empty card while its image loads. */}
+      <div hidden aria-hidden="true">
+        {MEMORY_FACES.map((face) => (
+          <FaceImage key={face} face={face} loading="eager" />
+        ))}
+      </div>
     </div>
+  );
+}
+
+/**
+ * One card, flipped in 3D between the shared back and its face. It remembers
+ * the last face it showed so a mismatched pair keeps its picture while it
+ * turns back over — the grid clears `face` the instant the turn passes.
+ */
+function MemoryCardButton({
+  card,
+  claimerColor,
+  disabled,
+  onFlip,
+}: {
+  card: MemoryGridCard;
+  claimerColor: string | undefined;
+  disabled: boolean;
+  onFlip: () => void;
+}) {
+  const t = useT();
+  const faceUp = card.face !== null;
+  const [shownFace, setShownFace] = useState(card.face);
+  if (card.face !== null && card.face !== shownFace) setShownFace(card.face);
+
+  return (
+    <button
+      type="button"
+      disabled={disabled || card.claimedBy !== null || faceUp}
+      onClick={onFlip}
+      aria-label={faceUp ? t("expenses.memoryCardRevealed") : t("expenses.memoryCardHidden")}
+      className={cn(
+        "aspect-square touch-manipulation transition-opacity duration-(--duration-base) perspective-[400px]",
+        card.claimedBy !== null && "opacity-60",
+      )}
+    >
+      <span
+        className={cn(
+          "relative block size-full transition-transform duration-(--duration-slow) ease-out transform-3d",
+          faceUp && "rotate-y-180",
+        )}
+      >
+        <span className="shadow-e1 absolute inset-0 overflow-hidden rounded-lg backface-hidden">
+          <Image src="/memory/card-back.webp" alt="" fill sizes="64px" unoptimized />
+        </span>
+        <span
+          className="shadow-e1 absolute inset-0 flex rotate-y-180 items-center justify-center overflow-hidden rounded-lg border bg-white backface-hidden"
+          style={claimerColor ? { borderColor: claimerColor, borderWidth: 2 } : undefined}
+        >
+          {shownFace !== null &&
+            (isMemoryFace(shownFace) ? (
+              <FaceImage face={shownFace} />
+            ) : (
+              <span className="text-lg">{shownFace}</span>
+            ))}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function FaceImage({ face, loading }: { face: MemoryFace; loading?: "eager" }) {
+  return (
+    <Image
+      src={`/memory/faces/${face}.webp`}
+      alt=""
+      width={64}
+      height={64}
+      loading={loading}
+      unoptimized
+      className="size-[88%] object-contain"
+    />
   );
 }
