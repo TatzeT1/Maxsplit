@@ -285,12 +285,18 @@ export function useImpactShake<T extends HTMLElement = HTMLDivElement>() {
  * faint while it falls toward the "camera", solid and slightly
  * over-squashed on contact, then settled at a jaunty angle. Positioned
  * entirely by the caller's `className`.
+ *
+ * `animateIn={false}` prints it already settled, for a stamp that is part of
+ * a screen's resting state rather than the moment it happened — a slam on
+ * every page load would stop meaning anything.
  */
 export function InkStamp({
   label,
   name,
   size = "lg",
   delay = STAMP_DROP_S,
+  animateIn = true,
+  ink: inkOverride,
   className,
 }: {
   label: string;
@@ -298,10 +304,13 @@ export function InkStamp({
   name: string;
   size?: "sm" | "lg";
   delay?: number;
+  animateIn?: boolean;
+  /** A color that means something regardless of who it's about, instead of the person's own. */
+  ink?: string;
   className?: string;
 }) {
-  const reduceMotion = useReducedMotion();
-  const ink = memberInk(name);
+  const reduceMotion = useReducedMotion() || !animateIn;
+  const ink = inkOverride ?? memberInk(name);
   const splatter = useMemo(() => {
     const random = seededRandom(nameHash(name) ^ label.length);
     return Array.from({ length: 6 }, () => ({

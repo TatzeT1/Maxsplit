@@ -1,7 +1,6 @@
 "use client";
 
-import { Check, Copy, Pencil, ShieldCheck, UserMinus, Users, X } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Check, Copy, Pencil, ShieldCheck, UserMinus, X } from "lucide-react";
 import { useState } from "react";
 import { AddPlaceholderDialog } from "@/components/groups/add-placeholder-dialog";
 import {
@@ -13,20 +12,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { RowActions } from "@/components/groups/row-actions";
+import { SectionHeading } from "@/components/groups/section-heading";
 import { useT } from "@/components/locale-provider";
-import {
-  deleteGroup,
-  leaveGroup,
-  removeMember,
-  renamePlaceholderMember,
-  setMemberRole,
-} from "@/lib/actions/groups";
+import { removeMember, renamePlaceholderMember, setMemberRole } from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { avatarGradient, cn } from "@/lib/utils";
@@ -158,16 +151,7 @@ function MemberRow({
   }
 
   return (
-    <li
-      className={cn(
-        "flex flex-col gap-1 rounded-xl p-3 ring-1",
-        member.role === "owner"
-          ? "bg-primary/5 ring-primary/15"
-          : member.role === "admin"
-            ? "bg-accent/40 ring-foreground/10"
-            : "bg-card ring-foreground/10",
-      )}
-    >
+    <li className="flex flex-col gap-1 px-4 py-3">
       <div className="flex items-center gap-3">
         <div
           className={cn(
@@ -273,6 +257,12 @@ function MemberRow({
   );
 }
 
+/**
+ * The member list for a group's "Gruppe" tab: one card, one row per person,
+ * with their payment details a tap from being copied. Leaving or deleting the
+ * group lives at the bottom of that tab, not here — next to the people it
+ * used to sit between the member list and everything after it.
+ */
 export function MembersPanel({
   groupId,
   members,
@@ -282,60 +272,25 @@ export function MembersPanel({
   members: Record<string, GroupMember>;
   currentUid: string;
 }) {
-  const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
   const t = useT();
   const currentRole = members[currentUid]?.role ?? "member";
-  const isOwner = currentRole === "owner";
-
-  async function handleLeave() {
-    setBusy(true);
-    setError(null);
-    const result = await leaveGroup({ groupId });
-    if (!result.ok) {
-      setError(
-        result.error === "owner-cannot-leave"
-          ? t("groups.ownerCannotLeave")
-          : result.error === "unsettled-balance"
-            ? t("groups.unsettledBalanceError")
-            : t("groups.leaveGroupError"),
-      );
-      setBusy(false);
-      return;
-    }
-    router.push("/groups");
-  }
-
-  async function handleDelete() {
-    setBusy(true);
-    setError(null);
-    const result = await deleteGroup({ groupId });
-    if (!result.ok) {
-      setError(t("groups.deleteGroupError"));
-      setBusy(false);
-      return;
-    }
-    router.push("/groups");
-  }
+  const count = Object.keys(members).length;
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-1.5 text-sm font-medium">
-          <Users className="h-4 w-4" />
-          {t("groups.members")}
-        </h2>
-        <div className="flex items-center gap-2">
-          <span className="text-muted-foreground text-xs">
-            {Object.keys(members).length === 1
-              ? t("groups.memberCountSingular")
-              : t("groups.membersCount", { count: Object.keys(members).length })}
-          </span>
-          {isGroupManager(currentRole) && <AddPlaceholderDialog groupId={groupId} />}
-        </div>
-      </div>
-      <ul className="flex flex-col gap-2">
+    <section className="flex flex-col gap-3">
+      <SectionHeading
+        aside={
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground text-xs">
+              {count === 1 ? t("groups.memberCountSingular") : t("groups.membersCount", { count })}
+            </span>
+            {isGroupManager(currentRole) && <AddPlaceholderDialog groupId={groupId} />}
+          </div>
+        }
+      >
+        {t("groups.members")}
+      </SectionHeading>
+      <ul className="bg-card ring-foreground/10 shadow-e1 divide-border/70 flex flex-col divide-y rounded-xl ring-1">
         {Object.entries(members).map(([uid, member]) => (
           <MemberRow
             key={uid}
@@ -347,53 +302,6 @@ export function MembersPanel({
           />
         ))}
       </ul>
-      {error && <p className="text-destructive text-sm">{error}</p>}
-      <div className="flex gap-2">
-        {!isOwner && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={busy}>
-                {t("groups.leaveGroup")}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("groups.leaveGroupConfirm")}</AlertDialogTitle>
-                <AlertDialogDescription>{t("groups.leaveGroupConfirmBody")}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleLeave}>
-                  {t("groups.leaveGroup")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-        {isOwner && (
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={busy}>
-                {t("groups.deleteGroup")}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("groups.deleteGroupConfirm")}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {t("groups.deleteGroupConfirmBody")}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" onClick={handleDelete}>
-                  {t("groups.deleteGroup")}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-      </div>
-    </div>
+    </section>
   );
 }

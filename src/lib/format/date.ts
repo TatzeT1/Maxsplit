@@ -25,3 +25,26 @@ export function formatWeekday(date: Date): string {
 export function formatTime(date: Date): string {
   return timeFormatter.format(date);
 }
+
+const dayMonthFormatter = new Intl.DateTimeFormat("de-DE", { day: "2-digit", month: "2-digit" });
+
+/** Formats a date as "12.08." — for rows already grouped under their month. */
+export function formatDayMonth(date: Date): string {
+  return dayMonthFormatter.format(date);
+}
+
+const monthYearFormatter = new Intl.DateTimeFormat("de-DE", {
+  month: "long",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/**
+ * Formats a "YYYY-MM" month key as "August 2026". Built at UTC midnight and
+ * formatted in UTC, so no local offset can tip the first of the month back
+ * into the previous one.
+ */
+export function formatMonthKey(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  return monthYearFormatter.format(new Date(Date.UTC(year, month - 1, 1)));
+}

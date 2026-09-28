@@ -29,6 +29,23 @@ neutral body font, per the inline comment: "the numbers that matter most (what y
 you're owed) carry weight." If you're building a new screen that displays a balance
 prominently, reach for the Fraunces variable, not the default sans.
 
+## Receipt vocabulary: `.receipt-edges`, `.paper-tokens`, `InkStamp`
+
+Two screens print on till paper: the split games' verdict slip and the group page's balance
+receipt ([[Group Page]]). `.receipt-edges` masks the torn zig-zag edges (it clips
+box-shadow, so elevation goes on a wrapper as `drop-shadow`). `.paper-tokens` restates the
+light theme's ink, paper, status and control tokens on the slip's subtree, so a receipt stays
+cream in the dark theme — an object, not a surface — and anything printed or pressed on it
+(signed amounts, settle-up buttons) keeps light-theme contrast. `InkStamp`
+(`split-game/celebration.tsx`) is the rubber stamp; `animateIn={false}` prints it at rest,
+`ink` overrides the person-colored ink when the color itself carries meaning.
+
+## Tabs
+
+`src/components/ui/tabs.tsx` wraps Radix Tabs (from the `radix-ui` monorepo package, like
+every other primitive here) as a segmented control: raised active segment, whole segment as
+the touch target, roving arrow-key focus from Radix.
+
 ## Dark mode: default, flash-free
 
 Dark is the default theme (`theme-toggle.tsx`, `theme-provider.tsx`), with a light toggle.
@@ -59,4 +76,4 @@ session cookie was set correctly). See [[Deployment and Production Debugging]] f
 header list and reasoning.
 
 ## Related
-[[Mobile iOS Quirks]] · [[i18n]] · [[Deployment and Production Debugging]]
+[[Mobile iOS Quirks]] · [[i18n]] · [[Deployment and Production Debugging]] · [[Group Page]]

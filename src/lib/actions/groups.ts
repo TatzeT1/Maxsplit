@@ -16,7 +16,8 @@ export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string
  * A member's net balance (minor units) across the group's whole ledger, not
  * just its current members — same computation the settlement PDF uses (see
  * app/share/settlement/[groupId]/[token]/route.ts). Used to block
- * removing/leaving while unsettled: BalanceView only ever renders debts for
+ * removing/leaving while unsettled: the group page's balance views (the
+ * BalanceHero slip and the Salden tab) only ever name debts for
  * `Object.keys(members)`, so a member removed with a nonzero balance would
  * have their debt silently vanish from the main view even though the
  * expenses/settlements that created it are still sitting in the ledger.

@@ -6,7 +6,8 @@ export interface CategoryTotal {
 }
 
 /**
- * Sums expense amounts per category for the spending-analytics breakdown.
+ * Sums expense amounts per category for the group page's category filter
+ * chips, which double as its spending breakdown.
  * Uncategorized expenses (`category: null`) are folded into "other" — the
  * same bucket `categoryIcon`/`categoryColorClasses` already fall back to for
  * a null category, so the chart reads consistently with the rest of the UI.

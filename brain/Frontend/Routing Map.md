@@ -16,7 +16,7 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
 (app)/                               layout.tsx: redirect("/") if !getSession()
                                       → renders AppSidebar + SessionGuard (see Two Auth States)
   /groups                            group list (balancesMinor cache — see Data Model)
-  /groups/[groupId]                  group detail: expenses, balances, members, activity
+  /groups/[groupId]                  group detail — see Group Page; ?tab=balances|games|group
   /groups/[groupId]/chat             per-group chat — see Chat, Mobile iOS Quirks
   /groups/[groupId]/tournaments/[tournamentId]
                                       live tournament bracket — watch/play from any device, see Split Games
@@ -50,4 +50,4 @@ It's not nested under the `(app)` route group at all, specifically so it never g
 route handler itself — see [[Settlement PDF Export]].
 
 ## Related
-[[Data Access Pattern]] · [[Two Auth States]] · [[Admin Panel]] · [[Settlement PDF Export]]
+[[Data Access Pattern]] · [[Two Auth States]] · [[Admin Panel]] · [[Settlement PDF Export]] · [[Group Page]]

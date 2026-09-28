@@ -43,7 +43,8 @@ Google anmelden") — no real Google account needed.
 
 - **`pnpm test`** (Vitest, `vitest.config.ts`, jsdom via `vitest.setup.ts`) — the default
   suite. Colocated `*.test.ts` files next to what they test:
-  `src/lib/money/{split,balances,category-totals,lottery-totals}.test.ts`,
+  `src/lib/money/{split,balances,category-totals,lottery-totals,expense-impact}.test.ts`,
+  `src/lib/format/{money,date}.test.ts`,
   `src/lib/payment/{validate,paypal-me}.test.ts`, `src/lib/groups/invite-code.test.ts`,
   `src/lib/recurring/schedule.test.ts`, `src/lib/i18n/translate.test.ts`,
   `src/lib/firebase/config.test.ts`, `src/lib/use-visible-height.test.ts`,

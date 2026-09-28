@@ -31,7 +31,7 @@ expense" or "can manage membership" is checked. Rules:
 Both `leaveGroup` and `removeMember` call `computeMemberBalance(groupRef, uid)` — a fresh
 `computeBalances` over the **whole** ledger (not just current members) — and refuse
 (`"unsettled-balance"`) if it's nonzero. This exists because [[Balances and Settlements]]'s
-BalanceView only ever renders debts for `Object.keys(members)` — silently removing a member
+the group page's balance views only ever name debts for `Object.keys(members)` — silently removing a member
 with a nonzero balance would make their debt vanish from the UI even though the
 expenses/settlements that created it are still sitting in the ledger, breaking the zero-sum
 invariant's *visibility* (the math still sums to zero underneath, but nobody could see who

@@ -291,7 +291,8 @@ second player is bumped to the opposite side of the palette wheel.
 All eight games set `Expense.viaLottery = true` when their result is applied — the field name is
 a holdover from when the lottery was the only game (see [[Data Model]]), but its actual meaning
 has always been closer to "resolved via a split mini-game", so the existing
-`computeLotteryTotals` / `LotteryOverview` leaderboard already aggregates across all eight games
+`computeLotteryTotals` leaderboard (now the group page's Spiele tab, `games-tab.tsx` — see
+[[Group Page]]) already aggregates across all eight games
 with zero code changes needed. Renaming the field would mean migrating live Firestore data for
 a purely cosmetic win, so it stays `viaLottery`. One side effect worth knowing: the leaderboard's
 title ("Wer hat wie viel vergambelt?") now also counts skill-game losses, which reads slightly

@@ -1,7 +1,7 @@
 "use client";
 
 import { Pencil, Users } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,7 +22,14 @@ import type { Group } from "@/lib/types";
 
 const CURRENCIES = ["EUR", "USD", "CHF", "GBP"];
 
-export function EditGroupDialog({ group }: { group: Group }) {
+export function EditGroupDialog({
+  group,
+  trigger,
+}: {
+  group: Group;
+  /** Defaults to a pencil icon button. */
+  trigger?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(group.name);
   const [icon, setIcon] = useState<string | null>(group.icon ?? null);
@@ -57,9 +64,11 @@ export function EditGroupDialog({ group }: { group: Group }) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={t("groups.editGroup")}>
-          <Pencil className="h-4 w-4" />
-        </Button>
+        {trigger ?? (
+          <Button variant="ghost" size="icon" aria-label={t("groups.editGroup")}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>

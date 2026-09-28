@@ -59,7 +59,7 @@ export interface AdminGroupDetail extends AdminGroupSummary {
   recurringRules: RecurringRule[];
   /** Net balance per uid, computed fresh from the live (non-deleted) ledger — same math as `group.balancesMinor`, but never stale. */
   balancesMinor: Record<string, number>;
-  /** Per-uid 🎲 Split Lottery losses (amount + rounds), same figures as the member-facing LotteryOverview — see computeLotteryTotals. */
+  /** Per-uid 🎲 Split Lottery losses (amount + rounds), same figures as the member-facing Spiele tab (GamesTab) — see computeLotteryTotals. */
   lotteryTotals: Record<string, LotteryTotal>;
   /** Most recent messages, oldest first, capped at MAX_ADMIN_CHAT_MESSAGES. */
   messages: ChatMessage[];

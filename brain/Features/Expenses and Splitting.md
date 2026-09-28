@@ -63,10 +63,12 @@ also calls `recomputeGroupBalances(groupRef)` afterward (see [[Money Invariants]
 
 `src/lib/categories.ts` — `CategoryId` is a fixed union (`groceries`, `restaurant`,
 `transport`, `housing`, `utilities`, `entertainment`, `travel`, `shopping`, `health`,
-`other`), each with an icon, a text color, a row-tint, and a solid bar color (used by
-`spending-analytics.tsx`) — all four derived from the same hue per category so they read as
-one consistent system. `category: null` and `category: "other"` both fall back to the same
-visuals via `categoryIcon`/`categoryColorClasses`/etc. `emoji?: string | null` on `Expense` is
+`other`), each with an icon and a tinted icon-circle color (`categoryColorClasses`) derived
+from one hue per category. (A row tint and a solid bar color used to exist for the old
+per-row wash and the spending-analytics card; both went when the group page moved to
+grouped month cards and category chips — see [[Group Page]].) `category: null` and
+`category: "other"` both fall back to the same visuals via `categoryIcon`/
+`categoryColorClasses`, and `computeCategoryTotals` folds null into "other" for the chips. `emoji?: string | null` on `Expense` is
 a separate, optional **user override** shown instead of the category icon — unrelated to
 `category` itself.
 

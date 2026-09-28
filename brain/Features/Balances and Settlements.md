@@ -4,8 +4,9 @@ tags: [feature, balances, settlements, money]
 
 # Balances and Settlements
 
-Server Actions: `src/lib/actions/settlements.ts`. UI: `balance-view.tsx`,
-`record-settlement-dialog.tsx`, `activity-feed.tsx`. Math: [[Money Invariants]]
+Server Actions: `src/lib/actions/settlements.ts`. UI: `balance-hero.tsx` (your balance, on the
+group page's receipt), `balances-tab.tsx` (everyone), `record-settlement-dialog.tsx`,
+`activity-feed.tsx` — see [[Group Page]]. Math: [[Money Invariants]]
 (`src/lib/money/balances.ts`).
 
 ## Three views of the same underlying ledger
@@ -20,7 +21,8 @@ projections of the same expenses + settlements:
   a minimal set of transfers, greedy-matched, not globally optimal (see [[Money Invariants]]
   for why that's an accepted tradeoff).
 
-`BalanceView` renders debts only for `Object.keys(members)` — this is *why*
+The group page's balance views (`BalanceHero`, the Salden tab) name debts only for
+`Object.keys(members)` — this is *why*
 [[Groups and Members]] blocks leaving/removal while a member has a nonzero balance: removing
 them from `members` would make their debt invisible here even though it's still in the ledger.
 

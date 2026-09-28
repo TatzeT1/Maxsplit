@@ -6,6 +6,7 @@ import Link from "next/link";
 import { type CSSProperties, useEffect, useState } from "react";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { JoinGroupDialog } from "@/components/groups/join-group-dialog";
+import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
 import { useT } from "@/components/locale-provider";
 import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,8 +17,6 @@ import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { Group } from "@/lib/types";
-
-const MAX_VISIBLE_AVATARS = 4;
 
 /**
  * Reads the cached `balancesMinor` (see types.ts) written by
@@ -53,31 +52,6 @@ function GroupBalanceBadge({ group, uid }: { group: Group; uid: string }) {
       <span className="text-[10px] font-medium tracking-wide uppercase opacity-80">
         {isOwedToYou ? t("groups.balanceOwedToYouLabel") : t("groups.balanceYouOweLabel")}
       </span>
-    </div>
-  );
-}
-
-function MemberAvatarStack({ group }: { group: Group }) {
-  const t = useT();
-  const entries = Object.values(group.members);
-  const visible = entries.slice(0, MAX_VISIBLE_AVATARS);
-  const overflow = entries.length - visible.length;
-
-  return (
-    <div className="flex -space-x-2">
-      {visible.map((member, index) => (
-        <div
-          key={`${member.displayName}-${index}`}
-          className={`ring-card bg-linear-to-br ${avatarGradient(member.displayName)} flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2`}
-        >
-          {member.displayName.charAt(0).toUpperCase() || "?"}
-        </div>
-      ))}
-      {overflow > 0 && (
-        <div className="ring-card bg-muted text-muted-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ring-2">
-          {t("groups.moreMembers", { count: overflow })}
-        </div>
-      )}
     </div>
   );
 }
@@ -161,7 +135,7 @@ export default function GroupsPage() {
                   <div className="relative flex min-w-0 flex-1 flex-col gap-1.5">
                     <span className="truncate font-medium">{group.name}</span>
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <MemberAvatarStack group={group} />
+                      <MemberAvatarStack members={group.members} />
                       <span className="text-muted-foreground text-xs">
                         {group.memberUids.length === 1
                           ? t("groups.memberCountSingular")

@@ -54,6 +54,7 @@ re-deriving it from scratch by reading every file.
 - [[Mobile iOS Quirks]] — the two rules that only show up on a real iPhone
 - [[Design System and Theming]] — fonts, dark mode, shadcn/ui, motion
 - [[Routing Map]] — the App Router tree and what guards each segment
+- [[Group Page]] — the group screen: balance receipt, four tabs, sticky action bar, and why
 
 ### Ops — running, testing, shipping
 

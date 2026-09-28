@@ -10,7 +10,8 @@ tags: [feature, split-lottery, fun]
 > the shared engine the other three sit on. This note covers what's specific to the lottery.
 
 UI: `src/components/groups/split-lottery-dialog.tsx`. Sound: `src/lib/sound/game-sounds.ts`.
-Stats: `src/lib/money/lottery-totals.ts`. Leaderboard: `lottery-overview.tsx`.
+Stats: `src/lib/money/lottery-totals.ts`. Leaderboard: the group page's Spiele tab
+(`games-tab.tsx`, see [[Group Page]]).
 
 ## What it is
 

@@ -450,6 +450,29 @@
     --card: oklch(0.995 0.008 75);
     --foreground: oklch(0.24 0.035 250);
     --muted-foreground: oklch(0.51 0.03 245);
+    /*
+     * Everything else that can be printed or pressed on a slip: signed
+     * amounts and the settle-up buttons on the group page's balance receipt.
+     * The dark theme's success/destructive are lifted to glow on teal ink and
+     * drop to ~2:1 on cream, and its control surfaces would put dark buttons
+     * on light paper. Same values as `:root`, restated because inside `.dark`
+     * those are no longer reachable under their own names.
+     */
+    --background: oklch(0.98 0.012 75);
+    --muted: oklch(0.95 0.014 75);
+    --border: oklch(0.9 0.018 75);
+    --input: oklch(0.9 0.018 75);
+    --secondary: oklch(0.92 0.03 200);
+    --secondary-foreground: oklch(0.28 0.05 210);
+    --primary: oklch(0.62 0.19 42);
+    --primary-foreground: oklch(0.99 0.012 60);
+    --ring: oklch(0.62 0.19 42);
+    --success: oklch(0.58 0.15 150);
+    --destructive: oklch(0.58 0.21 22);
+    --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.85);
+    --elevation-1:
+      0 1px 1.5px -0.5px oklch(0.24 0.05 250 / 0.06), 0 3px 6px -1.5px oklch(0.24 0.05 250 / 0.045),
+      0 8px 16px -6px oklch(0.24 0.05 250 / 0.035);
     color: var(--foreground);
   }
 
