@@ -36,10 +36,12 @@ import {
 import { TournamentView } from "@/components/groups/split-game/tournament/tournament-view";
 import {
   DuelModePicker,
+  DuelPlacePicker,
   TournamentPlanCard,
   type DuelMode,
+  type DuelPlace,
 } from "@/components/groups/split-game/tournament/tournament-mode-picker";
-import type { DuelGameId, GroupMember } from "@/lib/types";
+import type { DuelGameId, GameExpenseDraft, GroupMember } from "@/lib/types";
 
 /** How long a finished match holds its winning position before the "caught" takeover covers it. */
 const MATCH_END_BEAT_MS = 650;
@@ -56,6 +58,16 @@ export interface SplitGameDialogProps {
   groupId?: string;
   currentUid?: string;
   stake?: { description: string; amountMinor: number; currency: string } | null;
+  /**
+   * The expense a server-backed game (online, or a tournament) books by
+   * itself once it's decided. `undefined` means this dialog can't auto-book
+   * (editing an existing expense) — the result is then applied by hand, and
+   * online play isn't offered. `null` means it could, but the form isn't
+   * complete enough yet.
+   */
+  expenseDraft?: GameExpenseDraft | null;
+  /** Called once a server-backed game with `expenseDraft` has started — the caller closes the form and opens the game's page. */
+  onServerGameStarted?: (tournamentId: string) => void;
 }
 
 export interface DuelBoardProps {
@@ -113,6 +125,8 @@ export function DuelGameDialog({
   groupId,
   currentUid,
   stake,
+  expenseDraft,
+  onServerGameStarted,
   config,
 }: SplitGameDialogProps & { config: DuelGameConfig }) {
   const t = useT();
@@ -134,16 +148,36 @@ export function DuelGameDialog({
   // knockout ladder. Only offered when the caller wired a groupId and the
   // game's config opts in (see DuelGameConfig.tournament).
   const [mode, setMode] = useState<DuelMode>("ladder");
+  const [place, setPlace] = useState<DuelPlace>("device");
   const [tournamentId, setTournamentId] = useState<string | null>(null);
   const [tournamentStarting, setTournamentStarting] = useState(false);
   const [tournamentStartError, setTournamentStartError] = useState<string | null>(null);
   const { tournament, errorCode: tournamentErrorCode } = useTournament(groupId ?? "", tournamentId);
   const canOfferTournament = !!(config.tournament && groupId && currentUid);
+  const canAutoBook = expenseDraft !== undefined;
+
+  // Online needs a phone on both ends of at least one match: two members
+  // with an account. Placeholders still play — on their opponent's phone.
+  const realPoolUids = poolUids.filter((uid) => members[uid]?.isPlaceholder !== true);
+  const placeholderNames = poolUids
+    .filter((uid) => members[uid]?.isPlaceholder === true)
+    .map((uid) => members[uid].displayName);
+  const onlineUnavailableHint = !canOfferTournament
+    ? null
+    : !canAutoBook
+      ? t("expenses.duelPlaceOnlineEditHint")
+      : realPoolUids.length < 2
+        ? t("expenses.duelPlaceOnlineMinHint")
+        : null;
+  const setupPlace: DuelPlace =
+    canOfferTournament && onlineUnavailableHint === null ? place : "device";
   const tournamentAvailable = canOfferTournament && poolUids.length >= 3;
-  // What "Start" will actually do: a tournament picked earlier falls back to
-  // the ladder if the pool has since shrunk below three, rather than quietly
-  // starting a two-person "tournament" behind a toggle that's no longer shown.
-  const setupMode: DuelMode = tournamentAvailable ? mode : "ladder";
+  // What "Start" will actually do. Online is always a bracket (a 1-vs-1 is a
+  // bracket of one match); on one device a tournament picked earlier falls
+  // back to the ladder if the pool has since shrunk below three, rather than
+  // quietly starting a two-person "tournament" behind a hidden toggle.
+  const setupMode: DuelMode =
+    setupPlace === "online" ? "tournament" : tournamentAvailable ? mode : "ladder";
 
   // The tournament was cancelled elsewhere (or by this device) — drop back to
   // setup so the dialog doesn't sit on a dead bracket. Adjusted during render
@@ -187,6 +221,12 @@ export function DuelGameDialog({
 
   async function startGame() {
     if (setupMode === "tournament" && groupId) {
+      // A server-backed game books the expense itself at the end, so the
+      // form has to be complete *now* — nobody's looking at it afterwards.
+      if (canAutoBook && !expenseDraft) {
+        setTournamentStartError(t("expenses.duelNeedsExpense"));
+        return;
+      }
       setTournamentStarting(true);
       setTournamentStartError(null);
       // A dropped connection throws instead of returning `ok: false` —
@@ -197,6 +237,8 @@ export function DuelGameDialog({
         poolUids,
         targetLoserCount: loserCount,
         stake: stake ?? null,
+        playMode: setupPlace === "online" ? "online" : "local",
+        autoBook: expenseDraft ?? null,
       }).catch(() => ({ ok: false as const, error: "network" }));
       setTournamentStarting(false);
       if (!result.ok) {
@@ -205,6 +247,13 @@ export function DuelGameDialog({
             ? t("expenses.tournamentAlreadyRunning")
             : t("expenses.tournamentStartError"),
         );
+        return;
+      }
+      if (expenseDraft && onServerGameStarted) {
+        // The game now lives on its own page (the same one the others open
+        // from the invite) and books the expense when it's decided.
+        resetAll();
+        onServerGameStarted(result.data.tournamentId);
         return;
       }
       setTournamentId(result.data.tournamentId);
@@ -326,6 +375,13 @@ export function DuelGameDialog({
         {step === "setup" ? (
           <div className="flex flex-col gap-4">
             {canOfferTournament && (
+              <DuelPlacePicker
+                place={setupPlace}
+                onPlaceChange={setPlace}
+                onlineUnavailableHint={onlineUnavailableHint}
+              />
+            )}
+            {canOfferTournament && setupPlace === "device" && (
               <DuelModePicker
                 mode={setupMode}
                 onModeChange={setMode}
@@ -342,14 +398,25 @@ export function DuelGameDialog({
               onStepLoserCount={stepLoserCount}
               stepperDirection={stepperDirection}
               countHint={
-                setupMode === "tournament"
+                setupMode === "tournament" && poolUids.length >= 3
                   ? t("expenses.tournamentCountHint")
                   : t("expenses.duelCountHint")
               }
               countIcon={config.emoji}
             />
-            {setupMode === "tournament" && (
+            {setupMode === "tournament" && poolUids.length >= 3 && (
               <TournamentPlanCard poolSize={poolUids.length} loserCount={loserCount} />
+            )}
+            {setupPlace === "online" && (
+              <p className="text-muted-foreground bg-muted/40 rounded-xl border p-3 text-xs leading-relaxed">
+                {t("expenses.duelOnlineHowItWorks")}
+                {placeholderNames.length > 0 && (
+                  <>
+                    {" "}
+                    {t("expenses.duelOnlinePlaceholders", { names: placeholderNames.join(", ") })}
+                  </>
+                )}
+              </p>
             )}
             {tournamentStartError && (
               <p className="text-destructive text-sm">{tournamentStartError}</p>
@@ -456,9 +523,11 @@ export function DuelGameDialog({
               >
                 {tournamentStarting
                   ? t("common.loading")
-                  : setupMode === "tournament"
-                    ? t("expenses.tournamentStart")
-                    : t("expenses.gameStart")}
+                  : setupPlace === "online"
+                    ? t("expenses.duelOnlineStart")
+                    : setupMode === "tournament"
+                      ? t("expenses.tournamentStart")
+                      : t("expenses.gameStart")}
               </Button>
             ) : showVerdict ? (
               <>

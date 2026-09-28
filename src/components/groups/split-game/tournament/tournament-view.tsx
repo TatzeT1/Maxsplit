@@ -1,6 +1,17 @@
 "use client";
 
-import { Check, Hourglass, Loader2, Play, Share2, type LucideIcon } from "lucide-react";
+import {
+  Check,
+  CircleAlert,
+  Eye,
+  Hourglass,
+  Loader2,
+  Play,
+  ReceiptText,
+  Share2,
+  Wifi,
+  type LucideIcon,
+} from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
@@ -25,6 +36,9 @@ import {
   MatchStakes,
 } from "@/components/groups/split-game/tournament/tournament-fate";
 import { TournamentMatchRunner } from "@/components/groups/split-game/tournament/tournament-match-runner";
+import { OnlineMatchRunner } from "@/components/groups/split-game/online/online-match-runner";
+import { OnlineInviteCard } from "@/components/groups/split-game/online/online-invite-card";
+import { isOnlineMatch } from "@/lib/games/online-match";
 import { cancelTournament, claimTournamentMatch } from "@/lib/actions/tournaments";
 import { bracketLoserUids } from "@/lib/games/tournament-bracket";
 import {
@@ -120,6 +134,7 @@ function YourStatusCard({
   treeCount,
   claimingId,
   onClaim,
+  onPlayOnline,
 }: {
   standing: EntrantStanding;
   tournament: Tournament;
@@ -128,6 +143,7 @@ function YourStatusCard({
   treeCount: number;
   claimingId: string | null;
   onClaim: (matchId: string, takeover: boolean) => void;
+  onPlayOnline: (matchId: string) => void;
 }) {
   const t = useT();
   const nameOf = (uid: string | null) => (uid ? (members[uid]?.displayName ?? "?") : "?");
@@ -210,6 +226,42 @@ function YourStatusCard({
   const opponentUid = match.players.find((uid) => uid !== currentUid) ?? null;
   const opponentName = nameOf(opponentUid);
   const claiming = claimingId === match.id;
+
+  // Online: each of you on your own phone — no claiming, no hosting, no
+  // takeover; the match just opens (or reopens) on this phone.
+  if (isOnlineMatch(tournament, match)) {
+    const live = match.status === "playing";
+    return (
+      <section className="border-primary/40 bg-primary/5 shadow-e1 animate-rise flex flex-col gap-3 rounded-2xl border p-4">
+        <span className={cn(EYEBROW, "text-primary flex items-center gap-1.5")}>
+          <LiveDot />
+          {live ? t("expenses.tournamentYourMatchLive") : t("expenses.tournamentYourTurnEyebrow")}
+        </span>
+        <div className="flex items-center gap-3">
+          <GameAvatar name={opponentName} className="size-11 text-base" />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <h3 className="font-heading truncate text-lg leading-tight font-medium">
+              {t("expenses.tournamentYouVs", { name: opponentName })}
+            </h3>
+            <p className="text-muted-foreground flex items-center gap-1 text-xs">
+              <Wifi aria-hidden="true" className="size-3.5" />
+              {treeCount > 1 || Object.keys(tournament.matches).length > 1
+                ? `${t("expenses.onlineBadge")} · ${context}`
+                : t("expenses.onlineBadge")}
+            </p>
+          </div>
+        </div>
+        <MatchStakes advance={tournament.advance} match={match} />
+        <Button type="button" size="lg" className="w-full" onClick={() => onPlayOnline(match.id)}>
+          <Play />
+          {live ? t("expenses.onlineResume") : t("expenses.tournamentPlayNow")}
+        </Button>
+        <p className="text-muted-foreground text-center text-xs">
+          {t("expenses.onlineYourTurnHint", { name: opponentName })}
+        </p>
+      </section>
+    );
+  }
 
   if (match.status === "playing") {
     const byUid = match.claim?.byUid ?? "";
@@ -399,6 +451,19 @@ export function TournamentView({
   const [cancelError, setCancelError] = useState(false);
   const [copied, setCopied] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  // A plain online 1-vs-1 *is* its one match — open straight onto the board
+  // for its two players instead of making them tap through an overview.
+  const [onlineMatchId, setOnlineMatchId] = useState<string | null>(() => {
+    const all = Object.values(tournament.matches);
+    const only = all.length === 1 ? all[0] : null;
+    return only &&
+      only.status !== "done" &&
+      only.players.includes(currentUid) &&
+      isOnlineMatch(tournament, only)
+      ? only.id
+      : null;
+  });
+  const onlineMatch = onlineMatchId ? (tournament.matches[onlineMatchId] ?? null) : null;
 
   const activeMatch = myMatch ? tournament.matches[myMatch.matchId] : null;
   // Trust a just-made local claim optimistically: the snapshot for it can lag
@@ -419,17 +484,19 @@ export function TournamentView({
   if (takenOver) setMyMatch(null);
 
   const showRunner = tournament.status !== "cancelled" && !!myMatch && stillMine && !!activeMatch;
+  const showOnline = tournament.status !== "cancelled" && !!onlineMatch;
 
   // Entering or leaving a match swaps almost the whole screen. Without this, a
   // match started from far down the list would open with its handoff card
   // (and "Los geht's") scrolled out of view above — and coming back, the
   // overview would open somewhere in the middle.
-  const prevShowRunnerRef = useRef(showRunner);
+  const swapped = showRunner || showOnline;
+  const prevShowRunnerRef = useRef(swapped);
   useEffect(() => {
-    if (prevShowRunnerRef.current === showRunner) return;
-    prevShowRunnerRef.current = showRunner;
+    if (prevShowRunnerRef.current === swapped) return;
+    prevShowRunnerRef.current = swapped;
     rootRef.current?.scrollIntoView({ block: "start" });
-  }, [showRunner]);
+  }, [swapped]);
 
   async function handleClaim(matchId: string, takeover: boolean) {
     setClaimingId(matchId);
@@ -466,7 +533,7 @@ export function TournamentView({
   }
 
   async function handleShare() {
-    const url = `${window.location.origin}/groups/${groupId}/tournaments/${tournament.id}`;
+    const url = `${window.location.origin}/play/${groupId}/${tournament.id}`;
     if (navigator.share) {
       try {
         await navigator.share({ url, title: t(config.titleKey) });
@@ -485,6 +552,37 @@ export function TournamentView({
       <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
         {t("expenses.tournamentCancelled")}
       </p>
+    );
+  }
+
+  if (showOnline) {
+    return (
+      <div ref={rootRef} className="min-w-0 scroll-mt-16">
+        <OnlineMatchRunner
+          groupId={groupId}
+          tournament={tournament}
+          match={onlineMatch!}
+          members={members}
+          currentUid={currentUid}
+          contextLabel={
+            Object.keys(tournament.matches).length > 1
+              ? matchContext(t, onlineMatch!, tournament.trees.length)
+              : null
+          }
+          beforeFirstMove={
+            bracketProgress(tournament).doneCount === 0 ? (
+              <OnlineInviteCard
+                groupId={groupId}
+                tournament={tournament}
+                members={members}
+                currentUid={currentUid}
+                gameTitle={t(config.titleKey)}
+              />
+            ) : null
+          }
+          onDone={() => setOnlineMatchId(null)}
+        />
+      </div>
     );
   }
 
@@ -509,6 +607,9 @@ export function TournamentView({
   const finished = tournament.status === "finished";
   const treeCount = tournament.trees.length;
   const matches = Object.values(tournament.matches);
+  // An online 1-vs-1 is a bracket of one match: no rounds, no tree, no
+  // standings worth drawing — just the match and its result.
+  const isDuel = matches.length === 1;
   const progress = bracketProgress(tournament);
   const standing = entrantStanding(tournament, currentUid);
   const ownMatchId = standing?.kind === "active" ? standing.match.id : null;
@@ -553,12 +654,16 @@ export function TournamentView({
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className={cn(EYEBROW, "text-muted-foreground")}>
-              {finished || progress.currentRound === null
-                ? t("expenses.tournamentFinished")
-                : t("expenses.tournamentRoundOf", {
-                    round: progress.currentRound,
-                    total: progress.roundCount,
-                  })}
+              {isDuel
+                ? finished
+                  ? t("expenses.onlineDuelFinished")
+                  : t("expenses.onlineBadgeDuel")
+                : finished || progress.currentRound === null
+                  ? t("expenses.tournamentFinished")
+                  : t("expenses.tournamentRoundOf", {
+                      round: progress.currentRound,
+                      total: progress.roundCount,
+                    })}
             </span>
             {tournament.stake && (
               <span className="truncate text-sm">
@@ -580,24 +685,26 @@ export function TournamentView({
             {copied ? t("expenses.tournamentLinkCopied") : t("expenses.tournamentShare")}
           </Button>
         </div>
-        <div className="flex items-center gap-2.5">
-          <div
-            role="progressbar"
-            aria-label={progressText}
-            aria-valuemin={0}
-            aria-valuemax={progress.totalCount}
-            aria-valuenow={progress.doneCount}
-            className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full"
-          >
+        {!isDuel && (
+          <div className="flex items-center gap-2.5">
             <div
-              className="bg-primary h-full rounded-full transition-[width] duration-(--duration-slow) ease-(--ease-entrance)"
-              style={{ width: `${progressPct}%` }}
-            />
+              role="progressbar"
+              aria-label={progressText}
+              aria-valuemin={0}
+              aria-valuemax={progress.totalCount}
+              aria-valuenow={progress.doneCount}
+              className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full"
+            >
+              <div
+                className="bg-primary h-full rounded-full transition-[width] duration-(--duration-slow) ease-(--ease-entrance)"
+                style={{ width: `${progressPct}%` }}
+              />
+            </div>
+            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+              {progressText}
+            </span>
           </div>
-          <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-            {progressText}
-          </span>
-        </div>
+        )}
       </div>
 
       {finished ? (
@@ -607,7 +714,20 @@ export function TournamentView({
             members={members}
             inDialog={inDialog}
           />
-          {onApply ? (
+          {tournament.expenseId ? (
+            <p className="text-success flex items-center justify-center gap-1.5 text-sm font-medium">
+              <ReceiptText aria-hidden="true" className="size-4" />
+              {t("expenses.onlineBooked")}
+            </p>
+          ) : tournament.autoBookError ? (
+            <p
+              role="alert"
+              className="text-destructive flex items-start justify-center gap-1.5 text-center text-sm"
+            >
+              <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              {t("expenses.onlineBookFailed")}
+            </p>
+          ) : onApply ? (
             <Button
               type="button"
               size="lg"
@@ -626,6 +746,16 @@ export function TournamentView({
         </div>
       ) : (
         <>
+          {tournament.playMode === "online" && progress.doneCount === 0 && (
+            <OnlineInviteCard
+              groupId={groupId}
+              tournament={tournament}
+              members={members}
+              currentUid={currentUid}
+              gameTitle={t(config.titleKey)}
+            />
+          )}
+
           {standing && (
             <YourStatusCard
               standing={standing}
@@ -635,6 +765,7 @@ export function TournamentView({
               treeCount={treeCount}
               claimingId={claimingId}
               onClaim={(matchId, takeover) => void handleClaim(matchId, takeover)}
+              onPlayOnline={setOnlineMatchId}
             />
           )}
 
@@ -675,23 +806,30 @@ export function TournamentView({
                           {matchContext(t, match, treeCount)}
                         </span>
                       </div>
-                      <Button
-                        type="button"
-                        // Primary only when nothing above already is: with the
-                        // viewer's own match up top, their "Jetzt spielen" is
-                        // the one action; hosting someone else's is secondary.
-                        variant={ownReady ? "outline" : "default"}
-                        size="sm"
-                        className="h-10 shrink-0"
-                        aria-label={t("expenses.tournamentPlayHereLabel", { a, b })}
-                        disabled={claimingId !== null}
-                        onClick={() => void handleClaim(match.id, false)}
-                      >
-                        {claimingId === match.id && (
-                          <Loader2 aria-hidden="true" className="animate-spin" />
-                        )}
-                        {t("expenses.tournamentPlayHere")}
-                      </Button>
+                      {isOnlineMatch(tournament, match) ? (
+                        <span className="text-muted-foreground flex shrink-0 items-center gap-1 pr-1 text-xs">
+                          <Wifi aria-hidden="true" className="size-3.5" />
+                          {t("expenses.onlineBadge")}
+                        </span>
+                      ) : (
+                        <Button
+                          type="button"
+                          // Primary only when nothing above already is: with the
+                          // viewer's own match up top, their "Jetzt spielen" is
+                          // the one action; hosting someone else's is secondary.
+                          variant={ownReady ? "outline" : "default"}
+                          size="sm"
+                          className="h-10 shrink-0"
+                          aria-label={t("expenses.tournamentPlayHereLabel", { a, b })}
+                          disabled={claimingId !== null}
+                          onClick={() => void handleClaim(match.id, false)}
+                        >
+                          {claimingId === match.id && (
+                            <Loader2 aria-hidden="true" className="animate-spin" />
+                          )}
+                          {t("expenses.tournamentPlayHere")}
+                        </Button>
+                      )}
                     </li>
                   );
                 })}
@@ -726,17 +864,36 @@ export function TournamentView({
                         <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
                           <LiveDot />
                           <span className="truncate">
-                            {byUid === currentUid
-                              ? t("expenses.tournamentOnYourPhone")
-                              : t("expenses.tournamentOnPhone", { name: nameOf(byUid) })}
+                            {isOnlineMatch(tournament, match)
+                              ? t("expenses.onlineBadge")
+                              : byUid === currentUid
+                                ? t("expenses.tournamentOnYourPhone")
+                                : t("expenses.tournamentOnPhone", { name: nameOf(byUid) })}
                           </span>
                         </span>
                       </div>
-                      <TakeoverButton
-                        className="text-muted-foreground h-10 shrink-0"
-                        disabled={claimingId !== null}
-                        onConfirm={() => void handleClaim(match.id, true)}
-                      />
+                      {isOnlineMatch(tournament, match) ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground h-10 shrink-0"
+                          aria-label={t("expenses.onlineWatchLabel", {
+                            a: nameOf(match.players[0]),
+                            b: nameOf(match.players[1]),
+                          })}
+                          onClick={() => setOnlineMatchId(match.id)}
+                        >
+                          <Eye aria-hidden="true" />
+                          {t("expenses.onlineWatch")}
+                        </Button>
+                      ) : (
+                        <TakeoverButton
+                          className="text-muted-foreground h-10 shrink-0"
+                          disabled={claimingId !== null}
+                          onConfirm={() => void handleClaim(match.id, true)}
+                        />
+                      )}
                     </li>
                   );
                 })}
@@ -746,54 +903,58 @@ export function TournamentView({
         </>
       )}
 
-      <section className="flex min-w-0 flex-col gap-3 border-t pt-5">
-        <SectionTitle>{t("expenses.tournamentBracketTitle")}</SectionTitle>
-        <p className="text-muted-foreground -mt-1 text-xs">
-          {tournament.advance === "loser"
-            ? t("expenses.tournamentRuleLoser")
-            : t("expenses.tournamentRuleWinner")}
-        </p>
-        <BracketLegend />
-        <BracketView tournament={tournament} members={members} currentUid={currentUid} />
-      </section>
+      {!isDuel && (
+        <>
+          <section className="flex min-w-0 flex-col gap-3 border-t pt-5">
+            <SectionTitle>{t("expenses.tournamentBracketTitle")}</SectionTitle>
+            <p className="text-muted-foreground -mt-1 text-xs">
+              {tournament.advance === "loser"
+                ? t("expenses.tournamentRuleLoser")
+                : t("expenses.tournamentRuleWinner")}
+            </p>
+            <BracketLegend />
+            <BracketView tournament={tournament} members={members} currentUid={currentUid} />
+          </section>
 
-      <section className="flex flex-col gap-3.5 border-t pt-5">
-        <SectionTitle>{t("expenses.tournamentStandingsTitle")}</SectionTitle>
-        <StandingsGroup
-          title={t("expenses.tournamentStandingsPays")}
-          icon={FATE_ICON.pays}
-          iconClass={FATE_TEXT_CLASS.pays}
-          chipClass="border-destructive/25 bg-destructive/5"
-          aside={
-            finished
-              ? undefined
-              : t("expenses.tournamentPayersProgress", {
-                  found: payerUids.length,
-                  target: tournament.targetLoserCount,
-                })
-          }
-          uids={payerUids}
-          members={members}
-          currentUid={currentUid}
-        />
-        <StandingsGroup
-          title={t("expenses.tournamentStandingsActive")}
-          icon={null}
-          chipClass="border-border"
-          uids={activeUids}
-          members={members}
-          currentUid={currentUid}
-        />
-        <StandingsGroup
-          title={t("expenses.tournamentStandingsSafe")}
-          icon={FATE_ICON.safe}
-          iconClass={FATE_TEXT_CLASS.safe}
-          chipClass="border-success/25 bg-success/5"
-          uids={safeUids}
-          members={members}
-          currentUid={currentUid}
-        />
-      </section>
+          <section className="flex flex-col gap-3.5 border-t pt-5">
+            <SectionTitle>{t("expenses.tournamentStandingsTitle")}</SectionTitle>
+            <StandingsGroup
+              title={t("expenses.tournamentStandingsPays")}
+              icon={FATE_ICON.pays}
+              iconClass={FATE_TEXT_CLASS.pays}
+              chipClass="border-destructive/25 bg-destructive/5"
+              aside={
+                finished
+                  ? undefined
+                  : t("expenses.tournamentPayersProgress", {
+                      found: payerUids.length,
+                      target: tournament.targetLoserCount,
+                    })
+              }
+              uids={payerUids}
+              members={members}
+              currentUid={currentUid}
+            />
+            <StandingsGroup
+              title={t("expenses.tournamentStandingsActive")}
+              icon={null}
+              chipClass="border-border"
+              uids={activeUids}
+              members={members}
+              currentUid={currentUid}
+            />
+            <StandingsGroup
+              title={t("expenses.tournamentStandingsSafe")}
+              icon={FATE_ICON.safe}
+              iconClass={FATE_TEXT_CLASS.safe}
+              chipClass="border-success/25 bg-success/5"
+              uids={safeUids}
+              members={members}
+              currentUid={currentUid}
+            />
+          </section>
+        </>
+      )}
 
       {canManage && !finished && (
         <div className="flex flex-col items-center gap-1 border-t pt-4">

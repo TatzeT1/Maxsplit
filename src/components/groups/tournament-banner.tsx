@@ -4,6 +4,7 @@ import { ChevronRight, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/components/locale-provider";
 import { TOURNAMENT_GAME_CONFIGS } from "@/components/groups/split-game/tournament/tournament-game-configs";
+import { isOnlineMatch } from "@/lib/games/online-match";
 import { bracketProgress } from "@/lib/games/tournament-status";
 import { useRunningTournaments } from "@/lib/games/use-tournament";
 import { cn } from "@/lib/utils";
@@ -35,9 +36,27 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
   const config = TOURNAMENT_GAME_CONFIGS[tournament.gameId];
   const progress = bracketProgress(tournament);
 
-  const hasReadyMatch = Object.values(tournament.matches).some(
-    (match) => match.status === "ready" && match.players.includes(currentUid),
+  const online = tournament.playMode === "online";
+  const matches = Object.values(tournament.matches);
+  const isDuel = matches.length === 1;
+  // An online match stays "yours to act on" while it's running too — the
+  // board is waiting on this phone, not on some other phone in the room.
+  const hasReadyMatch = matches.some(
+    (match) =>
+      match.players.includes(currentUid) &&
+      (match.status === "ready" ||
+        (match.status === "playing" && isOnlineMatch(tournament, match))),
   );
+  const challenger = tournament.entrants[tournament.createdBy]?.displayName ?? "";
+  const title = online
+    ? isDuel
+      ? t("expenses.onlineBannerDuelTitle")
+      : t("expenses.onlineBannerTournamentTitle")
+    : t("expenses.tournamentBannerTitle");
+  const yourTurnText =
+    online && tournament.createdBy !== currentUid && progress.doneCount === 0
+      ? t("expenses.onlineBannerChallenge", { name: challenger })
+      : t("expenses.tournamentBannerYourTurn");
 
   return (
     <Link
@@ -58,7 +77,7 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
       </div>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-sm font-semibold">
-          {config.emoji} {t("expenses.tournamentBannerTitle")}
+          {config.emoji} {title}
         </span>
         <p
           className={cn(
@@ -67,7 +86,7 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
           )}
         >
           {hasReadyMatch
-            ? t("expenses.tournamentBannerYourTurn")
+            ? yourTurnText
             : t("expenses.tournamentBannerProgress", {
                 game: t(config.titleKey),
                 done: progress.doneCount,

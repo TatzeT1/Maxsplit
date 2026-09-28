@@ -132,6 +132,8 @@ export interface ChatMessage {
   senderUid: string;
   text: string;
   createdAt: string;
+  /** Set on the automatic "X fordert euch heraus" message a game start posts — renders as a join card. Absent on normal messages. */
+  gameInvite?: { tournamentId: string; gameId: DuelGameId };
 }
 
 /**
@@ -217,6 +219,94 @@ export interface Tournament {
   loserUids: string[] | null;
   /** Display-only context for the tournament screen ("Pizza · 42,00 €"); not itself the expense split. */
   stake: { description: string; amountMinor: number; currency: string } | null;
+  /**
+   * "local": every match is played by its two players sharing one phone (the
+   * original claim → play → report flow). "online": each player plays on
+   * their own phone, move by move, through a `liveMatches` doc — except a
+   * match with a placeholder member in it, which has no phone of its own and
+   * so still plays locally (`isOnlineMatch`, lib/games/online-match.ts).
+   * Absent on tournaments created before online play existed — read it as
+   * "local".
+   */
+  playMode?: TournamentPlayMode;
+  /**
+   * The expense to book, server-side, the moment the bracket finishes —
+   * everything but the split, which the result decides. Absent/null when the
+   * result is applied by hand instead (a tournament started while *editing*
+   * an expense, or created before auto-booking existed).
+   */
+  autoBook?: GameExpenseDraft | null;
+  /** Set once `autoBook` has actually been booked — the id of the new expense. */
+  expenseId?: string | null;
+  /** Why `autoBook` couldn't be booked at finish (e.g. a loser left the group meanwhile); absent on success. */
+  autoBookError?: string | null;
+}
+
+export type TournamentPlayMode = "local" | "online";
+
+/** An expense minus its split — what a game decides. Validated at tournament start, booked at finish. */
+export interface GameExpenseDraft {
+  description: string;
+  amountMinor: number;
+  currency: string;
+  date: string;
+  category: CategoryId | null;
+  emoji: string | null;
+  paidBy: Record<string, number>;
+}
+
+/**
+ * Per-game move-by-move state of one online match. Firestore can't store
+ * nested arrays, so both grid games keep a flat move list (replayed through
+ * the pure rule modules) instead of a board.
+ */
+export type LiveMatchState =
+  | { gameId: "tictactoe"; moves: number[] }
+  | { gameId: "connectfour"; columns: number[] }
+  | {
+      gameId: "memory";
+      /** Per card: the face once claimed, `null` while still face down. */
+      claimedFaces: (string | null)[];
+      /** Per card: which player claimed it, `-1` while unclaimed. */
+      claimedBy: (0 | 1 | -1)[];
+      /** The (at most two) currently face-up, unclaimed cards — a mismatch stays shown until the next flip. */
+      open: { index: number; face: string }[];
+      scores: [number, number];
+      turn: 0 | 1;
+    }
+  | {
+      gameId: "reaction";
+      ready: [boolean, boolean];
+      /** Drawn by the server once both are ready; each phone waits this long after seeing it, then shows "Los!". */
+      signalDelayMs: number | null;
+      /** Each phone's own measured reaction, or a false start; `null` until reported. */
+      results: [ReactionReport | null, ReactionReport | null];
+    };
+
+export type ReactionReport = { kind: "time"; ms: number } | { kind: "falseStart" };
+
+/**
+ * One online match's live board (`groups/{groupId}/tournaments/{tournamentId}/liveMatches/{matchId}`,
+ * doc id == the bracket match id). Written only by `playOnlineMove`; both
+ * players (and any spectator) render it via `onSnapshot`. The bracket doc
+ * only learns the final winner, in the same transaction as the deciding move.
+ */
+export interface LiveMatch {
+  id: string;
+  gameId: DuelGameId;
+  /** `players[0]` moves first in the current attempt; swapped on every draw replay, like the ladder. */
+  players: [string, string];
+  /** 0 on the first try, +1 per draw replay — Tic-Tac-Toe switches to sudden death from 2. */
+  attempt: number;
+  state: LiveMatchState;
+  /** Bumped on every accepted move — lets a client tell a fresh snapshot from a stale one. */
+  version: number;
+  /** Set on a draw until the next move: "the last attempt was a draw", so both phones can say so. */
+  lastDrawAt: string | null;
+  winnerUid: string | null;
+  /** How the match was decided, for the result card ("Fehlstart", "132 ms" …). */
+  finish: { reason: "win" | "falseStart" | "forfeit"; at: string } | null;
+  updatedAt: string;
 }
 
 export type RecurringFrequency = "weekly" | "monthly";

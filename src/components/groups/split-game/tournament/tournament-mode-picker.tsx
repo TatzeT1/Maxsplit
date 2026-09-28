@@ -1,91 +1,71 @@
 "use client";
 
-import { Smartphone } from "lucide-react";
+import { ListOrdered, Smartphone, Trophy, Wifi, type LucideIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { planBracket } from "@/lib/games/tournament-bracket";
 import { cn } from "@/lib/utils";
 
 export type DuelMode = "ladder" | "tournament";
+export type DuelPlace = "device" | "online";
 
-/** One phone vs. several — the whole practical difference between the two modes, drawn rather than explained. */
-function PhoneCount({ count, active }: { count: number; active: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "flex h-6 items-end gap-0.5 transition-colors duration-(--duration-fast)",
-        active ? "text-primary" : "text-muted-foreground",
-      )}
-    >
-      {Array.from({ length: count }, (_, i) => (
-        <Smartphone
-          key={i}
-          strokeWidth={1.75}
-          className={cn("shrink-0", count > 1 && i !== 1 ? "size-4.5" : "size-6")}
-        />
-      ))}
-    </span>
-  );
+interface ChoiceOption<T extends string> {
+  value: T;
+  title: string;
+  hint: string;
+  icon: LucideIcon;
+  disabled?: boolean;
 }
 
 /**
- * The setup step's "K.-o.-Modus vs. Turnier" choice, as two selectable cards
- * (same selected look as the member checklist) instead of a small segmented
- * toggle with the difference buried in a paragraph below it. The tournament
- * card stays visible but disabled under three players, so the option doesn't
- * appear and vanish as people are ticked on and off.
+ * Two selectable cards (same selected look as the member checklist) — used
+ * for both setup questions, "wo?" and "wie?", so they read as one family.
+ * A disabled option stays visible with its reason as the hint, so choices
+ * don't appear and vanish as people are ticked on and off.
  */
-export function DuelModePicker({
-  mode,
-  onModeChange,
-  tournamentAvailable,
+function ChoiceCards<T extends string>({
+  id,
+  label,
+  value,
+  onChange,
+  options,
 }: {
-  mode: DuelMode;
-  onModeChange: (mode: DuelMode) => void;
-  tournamentAvailable: boolean;
+  id: string;
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: ChoiceOption<T>[];
 }) {
-  const t = useT();
-  const options: { value: DuelMode; title: string; hint: string; phones: number }[] = [
-    {
-      value: "ladder",
-      title: t("expenses.tournamentModeLadder"),
-      hint: t("expenses.tournamentModeLadderHint"),
-      phones: 1,
-    },
-    {
-      value: "tournament",
-      title: t("expenses.tournamentModeTournament"),
-      hint: tournamentAvailable
-        ? t("expenses.tournamentModeTournamentHint")
-        : t("expenses.tournamentModeMinHint"),
-      phones: 3,
-    },
-  ];
-
   return (
     <div className="flex flex-col gap-2">
-      <Label id="duel-mode-label">{t("expenses.tournamentModeLabel")}</Label>
-      <div role="radiogroup" aria-labelledby="duel-mode-label" className="grid grid-cols-2 gap-2">
+      <Label id={id}>{label}</Label>
+      <div role="radiogroup" aria-labelledby={id} className="grid grid-cols-2 gap-2">
         {options.map((option) => {
-          const disabled = option.value === "tournament" && !tournamentAvailable;
-          const selected = mode === option.value && !disabled;
+          const selected = value === option.value && !option.disabled;
+          const Icon = option.icon;
           return (
             <button
               key={option.value}
               type="button"
               role="radio"
               aria-checked={selected}
-              disabled={disabled}
-              onClick={() => onModeChange(option.value)}
+              disabled={option.disabled}
+              onClick={() => onChange(option.value)}
               className={cn(
-                "ease-spring active:shadow-pressed focus-visible:ring-ring/50 relative flex min-h-28 touch-manipulation flex-col items-start gap-2 rounded-xl border p-3 text-left transition-[background-color,border-color,transform,box-shadow] duration-(--duration-fast) outline-none select-none focus-visible:ring-3 active:scale-[0.99] disabled:opacity-50",
+                "ease-spring active:shadow-pressed focus-visible:ring-ring/50 relative flex min-h-24 touch-manipulation flex-col items-start gap-2 rounded-xl border p-3 text-left transition-[background-color,border-color,transform,box-shadow] duration-(--duration-fast) outline-none select-none focus-visible:ring-3 active:scale-[0.99] disabled:opacity-50",
                 selected
                   ? "border-primary/40 bg-primary/5 shadow-e1"
                   : "border-border bg-background",
               )}
             >
-              <PhoneCount count={option.phones} active={selected} />
+              <Icon
+                aria-hidden="true"
+                strokeWidth={1.75}
+                className={cn(
+                  "size-5.5 shrink-0 transition-colors duration-(--duration-fast)",
+                  selected ? "text-primary" : "text-muted-foreground",
+                )}
+              />
               <span className="flex flex-col gap-0.5 pr-4">
                 <span className="text-sm font-semibold">{option.title}</span>
                 <span className="text-muted-foreground text-xs leading-snug">{option.hint}</span>
@@ -104,6 +84,81 @@ export function DuelModePicker({
         })}
       </div>
     </div>
+  );
+}
+
+/** "Wo spielt ihr?" — one phone passed around, or everyone on their own phone, live. */
+export function DuelPlacePicker({
+  place,
+  onPlaceChange,
+  onlineUnavailableHint,
+}: {
+  place: DuelPlace;
+  onPlaceChange: (place: DuelPlace) => void;
+  /** Why online can't be picked right now, or `null` when it can. */
+  onlineUnavailableHint: string | null;
+}) {
+  const t = useT();
+  return (
+    <ChoiceCards
+      id="duel-place-label"
+      label={t("expenses.duelPlaceLabel")}
+      value={onlineUnavailableHint ? "device" : place}
+      onChange={onPlaceChange}
+      options={[
+        {
+          value: "device",
+          title: t("expenses.duelPlaceDevice"),
+          hint: t("expenses.duelPlaceDeviceHint"),
+          icon: Smartphone,
+        },
+        {
+          value: "online",
+          title: t("expenses.duelPlaceOnline"),
+          hint: onlineUnavailableHint ?? t("expenses.duelPlaceOnlineHint"),
+          icon: Wifi,
+          disabled: onlineUnavailableHint !== null,
+        },
+      ]}
+    />
+  );
+}
+
+/** "Format" for a same-device round of three or more: the one-at-a-time ladder, or a bracket several pairs can play in parallel. */
+export function DuelModePicker({
+  mode,
+  onModeChange,
+  tournamentAvailable,
+}: {
+  mode: DuelMode;
+  onModeChange: (mode: DuelMode) => void;
+  tournamentAvailable: boolean;
+}) {
+  const t = useT();
+  return (
+    <ChoiceCards
+      id="duel-mode-label"
+      label={t("expenses.tournamentModeLabel")}
+      value={tournamentAvailable ? mode : "ladder"}
+      onChange={onModeChange}
+      options={[
+        {
+          value: "ladder",
+          title: t("expenses.tournamentModeLadder"),
+          hint: t("expenses.tournamentModeLadderHint"),
+          icon: ListOrdered,
+        },
+        {
+          value: "tournament",
+          title: t("expenses.tournamentModeTournament"),
+          hint: tournamentAvailable
+            ? t("expenses.tournamentModeTournamentHint")
+            : t("expenses.tournamentModeMinHint"),
+          icon: Trophy,
+          disabled: !tournamentAvailable,
+        },
+      ]}
+    />
   );
 }
 

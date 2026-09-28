@@ -9,6 +9,7 @@ import {
   ticTacToeCells,
   ticTacToeNextToVanish,
   ticTacToeVariantForAttempt,
+  type TicTacToeCell,
   type TicTacToeState,
 } from "@/lib/games/tic-tac-toe";
 import { playReelStopSound } from "@/lib/sound/game-sounds";
@@ -62,44 +63,75 @@ export function TicTacToeBoard({
           {t("expenses.ticTacToeSuddenDeath")}
         </p>
       )}
-      <div className="bg-muted/30 mx-auto grid w-full max-w-[280px] grid-cols-3 gap-2 rounded-xl border p-2">
-        {cells.map((value, index) => {
-          const row = Math.floor(index / 3) + 1;
-          const col = (index % 3) + 1;
-          const isWinCell = winLine?.includes(index) ?? false;
-          const vanishing = value !== null && nextToVanish === index && value === turn;
-          return (
-            <button
-              key={index}
-              type="button"
-              disabled={locked || value !== null}
-              onClick={() => tapCell(index)}
-              aria-label={
-                value === null
-                  ? t("expenses.ticTacToeCellLabel", { row, col })
-                  : t("expenses.ticTacToeCellLabelTaken", {
-                      row,
-                      col,
-                      name: members[players[value]].displayName,
-                    })
-              }
-              className={cn(
-                "flex aspect-square touch-manipulation items-center justify-center rounded-lg border text-3xl font-bold transition-[opacity,background-color,border-color] duration-(--duration-fast)",
-                isWinCell ? "border-destructive/50 bg-destructive/10" : "border-border bg-card",
-              )}
-            >
-              {value !== null && (
-                <span
-                  className={cn(vanishing && "opacity-40")}
-                  style={{ color: value === 0 ? colorA : colorB }}
-                >
-                  {value === 0 ? "✕" : "◯"}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
+      <TicTacToeGrid
+        cells={cells}
+        winLine={winLine}
+        nextToVanish={nextToVanish}
+        turn={turn}
+        colors={[colorA, colorB]}
+        names={[members[players[0]].displayName, members[players[1]].displayName]}
+        disabled={locked}
+        onTap={tapCell}
+      />
+    </div>
+  );
+}
+
+/**
+ * The 3×3 grid itself, stateless — shared by the one-phone board above and
+ * the online board (`online-boards.tsx`), so both look and read identically.
+ */
+export function TicTacToeGrid({
+  cells,
+  winLine,
+  nextToVanish,
+  turn,
+  colors,
+  names,
+  disabled,
+  onTap,
+}: {
+  cells: TicTacToeCell[];
+  winLine: readonly [number, number, number] | null;
+  nextToVanish: number | null;
+  turn: 0 | 1;
+  colors: [string, string];
+  names: [string, string];
+  disabled: boolean;
+  onTap: (index: number) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="bg-muted/30 mx-auto grid w-full max-w-[280px] grid-cols-3 gap-2 rounded-xl border p-2">
+      {cells.map((value, index) => {
+        const row = Math.floor(index / 3) + 1;
+        const col = (index % 3) + 1;
+        const isWinCell = winLine?.includes(index) ?? false;
+        const vanishing = value !== null && nextToVanish === index && value === turn;
+        return (
+          <button
+            key={index}
+            type="button"
+            disabled={disabled || value !== null}
+            onClick={() => onTap(index)}
+            aria-label={
+              value === null
+                ? t("expenses.ticTacToeCellLabel", { row, col })
+                : t("expenses.ticTacToeCellLabelTaken", { row, col, name: names[value] })
+            }
+            className={cn(
+              "flex aspect-square touch-manipulation items-center justify-center rounded-lg border text-3xl font-bold transition-[opacity,background-color,border-color] duration-(--duration-fast)",
+              isWinCell ? "border-destructive/50 bg-destructive/10" : "border-border bg-card",
+            )}
+          >
+            {value !== null && (
+              <span className={cn(vanishing && "opacity-40")} style={{ color: colors[value] }}>
+                {value === 0 ? "✕" : "◯"}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

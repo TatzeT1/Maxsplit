@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
-import type { Tournament } from "@/lib/types";
+import type { LiveMatch, Tournament } from "@/lib/types";
 
 /**
  * Subscribes to one tournament document — the live source of truth every
@@ -79,4 +79,47 @@ export function useRunningTournaments(groupId: string): {
   }, [groupId, user]);
 
   return { tournaments, errorCode };
+}
+
+/**
+ * Subscribes to one online match's live board. Same contract as
+ * `useTournament`: an error must never read as "still loading", so callers
+ * render `errorCode` as soon as it's set. `live === null` with no error and
+ * `loading === false` means the board simply doesn't exist yet (nobody has
+ * opened the match) — the runner then calls `openOnlineMatch`.
+ */
+export function useLiveMatch(
+  groupId: string,
+  tournamentId: string,
+  matchId: string | null,
+): { live: LiveMatch | null; errorCode: string | null; loading: boolean } {
+  const user = useCurrentUser();
+  const [live, setLive] = useState<LiveMatch | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+
+  const subscriptionKey = matchId ? `${groupId}/${tournamentId}/${matchId}` : null;
+  const [subscribedKey, setSubscribedKey] = useState(subscriptionKey);
+  if (subscriptionKey !== subscribedKey) {
+    setSubscribedKey(subscriptionKey);
+    setLive(null);
+    setLoaded(false);
+    setErrorCode(null);
+  }
+
+  useEffect(() => {
+    if (!user || !matchId) return;
+    return onSnapshot(
+      doc(db, "groups", groupId, "tournaments", tournamentId, "liveMatches", matchId),
+      (snapshot) => {
+        setLive(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as LiveMatch) : null);
+        setLoaded(true);
+      },
+      (error) => {
+        setErrorCode(reportSnapshotError("live-match", error));
+      },
+    );
+  }, [groupId, tournamentId, matchId, user]);
+
+  return { live, errorCode, loading: !!matchId && !loaded && !errorCode };
 }

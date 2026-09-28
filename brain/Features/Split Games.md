@@ -205,9 +205,8 @@ and silently invalidates the old one (a stale device's next report gets `claim-l
 Deliberately in scope from the first version — without it, one closed tab blocks the whole
 tournament from ever finishing.
 
-**Explicitly out of scope:** syncing individual moves between two phones in different
-rooms. The ask was parallel _pairs_, not remote 1-vs-1 play — see ADR-002's "what would
-make us reverse this" for what a real remote-play version would need instead.
+Local matches still work exactly this way. Remote play — two phones, different rooms —
+came later as its own mode; see [[#Online play: every player on their own phone]].
 
 ### Where it lives on screen
 
@@ -236,11 +235,56 @@ they're safe while the payout makes them pay. Safe is green, pays is red, and or
 reserved for "ready / yours / act now"; `tournament-fate.tsx` keeps icon, color and label
 for each of those in one place.
 
-Applying a finished tournament's result to an actual expense (`onResolve(loserUids)` →
-`viaLottery = true`, exactly like every other split game) currently only happens from
-inside the `AddExpenseDialog` that created it — the standalone page is for watching and
-playing, not for entering the expense. See ADR-002 for why that fallback was deferred
-rather than guessed at.
+A tournament started from a **new** expense books that expense by itself when it finishes
+(`autoBook`, see below). One started while _editing_ an expense still hands its result back
+to the dialog (`onResolve(loserUids)` → `viaLottery = true`), since an edit can't be
+booked blind.
+
+## Online play: every player on their own phone
+
+ADR-003. The setup step asks two things: **"Wo spielt ihr?"** (`DuelPlacePicker`: "Auf
+einem Handy" / "Online") and, only on one device with 3+ people, the **format**
+(`DuelModePicker`: K.-o.-Leiter / Turnier). Online is always a bracket — a 1-vs-1 online
+duel is simply a tournament with one match (`playMode: "online"`), so it reuses the
+banner, the page, the share link and the bracket engine unchanged. Online is offered only
+when adding a new expense (it auto-books) and with ≥2 pool members who have an account.
+
+- **Moves are server-validated.** `playOnlineMove` runs `applyOnlineMove`
+  (`lib/games/online-match.ts`, pure, unit-tested) inside a transaction — the exact rule
+  modules the one-phone boards use, plus turn order and validation. A modified client
+  can't move out of turn, flip a card it can't see, or report a win the board doesn't
+  show; `reportTournamentMatchResult` and `claimTournamentMatch` refuse online matches.
+  The deciding move records the bracket result in the **same transaction**.
+- **Boards are shared.** `TicTacToeGrid`, `ConnectFourGrid`, `MemoryGrid` were pulled out
+  of the local boards as stateless views; `online-boards.tsx` drives them from the live
+  doc, so both modes look identical. The two grid games lay the viewer's own move over the
+  snapshot optimistically (`OnlineMatchRunner`) so a tap never feels laggy.
+- **Memory's deck is secret** (`liveSecrets`, unreadable by rules); a mismatch stays face up
+  until the next flip, with a short local grace lock so the next player sees both cards.
+- **Reaktionsduell measures on each phone.** The server draws the delay once both are
+  ready; each phone counts it down itself, shows "Los!", and reports its own reaction time
+  (or a false start). Network lag therefore never decides who was faster — the trade-off is
+  trusting the other phone's clock, acceptable between friends. A phone that never taps
+  reports `REACTION_ONLINE_TIMEOUT_MS` so the match can't hang.
+- **Placeholders** have no phone: a match with one plays locally on its opponent's phone
+  via the old claim flow (`isOnlineMatch` decides per match).
+- **Forfeit** ("Aufgeben") ends your match as a loss — the escape hatch for "we're done".
+
+**Auto-booking.** The `AddExpenseDialog` hands the game a `GameExpenseDraft` (description,
+amount, date, category, emoji, payer — everything but the split); `createTournament`
+validates it up front (`validateGameExpenseDraft`, `lib/money/game-expense.ts`) and
+`applyBracketUpdate` writes the expense in the finishing transaction via
+`buildGameExpense` — an exact split of `splitEqual` over the losers, `viaLottery: true`,
+byte-for-byte what applying a result by hand produces. After "Herausfordern" the form
+resets and closes and the app navigates to the game page, so the same bill can't be saved
+twice. If a loser left the group meanwhile, nothing is booked and `autoBookError` says so.
+
+**Invites.** No push notifications exist, so `createTournament` posts a chat message with
+`gameInvite` (a join card in the chat), the group banner says "X fordert dich heraus!",
+and the creator gets `OnlineInviteCard` — a prefilled WhatsApp message (`wa.me`) plus copy
+link — until the first move. Shared links go through `/play/[groupId]/[tournamentId]`,
+which survives WhatsApp's cookie-less in-app browser by routing through sign-in.
+One game runs per group at a time (unchanged `createTournament` rule).
 
 ## The picker: two categories and a preview step
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { collection, doc, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
-import { ArrowLeft, MessageCircle, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, MessageCircle, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
@@ -25,6 +25,7 @@ import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { formatDate, formatTime } from "@/lib/format/date";
+import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
 import { useVisibleHeight } from "@/lib/use-visible-height";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { ChatMessage, Group } from "@/lib/types";
@@ -108,20 +109,81 @@ function MessageBubble({
             </AlertDialogContent>
           </AlertDialog>
         )}
-        <div
-          className={cn(
-            "max-w-[75vw] rounded-2xl px-3.5 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-sm",
-            isOwn
-              ? "from-primary to-primary/85 text-primary-foreground shadow-primary/20 shadow-e1 rounded-br-md bg-linear-to-br"
-              : "bg-card ring-foreground/10 shadow-e1 rounded-bl-md ring-1",
-          )}
-        >
-          {message.text}
-        </div>
+        {message.gameInvite ? (
+          <GameInviteBubble
+            text={message.text}
+            invite={message.gameInvite}
+            groupId={groupId}
+            isOwn={isOwn}
+          />
+        ) : (
+          <div
+            className={cn(
+              "max-w-[75vw] rounded-2xl px-3.5 py-2 text-sm break-words whitespace-pre-wrap sm:max-w-sm",
+              isOwn
+                ? "from-primary to-primary/85 text-primary-foreground shadow-primary/20 shadow-e1 rounded-br-md bg-linear-to-br"
+                : "bg-card ring-foreground/10 shadow-e1 rounded-bl-md ring-1",
+            )}
+          >
+            {message.text}
+          </div>
+        )}
       </div>
       <span className="text-muted-foreground px-1 text-[10px]">
         {formatTime(new Date(message.createdAt))}
       </span>
+    </div>
+  );
+}
+
+/**
+ * The challenge an online game posts when it starts — a card with a way in,
+ * not just a sentence, since joining is the whole point of the message.
+ * Same neutral card for both sides; only the button label changes.
+ */
+function GameInviteBubble({
+  text,
+  invite,
+  groupId,
+  isOwn,
+}: {
+  text: string;
+  invite: NonNullable<ChatMessage["gameInvite"]>;
+  groupId: string;
+  isOwn: boolean;
+}) {
+  const t = useT();
+  const meta = DUEL_GAME_META[invite.gameId];
+  return (
+    <div
+      className={cn(
+        "bg-card ring-foreground/10 shadow-e1 flex w-[min(75vw,18rem)] flex-col gap-2.5 rounded-2xl p-3 ring-1",
+        isOwn ? "rounded-br-md" : "rounded-bl-md",
+      )}
+    >
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden="true"
+          className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-xl text-xl"
+        >
+          {meta?.emoji ?? "🎮"}
+        </span>
+        <div className="flex min-w-0 flex-col">
+          <span className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
+            {t("chat.gameInviteEyebrow")}
+          </span>
+          <span className="font-heading truncate text-base leading-tight font-medium">
+            {meta ? t(meta.titleKey) : ""}
+          </span>
+        </div>
+      </div>
+      <p className="text-muted-foreground text-sm break-words whitespace-pre-wrap">{text}</p>
+      <Button asChild size="sm" variant={isOwn ? "outline" : "default"} className="h-10 w-full">
+        <Link href={`/groups/${groupId}/tournaments/${invite.tournamentId}`}>
+          {isOwn ? t("chat.gameInviteOpen") : t("chat.gameInviteJoin")}
+          <ChevronRight aria-hidden="true" />
+        </Link>
+      </Button>
     </div>
   );
 }

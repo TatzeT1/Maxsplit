@@ -40,6 +40,8 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
   messages/{id}      → read: isGroupMember(groupId). write: false.
   chatReads/{uid}    → read: isSignedIn() && !isBanned() && auth.uid == uid && isGroupMember(groupId). write: false.
   tournaments/{id}   → read: isGroupMember(groupId). write: false. See Split Games.
+    liveMatches/{id} → read: isGroupMember(groupId). write: false. (online play)
+    liveSecrets/{id} → read, write: false — the hidden memory deck; nobody may peek.
 
 {document=**}        → deny-all backstop for anything unmatched.
 ```
@@ -54,12 +56,12 @@ from the parent — Firestore rules don't cascade, each `match` block is self-co
 ID token immediately — a token issued before the ban and not yet expired can keep working
 against Firestore Rules for up to an hour otherwise. `isBanned()` closes that window by
 checking the live `users/{uid}.banned` flag on every gated read, independent of token
-freshness. Note it does *not* protect the session cookie path — that's `checkRevoked: true`
+freshness. Note it does _not_ protect the session cookie path — that's `checkRevoked: true`
 in `getSession()` (see [[Two Auth States]] and [[Admin Panel]]).
 
 ## chatReads doc-id trick
 
-`chatReads/{uid}` doesn't need a membership *and* ownership check written out expansively —
+`chatReads/{uid}` doesn't need a membership _and_ ownership check written out expansively —
 because the document id **is** the uid, `request.auth.uid == uid` already means "this is your
 own receipt," and membership is checked on top of that. This is a recurring pattern in this
 codebase: when a doc id can double as an identity check, rules (and code) lean on that instead
@@ -74,4 +76,5 @@ emulator running; per AGENTS.md, "a backstop that's never tested isn't one," so 
 when rules change, just run it manually. See [[Local Development and Testing]].
 
 ## Related
+
 [[Data Access Pattern]] · [[Two Auth States]] · [[Admin Panel]] · [[Data Model]]

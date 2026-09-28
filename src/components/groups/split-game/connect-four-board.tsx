@@ -19,7 +19,6 @@ import type { DuelBoardProps } from "@/components/groups/split-game/duel-game-di
 /** One match on a 7×6 board. Remounted fresh for every new match and every draw replay. */
 export function ConnectFourBoard({ players, members, locked, onWin, onDraw }: DuelBoardProps) {
   const t = useT();
-  const reduceMotion = useReducedMotion();
   const [board, setBoard] = useState<ConnectFourBoardState>(emptyConnectFourBoard());
   const [winCells, setWinCells] = useState<[number, number][] | null>(null);
   const [lastDrop, setLastDrop] = useState<{ col: number; row: number } | null>(null);
@@ -51,62 +50,97 @@ export function ConnectFourBoard({ players, members, locked, onWin, onDraw }: Du
   return (
     <div className="flex flex-col gap-3">
       <DuelTurnBanner uid={players[turn]} members={members} hint={t("expenses.connectFourHint")} />
-      <div className="bg-muted/30 mx-auto grid w-full max-w-[320px] grid-cols-7 gap-1 rounded-xl border p-2">
-        {Array.from({ length: CF_COLUMNS }, (_, col) => {
-          const full = board[col].length >= CF_ROWS;
-          return (
-            <button
-              key={col}
-              type="button"
-              disabled={locked || full}
-              onClick={() => dropInColumn(col)}
-              aria-label={
-                full
-                  ? t("expenses.connectFourColumnFull", { n: col + 1 })
-                  : t("expenses.connectFourColumnLabel", { n: col + 1 })
-              }
-              className="flex touch-manipulation flex-col-reverse gap-1 rounded-md disabled:opacity-60"
-            >
-              {Array.from({ length: CF_ROWS }, (_, row) => {
-                const value = board[col][row];
-                const isWin = winCells?.some(([c, r]) => c === col && r === row) ?? false;
-                const isLast = lastDrop?.col === col && lastDrop?.row === row;
-                const disc = value !== undefined && (
-                  <span
-                    className="flex size-full items-center justify-center rounded-full text-[10px] font-bold text-white"
-                    style={{ backgroundColor: value === 0 ? colorA : colorB }}
-                  >
-                    {members[players[value]].displayName.charAt(0).toUpperCase()}
-                  </span>
-                );
-                return (
-                  <span
-                    key={row}
-                    className={cn(
-                      "flex aspect-square items-center justify-center rounded-full",
-                      value === undefined && "border-border/60 bg-background border",
-                      isWin && "ring-destructive ring-2",
-                    )}
-                  >
-                    {value !== undefined && isLast && !reduceMotion ? (
-                      <motion.span
-                        initial={{ y: -220, opacity: 0.4 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 28, mass: 0.7 }}
-                        className="size-full"
-                      >
-                        {disc}
-                      </motion.span>
-                    ) : (
-                      disc
-                    )}
-                  </span>
-                );
-              })}
-            </button>
-          );
-        })}
-      </div>
+      <ConnectFourGrid
+        board={board}
+        winCells={winCells}
+        lastDrop={lastDrop}
+        colors={[colorA, colorB]}
+        names={[members[players[0]].displayName, members[players[1]].displayName]}
+        disabled={locked}
+        onDrop={dropInColumn}
+      />
+    </div>
+  );
+}
+
+/** The 7×6 drop board itself, stateless — shared by the one-phone board and the online board. */
+export function ConnectFourGrid({
+  board,
+  winCells,
+  lastDrop,
+  colors,
+  names,
+  disabled,
+  onDrop,
+}: {
+  board: ConnectFourBoardState;
+  winCells: [number, number][] | null;
+  lastDrop: { col: number; row: number } | null;
+  colors: [string, string];
+  names: [string, string];
+  disabled: boolean;
+  onDrop: (column: number) => void;
+}) {
+  const t = useT();
+  const reduceMotion = useReducedMotion();
+  return (
+    <div className="bg-muted/30 mx-auto grid w-full max-w-[320px] grid-cols-7 gap-1 rounded-xl border p-2">
+      {Array.from({ length: CF_COLUMNS }, (_, col) => {
+        const full = board[col].length >= CF_ROWS;
+        return (
+          <button
+            key={col}
+            type="button"
+            disabled={disabled || full}
+            onClick={() => onDrop(col)}
+            aria-label={
+              full
+                ? t("expenses.connectFourColumnFull", { n: col + 1 })
+                : t("expenses.connectFourColumnLabel", { n: col + 1 })
+            }
+            className="flex touch-manipulation flex-col-reverse gap-1 rounded-md disabled:opacity-60"
+          >
+            {Array.from({ length: CF_ROWS }, (_, row) => {
+              const value = board[col][row];
+              const isWin = winCells?.some(([c, r]) => c === col && r === row) ?? false;
+              const isLast = lastDrop?.col === col && lastDrop?.row === row;
+              const disc = value !== undefined && (
+                <span
+                  className="flex size-full items-center justify-center rounded-full text-[10px] font-bold text-white"
+                  style={{ backgroundColor: colors[value] }}
+                >
+                  {names[value].charAt(0).toUpperCase()}
+                </span>
+              );
+              return (
+                <span
+                  key={row}
+                  className={cn(
+                    "flex aspect-square items-center justify-center rounded-full",
+                    value === undefined && "border-border/60 bg-background border",
+                    isWin && "ring-destructive ring-2",
+                  )}
+                >
+                  {value !== undefined && isLast && !reduceMotion ? (
+                    <motion.span
+                      // Keyed by position so a replayed snapshot doesn't re-drop an old disc.
+                      key={`${col}-${row}`}
+                      initial={{ y: -220, opacity: 0.4 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 28, mass: 0.7 }}
+                      className="size-full"
+                    >
+                      {disc}
+                    </motion.span>
+                  ) : (
+                    disc
+                  )}
+                </span>
+              );
+            })}
+          </button>
+        );
+      })}
     </div>
   );
 }

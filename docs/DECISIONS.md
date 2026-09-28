@@ -187,3 +187,48 @@ extra steps.
 - If real move-by-move remote play becomes an actual request, the "claim, play locally,
   report once" design here would need a materially different, heavier realtime layer per
   match — this ADR's scope assumption (co-located pairs) would need revisiting first.
+
+## ADR-003: Online play — move-by-move sync per match, server-validated
+
+**Status:** Accepted
+**Date:** 2026-09-28
+
+### Context
+
+ADR-002 kept match play on one shared phone and named "real move-by-move remote play" as
+what would make us revisit it. That request arrived: two people in the same group (the
+example was a couple, 1 €, Tic-Tac-Toe) want to play each other from their own phones,
+both as a plain 1-vs-1 and inside a tournament, with "on one device" still selectable.
+
+### Decision
+
+- **An online 1-vs-1 is a tournament with one match.** `Tournament.playMode = "online"`;
+  no second game model, and the banner, page, share link and bracket engine all apply.
+- **One `liveMatches/{matchId}` doc per online match**, not fields on the tournament doc:
+  parallel matches in a big online tournament would otherwise all contend on one document
+  with every move. The tournament doc still only learns the result, written in the same
+  transaction as the deciding move.
+- **Every move is a Server Action** (`playOnlineMove`) validated by the pure
+  `applyOnlineMove`, consistent with ADR-001 — no client writes, no trusted "I won".
+  Hidden information (the memory deck) lives in an unreadable `liveSecrets` doc.
+- **The reaction duel is timed on each phone**, not by the server — a server-timed race
+  would measure network latency, not reactions.
+- **A finished server-backed game books its expense itself** (`autoBook`), in the
+  finishing transaction. With players on different phones, "the creator's dialog applies
+  the result" (ADR-002's deferred gap) no longer works at all.
+
+### Consequences
+
+- A Server Action round trip per move (~200–500 ms on Vercel). Fine for turn-based play;
+  the grid games paint the own move optimistically to hide it.
+- No presence/heartbeat: "Warte auf Lea …" can't tell "thinking" from "phone in pocket".
+  Forfeit and cancel are the escape hatches.
+- Two new rules blocks with emulator tests; `recursiveDelete` still covers them.
+
+### What would make us reverse this
+
+- If per-move latency becomes a measured UX problem, move validation into a warm callable
+  function or accept client writes to `liveMatches` guarded by rules for the grid games
+  only (their rules are simple enough to express), keeping results server-side.
+- If fast real-time games are added, a dedicated realtime channel (RTDB / WebSocket) per
+  match would replace per-move Server Actions.

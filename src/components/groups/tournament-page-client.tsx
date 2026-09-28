@@ -1,7 +1,7 @@
 "use client";
 
 import { doc, onSnapshot } from "firebase/firestore";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Wifi } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/components/locale-provider";
@@ -15,12 +15,11 @@ import { useTournament } from "@/lib/games/use-tournament";
 import type { Group, GroupMember } from "@/lib/types";
 
 /**
- * The route every player and spectator other than the tournament's creator
- * uses: a standalone view of the same live bracket the creator sees inside
- * `AddExpenseDialog`'s game dialog, reached from the group page's
- * `TournamentBanner` or a shared link. Applying a finished result to an
- * expense still only happens from the creator's original dialog in Phase 1
- * — this page is for watching and playing your own matches.
+ * The home of every server-backed game: a tournament's live bracket, and
+ * the board of an online match (a 1-vs-1 online duel opens straight onto
+ * it). Reached from the group page's `TournamentBanner`, the chat invite,
+ * a shared `/play/...` link — and, for a game started from a new expense,
+ * directly after "Start", since such a game books the expense by itself.
  */
 export function TournamentPageClient({
   groupId,
@@ -100,8 +99,13 @@ export function TournamentPageClient({
         <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-semibold">
           <span aria-hidden="true">{config.emoji}</span>
           <span className="truncate">{t(config.titleKey)}</span>
-          <span className="bg-primary/10 text-primary shrink-0 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.08em] uppercase">
-            {t("expenses.tournamentModeTournament")}
+          <span className="bg-primary/10 text-primary flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.08em] uppercase">
+            {tournament.playMode === "online" && <Wifi aria-hidden="true" className="size-3" />}
+            {tournament.playMode !== "online"
+              ? t("expenses.tournamentModeTournament")
+              : Object.keys(tournament.matches).length === 1
+                ? t("expenses.onlineBadgeDuel")
+                : t("expenses.onlineBadgeTournament")}
           </span>
         </h1>
       </div>

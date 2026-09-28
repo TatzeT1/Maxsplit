@@ -112,31 +112,66 @@ export function MemoryBoard({ players, members, locked, onWin }: DuelBoardProps)
           </div>
         }
       />
-      <div className="bg-muted/30 mx-auto grid w-full max-w-[340px] grid-cols-6 gap-1.5 rounded-xl border p-2">
-        {cards.map((card, index) => {
-          const faceUp = card.claimedBy !== null || openIndices.includes(index);
-          const claimerColor =
-            card.claimedBy === null ? undefined : card.claimedBy === 0 ? colorA : colorB;
-          return (
-            <button
-              key={card.id}
-              type="button"
-              disabled={locked || card.claimedBy !== null || faceUp}
-              onClick={() => flipCard(index)}
-              aria-label={
-                faceUp ? t("expenses.memoryCardRevealed") : t("expenses.memoryCardHidden")
-              }
-              className={cn(
-                "flex aspect-square touch-manipulation items-center justify-center rounded-lg border text-lg transition-[opacity,border-color] duration-(--duration-fast)",
-                card.claimedBy !== null ? "opacity-45" : "bg-card",
-              )}
-              style={claimerColor ? { borderColor: claimerColor, borderWidth: 2 } : undefined}
-            >
-              {faceUp ? card.face : <span className="text-muted-foreground text-xs">?</span>}
-            </button>
-          );
-        })}
-      </div>
+      <MemoryGrid
+        cards={cards.map((card, index) => ({
+          key: card.id,
+          face: card.claimedBy !== null || openIndices.includes(index) ? card.face : null,
+          claimedBy: card.claimedBy,
+        }))}
+        colors={[colorA, colorB]}
+        disabled={locked}
+        onFlip={flipCard}
+      />
+    </div>
+  );
+}
+
+/** One card as the grid draws it: `face` is `null` while face down. */
+export interface MemoryGridCard {
+  key: number;
+  face: string | null;
+  claimedBy: 0 | 1 | null;
+}
+
+/**
+ * The 6×3 card grid, stateless — shared by the one-phone board and the
+ * online board, where a face only exists client-side once the server has
+ * revealed it.
+ */
+export function MemoryGrid({
+  cards,
+  colors,
+  disabled,
+  onFlip,
+}: {
+  cards: MemoryGridCard[];
+  colors: [string, string];
+  disabled: boolean;
+  onFlip: (index: number) => void;
+}) {
+  const t = useT();
+  return (
+    <div className="bg-muted/30 mx-auto grid w-full max-w-[340px] grid-cols-6 gap-1.5 rounded-xl border p-2">
+      {cards.map((card, index) => {
+        const faceUp = card.face !== null;
+        const claimerColor = card.claimedBy === null ? undefined : colors[card.claimedBy];
+        return (
+          <button
+            key={card.key}
+            type="button"
+            disabled={disabled || card.claimedBy !== null || faceUp}
+            onClick={() => onFlip(index)}
+            aria-label={faceUp ? t("expenses.memoryCardRevealed") : t("expenses.memoryCardHidden")}
+            className={cn(
+              "flex aspect-square touch-manipulation items-center justify-center rounded-lg border text-lg transition-[opacity,border-color] duration-(--duration-fast)",
+              card.claimedBy !== null ? "opacity-45" : "bg-card",
+            )}
+            style={claimerColor ? { borderColor: claimerColor, borderWidth: 2 } : undefined}
+          >
+            {faceUp ? card.face : <span className="text-muted-foreground text-xs">?</span>}
+          </button>
+        );
+      })}
     </div>
   );
 }

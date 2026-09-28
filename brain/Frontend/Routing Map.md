@@ -5,7 +5,7 @@ tags: [frontend, routing, nextjs]
 # Routing Map
 
 Next.js App Router, `src/app/`. This note is the "what guards what" map — see
-[[Data Access Pattern]] for *why* the guarding works this way.
+[[Data Access Pattern]] for _why_ the guarding works this way.
 
 ```
 /                                    public — landing/sign-in (page.tsx)
@@ -13,13 +13,15 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
 /invite/[code]                       invite-code landing (preview → join flow)
 /share/settlement/[groupId]/[token]  PUBLIC, no session — see Settlement PDF Export
 
+/play/[groupId]/[tournamentId]     public invite link (WhatsApp/share): signed in → redirect to the game;
+                                      signed out → sign-in that returns to it. Reveals nothing about the game.
 (app)/                               layout.tsx: redirect("/") if !getSession()
                                       → renders AppSidebar + SessionGuard (see Two Auth States)
   /groups                            group list (balancesMinor cache — see Data Model)
   /groups/[groupId]                  group detail — see Group Page; ?tab=balances|games|group
   /groups/[groupId]/chat             per-group chat — see Chat, Mobile iOS Quirks
   /groups/[groupId]/tournaments/[tournamentId]
-                                      live tournament bracket — watch/play from any device, see Split Games
+                                      live tournament bracket / online duel board — watch/play from any device, see Split Games
   /profile                           profile + payment details — see Onboarding and Payment Details
   /admin                             requireAdminSession() → notFound() if not admin
   /admin/groups/[groupId]            admin group moderation
@@ -33,12 +35,12 @@ api/
 ## Layering of guards
 
 1. **`(app)/layout.tsx`** — server-side `getSession()` check. No cookie → hard `redirect("/")`.
-   This is the *only* place route access is decided; individual pages under `(app)` don't
+   This is the _only_ place route access is decided; individual pages under `(app)` don't
    re-check session existence.
 2. **`SessionGuard`** (client, wraps `{children}` inside the layout) — catches the case where
    the cookie is valid but client Firebase Auth desynced (see [[Two Auth States]]). Not a
    route guard in the Next.js sense — a render-time recovery mechanism.
-3. **`requireAdminSession()`** — a second, independent gate layered *on top of* the above for
+3. **`requireAdminSession()`** — a second, independent gate layered _on top of_ the above for
    `/admin/**` pages specifically. A signed-in non-admin reaches `(app)/layout.tsx` fine and
    only gets stopped inside the admin page itself, via `notFound()` (404, not a redirect —
    see [[Admin Panel]] for why that distinction matters).
@@ -50,4 +52,5 @@ It's not nested under the `(app)` route group at all, specifically so it never g
 route handler itself — see [[Settlement PDF Export]].
 
 ## Related
+
 [[Data Access Pattern]] · [[Two Auth States]] · [[Admin Panel]] · [[Settlement PDF Export]] · [[Group Page]]

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +41,7 @@ import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
 import { cn } from "@/lib/utils";
-import type { CategoryId, Expense, GroupMember, SplitMode } from "@/lib/types";
+import type { CategoryId, Expense, GameExpenseDraft, GroupMember, SplitMode } from "@/lib/types";
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -231,6 +232,7 @@ export function AddExpenseDialog({
   const t = useT();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
+  const router = useRouter();
 
   function handleSelectGame(game: SplitGameId) {
     setGamePickerOpen(false);
@@ -326,6 +328,45 @@ export function AddExpenseDialog({
     return {};
   }
 
+  /**
+   * The bill minus its split, for a game that books itself once decided —
+   * `undefined` while editing (the result is applied by hand there), `null`
+   * while the form still lacks a description, amount or payer.
+   */
+  function buildExpenseDraft(): GameExpenseDraft | null | undefined {
+    if (expenseToEdit) return undefined;
+    const paidBy = buildPaidBy();
+    const paidTotal = Object.values(paidBy).reduce((sum, n) => sum + n, 0);
+    if (!description.trim() || amountMinor <= 0 || paidTotal !== amountMinor) return null;
+    return { description, amountMinor, currency, date, category, emoji, paidBy };
+  }
+
+  function resetForm() {
+    setDescription("");
+    setAmountInput("");
+    setCategory(null);
+    setEmoji(null);
+    setSplitMode("equal");
+    setParticipantUids(memberUids);
+    setMultiplePayers(false);
+    setPayerUid(currentUid);
+    setPayerAmounts({});
+    setShareInputs({});
+    setPercentInputs({});
+    setExactInputs({});
+    setViaLottery(false);
+  }
+
+  /** A self-booking game started: this bill is now the game's — clear the form so it can't be saved twice, and go watch it. */
+  function handleServerGameStarted(tournamentId: string) {
+    setActiveGame(null);
+    setOpen(false);
+    resetForm();
+    router.push(`/groups/${groupId}/tournaments/${tournamentId}`);
+  }
+
+  const expenseDraft = buildExpenseDraft();
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const paidBy = buildPaidBy();
@@ -382,21 +423,7 @@ export function AddExpenseDialog({
     setTimeout(() => {
       setCelebrating(false);
       setOpen(false);
-      if (!expenseToEdit) {
-        setDescription("");
-        setAmountInput("");
-        setCategory(null);
-        setEmoji(null);
-        setSplitMode("equal");
-        setParticipantUids(memberUids);
-        setMultiplePayers(false);
-        setPayerUid(currentUid);
-        setPayerAmounts({});
-        setShareInputs({});
-        setPercentInputs({});
-        setExactInputs({});
-        setViaLottery(false);
-      }
+      if (!expenseToEdit) resetForm();
     }, 1600);
   }
 
@@ -722,6 +749,8 @@ export function AddExpenseDialog({
         groupId={groupId}
         currentUid={currentUid}
         stake={{ description, amountMinor, currency }}
+        expenseDraft={expenseDraft}
+        onServerGameStarted={handleServerGameStarted}
       />
       <SplitConnectFourDialog
         open={activeGame === "connectfour"}
@@ -732,6 +761,8 @@ export function AddExpenseDialog({
         groupId={groupId}
         currentUid={currentUid}
         stake={{ description, amountMinor, currency }}
+        expenseDraft={expenseDraft}
+        onServerGameStarted={handleServerGameStarted}
       />
       <SplitMemoryDialog
         open={activeGame === "memory"}
@@ -742,6 +773,8 @@ export function AddExpenseDialog({
         groupId={groupId}
         currentUid={currentUid}
         stake={{ description, amountMinor, currency }}
+        expenseDraft={expenseDraft}
+        onServerGameStarted={handleServerGameStarted}
       />
       <SplitReactionDialog
         open={activeGame === "reaction"}
@@ -752,6 +785,8 @@ export function AddExpenseDialog({
         groupId={groupId}
         currentUid={currentUid}
         stake={{ description, amountMinor, currency }}
+        expenseDraft={expenseDraft}
+        onServerGameStarted={handleServerGameStarted}
       />
     </Dialog>
   );

@@ -220,4 +220,43 @@ describe("firestore.rules", () => {
       setDoc(doc(alice, "groups/group1/tournaments/t1"), { gameId: "connectfour" }),
     );
   });
+  it("allows a member to watch an online match's live board", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1/liveMatches/m1")
+        .set({ gameId: "tictactoe", version: 0 });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertSucceeds(getDoc(doc(alice, "groups/group1/tournaments/t1/liveMatches/m1")));
+  });
+
+  it("denies a non-member from reading a live board", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1/liveMatches/m1")
+        .set({ gameId: "tictactoe", version: 0 });
+    });
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    await assertFails(getDoc(doc(bob, "groups/group1/tournaments/t1/liveMatches/m1")));
+  });
+
+  it("denies a client move written straight to a live board", async () => {
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/tournaments/t1/liveMatches/m1"), { version: 1 }),
+    );
+  });
+
+  it("denies even a member from reading the hidden memory deck", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1/liveSecrets/m1")
+        .set({ faces: ["🍕", "🍕"] });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1/tournaments/t1/liveSecrets/m1")));
+  });
 });

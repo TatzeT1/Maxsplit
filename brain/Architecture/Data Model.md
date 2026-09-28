@@ -4,7 +4,7 @@ tags: [architecture, firestore, data-model]
 
 # Data Model
 
-Source of truth for types: `src/lib/types.ts`. This note explains the *shape and gotchas*;
+Source of truth for types: `src/lib/types.ts`. This note explains the _shape and gotchas_;
 read the actual file for exact field lists — it's short and heavily commented inline, so
 duplicating every field here would just rot.
 
@@ -20,6 +20,8 @@ groups/{groupId}
   groups/{groupId}/messages/{messageId}
   groups/{groupId}/chatReads/{uid}        (doc id == uid)
   groups/{groupId}/tournaments/{tournamentId}
+  groups/{groupId}/tournaments/{tournamentId}/liveMatches/{matchId}   (online play, doc id == bracket match id)
+  groups/{groupId}/tournaments/{tournamentId}/liveSecrets/{matchId}   (hidden memory deck — no client reads)
 ```
 
 All money is **integer minor units** (cents) plus an ISO-4217 `currency` string. Never a
@@ -29,7 +31,7 @@ float, never a formatted string. See [[Money Invariants]].
 
 Everything hangs off `groups/{groupId}`. Key fields and why they're shaped the way they are:
 
-- **`memberUids: string[]`** vs **`members: Record<string, GroupMember>`** — these are *not*
+- **`memberUids: string[]`** vs **`members: Record<string, GroupMember>`** — these are _not_
   redundant. `memberUids` is real, authenticated members only, and exists specifically
   because `firestore.rules` needs an array it can do `request.auth.uid in ...` against
   (rules can't easily check membership in a map's keys the same way). `members` includes
@@ -40,7 +42,7 @@ Everything hangs off `groups/{groupId}`. Key fields and why they're shaped the w
 - **`balancesMinor?: Record<string, number>`** — a cached, display-only copy of
   `computeBalances(...)`, written by `recomputeGroupBalances` after every mutation. It is
   **never a source of truth** — the group detail page recomputes from the live ledger. It
-  exists purely so the groups *list* page can show "you owe X" without subscribing to every
+  exists purely so the groups _list_ page can show "you owe X" without subscribing to every
   group's full expense/settlement collections. Absent on groups predating this field.
 - **`settlementShareToken?: string`** — gates the public PDF link (see
   [[Settlement PDF Export]]). Generated lazily, never rotated automatically.
@@ -63,7 +65,7 @@ copy** of the owning user's profile data, kept in sync by `updatePaymentDetails`
 
 - `paidBy: Record<uid, amountMinor>` — supports multiple payers on one expense.
 - `splitMode: 'equal' | 'shares' | 'percent' | 'exact'` and `splits: Record<uid,
-  ExpenseSplit>` where `ExpenseSplit = { rawValue, amountMinor }` — `rawValue` is what the
+ExpenseSplit>` where `ExpenseSplit = { rawValue, amountMinor }` — `rawValue` is what the
   user actually typed (a share count, a percent, an exact amount), `amountMinor` is always
   the resolved integer result. See [[Expenses and Splitting]].
 - `deletedAt: string | null` — **soft delete**. Every read that aggregates expenses
@@ -103,6 +105,25 @@ bracket still renders correctly if a member later leaves the group or a placehol
 claimed — the same "denormalized, not source of truth" pattern `GroupMember`'s payment
 fields already use.
 
+Added with online play (ADR-003), all **absent on older docs**: `playMode`
+(`"local" | "online"`, read absent as `"local"`), `autoBook` (a `GameExpenseDraft` — the
+expense minus its split — booked server-side when the bracket finishes), `expenseId` (set
+once booked), `autoBookError` (why it couldn't be, e.g. `"member-left"`).
+
+## `LiveMatch` / `liveSecrets`
+
+One online match's move-by-move board, `tournaments/{id}/liveMatches/{matchId}`. Written
+only by `playOnlineMove`/`openOnlineMatch`; both players and spectators `onSnapshot` it.
+`state` is per-game and **flat** — Firestore rejects nested arrays, so Tic-Tac-Toe and Vier
+gewinnt store a move list (`moves` / `columns`) that is replayed through the pure rule
+modules instead of a board. `players` swap on every draw replay (`attempt` +1), so colors
+are keyed to the _person_ (the bracket match's player order), not the seat. The memory
+deck lives in `liveSecrets/{matchId}`, which rules make unreadable — faces only reach the
+public `state` once flipped.
+
+`ChatMessage.gameInvite` (`{ tournamentId, gameId }`, absent on normal messages) marks the
+automatic challenge an online game posts; the chat renders it as a join card.
+
 ## `ChatMessage` / `ChatRead`
 
 Text-only chat, no attachments/edits/reactions in v1. `ChatRead` doc id equals the member's
@@ -110,4 +131,5 @@ uid (one receipt per member, enforced by Firestore doc-id semantics rather than 
 See [[Chat]].
 
 ## Related
+
 [[Data Access Pattern]] · [[Firestore Rules]] · [[Money Invariants]] · [[Groups and Members]]
