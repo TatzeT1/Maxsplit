@@ -25,6 +25,7 @@ const EVENT_LABEL: Record<PushEvent, TranslationKey> = {
   settlement: "notifications.eventSettlement",
   challenge: "notifications.eventChallenge",
   turn: "notifications.eventTurn",
+  chat: "notifications.eventChat",
 };
 
 async function detectDevice(): Promise<DeviceState> {

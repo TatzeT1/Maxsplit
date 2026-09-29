@@ -91,6 +91,38 @@ export function expensePushes(input: {
   return pushes;
 }
 
+const CHAT_PREVIEW_LENGTH = 120;
+
+/**
+ * "Ungelesene Chat-Nachricht": to every other member with an account. One tag
+ * per group chat, so several messages replace each other instead of piling up.
+ */
+export function chatPushes(input: {
+  groupId: string;
+  group: GroupInfo;
+  text: string;
+  actorUid: string;
+}): PendingPush[] {
+  const { group } = input;
+  const name = group.members[input.actorUid]?.displayName ?? "";
+  const collapsed = input.text.replace(/\s+/g, " ").trim();
+  const text =
+    collapsed.length > CHAT_PREVIEW_LENGTH
+      ? `${collapsed.slice(0, CHAT_PREVIEW_LENGTH - 1)}…`
+      : collapsed;
+  return group.memberUids
+    .filter((uid) => uid !== input.actorUid && hasAccount(group, uid))
+    .map((uid) => ({
+      uid,
+      event: "chat",
+      title: { key: "push.chatTitle", vars: { group: group.name } },
+      body: [{ key: "push.chatMessage", vars: { name, text } }],
+      url: `/groups/${input.groupId}/chat`,
+      tag: `chat-${input.groupId}`,
+      ttlSeconds: DAY,
+    }));
+}
+
 /** "Zahlung erhalten": to whoever the money went to — unless they entered it themselves. */
 export function settlementPushes(input: {
   groupId: string;

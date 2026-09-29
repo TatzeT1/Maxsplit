@@ -3,6 +3,8 @@
 import { getSession } from "@/lib/auth/session";
 import { MAX_MESSAGE_LENGTH } from "@/lib/chat/constants";
 import { adminDb } from "@/lib/firebase/admin";
+import { chatPushes } from "@/lib/push/messages";
+import { notifyAfterResponse } from "@/lib/push/notify";
 import type { ChatMessage, Group } from "@/lib/types";
 import type { ActionResult } from "./groups";
 
@@ -10,14 +12,15 @@ async function requireGroupMembership(
   groupId: string,
   uid: string,
 ): Promise<
-  { error: "not-found" | "forbidden" } | { groupRef: FirebaseFirestore.DocumentReference }
+  | { error: "not-found" | "forbidden" }
+  | { groupRef: FirebaseFirestore.DocumentReference; group: Omit<Group, "id"> }
 > {
   const groupRef = adminDb.collection("groups").doc(groupId);
   const groupSnap = await groupRef.get();
   if (!groupSnap.exists) return { error: "not-found" };
   const group = groupSnap.data() as Omit<Group, "id">;
   if (!group.memberUids.includes(uid)) return { error: "forbidden" };
-  return { groupRef };
+  return { groupRef, group };
 }
 
 export async function sendMessage(input: {
@@ -41,6 +44,14 @@ export async function sendMessage(input: {
   };
 
   const docRef = await membership.groupRef.collection("messages").add(message);
+  notifyAfterResponse(
+    chatPushes({
+      groupId: input.groupId,
+      group: membership.group,
+      text,
+      actorUid: session.uid,
+    }),
+  );
   return { ok: true, data: { messageId: docRef.id } };
 }
 

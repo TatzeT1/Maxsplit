@@ -1,7 +1,7 @@
 import type { TranslationKey } from "@/lib/i18n/translate";
 
-/** The four things Split sends a push for — each one can be switched off in the profile. */
-export const PUSH_EVENTS = ["expense", "settlement", "challenge", "turn"] as const;
+/** The things Split sends a push for — each one can be switched off in the profile. */
+export const PUSH_EVENTS = ["expense", "settlement", "challenge", "turn", "chat"] as const;
 export type PushEvent = (typeof PUSH_EVENTS)[number];
 
 /** `users/{uid}.notificationPrefs`. Absent (or a field absent) means on. */
@@ -12,6 +12,7 @@ export const DEFAULT_NOTIFICATION_PREFS: NotificationPrefs = {
   settlement: true,
   challenge: true,
   turn: true,
+  chat: true,
 };
 
 export function readNotificationPrefs(raw: unknown): NotificationPrefs {

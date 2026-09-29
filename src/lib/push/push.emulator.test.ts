@@ -296,6 +296,7 @@ describe("delivery", () => {
         settlement: true,
         challenge: true,
         turn: true,
+        chat: true,
       }),
     ).toEqual({ ok: true, data: null });
     const send = vi.fn<PushSender>(async () => {});

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Expense, GroupMember, TournamentMatch } from "@/lib/types";
 import {
   challengePushes,
+  chatPushes,
   expensePushes,
   newlyReadyMatches,
   settlementPushes,
@@ -229,5 +230,30 @@ describe("newlyReadyMatches", () => {
     };
     const after = { m1: match("m1", "done"), m2: match("m2", "ready"), m3: match("m3", "ready") };
     expect(newlyReadyMatches(before, after).map((m) => m.id)).toEqual(["m2"]);
+  });
+});
+
+describe("chatPushes", () => {
+  it("tells every other member with an account, one collapsing tag per chat", () => {
+    const pushes = chatPushes({
+      groupId: "g1",
+      group,
+      text: "Wer kauft\n  Milch?",
+      actorUid: "max",
+    });
+    expect(pushes.map((push) => push.uid)).toEqual(["lea", "ben"]);
+    expect(de(pushes[0])).toEqual({
+      title: "Chat in WG Küche",
+      body: "Max: Wer kauft Milch?",
+      url: "/groups/g1/chat",
+      tag: "chat-g1",
+    });
+    expect(pushes[0].event).toBe("chat");
+  });
+
+  it("shortens a long message", () => {
+    const [push] = chatPushes({ groupId: "g1", group, text: "x".repeat(500), actorUid: "max" });
+    expect(de(push).body.length).toBeLessThan(140);
+    expect(de(push).body.endsWith("…")).toBe(true);
   });
 });

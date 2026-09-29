@@ -886,6 +886,8 @@ export const de = {
     impactOwe: "du schuldest dafür {{amount}}",
     impactGetBack: "du bekommst {{amount}} zurück",
     settlementReceived: "{{from}} hat dir {{amount}} gezahlt",
+    chatTitle: "Chat in {{group}}",
+    chatMessage: "{{name}}: {{text}}",
     challengeTitle: "Herausforderung in {{group}}",
     challenge: "{{name}} fordert dich zu {{game}} heraus",
     challengeStake: "{{name}} fordert dich zu {{game}} heraus – es geht um {{stake}}",
@@ -918,6 +920,7 @@ export const de = {
     eventSettlement: "Zahlung erhalten",
     eventChallenge: "Herausforderung zu einem Spiel",
     eventTurn: "Du bist dran im Spiel",
+    eventChat: "Ungelesene Chat-Nachricht",
     prefsSaveError: "Konnte nicht gespeichert werden.",
   },
   settlementPdf: {

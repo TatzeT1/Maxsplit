@@ -871,6 +871,8 @@ export const en: Dictionary = {
     impactOwe: "you owe {{amount}} for it",
     impactGetBack: "you get {{amount}} back",
     settlementReceived: "{{from}} paid you {{amount}}",
+    chatTitle: "Chat in {{group}}",
+    chatMessage: "{{name}}: {{text}}",
     challengeTitle: "Challenge in {{group}}",
     challenge: "{{name}} challenges you to {{game}}",
     challengeStake: "{{name}} challenges you to {{game}} – the stake: {{stake}}",
@@ -902,6 +904,7 @@ export const en: Dictionary = {
     eventSettlement: "Payment received",
     eventChallenge: "Challenge to a game",
     eventTurn: "Your turn in a game",
+    eventChat: "Unread chat message",
     prefsSaveError: "Couldn't be saved.",
   },
   settlementPdf: {
