@@ -1,8 +1,7 @@
+import { isCategoryId } from "@/lib/categories";
+import { isIsoDate, isValidDescription, isValidEmoji } from "@/lib/ledger-input";
 import { splitEqual, validatePaidBy } from "@/lib/money/split";
 import type { Expense, GameExpenseDraft, GroupMember } from "@/lib/types";
-
-const MAX_DESCRIPTION_LENGTH = 200;
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Checks an auto-book draft at game start, so a bad amount or a stranger as
@@ -14,11 +13,11 @@ export function validateGameExpenseDraft(
   draft: GameExpenseDraft,
   members: Record<string, GroupMember>,
 ): string | null {
-  if (!draft.description.trim() || draft.description.length > MAX_DESCRIPTION_LENGTH) {
-    return "invalid-description";
-  }
+  if (!isValidDescription(draft.description)) return "invalid-description";
   if (!Number.isInteger(draft.amountMinor) || draft.amountMinor <= 0) return "invalid-amount";
-  if (!ISO_DATE.test(draft.date)) return "invalid-date";
+  if (!isIsoDate(draft.date)) return "invalid-date";
+  if (draft.category !== null && !isCategoryId(draft.category)) return "invalid-category";
+  if (!isValidEmoji(draft.emoji)) return "invalid-emoji";
   const payerUids = Object.keys(draft.paidBy);
   if (payerUids.length === 0) return "invalid-payer";
   if (!payerUids.every((uid) => uid in members)) return "forbidden";

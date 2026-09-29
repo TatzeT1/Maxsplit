@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { isIsoDate, MAX_NOTE_LENGTH } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import type { ActivityLogEntry, Group, Settlement } from "@/lib/types";
 import type { ActionResult } from "./groups";
@@ -46,6 +47,12 @@ function validateSettlementInput(input: SettlementInput, group: Omit<Group, "id"
   // paid to someone who hasn't joined the app yet).
   if (!(input.fromUid in group.members) || !(input.toUid in group.members)) return "forbidden";
   if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) return "invalid-amount";
+  // Balances net settlements against expenses at face value, in the group's currency.
+  if (input.currency !== group.currency) return "invalid-currency";
+  if (!isIsoDate(input.date)) return "invalid-date";
+  if (typeof input.note !== "string" || input.note.trim().length > MAX_NOTE_LENGTH) {
+    return "invalid-note";
+  }
   return null;
 }
 

@@ -3,10 +3,12 @@
 import { randomUUID } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getSession, type Session } from "@/lib/auth/session";
+import { isSupportedCurrency } from "@/lib/currencies";
 import { adminDb } from "@/lib/firebase/admin";
 import { generateInviteCode, normalizeInviteCode } from "@/lib/groups/invite-code";
 import { moveMemberInLedgerEntry } from "@/lib/groups/move-member";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { isValidEmoji, isValidName } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { computeBalances } from "@/lib/money/balances";
 import { pickPaymentDetails } from "@/lib/payment/member-payment-details";
@@ -94,6 +96,22 @@ async function isNamedInRecurringRule(
   return rules.docs.some((doc) => ruleNamesMember(doc.data() as RecurringRule, uid));
 }
 
+/**
+ * Whether the group has anything booked in its currency: a live expense, a
+ * settlement, or a recurring rule (which books in the currency it was
+ * created with). Balances add these amounts at face value, so once any exist
+ * the group's currency can't change — it would silently relabel 100 € as
+ * "100,00 $". The group page mirrors this to disable the currency picker.
+ */
+async function hasLedgerEntries(groupRef: FirebaseFirestore.DocumentReference): Promise<boolean> {
+  const [expenses, settlements, rules] = await Promise.all([
+    groupRef.collection("expenses").where("deletedAt", "==", null).limit(1).get(),
+    groupRef.collection("settlements").limit(1).get(),
+    groupRef.collection("recurring").limit(1).get(),
+  ]);
+  return !expenses.empty || !settlements.empty || !rules.empty;
+}
+
 const MAX_INVITE_CODE_ATTEMPTS = 5;
 
 async function findUniqueInviteCode(): Promise<string> {
@@ -115,8 +133,13 @@ export async function createGroup(input: {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
 
+  if (!isValidName(input.name)) return { ok: false, error: "invalid-name" };
   const name = input.name.trim();
-  if (!name) return { ok: false, error: "invalid-name" };
+  if (!isSupportedCurrency(input.currency)) return { ok: false, error: "invalid-currency" };
+  const icon = input.icon ?? null;
+  if (!isValidEmoji(icon)) return { ok: false, error: "invalid-icon" };
+  const memberNames = (input.memberNames ?? []).map((n) => n.trim()).filter((n) => n.length > 0);
+  if (!memberNames.every(isValidName)) return { ok: false, error: "invalid-name" };
 
   const inviteCode = await findUniqueInviteCode();
   const now = new Date().toISOString();
@@ -128,7 +151,6 @@ export async function createGroup(input: {
   // Optional placeholder members entered at creation time, same shape
   // addPlaceholderMember produces later — folded into the initial write so
   // the group never exists with only its creator as a transient state.
-  const memberNames = (input.memberNames ?? []).map((n) => n.trim()).filter((n) => n.length > 0);
   for (const displayName of memberNames) {
     const placeholderId = `ph_${randomUUID()}`;
     members[placeholderId] = {
@@ -142,7 +164,7 @@ export async function createGroup(input: {
 
   const group: Omit<Group, "id"> = {
     name,
-    icon: input.icon ?? null,
+    icon,
     currency: input.currency,
     createdBy: session.uid,
     createdAt: now,
@@ -165,8 +187,10 @@ export async function updateGroup(input: {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
 
+  if (!isValidName(input.name)) return { ok: false, error: "invalid-name" };
   const name = input.name.trim();
-  if (!name) return { ok: false, error: "invalid-name" };
+  const icon = input.icon ?? null;
+  if (!isValidEmoji(icon)) return { ok: false, error: "invalid-icon" };
 
   const groupRef = adminDb.collection("groups").doc(input.groupId);
   const groupSnap = await groupRef.get();
@@ -175,11 +199,12 @@ export async function updateGroup(input: {
 
   if (!isGroupManager(group.members[session.uid]?.role)) return { ok: false, error: "forbidden" };
 
-  await groupRef.update({
-    name,
-    currency: input.currency,
-    icon: input.icon ?? null,
-  });
+  if (input.currency !== group.currency) {
+    if (!isSupportedCurrency(input.currency)) return { ok: false, error: "invalid-currency" };
+    if (await hasLedgerEntries(groupRef)) return { ok: false, error: "currency-locked" };
+  }
+
+  await groupRef.update({ name, currency: input.currency, icon });
 
   return { ok: true, data: null };
 }
@@ -191,8 +216,8 @@ export async function addPlaceholderMember(input: {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
 
+  if (!isValidName(input.displayName)) return { ok: false, error: "invalid-name" };
   const name = input.displayName.trim();
-  if (!name) return { ok: false, error: "invalid-name" };
 
   const groupRef = adminDb.collection("groups").doc(input.groupId);
   const groupSnap = await groupRef.get();
@@ -224,8 +249,8 @@ export async function renamePlaceholderMember(input: {
   const session = await getSession();
   if (!session) return { ok: false, error: "unauthenticated" };
 
+  if (!isValidName(input.displayName)) return { ok: false, error: "invalid-name" };
   const name = input.displayName.trim();
-  if (!name) return { ok: false, error: "invalid-name" };
 
   const groupRef = adminDb.collection("groups").doc(input.groupId);
   const groupSnap = await groupRef.get();

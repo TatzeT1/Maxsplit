@@ -357,7 +357,12 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
             forceMount
             className="animate-rise pt-2 data-[state=inactive]:hidden"
           >
-            <GroupSettingsTab group={group} recurringRules={recurringRules} currentUid={user.uid} />
+            <GroupSettingsTab
+              group={group}
+              recurringRules={recurringRules}
+              hasBookings={expenses.length > 0 || settlements.length > 0}
+              currentUid={user.uid}
+            />
           </TabsContent>
         </Tabs>
 

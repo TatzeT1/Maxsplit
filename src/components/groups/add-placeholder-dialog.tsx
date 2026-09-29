@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { addPlaceholderMember } from "@/lib/actions/groups";
+import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
 
 export function AddPlaceholderDialog({ groupId }: { groupId: string }) {
   const [open, setOpen] = useState(false);
@@ -58,6 +59,7 @@ export function AddPlaceholderDialog({ groupId }: { groupId: string }) {
               <Label htmlFor="placeholder-name">{t("groups.placeholderNameLabel")}</Label>
               <Input
                 id="placeholder-name"
+                maxLength={MAX_NAME_LENGTH}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder={t("groups.placeholderNamePlaceholder")}

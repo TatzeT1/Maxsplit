@@ -11,7 +11,10 @@ server-side, in plain TypeScript, never trusted from a client.
 
 ## The three invariants (from the original project brief, still enforced)
 
-1. `sum(paidBy) === amountMinor` exactly — checked by `validatePaidBy` (`split.ts`).
+1. `sum(paidBy) === amountMinor` exactly — checked by `validatePaidBy` (`split.ts`), which
+   also requires **each** payer amount to be a non-negative integer. The sum alone used to
+   accept `{ a: 1.5, b: 98.5 }` for 100 — fractional minor units in the ledger — and negative
+   "payments" that still added up.
 2. `sum(splits[*].amountMinor) === amountMinor` exactly — checked by `validateSplits`
    (`split.ts`). The rounding remainder is distributed deterministically, **never** silently
    dropped or invented.

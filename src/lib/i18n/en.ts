@@ -182,6 +182,8 @@ export const en: Dictionary = {
     iconPickerLabel: "Choose an icon",
     iconReset: "Remove icon",
     currencyLabel: "Currency",
+    currencyLockedHint: "Fixed once the group has expenses, payments or recurring expenses.",
+    currencyLockedError: "The currency can't change anymore – this group already has entries.",
     membersLabel: "Members (optional)",
     membersHint:
       "Add names now, even without a Split account — once they join, they just pick their name.",

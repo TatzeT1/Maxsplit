@@ -17,6 +17,7 @@ import { useT } from "@/components/locale-provider";
 import { createRecurringRule } from "@/lib/actions/recurring";
 import { CATEGORY_IDS, categoryLabel } from "@/lib/categories";
 import { parseMoneyInput } from "@/lib/format/money";
+import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import type { CategoryId, GroupMember, RecurringFrequency } from "@/lib/types";
 
 function todayIsoDate(): string {
@@ -133,6 +134,7 @@ export function RecurringRuleDialog({
               <Label htmlFor="recurring-description">{t("expenses.descriptionLabel")}</Label>
               <Input
                 id="recurring-description"
+                maxLength={MAX_DESCRIPTION_LENGTH}
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 placeholder={t("expenses.descriptionPlaceholder")}

@@ -22,7 +22,7 @@ projections of the same expenses + settlements:
   for why that's an accepted tradeoff).
 
 The group page's balance views (`BalanceHero`, the Salden tab) name debts only for
-`Object.keys(members)` — this is *why*
+`Object.keys(members)` — this is _why_
 [[Groups and Members]] blocks leaving/removal while a member has a nonzero balance: removing
 them from `members` would make their debt invisible here even though it's still in the ledger.
 
@@ -39,12 +39,22 @@ every mutation triggers `recomputeGroupBalances`.
 
 ## Currency
 
-Every `Expense` and `Settlement` carries its own `currency` field independently of
-`group.currency` (the group's default/display currency). The original roadmap's Phase 3
-scoped per-expense FX conversion with the rate frozen at entry time — check
-`src/lib/format/money.ts` and the `Expense`/`Settlement` types before assuming multi-currency
-math is fully wired end-to-end; this vault doesn't assert more than the code confirms here,
-verify current state if you're touching FX logic.
+**One currency per group, no FX.** Every `Expense`, `Settlement` and `RecurringRule` carries
+a `currency` field, but the balance math (`computeBalances` and friends) adds `amountMinor`
+at face value and ignores it — so the only safe state is "every entry is in the group's
+currency". The server enforces that since 2026-09:
+
+- `addExpense`/`editExpense`, `recordSettlement`/`editSettlement` and `createRecurringRule`
+  refuse a `currency` other than `group.currency` (`"invalid-currency"`), as the game
+  auto-book path (`createTournament`) already did.
+- `updateGroup` refuses to change the currency once anything is booked — a live expense, a
+  settlement or a recurring rule (`hasLedgerEntries`, `"currency-locked"`); before, it
+  silently relabelled 100 € as "100,00 $". The edit dialog disables the picker with a hint.
+- Only `SUPPORTED_CURRENCIES` (`src/lib/currencies.ts`) can be chosen at all.
+
+The original roadmap's Phase 3 (per-expense currency with the FX rate frozen at entry) is
+**not built**; it needs a data-model change and its own ADR.
 
 ## Related
+
 [[Money Invariants]] · [[Groups and Members]] · [[Settlement PDF Export]] · [[Data Model]]

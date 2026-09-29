@@ -18,9 +18,9 @@ import { Select } from "@/components/ui/select";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
 import { createGroup } from "@/lib/actions/groups";
+import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { GROUP_ICONS } from "@/lib/emoji";
-
-const CURRENCIES = ["EUR", "USD", "CHF", "GBP"];
+import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
 
 export function CreateGroupDialog() {
   const [open, setOpen] = useState(false);
@@ -104,6 +104,7 @@ export function CreateGroupDialog() {
                 />
                 <Input
                   id="group-name"
+                  maxLength={MAX_NAME_LENGTH}
                   className="flex-1"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -120,7 +121,7 @@ export function CreateGroupDialog() {
                 value={currency}
                 onChange={(event) => setCurrency(event.target.value)}
               >
-                {CURRENCIES.map((code) => (
+                {SUPPORTED_CURRENCIES.map((code) => (
                   <option key={code} value={code}>
                     {code}
                   </option>
@@ -135,6 +136,7 @@ export function CreateGroupDialog() {
                   <div key={index} className="flex items-center gap-2">
                     <Input
                       value={value}
+                      maxLength={MAX_NAME_LENGTH}
                       onChange={(event) => updateMemberName(index, event.target.value)}
                       placeholder={t("groups.placeholderNamePlaceholder")}
                     />

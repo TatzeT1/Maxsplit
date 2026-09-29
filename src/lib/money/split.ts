@@ -112,9 +112,19 @@ export function splitExact(
   return { ...exactAmounts };
 }
 
-/** Throws unless the payer amounts sum exactly to the expense total. */
+/**
+ * Throws unless every payer amount is a non-negative integer and they sum
+ * exactly to the expense total. The per-payer check matters on its own: the
+ * sum alone accepted `{ a: 1.5, b: 98.5 }` for 100, putting fractional minor
+ * units into the ledger, and negative "payments" that still added up.
+ */
 export function validatePaidBy(amountMinor: number, paidBy: Record<string, number>): void {
   assertIntegerMinorUnits(amountMinor);
+  for (const [uid, value] of Object.entries(paidBy)) {
+    if (!Number.isInteger(value) || value < 0) {
+      throw new Error(`Paid amount for "${uid}" must be a non-negative integer, got ${value}`);
+    }
+  }
   const sum = Object.values(paidBy).reduce((total, value) => total + value, 0);
   if (sum !== amountMinor) {
     throw new AmountMismatchError("sum(paidBy)", amountMinor, sum);

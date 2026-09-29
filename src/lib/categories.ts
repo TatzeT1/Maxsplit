@@ -28,6 +28,15 @@ export const CATEGORY_IDS: CategoryId[] = [
   "other",
 ];
 
+/**
+ * Whether `value` is one of CATEGORY_IDS. The server checks this before
+ * storing an expense: an unknown id has no icon or dictionary label, so
+ * rendering it would throw and take the group page down for every member.
+ */
+export function isCategoryId(value: unknown): value is CategoryId {
+  return typeof value === "string" && (CATEGORY_IDS as string[]).includes(value);
+}
+
 const CATEGORY_ICONS: Record<CategoryId, LucideIcon> = {
   groceries: ShoppingCart,
   restaurant: UtensilsCrossed,

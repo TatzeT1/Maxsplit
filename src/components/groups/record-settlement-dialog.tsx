@@ -17,6 +17,7 @@ import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { editSettlement, recordSettlement } from "@/lib/actions/settlements";
 import { parseMoneyInput } from "@/lib/format/money";
+import { MAX_NOTE_LENGTH } from "@/lib/ledger-input";
 import type { GroupMember, Settlement } from "@/lib/types";
 
 function todayIsoDate(): string {
@@ -209,6 +210,7 @@ export function RecordSettlementDialog({
                 <Label htmlFor="settlement-note">{t("settlements.noteLabel")}</Label>
                 <Input
                   id="settlement-note"
+                  maxLength={MAX_NOTE_LENGTH}
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
                   placeholder={t("settlements.notePlaceholder")}

@@ -38,6 +38,7 @@ import {
 } from "@/lib/categories";
 import { EXPENSE_EMOJIS } from "@/lib/emoji";
 import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
+import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
 import { cn } from "@/lib/utils";
@@ -449,6 +450,7 @@ export function AddExpenseDialog({
                 <Label htmlFor="expense-description">{t("expenses.descriptionLabel")}</Label>
                 <Input
                   id="expense-description"
+                  maxLength={MAX_DESCRIPTION_LENGTH}
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
                   placeholder={t("expenses.descriptionPlaceholder")}

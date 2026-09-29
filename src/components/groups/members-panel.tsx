@@ -23,6 +23,7 @@ import { removeMember, renamePlaceholderMember, setMemberRole } from "@/lib/acti
 import { isGroupManager } from "@/lib/groups/permissions";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { avatarGradient, cn } from "@/lib/utils";
+import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
 import type { GroupMember, GroupRole } from "@/lib/types";
 
 function CopyChip({ label, value }: { label: string; value: string }) {
@@ -168,6 +169,7 @@ function MemberRow({
             <Input
               autoFocus
               value={nameInput}
+              maxLength={MAX_NAME_LENGTH}
               onChange={(event) => setNameInput(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === "Escape") setRenaming(false);

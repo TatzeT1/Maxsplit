@@ -142,6 +142,18 @@ describe("validatePaidBy", () => {
   it("throws AmountMismatchError when payer amounts don't sum to the total", () => {
     expect(() => validatePaidBy(1000, { a: 600, b: 399 })).toThrow(AmountMismatchError);
   });
+
+  it("rejects fractional payer amounts even when they sum to the total", () => {
+    expect(() => validatePaidBy(100, { a: 1.5, b: 98.5 })).toThrow(/non-negative integer/);
+  });
+
+  it("rejects a negative payer amount even when the payers still sum to the total", () => {
+    expect(() => validatePaidBy(1000, { a: -1000, b: 2000 })).toThrow(/non-negative integer/);
+  });
+
+  it("accepts a payer listed with zero", () => {
+    expect(() => validatePaidBy(1000, { a: 1000, b: 0 })).not.toThrow();
+  });
 });
 
 describe("validateSplits", () => {

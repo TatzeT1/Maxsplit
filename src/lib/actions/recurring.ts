@@ -2,7 +2,9 @@
 
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { isCategoryId } from "@/lib/categories";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { isIsoDate, isValidDescription } from "@/lib/ledger-input";
 import { splitEqual, validatePaidBy } from "@/lib/money/split";
 import { ruleHasMissingMembers } from "@/lib/recurring/rule-members";
 import { firstRunOnOrAfter, utcToday } from "@/lib/recurring/schedule";
@@ -48,9 +50,20 @@ function toSplits(amounts: Record<string, number>): Record<string, ExpenseSplit>
   return splits;
 }
 
+const FREQUENCIES: readonly RecurringFrequency[] = ["weekly", "monthly"];
+
+/**
+ * A rule is booked as-is by the cron for months (see materialize.ts), so
+ * whatever it stores has to be right up front. `frequency` in particular is a
+ * compile-time type only: anything but "weekly" used to be advanced as if it
+ * were monthly.
+ */
 function validateRuleInput(input: RecurringRuleInput): string | null {
-  if (!input.description.trim()) return "invalid-description";
+  if (!isValidDescription(input.description)) return "invalid-description";
   if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) return "invalid-amount";
+  if (input.category !== null && !isCategoryId(input.category)) return "invalid-category";
+  if (!FREQUENCIES.includes(input.frequency)) return "invalid-frequency";
+  if (!isIsoDate(input.startDate)) return "invalid-date";
   if (input.participantUids.length === 0) return "invalid-participants";
   return null;
 }
@@ -67,6 +80,7 @@ export async function createRecurringRule(
 
   const validationError = validateRuleInput(input);
   if (validationError) return { ok: false, error: validationError };
+  if (input.currency !== group.currency) return { ok: false, error: "invalid-currency" };
 
   // Checked against group.members (real + placeholder), not memberUids —
   // placeholder members are valid payers/participants too.

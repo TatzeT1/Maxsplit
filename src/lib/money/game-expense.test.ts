@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildGameExpense, validateGameExpenseDraft } from "./game-expense";
-import type { GameExpenseDraft, GroupMember } from "@/lib/types";
+import type { CategoryId, GameExpenseDraft, GroupMember } from "@/lib/types";
 
 const member = (displayName: string): GroupMember => ({
   displayName,
@@ -31,6 +31,10 @@ describe("validateGameExpenseDraft", () => {
     [{ amountMinor: 0 }, "invalid-amount"],
     [{ amountMinor: 10.5 }, "invalid-amount"],
     [{ date: "28.09.2026" }, "invalid-date"],
+    [{ date: "2026-02-30" }, "invalid-date"],
+    [{ description: "x".repeat(201) }, "invalid-description"],
+    // A hand-crafted request can carry any string; the type is compile-time only.
+    [{ category: "bogus" as unknown as CategoryId }, "invalid-category"],
     [{ paidBy: {} }, "invalid-payer"],
     [{ paidBy: { a: 999 } }, "invalid-payer"],
     [{ paidBy: { stranger: 1000 } }, "forbidden"],

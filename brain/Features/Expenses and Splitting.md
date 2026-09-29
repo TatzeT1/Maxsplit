@@ -31,9 +31,12 @@ matching function in `split.ts` (`splitEqual` / `splitByShares` / `splitByPercen
 Both add and edit funnel through `resolveExpense`, in this order:
 
 1. **Membership** — `session.uid` must be in `group.memberUids` (`requireGroupMembership`).
-2. **Shape** — `validateExpenseInput`: non-empty description, positive integer amount, at
-   least one payer, at least one split participant.
-3. **Participant validity** — every uid in `paidBy` *and* every split participant must exist
+2. **Shape** — `validateExpenseInput`: description (non-blank, ≤ `MAX_DESCRIPTION_LENGTH`),
+   positive integer amount, real `yyyy-mm-dd` date, known category or null, a single emoji
+   or null, a known split mode, at least one payer, at least one split participant — then
+   `currency === group.currency` (see [[Balances and Settlements]]). See [[Conventions]] on
+   why every field is checked, not only the money.
+3. **Participant validity** — every uid in `paidBy` _and_ every split participant must exist
    in `group.members` (real or placeholder — see [[Groups and Members]]). This is checked
    against `group.members`, deliberately not `memberUids`, so placeholder payers/participants
    are valid.
@@ -73,4 +76,5 @@ a separate, optional **user override** shown instead of the category icon — un
 `category` itself.
 
 ## Related
+
 [[Money Invariants]] · [[Groups and Members]] · [[Split Games]] (alternate, gamified ways to pick a split) · [[Data Model]]

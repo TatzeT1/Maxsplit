@@ -111,10 +111,13 @@ function LeaveOrDeleteGroup({ group, currentUid }: { group: Group; currentUid: s
 export function GroupSettingsTab({
   group,
   recurringRules,
+  hasBookings,
   currentUid,
 }: {
   group: Group;
   recurringRules: RecurringRule[];
+  /** Whether any live expense or settlement exists — with any recurring rule, it fixes the currency. */
+  hasBookings: boolean;
   currentUid: string;
 }) {
   const t = useT();
@@ -150,6 +153,7 @@ export function GroupSettingsTab({
         {canManage && (
           <EditGroupDialog
             group={group}
+            currencyLocked={hasBookings || recurringRules.length > 0}
             trigger={
               <Button variant="outline" className="h-11 w-full justify-start">
                 <Pencil />

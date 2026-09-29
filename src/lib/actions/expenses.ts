@@ -2,7 +2,9 @@
 
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { isCategoryId } from "@/lib/categories";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { isIsoDate, isValidDescription, isValidEmoji } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import {
   splitByPercent,
@@ -89,9 +91,23 @@ function splitParticipantUids(input: ExpenseInput): string[] {
   return input.splitMode === "equal" ? input.participantUids : Object.keys(input.splitInputs);
 }
 
+const SPLIT_MODES: readonly SplitMode[] = ["equal", "shares", "percent", "exact"];
+
+/**
+ * Shape checks on everything the client sends. The parameter types are
+ * compile-time only, and several of these fields end up somewhere a bad
+ * value breaks more than one expense: an unknown category has no icon or
+ * label and throws while rendering the group page, a malformed date sorts
+ * and formats wrongly, an unknown split mode reaches no branch of
+ * buildSplits.
+ */
 function validateExpenseInput(input: ExpenseInput): string | null {
-  if (!input.description.trim()) return "invalid-description";
+  if (!isValidDescription(input.description)) return "invalid-description";
   if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) return "invalid-amount";
+  if (!isIsoDate(input.date)) return "invalid-date";
+  if (input.category !== null && !isCategoryId(input.category)) return "invalid-category";
+  if (!isValidEmoji(input.emoji)) return "invalid-emoji";
+  if (!SPLIT_MODES.includes(input.splitMode)) return "invalid-split";
   if (Object.keys(input.paidBy).length === 0) return "invalid-payer";
   if (splitParticipantUids(input).length === 0) return "invalid-participants";
   return null;
@@ -115,6 +131,9 @@ async function resolveExpense(
 
   const validationError = validateExpenseInput(input);
   if (validationError) return { ok: false, error: validationError };
+  // Balances add every expense's amount as-is, in the group's currency —
+  // an expense in another one would be counted at face value.
+  if (input.currency !== group.currency) return { ok: false, error: "invalid-currency" };
 
   // Checked against group.members (real + placeholder), not memberUids
   // (real, authenticated members only) — placeholder members are valid
@@ -158,7 +177,7 @@ export async function addExpense(
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
-    viaLottery: input.viaLottery,
+    viaLottery: input.viaLottery === true,
   };
 
   const docRef = await groupRef.collection("expenses").add(expense);
@@ -196,7 +215,7 @@ export async function editExpense(
     splitMode: input.splitMode,
     splits,
     updatedAt: now,
-    viaLottery: input.viaLottery,
+    viaLottery: input.viaLottery === true,
   });
 
   const logEntry: Omit<ActivityLogEntry, "id"> = {

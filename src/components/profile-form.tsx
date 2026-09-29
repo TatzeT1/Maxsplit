@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { updateDisplayName } from "@/lib/actions/profile";
+import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
 
 export function ProfileForm({ displayName, email }: { displayName: string; email: string }) {
   const [name, setName] = useState(displayName);
@@ -49,7 +50,7 @@ export function ProfileForm({ displayName, email }: { displayName: string; email
             setStatus("idle");
           }}
           placeholder={t("profile.displayNamePlaceholder")}
-          maxLength={60}
+          maxLength={MAX_NAME_LENGTH}
           autoComplete="name"
         />
         <p className="text-muted-foreground text-sm">{t("profile.displayNameHint")}</p>

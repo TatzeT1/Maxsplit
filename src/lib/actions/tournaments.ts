@@ -18,6 +18,7 @@ import {
 import { randomInt, secureShuffle } from "@/lib/games/random";
 import { REACTION_MAX_DELAY_MS, REACTION_MIN_DELAY_MS } from "@/lib/games/reaction-duel";
 import { getServerT } from "@/lib/i18n/server";
+import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { buildGameExpense, validateGameExpenseDraft } from "@/lib/money/game-expense";
 import {
@@ -193,7 +194,11 @@ export async function createTournament(input: {
 
   if (input.stake) {
     const { amountMinor, description } = input.stake;
-    if (!Number.isInteger(amountMinor) || amountMinor < 0 || description.length > 200) {
+    if (
+      !Number.isInteger(amountMinor) ||
+      amountMinor < 0 ||
+      description.length > MAX_DESCRIPTION_LENGTH
+    ) {
       return { ok: false, error: "invalid-stake" };
     }
   }

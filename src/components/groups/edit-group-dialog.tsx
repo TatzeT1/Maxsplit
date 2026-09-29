@@ -17,16 +17,23 @@ import { Select } from "@/components/ui/select";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
 import { updateGroup } from "@/lib/actions/groups";
+import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { GROUP_ICONS } from "@/lib/emoji";
+import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
 import type { Group } from "@/lib/types";
-
-const CURRENCIES = ["EUR", "USD", "CHF", "GBP"];
 
 export function EditGroupDialog({
   group,
+  currencyLocked,
   trigger,
 }: {
   group: Group;
+  /**
+   * True once the group has anything booked — the server then refuses a
+   * currency change (see hasLedgerEntries in lib/actions/groups.ts), so the
+   * picker is disabled with a hint instead of failing on save.
+   */
+  currencyLocked: boolean;
   /** Defaults to a pencil icon button. */
   trigger?: ReactNode;
 }) {
@@ -35,7 +42,7 @@ export function EditGroupDialog({
   const [icon, setIcon] = useState<string | null>(group.icon ?? null);
   const [currency, setCurrency] = useState(group.currency);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const t = useT();
 
   function handleOpenChange(next: boolean) {
@@ -44,18 +51,22 @@ export function EditGroupDialog({
       setName(group.name);
       setIcon(group.icon ?? null);
       setCurrency(group.currency);
-      setError(false);
+      setError(null);
     }
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
-    setError(false);
+    setError(null);
     const result = await updateGroup({ groupId: group.id, name, currency, icon });
     setLoading(false);
     if (!result.ok) {
-      setError(true);
+      setError(
+        result.error === "currency-locked"
+          ? t("groups.currencyLockedError")
+          : t("groups.editError"),
+      );
       return;
     }
     setOpen(false);
@@ -96,6 +107,7 @@ export function EditGroupDialog({
                 />
                 <Input
                   id="edit-group-name"
+                  maxLength={MAX_NAME_LENGTH}
                   className="flex-1"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -111,15 +123,23 @@ export function EditGroupDialog({
                 id="edit-group-currency"
                 value={currency}
                 onChange={(event) => setCurrency(event.target.value)}
+                disabled={currencyLocked}
+                aria-describedby={currencyLocked ? "edit-group-currency-hint" : undefined}
               >
-                {CURRENCIES.map((code) => (
+                {/* A legacy group can hold a code the picker no longer offers — keep it selectable. */}
+                {[...new Set([...SUPPORTED_CURRENCIES, group.currency])].map((code) => (
                   <option key={code} value={code}>
                     {code}
                   </option>
                 ))}
               </Select>
+              {currencyLocked && (
+                <p id="edit-group-currency-hint" className="text-muted-foreground text-xs">
+                  {t("groups.currencyLockedHint")}
+                </p>
+              )}
             </div>
-            {error && <p className="text-destructive text-sm">{t("groups.editError")}</p>}
+            {error && <p className="text-destructive text-sm">{error}</p>}
           </div>
           <DialogFooter>
             <Button type="submit" size="lg" className="w-full" disabled={loading || !name.trim()}>

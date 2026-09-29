@@ -183,6 +183,10 @@ export const de = {
     iconPickerLabel: "Icon wählen",
     iconReset: "Icon entfernen",
     currencyLabel: "Währung",
+    currencyLockedHint:
+      "Steht fest, sobald die Gruppe Ausgaben, Zahlungen oder wiederkehrende Ausgaben hat.",
+    currencyLockedError:
+      "Die Währung lässt sich nicht mehr ändern – in der Gruppe ist schon etwas gebucht.",
     membersLabel: "Mitglieder (optional)",
     membersHint:
       "Trag schon jetzt Namen ein, auch ohne Split-Konto — sobald sie beitreten, wählen sie einfach ihren Namen aus.",
