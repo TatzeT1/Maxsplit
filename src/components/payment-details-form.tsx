@@ -7,17 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { updatePaymentDetails } from "@/lib/actions/profile";
+import { EPC_MAX_NAME_CHARS } from "@/lib/payment/epc-qr";
 
 export function PaymentDetailsForm({
   paypalEmail,
   iban,
   paypalMeHandle,
+  accountHolderName,
   submitLabel,
   onSaved,
 }: {
   paypalEmail: string;
   iban: string;
   paypalMeHandle: string;
+  accountHolderName: string;
   /** Overrides the submit button's label, e.g. "Fertig" when embedded in the onboarding flow. Defaults to "profile.save". */
   submitLabel?: string;
   /** Called after a successful save, in addition to the usual `router.refresh()` — lets the onboarding flow advance to the next step. */
@@ -26,6 +29,7 @@ export function PaymentDetailsForm({
   const [email, setEmail] = useState(paypalEmail);
   const [ibanValue, setIbanValue] = useState(iban);
   const [handle, setHandle] = useState(paypalMeHandle);
+  const [holder, setHolder] = useState(accountHolderName);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<
     | "idle"
@@ -34,6 +38,7 @@ export function PaymentDetailsForm({
     | "invalid-paypal-email"
     | "invalid-iban"
     | "invalid-paypal-me-handle"
+    | "invalid-account-holder"
   >("idle");
   const router = useRouter();
   const t = useT();
@@ -46,13 +51,15 @@ export function PaymentDetailsForm({
       paypalEmail: email,
       iban: ibanValue,
       paypalMeHandle: handle,
+      accountHolderName: holder,
     });
     setLoading(false);
     if (!result.ok) {
       setStatus(
         result.error === "invalid-paypal-email" ||
           result.error === "invalid-iban" ||
-          result.error === "invalid-paypal-me-handle"
+          result.error === "invalid-paypal-me-handle" ||
+          result.error === "invalid-account-holder"
           ? result.error
           : "error",
       );
@@ -108,6 +115,24 @@ export function PaymentDetailsForm({
           autoComplete="off"
         />
       </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="profile-account-holder">{t("profile.accountHolderLabel")}</Label>
+        <Input
+          id="profile-account-holder"
+          value={holder}
+          maxLength={EPC_MAX_NAME_CHARS}
+          onChange={(event) => {
+            setHolder(event.target.value);
+            setStatus("idle");
+          }}
+          placeholder={t("profile.accountHolderPlaceholder")}
+          autoComplete="name"
+          aria-describedby="profile-account-holder-hint"
+        />
+        <p id="profile-account-holder-hint" className="text-muted-foreground text-xs">
+          {t("profile.accountHolderHint")}
+        </p>
+      </div>
       <p className="text-muted-foreground text-sm">{t("profile.paymentDetailsHint")}</p>
       {status === "invalid-paypal-email" && (
         <p className="text-destructive text-sm">{t("profile.errorInvalidPaypalEmail")}</p>
@@ -117,6 +142,9 @@ export function PaymentDetailsForm({
       )}
       {status === "invalid-paypal-me-handle" && (
         <p className="text-destructive text-sm">{t("profile.errorInvalidPaypalMeHandle")}</p>
+      )}
+      {status === "invalid-account-holder" && (
+        <p className="text-destructive text-sm">{t("profile.errorInvalidAccountHolder")}</p>
       )}
       {status === "error" && <p className="text-destructive text-sm">{t("profile.saveError")}</p>}
       {status === "success" && (

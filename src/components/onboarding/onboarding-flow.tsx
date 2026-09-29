@@ -65,12 +65,14 @@ export function OnboardingFlow({
   paypalEmail,
   iban,
   paypalMeHandle,
+  accountHolderName,
   exitTo,
 }: {
   displayName: string;
   paypalEmail: string;
   iban: string;
   paypalMeHandle: string;
+  accountHolderName: string;
   exitTo: string;
 }) {
   const [step, setStep] = useState<Step>("welcome");
@@ -169,6 +171,7 @@ export function OnboardingFlow({
                 paypalEmail={paypalEmail}
                 iban={iban}
                 paypalMeHandle={paypalMeHandle}
+                accountHolderName={accountHolderName}
                 submitLabel={t("onboarding.paymentFinish")}
                 onSaved={finish}
               />

@@ -42,11 +42,26 @@ optional; "leave empty to hide it" per the German copy in `de.ts`.
 - **Email** (PayPal email): a permissive format check only — no delivery/ownership
   verification, consistent with "display only, no verification" above.
 
+### Account holder name (for the GiroCode)
+
+`accountHolderName` (optional, ≤ 70 characters — the EPC's cap, `EPC_MAX_NAME_CHARS`) is the
+IBAN's holder as the bank knows them. Since October 2025 banks check a SEPA transfer's
+recipient name against the IBAN ("Empfängerüberprüfung" / Verification of Payee); a GiroCode
+addressed to a display name like "Max" would make the payer's banking app warn about a
+mismatch. Empty means "use the display name".
+
+## GiroCode and reminders — see [[Balances and Settlements]]
+
+The details stored here feed two things on the group page's balance receipt: an EPC QR
+"GiroCode" (`src/lib/payment/epc-qr.ts`, rendered by `components/qr-code.tsx` via `uqr`) and a
+WhatsApp reminder text (`src/lib/payment/reminder.ts`). Neither moves money — same as
+everything else here.
+
 ## Denormalization onto `GroupMember`
 
-Once saved, `paypalEmail`/`iban`/`paypalMeHandle` are copied onto every `GroupMember` entry
-the user currently holds (see [[Data Model]]) — so a group's member list can render payment
-info without an extra `users/{uid}` read per member. This copy is **not the source of
+Once saved, `paypalEmail`/`iban`/`paypalMeHandle`/`accountHolderName` are copied onto every
+`GroupMember` entry the user currently holds (see [[Data Model]]) — so a group's member list
+can render payment info without an extra `users/{uid}` read per member. This copy is **not the source of
 truth** (`users/{uid}` is). The field list lives once, in `MEMBER_PAYMENT_FIELDS`
 (`src/lib/payment/member-payment-details.ts`), and every writer of the copy goes through it:
 

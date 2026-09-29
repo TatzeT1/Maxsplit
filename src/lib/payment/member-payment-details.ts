@@ -9,7 +9,12 @@ import type { GroupMember } from "@/lib/types";
  * covers the same fields: `paypalMeHandle` was once left out of the three
  * membership paths and never reached any group joined after it was set.
  */
-export const MEMBER_PAYMENT_FIELDS = ["paypalEmail", "iban", "paypalMeHandle"] as const;
+export const MEMBER_PAYMENT_FIELDS = [
+  "paypalEmail",
+  "iban",
+  "paypalMeHandle",
+  "accountHolderName",
+] as const;
 
 export type MemberPaymentField = (typeof MEMBER_PAYMENT_FIELDS)[number];
 

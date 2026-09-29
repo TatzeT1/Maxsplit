@@ -12,6 +12,11 @@ export function normalizeIban(input: string): string {
   return input.replace(/\s+/g, "").toUpperCase();
 }
 
+/** An IBAN in the groups of four it's printed and read aloud in, e.g. "DE89 3704 0044 0532 0130 00". */
+export function formatIban(iban: string): string {
+  return normalizeIban(iban).replace(/(.{4})(?=.)/g, "$1 ");
+}
+
 /**
  * Format check plus the ISO 7064 mod-97-10 checksum every real IBAN
  * satisfies, so typos are caught here instead of surfacing as a failed

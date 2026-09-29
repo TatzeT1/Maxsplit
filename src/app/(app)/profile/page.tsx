@@ -57,6 +57,7 @@ export default async function ProfilePage() {
               paypalEmail={session.paypalEmail ?? ""}
               iban={session.iban ?? ""}
               paypalMeHandle={session.paypalMeHandle ?? ""}
+              accountHolderName={session.accountHolderName ?? ""}
             />
           </CardContent>
         </Card>

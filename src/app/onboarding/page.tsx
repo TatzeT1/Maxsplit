@@ -50,6 +50,7 @@ export default async function OnboardingPage({
         paypalEmail={session.paypalEmail ?? ""}
         iban={session.iban ?? ""}
         paypalMeHandle={session.paypalMeHandle ?? ""}
+        accountHolderName={session.accountHolderName ?? ""}
         exitTo={exitTo}
       />
     </div>

@@ -33,16 +33,16 @@ were not picked, so they live in the Gruppe tab.
 
 ## Tabs
 
-| Tab | Contents |
-|---|---|
-| **Ausgaben** | Search (from 6 expenses on) · category chips with totals (filter *and* spending breakdown, replaced the stats card and a `<select>`) · ledger grouped by month, each month one card with its total |
-| **Salden** | "Wer steht wo" diverging bars (everyone's net balance around a zero line) · "So werdet ihr quitt" (`simplifyDebts`, your transfers tinted) · "Bezahlt vs. Anteil" as a real `<table>` · PDF export |
-| **Spiele** | "Wer hat wie viel vergambelt?" podium (top 3) + list · "Bisher verschont" · last 5 game rounds with who lost |
-| **Gruppe** | Invite (native share sheet, copy fallback) · members (one card, rows) · recurring rules (actions in the ⋯ menu) · edit group · leave/delete, last and set apart |
+| Tab          | Contents                                                                                                                                                                                           |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ausgaben** | Search (from 6 expenses on) · category chips with totals (filter _and_ spending breakdown, replaced the stats card and a `<select>`) · ledger grouped by month, each month one card with its total |
+| **Salden**   | "Wer steht wo" diverging bars (everyone's net balance around a zero line) · "So werdet ihr quitt" (`simplifyDebts`, your transfers tinted) · "Bezahlt vs. Anteil" as a real `<table>` · PDF export |
+| **Spiele**   | "Wer hat wie viel vergambelt?" podium (top 3) + list · "Bisher verschont" · last 5 game rounds with who lost                                                                                       |
+| **Gruppe**   | Invite (native share sheet, copy fallback) · members (one card, rows) · recurring rules (actions in the ⋯ menu) · edit group · leave/delete, last and set apart                                    |
 
 The active tab lives in `?tab=` (`expenses` is the default and drops the param). It's written
 with `window.history.replaceState`, which Next integrates with `useSearchParams` — no server
-round trip, and *replace* rather than push, so Back doesn't walk through tab switches. Coming
+round trip, and _replace_ rather than push, so Back doesn't walk through tab switches. Coming
 back from the chat restores the tab you left. All four panels are `forceMount`ed and hidden
 with `data-[state=inactive]:hidden`, so a typed search or picked filter survives a switch and
 `animate-rise` replays on every reveal.
@@ -63,12 +63,15 @@ torn edges, cream paper via `.paper-tokens` in **both** themes (a receipt is an 
 surface), a mono eyebrow, the amount in Fraunces, and dotted leaders from name to amount like
 item to price. Settled shows `InkStamp` "Quitt" — in success green (`ink` override), not the
 group's ink, since a group's own color can be rose and red means debt here. It slams down
-only if the group becomes square *while you watch* (`animateIn`); opening an already-square
+only if the group becomes square _while you watch_ (`animateIn`); opening an already-square
 group shows it at rest.
 
 `.paper-tokens` was extended with the light theme's status and control tokens (`--success`,
 `--destructive`, `--secondary`, `--border`, `--input`, …): the dark theme's lifted greens and
 reds drop to ~2:1 on cream, and its control surfaces would put dark buttons on light paper.
+
+Each line carries its own actions — pay/GiroCode/record on "you owe", remind/show your
+GiroCode on "owes you"; see [[Balances and Settlements]].
 
 ## Sticky gotchas (both learned the hard way)
 
@@ -87,4 +90,5 @@ padding is the wrong tool). On touch devices it hides while a field on the page 
 would otherwise sit on top of half the remaining screen. On `md+` it becomes a floating dock.
 
 ## Related
+
 [[Design System and Theming]] · [[Balances and Settlements]] · [[Split Games]] · [[Groups and Members]] · [[Mobile iOS Quirks]] · [[Routing Map]]

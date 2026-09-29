@@ -26,6 +26,27 @@ The group page's balance views (`BalanceHero`, the Salden tab) name debts only f
 [[Groups and Members]] blocks leaving/removal while a member has a nonzero balance: removing
 them from `members` would make their debt invisible here even though it's still in the ledger.
 
+## Paying and reminding, from the balance receipt
+
+Each of _your_ lines on `BalanceHero` carries its actions:
+
+- **"Du schuldest X"** — "Jetzt bezahlen" (PayPal.Me), copy PayPal email / IBAN, **GiroCode**,
+  "Bezahlt eintragen". The GiroCode dialog (`girocode-dialog.tsx`, `mode="pay"`) shows X's EPC
+  QR code for scanning from a second screen or a screenshot.
+- **"X schuldet dir"** — **"Erinnern"** opens WhatsApp with `buildReminderMessage`'s text (who,
+  group, amount written out, your PayPal.Me link and IBAN, a link to the group), and
+  **"GiroCode zeigen"** (`mode="show"`) shows _your_ code for X to scan across the table.
+
+Why both directions: a phone can't scan its own screen, so the payer's own GiroCode only helps
+with a second device, while showing yours to the person next to you works with one phone
+each. GiroCodes are euro-only (EPC), need the recipient's IBAN, and are addressed to the
+account holder name when set ([[Onboarding and Payment Details]]).
+
+The reminder writes the amount out in words and treats the PayPal.Me link as a shortcut only:
+PayPal drops a link's pre-filled amount when its native app takes over — even from an
+installed iOS PWA — which is why an earlier "pay with the amount filled in" attempt was
+reverted (commits `026624c`/`4bfa331`). Before 2026-09 creditor lines had no actions at all.
+
 ## Recording a settlement
 
 `recordSettlement` — validates `fromUid !== toUid`, both parties exist in `group.members`

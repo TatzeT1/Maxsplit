@@ -73,6 +73,7 @@ describe("payment details reach every group a member joins", () => {
       paypalEmail: "",
       iban: "de89 3704 0044 0532 0130 00",
       paypalMeHandle: "https://paypal.me/leapay/",
+      accountHolderName: "  Lea   Sommer ",
     });
     expect(result.ok).toBe(true);
 
@@ -80,8 +81,21 @@ describe("payment details reach every group a member joins", () => {
       const member = (await readGroup(groupId)).members.lea;
       expect(member.iban).toBe("DE89370400440532013000");
       expect(member.paypalMeHandle).toBe("leapay");
+      expect(member.accountHolderName).toBe("Lea Sommer");
       expect(member.paypalEmail).toBeUndefined();
     }
+  });
+
+  it("refuses an account holder name longer than a GiroCode can carry", async () => {
+    signInAs({ uid: "lea" });
+    expect(
+      await updatePaymentDetails({
+        paypalEmail: "",
+        iban: "",
+        paypalMeHandle: "",
+        accountHolderName: "x".repeat(71),
+      }),
+    ).toEqual({ ok: false, error: "invalid-account-holder" });
   });
 });
 

@@ -21,6 +21,13 @@ export interface GroupMember {
   iban?: string;
   /** PayPal.Me username only (e.g. "maxrobin"), no URL — see buildPaypalMeLink (lib/payment/paypal-me.ts). @see paypalEmail */
   paypalMeHandle?: string;
+  /**
+   * The IBAN's account holder as the bank knows them, for the GiroCode's
+   * recipient name — banks check that name against the IBAN before a SEPA
+   * transfer ("Empfängerüberprüfung"), and a display name like "Max" won't
+   * match. Absent means "use displayName". @see paypalEmail
+   */
+  accountHolderName?: string;
 }
 
 export interface Group {

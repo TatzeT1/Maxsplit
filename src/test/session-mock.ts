@@ -17,6 +17,7 @@ export function signInAs(session: Partial<Session> & { uid: string }): Session {
     paypalEmail: null,
     iban: null,
     paypalMeHandle: null,
+    accountHolderName: null,
     onboardingCompletedAt: "2026-01-01T00:00:00.000Z",
     ...session,
   };

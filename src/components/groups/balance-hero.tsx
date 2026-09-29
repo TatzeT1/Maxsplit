@@ -1,7 +1,8 @@
 "use client";
 
-import { Check, ChevronRight, Copy } from "lucide-react";
-import { type CSSProperties, useState } from "react";
+import { Check, ChevronRight, Copy, MessageCircle } from "lucide-react";
+import { type CSSProperties, useState, useSyncExternalStore } from "react";
+import { GiroCodeDialog } from "@/components/groups/girocode-dialog";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { InkStamp } from "@/components/groups/split-game/celebration";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { formatMoney, minorToMajor } from "@/lib/format/money";
 import { simplifyDebts } from "@/lib/money/balances";
 import { buildPaypalMeLink } from "@/lib/payment/paypal-me";
+import { buildReminderMessage, whatsAppShareUrl } from "@/lib/payment/reminder";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
@@ -45,21 +47,39 @@ function CopyButton({
   );
 }
 
+/** The name a GiroCode addresses: the account holder if they set one, which is what the bank checks. */
+function giroCodeName(member: GroupMember): string {
+  return member.accountHolderName || member.displayName;
+}
+
+/** GiroCodes are euro-only and need the recipient's IBAN and a name to address. */
+function canUseGiroCode(
+  member: GroupMember | undefined,
+  currency: string,
+): member is GroupMember & { iban: string } {
+  return currency === "EUR" && !!member?.iban && giroCodeName(member).trim().length > 0;
+}
+
+function noopSubscribe(): () => void {
+  return () => {};
+}
+
 /**
  * Everything you can do about one "you owe" line, in the order you'd do it:
- * pay (PayPal.Me link, or copy the details to pay by hand), then record it.
- * Money owed *to* you gets no actions — per the balances.payNow spec, the
- * app never nudges the creditor.
+ * pay (PayPal.Me link, or copy the details to pay by hand, or scan their
+ * GiroCode), then record it.
  */
 function PayActions({
   member,
   amountMinor,
   currency,
+  groupName,
   onMarkPaid,
 }: {
   member: GroupMember | undefined;
   amountMinor: number;
   currency: string;
+  groupName: string;
   onMarkPaid: () => void;
 }) {
   const t = useT();
@@ -99,6 +119,76 @@ function PayActions({
           copiedLabel={t("balances.ibanCopied")}
         />
       )}
+      {canUseGiroCode(member, currency) && (
+        <GiroCodeDialog
+          mode="pay"
+          recipientName={giroCodeName(member)}
+          iban={member.iban}
+          amountMinor={amountMinor}
+          groupName={groupName}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * What you can do about money owed *to* you: nudge them with a prefilled
+ * WhatsApp message (buildReminderMessage), or — sitting at the same table —
+ * show your own GiroCode for them to scan. Paying stays their move; recording
+ * it is done on their "you owe" line.
+ */
+function RemindActions({
+  debtorName,
+  me,
+  amountMinor,
+  currency,
+  groupId,
+  groupName,
+}: {
+  debtorName: string;
+  me: GroupMember | undefined;
+  amountMinor: number;
+  currency: string;
+  groupId: string;
+  groupName: string;
+}) {
+  const t = useT();
+  // `window` only exists on the client; until hydration the message just
+  // goes without the link back into the group.
+  const origin = useSyncExternalStore(
+    noopSubscribe,
+    () => window.location.origin,
+    () => "",
+  );
+  const message = buildReminderMessage({
+    t,
+    debtorName,
+    groupName,
+    amountMinor,
+    currency,
+    creditor: me ?? { displayName: "" },
+    groupUrl: origin ? `${origin}/groups/${groupId}` : null,
+  });
+
+  return (
+    <div className="flex flex-wrap gap-2 pt-3">
+      <Button asChild variant="outline" size="sm" className="h-10">
+        <a href={whatsAppShareUrl(message)} target="_blank" rel="noopener noreferrer">
+          <MessageCircle aria-hidden="true" />
+          {t("balances.remind")}
+        </a>
+      </Button>
+      {canUseGiroCode(me, currency) && (
+        <GiroCodeDialog
+          mode="show"
+          recipientName={giroCodeName(me)}
+          iban={me.iban}
+          amountMinor={amountMinor}
+          groupName={groupName}
+          payerName={debtorName}
+        />
+      )}
     </div>
   );
 }
@@ -130,7 +220,10 @@ export function BalanceHero({
   onShowAll,
 }: {
   groupId: string;
-  /** Seeds the settled stamp's ink splatter, so it lands the same way every time for this group. */
+  /**
+   * Seeds the settled stamp's ink splatter, so it lands the same way every
+   * time for this group — and names the group in reminders and GiroCodes.
+   */
   groupName: string;
   balances: Record<string, number>;
   members: Record<string, GroupMember>;
@@ -240,14 +333,24 @@ export function BalanceHero({
                             {formatMoney(line.amountMinor, currency)}
                           </span>
                         </div>
-                        {line.youOwe && (
+                        {line.youOwe ? (
                           <PayActions
                             member={members[line.uid]}
                             amountMinor={line.amountMinor}
                             currency={currency}
+                            groupName={groupName}
                             onMarkPaid={() =>
                               setSettleTarget({ toUid: line.uid, amountMinor: line.amountMinor })
                             }
+                          />
+                        ) : (
+                          <RemindActions
+                            debtorName={line.name}
+                            me={members[currentUid]}
+                            amountMinor={line.amountMinor}
+                            currency={currency}
+                            groupId={groupId}
+                            groupName={groupName}
                           />
                         )}
                       </li>

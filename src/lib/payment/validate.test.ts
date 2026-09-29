@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatIban,
   isValidEmail,
   isValidIban,
   isValidPaypalMeHandle,
@@ -10,6 +11,13 @@ import {
 describe("normalizeIban", () => {
   it("strips whitespace and uppercases", () => {
     expect(normalizeIban(" de89 3704 0044 0532 0130 00 ")).toBe("DE89370400440532013000");
+  });
+});
+
+describe("formatIban", () => {
+  it("groups a normalized IBAN in fours, leaving a short last group", () => {
+    expect(formatIban("de89370400440532013000")).toBe("DE89 3704 0044 0532 0130 00");
+    expect(formatIban("GB29 NWBK 6016 1331 9268 19")).toBe("GB29 NWBK 6016 1331 9268 19");
   });
 });
 

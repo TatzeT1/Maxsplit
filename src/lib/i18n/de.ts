@@ -49,10 +49,15 @@ export const de = {
     paypalMeHandlePlaceholder: "z. B. https://paypal.me/maxrobin",
     ibanLabel: "IBAN",
     ibanPlaceholder: "z. B. DE89 3704 0044 0532 0130 00",
+    accountHolderLabel: "Kontoinhaber",
+    accountHolderPlaceholder: "So wie der Name bei deiner Bank steht",
+    accountHolderHint:
+      "Für den GiroCode: Banken gleichen den Namen mit der IBAN ab. Leer lassen = dein Anzeigename.",
     paymentDetailsHint:
       "Wird deinen Gruppenmitgliedern angezeigt, damit sie dich zurückzahlen können. Leer lassen, um ein Feld auszublenden.",
     errorInvalidPaypalEmail: "Bitte gib eine gültige E-Mail-Adresse ein.",
     errorInvalidIban: "Bitte gib eine gültige IBAN ein.",
+    errorInvalidAccountHolder: "Der Name darf höchstens 70 Zeichen lang sein.",
     errorInvalidPaypalMeHandle:
       "Bitte füg deinen kompletten PayPal.Me-Link ein, z. B. „https://paypal.me/maxrobin“ — dein Nutzername allein geht auch.",
     guideTitle: "Wie funktioniert das?",
@@ -693,6 +698,27 @@ export const de = {
     stampSettled: "Quitt",
     copyIban: "IBAN kopieren",
     ibanCopied: "IBAN kopiert",
+    giroCode: "GiroCode",
+    giroCodeShow: "GiroCode zeigen",
+    giroCodePayTitle: "Per Überweisung zahlen",
+    giroCodePayBody:
+      "Scann den Code mit deiner Banking-App, zum Beispiel vom Laptop aus. Viele Apps lesen ihn auch aus einem Screenshot.",
+    giroCodeShowTitle: "{{name}} zahlt per Überweisung",
+    giroCodeShowBody:
+      "{{name}} scannt den Code mit der Banking-App – Empfänger, IBAN, Betrag und Verwendungszweck sind dann ausgefüllt.",
+    giroCodeRecipient: "Empfänger",
+    giroCodeIban: "IBAN",
+    giroCodeAmount: "Betrag",
+    giroCodeReference: "Verwendungszweck",
+    giroCodeReferenceText: "Split: {{group}}",
+    giroCodeCheck: "Prüf vor dem Absenden, ob alles stimmt.",
+    giroCodeQrLabel: "GiroCode über {{amount}} an {{name}}",
+    remind: "Erinnern",
+    remindText:
+      "Hi {{name}}, kleine Erinnerung aus „{{group}}“: Du schuldest mir noch {{amount}}. 🙏",
+    remindPaypal: "Per PayPal: {{link}}",
+    remindIban: "Per Überweisung: {{iban}} ({{holder}})",
+    remindAppLink: "Alle Details in Split: {{url}}",
     everyoneTitle: "Wer steht wo",
     everyoneHint: "Plus heißt: bekommt noch Geld. Minus: muss noch zahlen.",
     transfersTitle: "So werdet ihr quitt",
