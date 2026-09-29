@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { useRef, useState } from "react";
+import { preload } from "react-dom";
 import { useT } from "@/components/locale-provider";
 import { duelPalettes } from "@/lib/games/member-colors";
 import {
@@ -14,6 +15,7 @@ import {
 import { playReelStopSound } from "@/lib/sound/game-sounds";
 import { DuelTurnBanner } from "@/components/groups/split-game/duel-turn-banner";
 import { cn } from "@/lib/utils";
+import { TintedPiece } from "@/components/groups/split-game/tinted-piece";
 import type { DuelBoardProps } from "@/components/groups/split-game/duel-game-dialog";
 
 /** One match on a 7×6 board. Remounted fresh for every new match and every draw replay. */
@@ -81,10 +83,14 @@ export function ConnectFourGrid({
   disabled: boolean;
   onDrop: (column: number) => void;
 }) {
+  preload("/duel/c4-disc.webp", { as: "image" });
   const t = useT();
   const reduceMotion = useReducedMotion();
   return (
-    <div className="bg-muted/30 mx-auto grid w-full max-w-[320px] grid-cols-7 gap-1 rounded-xl border p-2">
+    <div
+      className="mx-auto grid w-full max-w-[320px] grid-cols-7 gap-1 bg-size-[100%_100%] p-3"
+      style={{ backgroundImage: "url(/duel/c4-board.webp)" }}
+    >
       {Array.from({ length: CF_COLUMNS }, (_, col) => {
         const full = board[col].length >= CF_ROWS;
         return (
@@ -105,19 +111,20 @@ export function ConnectFourGrid({
               const isWin = winCells?.some(([c, r]) => c === col && r === row) ?? false;
               const isLast = lastDrop?.col === col && lastDrop?.row === row;
               const disc = value !== undefined && (
-                <span
-                  className="flex size-full items-center justify-center rounded-full text-[10px] font-bold text-white"
-                  style={{ backgroundColor: colors[value] }}
+                <TintedPiece
+                  src="/duel/c4-disc.webp"
+                  color={colors[value]}
+                  className="size-full text-[10px] font-bold text-white [text-shadow:0_1px_2px_rgb(0_0_0/0.45)]"
                 >
                   {names[value].charAt(0).toUpperCase()}
-                </span>
+                </TintedPiece>
               );
               return (
                 <span
                   key={row}
                   className={cn(
                     "flex aspect-square items-center justify-center rounded-full",
-                    value === undefined && "border-border/60 bg-background border",
+                    value === undefined && "bg-[#133f3c] shadow-[inset_0_2px_4px_rgb(0_0_0/0.55)]",
                     isWin && "ring-destructive ring-2",
                   )}
                 >

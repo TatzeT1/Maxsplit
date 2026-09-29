@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { preload } from "react-dom";
 import { useT } from "@/components/locale-provider";
 import { duelPalettes } from "@/lib/games/member-colors";
 import {
@@ -15,6 +16,7 @@ import {
 import { playReelStopSound } from "@/lib/sound/game-sounds";
 import { DuelTurnBanner } from "@/components/groups/split-game/duel-turn-banner";
 import { cn } from "@/lib/utils";
+import { TintedPiece } from "@/components/groups/split-game/tinted-piece";
 import type { DuelBoardProps } from "@/components/groups/split-game/duel-game-dialog";
 
 /** One 3×3 match. Remounted (via the shell's `key={pairing.key}`) for every new match and every draw replay, so its state never has to be reset by hand. */
@@ -100,9 +102,14 @@ export function TicTacToeGrid({
   disabled: boolean;
   onTap: (index: number) => void;
 }) {
+  preload("/duel/ttt-x.webp", { as: "image" });
+  preload("/duel/ttt-o.webp", { as: "image" });
   const t = useT();
   return (
-    <div className="bg-muted/30 mx-auto grid w-full max-w-[280px] grid-cols-3 gap-2 rounded-xl border p-2">
+    <div
+      className="shadow-e1 mx-auto grid w-full max-w-[280px] grid-cols-3 gap-2 rounded-xl bg-cover bg-center p-2.5"
+      style={{ backgroundImage: "url(/duel/ttt-board.webp)" }}
+    >
       {cells.map((value, index) => {
         const row = Math.floor(index / 3) + 1;
         const col = (index % 3) + 1;
@@ -120,14 +127,21 @@ export function TicTacToeGrid({
                 : t("expenses.ticTacToeCellLabelTaken", { row, col, name: names[value] })
             }
             className={cn(
-              "flex aspect-square touch-manipulation items-center justify-center rounded-lg border text-3xl font-bold transition-[opacity,background-color,border-color] duration-(--duration-fast)",
-              isWinCell ? "border-destructive/50 bg-destructive/10" : "border-border bg-card",
+              "flex aspect-square touch-manipulation items-center justify-center rounded-lg border shadow-[inset_0_1px_3px_rgb(80_40_0/0.25)] transition-[opacity,background-color,border-color] duration-(--duration-fast)",
+              isWinCell
+                ? "border-destructive ring-destructive/60 bg-white/40 ring-2"
+                : "border-amber-950/15 bg-amber-50/20",
             )}
           >
             {value !== null && (
-              <span className={cn(vanishing && "opacity-40")} style={{ color: colors[value] }}>
-                {value === 0 ? "✕" : "◯"}
-              </span>
+              <TintedPiece
+                src={value === 0 ? "/duel/ttt-x.webp" : "/duel/ttt-o.webp"}
+                color={colors[value]}
+                className={cn(
+                  "size-[72%] transition-opacity duration-(--duration-fast)",
+                  vanishing && "opacity-40",
+                )}
+              />
             )}
           </button>
         );
