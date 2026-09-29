@@ -23,6 +23,7 @@ cp .env.example .env.local
 ```
 
 Edit `.env.local`:
+
 - Set `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`.
 - Add these three lines so the Admin SDK also talks to the local emulators instead of
   production Firebase:
@@ -57,15 +58,17 @@ Google account needed.
 
 ## Scripts
 
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Next.js dev server |
-| `pnpm build` | Production build |
-| `pnpm lint` | ESLint |
-| `pnpm format` / `format:check` | Prettier |
-| `pnpm test` | Unit tests (Vitest) |
-| `pnpm test:rules` | Firestore security rules tests against the emulator |
-| `pnpm emulators` | Firebase Auth/Firestore/Storage emulator suite |
+| Command                        | What it does                                                          |
+| ------------------------------ | --------------------------------------------------------------------- |
+| `pnpm dev`                     | Next.js dev server                                                    |
+| `pnpm build`                   | Production build                                                      |
+| `pnpm lint`                    | ESLint                                                                |
+| `pnpm typecheck`               | Generate Next's route types, then `tsc --noEmit`                      |
+| `pnpm format` / `format:check` | Prettier                                                              |
+| `pnpm test`                    | Unit tests (Vitest)                                                   |
+| `pnpm test:rules`              | Firestore security rules tests against the emulator                   |
+| `pnpm test:emulator`           | Server Action / cron integration tests against the Firestore emulator |
+| `pnpm emulators`               | Firebase Auth/Firestore/Storage emulator suite                        |
 
 ## Project structure
 

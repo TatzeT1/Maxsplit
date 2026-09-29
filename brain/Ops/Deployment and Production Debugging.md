@@ -17,6 +17,23 @@ Hosting: Vercel, auto-deploy from GitHub `main`. Cron: `vercel.json`. Security h
 - Deploying rule changes: `pnpm exec firebase deploy --only firestore:rules,storage` — rules
   are **not** deployed automatically by `next build`/Vercel; that's a separate, explicit step.
 
+### CI — `.github/workflows/ci.yml`
+
+The original brief's "GitHub Actions: typecheck + lint + test on every PR" — added 2026-09.
+Two jobs on every pull request and every push to `main`:
+
+- **check** — `pnpm typecheck`, `lint`, `test`, `build`. The build gets placeholder
+  `NEXT_PUBLIC_FIREBASE_*` values that pass the format gate, plus a **throwaway service
+  account generated per run**: `lib/firebase/admin.ts` initializes at import time and
+  `next build` imports every route to collect page data, so the build fails without a
+  well-formed `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64` (on Vercel that failure is a feature — a
+  deployment missing its server secret never ships). No real secret is stored in GitHub.
+- **emulator** — Java 21 + `pnpm test:rules` + `pnpm test:emulator` (see
+  [[Local Development and Testing]]). The emulator jars are cached between runs.
+
+CI never talks to a real Firebase project, and it doesn't deploy — Vercel still builds and
+deploys from GitHub on its own.
+
 ### The Firebase Auth authorized-domains gotcha
 
 Firebase Auth only allows sign-in from domains listed under Authentication → Settings →
@@ -30,20 +47,20 @@ not something to assume is already solved.
 
 Applied to every route via `headers()`:
 
-| Header | Value | Why |
-|---|---|---|
-| `X-Frame-Options` | `DENY` | money actions + the public settlement PDF must never render inside a frame |
-| `Content-Security-Policy` | `frame-ancestors 'none'` | same clickjacking concern, belt-and-suspenders |
-| `X-Content-Type-Options` | `nosniff` | standard MIME-sniffing hardening |
-| `Referrer-Policy` | `strict-origin-when-cross-origin` | standard |
-| `Strict-Transport-Security` | `max-age=63072000; includeSubDomains; preload` | app is HTTPS-only on Vercel; long max-age + preload opts the apex domain into the browser preload list |
-| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | no route needs any of these — deny outright |
-| `Cross-Origin-Opener-Policy` | `same-origin-allow-popups` | **not** the standard strict COOP — see below |
+| Header                       | Value                                          | Why                                                                                                    |
+| ---------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `X-Frame-Options`            | `DENY`                                         | money actions + the public settlement PDF must never render inside a frame                             |
+| `Content-Security-Policy`    | `frame-ancestors 'none'`                       | same clickjacking concern, belt-and-suspenders                                                         |
+| `X-Content-Type-Options`     | `nosniff`                                      | standard MIME-sniffing hardening                                                                       |
+| `Referrer-Policy`            | `strict-origin-when-cross-origin`              | standard                                                                                               |
+| `Strict-Transport-Security`  | `max-age=63072000; includeSubDomains; preload` | app is HTTPS-only on Vercel; long max-age + preload opts the apex domain into the browser preload list |
+| `Permissions-Policy`         | `camera=(), microphone=(), geolocation=()`     | no route needs any of these — deny outright                                                            |
+| `Cross-Origin-Opener-Policy` | `same-origin-allow-popups`                     | **not** the standard strict COOP — see below                                                           |
 
 > [!warning] No full CSP, deliberately
 > A strict Content-Security-Policy has to be tuned against Firebase Auth/Firestore origins,
-> Next's inline bootstrap script, and the app's own styling — shipping a wrong one *silently
-> breaks auth*. This is tracked as a deliberate gap, not guessed at. Don't add a strict CSP
+> Next's inline bootstrap script, and the app's own styling — shipping a wrong one _silently
+> breaks auth_. This is tracked as a deliberate gap, not guessed at. Don't add a strict CSP
 > without testing sign-in end-to-end against it.
 
 The COOP override exists because **Vercel's platform default is a stricter COOP that silently
@@ -73,4 +90,5 @@ Per AGENTS.md, **get signal before forming theories**, in this order:
 > deployment can otherwise look like an active, ongoing incident.
 
 ## Related
+
 [[Environment and Config]] · [[Two Auth States]] · [[Recurring Expenses]] (the cron job deployed here) · [[Design System and Theming]] (headers)

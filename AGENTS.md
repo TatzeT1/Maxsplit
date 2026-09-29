@@ -15,13 +15,16 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 All four must be green before you commit:
 
 ```
-pnpm exec tsc --noEmit
+pnpm typecheck    # next typegen && tsc --noEmit — bare tsc lacks the route types on a fresh clone
 pnpm lint
 pnpm test
 pnpm build
 ```
 
-`pnpm test:rules` needs the emulator suite and is not part of the default gate.
+`pnpm test:rules` (Firestore rules) and `pnpm test:emulator` (Server Actions and the
+recurring cron against the Firestore emulator) need Java and are not part of the default
+gate — run them when you touch rules or actions. CI (`.github/workflows/ci.yml`) runs all
+six on every pull request.
 `pnpm format:check` currently fails on pre-existing files — run Prettier on the
 files you touch, and leave the rest alone rather than reformatting the repo.
 

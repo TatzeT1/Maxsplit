@@ -1,0 +1,93 @@
+# The Definition of Done from AGENTS.md, on every pull request and on main,
+# plus the two emulator suites that need Java and so aren't in the local
+# default gate. Nothing here talks to a real Firebase project.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Inlined into the client bundle at build time and format-checked by
+  # next.config.ts (see src/lib/firebase/config.ts). CI only needs values that
+  # pass those checks.
+  NEXT_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: split-ci.firebaseapp.com
+  NEXT_PUBLIC_FIREBASE_PROJECT_ID: split-ci
+  NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: split-ci.firebasestorage.app
+  NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "1234567890"
+  NEXT_PUBLIC_FIREBASE_APP_ID: "1:1234567890:web:ci"
+
+jobs:
+  check:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version from package.json's packageManager
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+
+      # firebase-admin initializes when lib/firebase/admin.ts is imported, and
+      # `next build` imports every route to collect page data, so the build
+      # needs a well-formed service account. This one is generated per run and
+      # never authenticates anywhere.
+      - name: Generate a throwaway service account
+        run: |
+          node -e '
+            const { generateKeyPairSync } = require("node:crypto");
+            const { privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
+            const account = {
+              type: "service_account",
+              project_id: "split-ci",
+              client_email: "ci@split-ci.iam.gserviceaccount.com",
+              private_key: privateKey.export({ type: "pkcs8", format: "pem" }),
+            };
+            console.log("FIREBASE_SERVICE_ACCOUNT_KEY_BASE64=" + Buffer.from(JSON.stringify(account)).toString("base64"));
+          ' >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('src/**') }}
+          restore-keys: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      - run: pnpm build
+
+  emulator:
+    name: Rules + Server Action tests (emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4 # the Firestore and Storage emulators run on the JVM
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4 # the emulator jars firebase-tools downloads on first use
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm test:rules
+      - run: pnpm test:emulator

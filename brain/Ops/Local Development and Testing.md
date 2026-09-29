@@ -12,11 +12,15 @@ map.
 All four must be green before committing:
 
 ```
-pnpm exec tsc --noEmit
+pnpm typecheck    # next typegen && tsc --noEmit
 pnpm lint
 pnpm test
 pnpm build
 ```
+
+`pnpm typecheck` runs `next typegen` first: the root layout uses Next's generated
+`LayoutProps` type, which only exists once route types have been generated (by `next dev`,
+`next build` or `next typegen`), so a bare `tsc --noEmit` fails on a fresh clone.
 
 `pnpm test:rules` (emulator-backed Firestore rules suite) is **not** part of this default
 gate — it needs the emulator running. Run it manually whenever `firestore.rules` changes; see
