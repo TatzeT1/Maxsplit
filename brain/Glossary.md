@@ -10,18 +10,18 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 
 ## German UI terms
 
-| German | English meaning | Where |
-|---|---|---|
-| Schulden vereinfachen | "Simplify debts" | `simplifyDebts`, opt-in per-group debt-simplification toggle — [[Money Invariants]], [[Balances and Settlements]] |
-| Du schuldest Anna 12,50 € | "You owe Anna 12.50 €" | pairwise debt display — `computePairwiseDebts` |
-| Schuldenausgleich | "Debt settlement" | filename `schuldenausgleich.pdf` from the [[Settlement PDF Export]] route |
-| vergambelt | roughly "gambled away" | informal term for the [[Split Games]] leaderboard of who's lost the most across the split mini-games |
-| Überspringen | "Skip" | the onboarding skip action — see [[Onboarding and Payment Details]] |
-| Mit Google anmelden | "Sign in with Google" | the sign-in button label, incl. in the emulator's fake account picker |
-| Ausgaben teilen, ohne Kopfrechnen | "Split expenses without mental math" | the app's tagline (`app.tagline` in `de.ts`) |
-| Glücksspiele | "Games of chance" | the picker's luck-based category (🎲🎡🎰🎫) — [[Split Games]] |
-| Minispiele | "Minigames" | the picker's skill-based, 1-vs-1 duel category (⭕🔴🧠⚡) — [[Split Games]] |
-| K.-o.-Modus | "Knockout mode" | the picker's name for the knockout-ladder mechanic that scales a duel game to a pool bigger than 2 — [[Split Games]] |
+| German                            | English meaning                      | Where                                                                                                                |
+| --------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| Schulden vereinfachen             | "Simplify debts"                     | `simplifyDebts`, opt-in per-group debt-simplification toggle — [[Money Invariants]], [[Balances and Settlements]]    |
+| Du schuldest Anna 12,50 €         | "You owe Anna 12.50 €"               | pairwise debt display — `computePairwiseDebts`                                                                       |
+| Schuldenausgleich                 | "Debt settlement"                    | filename `schuldenausgleich.pdf` from the [[Settlement PDF Export]] route                                            |
+| vergambelt                        | roughly "gambled away"               | informal term for the [[Split Games]] leaderboard of who's lost the most across the split mini-games                 |
+| Überspringen                      | "Skip"                               | the onboarding skip action — see [[Onboarding and Payment Details]]                                                  |
+| Mit Google anmelden               | "Sign in with Google"                | the sign-in button label, incl. in the emulator's fake account picker                                                |
+| Ausgaben teilen, ohne Kopfrechnen | "Split expenses without mental math" | the app's tagline (`app.tagline` in `de.ts`)                                                                         |
+| Glücksspiele                      | "Games of chance"                    | the picker's luck-based category (🎲🎡🎰🎫) — [[Split Games]]                                                        |
+| Minispiele                        | "Minigames"                          | the picker's skill-based, 1-vs-1 duel category (⭕🔴🧠⚡) — [[Split Games]]                                          |
+| K.-o.-Modus                       | "Knockout mode"                      | the picker's name for the knockout-ladder mechanic that scales a duel game to a pool bigger than 2 — [[Split Games]] |
 
 ## Domain vocabulary
 
@@ -42,9 +42,14 @@ how they appear in `de.ts`, dialog titles, and design discussions.
   (Context → Decision → Consequences → what would reverse it).
 - **manager** (as in `isGroupManager`) — a group `owner` or `admin`, as opposed to a plain
   `member`. See [[Conventions]].
+- **ghost debt** — a balance on a uid that is no longer in `group.members` (someone who left,
+  a claimed placeholder id): still in the ledger, invisible on the group page. Leaving is
+  blocked while unsettled for this reason, and recurring rules are kept from creating new
+  ones. See [[Groups and Members]] and [[Recurring Expenses]].
 - **backstop** — used specifically for `firestore.rules`' deny-all write rules: not the
   primary enforcement mechanism (that's Server Actions), just a safety net that should never
   actually be exercised. See [[Firestore Rules]].
 
 ## Related
+
 [[Home]] · [[Conventions]] · [[Data Model]]

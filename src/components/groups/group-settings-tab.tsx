@@ -43,7 +43,9 @@ function LeaveOrDeleteGroup({ group, currentUid }: { group: Group; currentUid: s
           ? t("groups.ownerCannotLeave")
           : result.error === "unsettled-balance"
             ? t("groups.unsettledBalanceError")
-            : t("groups.leaveGroupError"),
+            : result.error === "in-recurring-rule"
+              ? t("groups.leaveInRecurringRuleError")
+              : t("groups.leaveGroupError"),
       );
       setBusy(false);
       return;

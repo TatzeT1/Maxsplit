@@ -16,7 +16,7 @@ server-side, in plain TypeScript, never trusted from a client.
    (`split.ts`). The rounding remainder is distributed deterministically, **never** silently
    dropped or invented.
 3. Across a group, `sum(all member balances) === 0` — this is not separately validated; it
-   *falls out* of invariants 1 and 2 holding for every expense (see `computeBalances`'s doc
+   _falls out_ of invariants 1 and 2 holding for every expense (see `computeBalances`'s doc
    comment in `balances.ts`).
 
 All amounts are **integer minor units** (cents). `assertIntegerMinorUnits` throws on any
@@ -32,12 +32,12 @@ dropped or invented — the property invariant #2 depends on.
 
 All four split modes are thin wrappers around this one function:
 
-| Mode | Weights | Function |
-|---|---|---|
-| `equal` | all `1` | `splitEqual` |
-| `shares` | share counts (positive integers) | `splitByShares` |
+| Mode      | Weights                                                 | Function         |
+| --------- | ------------------------------------------------------- | ---------------- |
+| `equal`   | all `1`                                                 | `splitEqual`     |
+| `shares`  | share counts (positive integers)                        | `splitByShares`  |
 | `percent` | percentages, must sum to 100 (`validatePercentsSum100`) | `splitByPercent` |
-| `exact` | the amounts themselves, must already sum to the total | `splitExact` |
+| `exact`   | the amounts themselves, must already sum to the total   | `splitExact`     |
 
 See [[Expenses and Splitting]] for how a Server Action turns raw UI input into these calls.
 
@@ -53,7 +53,7 @@ group owes them; negative = they owe the group.
 Greedy min-cash-flow heuristic: repeatedly matches the largest creditor with the largest
 debtor until everyone nets to zero. **Not** a globally-optimal minimum-transaction-count
 solver (that's NP-hard) — same approach other Splitwise-style apps use. Always ≤ `n-1`
-transfers for `n` people with a nonzero balance. Purely a *display* suggestion: it doesn't
+transfers for `n` people with a nonzero balance. Purely a _display_ suggestion: it doesn't
 read or write settlements — a caller still has to call `recordSettlement` once money actually
 changes hands. Per the original roadmap this is opt-in per group in the UI.
 
@@ -76,11 +76,13 @@ arithmetic visible (used by [[Settlement PDF Export]]), not to compute anything 
 ## The cache: `recomputeGroupBalances`
 
 `src/lib/money/balance-cache.ts`. Called after **every** Server Action that mutates a
-group's expenses or settlements. Recomputes the full ledger and writes it to
+group's expenses or settlements, and after the recurring cron books into a group (see
+[[Recurring Expenses]]). Recomputes the full ledger and writes it to
 `groups/{id}.balancesMinor`. **Best-effort**: wrapped in try/catch, a failure here is logged
 but never fails the caller's already-succeeded primary mutation — the cache just goes stale
 until the next write. See [[Data Model]] for why this field is display-only, never a source
 of truth.
 
 ## Related
+
 [[Data Access Pattern]] · [[Expenses and Splitting]] · [[Balances and Settlements]] · [[Split Games]]

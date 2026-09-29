@@ -27,3 +27,30 @@ export function addPeriod(
   const targetDay = Math.min(anchorDay, lastDayOfTargetMonth);
   return new Date(Date.UTC(year, targetMonthIndex, targetDay)).toISOString().slice(0, 10);
 }
+
+/**
+ * Today's date as yyyy-mm-dd in UTC — the calendar the cron books against
+ * (it runs at 06:00 UTC, see vercel.json) and the one "resume" compares
+ * with, so both agree on which periods count as past.
+ */
+export function utcToday(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+/**
+ * The first date on the rule's own cadence that is on or after `today`,
+ * walking forward from `nextRunDate`. This is where "Fortsetzen" resumes a
+ * paused rule: the periods that passed while it was paused are skipped, not
+ * booked all at once by the next cron run. A `nextRunDate` that is already
+ * today or later is returned unchanged.
+ */
+export function firstRunOnOrAfter(
+  nextRunDate: string,
+  startDate: string,
+  frequency: RecurringFrequency,
+  today: string,
+): string {
+  let date = nextRunDate;
+  while (date < today) date = addPeriod(date, startDate, frequency);
+  return date;
+}

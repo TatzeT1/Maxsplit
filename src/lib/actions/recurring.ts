@@ -4,6 +4,8 @@ import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { splitEqual, validatePaidBy } from "@/lib/money/split";
+import { ruleHasMissingMembers } from "@/lib/recurring/rule-members";
+import { firstRunOnOrAfter, utcToday } from "@/lib/recurring/schedule";
 import type {
   CategoryId,
   ExpenseSplit,
@@ -108,17 +110,25 @@ async function requireRuleOwnerOrManager(
   ruleId: string,
   uid: string,
 ): Promise<
-  { error: "not-found" | "not-owner" } | { ruleRef: FirebaseFirestore.DocumentReference }
+  | { error: "not-found" | "not-owner" }
+  | { ruleRef: FirebaseFirestore.DocumentReference; rule: Omit<RecurringRule, "id"> }
 > {
   const ruleRef = groupRef.collection("recurring").doc(ruleId);
   const ruleSnap = await ruleRef.get();
   if (!ruleSnap.exists) return { error: "not-found" };
-  const rule = ruleSnap.data() as RecurringRule;
+  const rule = ruleSnap.data() as Omit<RecurringRule, "id">;
   const canManage = isGroupManager(group.members[uid]?.role);
   if (rule.createdBy !== uid && !canManage) return { error: "not-owner" };
-  return { ruleRef };
+  return { ruleRef, rule };
 }
 
+/**
+ * Pauses or resumes a rule. Resuming picks up at the rule's next date on or
+ * after today (firstRunOnOrAfter): "Pausieren" means those periods are
+ * skipped, so they're not booked all at once by the next cron run. A rule
+ * naming someone who has left can't be resumed at all — the cron pauses such
+ * rules, and booking them would create debts the group page can't show.
+ */
 export async function setRecurringRuleActive(input: {
   groupId: string;
   ruleId: string;
@@ -133,8 +143,20 @@ export async function setRecurringRuleActive(input: {
 
   const owner = await requireRuleOwnerOrManager(groupRef, group, input.ruleId, session.uid);
   if ("error" in owner) return { ok: false, error: owner.error };
+  const { ruleRef, rule } = owner;
 
-  await owner.ruleRef.update({ active: input.active });
+  if (!input.active) {
+    await ruleRef.update({ active: false });
+    return { ok: true, data: null };
+  }
+
+  if (ruleHasMissingMembers(rule, group.members)) {
+    return { ok: false, error: "rule-member-missing" };
+  }
+  await ruleRef.update({
+    active: true,
+    nextRunDate: firstRunOnOrAfter(rule.nextRunDate, rule.startDate, rule.frequency, utcToday()),
+  });
   return { ok: true, data: null };
 }
 

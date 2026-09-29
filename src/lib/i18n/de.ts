@@ -211,6 +211,10 @@ export const de = {
     removeMemberConfirmBody: "{{name}} verliert den Zugriff auf diese Gruppe.",
     removeMemberError: "Entfernen fehlgeschlagen.",
     unsettledBalanceError: "Es gibt noch eine offene Schuld. Erst ausgleichen, dann geht's weiter.",
+    leaveInRecurringRuleError:
+      "Du bist noch Teil einer wiederkehrenden Ausgabe. Sie muss erst gelöscht werden, dann kannst du gehen.",
+    removeInRecurringRuleError:
+      "Diese Person ist noch Teil einer wiederkehrenden Ausgabe. Lösch die Regel zuerst.",
     roleChangeError: "Rolle konnte nicht geändert werden.",
     leaveGroup: "Gruppe verlassen",
     leaveGroupConfirm: "Gruppe wirklich verlassen?",
@@ -732,6 +736,8 @@ export const de = {
     empty: "Keine wiederkehrenden Ausgaben.",
     saveError: "Konnte nicht gespeichert werden.",
     errorNotOwner: "Du kannst nur eigene Regeln bearbeiten oder löschen.",
+    errorMemberMissing:
+      "Jemand aus dieser Regel ist nicht mehr in der Gruppe. Lösch sie und leg sie neu an.",
   },
   activity: {
     expenseAdded: "{{name}} hat „{{description}}“ hinzugefügt",

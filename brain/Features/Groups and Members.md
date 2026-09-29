@@ -22,7 +22,7 @@ expense" or "can manage membership" is checked. Rules:
   else server-side (a hand-crafted request could otherwise carry an arbitrary string and mint
   a second "owner" or a bogus role that slips past `isGroupManager`).
 - An **admin cannot remove another admin** (`removeMember`: `actor.role === "admin" &&
-  target.role === "admin"` → forbidden) — only the owner can.
+target.role === "admin"` → forbidden) — only the owner can.
 - Nobody can remove themselves via `removeMember` (`"cannot-remove-self"` — that's what
   `leaveGroup` is for).
 
@@ -34,8 +34,15 @@ Both `leaveGroup` and `removeMember` call `computeMemberBalance(groupRef, uid)` 
 the group page's balance views only ever name debts for `Object.keys(members)` — silently removing a member
 with a nonzero balance would make their debt vanish from the UI even though the
 expenses/settlements that created it are still sitting in the ledger, breaking the zero-sum
-invariant's *visibility* (the math still sums to zero underneath, but nobody could see who
+invariant's _visibility_ (the math still sums to zero underneath, but nobody could see who
 owes what anymore).
+
+### …and while a recurring rule still names them
+
+Both also refuse with `"in-recurring-rule"` while any recurring rule (active or paused) names
+the member as payer or participant: the cron would otherwise keep booking expenses on a uid
+that's no longer in `members` — the same invisible-debt problem, just arriving month by
+month. See [[Recurring Expenses]].
 
 ## Invite codes
 
@@ -54,6 +61,7 @@ app. Created two ways: at group creation (`createGroup({ memberNames })`) or lat
 (`addPlaceholderMember`, `renamePlaceholderMember` — both require `isGroupManager`).
 
 Placeholders are:
+
 - **Valid participants** in expenses and settlements — `resolveExpense` in
   `lib/actions/expenses.ts` checks candidate uids against `group.members` (real +
   placeholder), not `memberUids` (real only).
@@ -66,10 +74,14 @@ Placeholders are:
 When a real person's invite-code join matches an existing placeholder
 (`joinGroupByInviteCode({ claimPlaceholderId })`), `claimPlaceholder` in `groups.ts`:
 
-1. Rewrites every expense's `paidBy`/`splits` and every settlement's `fromUid`/`toUid` from
-   `placeholderId` → the new real `uid`, in one Firestore batch (500-write limit — this is
-   explicitly **not** built to handle a placeholder referenced by hundreds of expenses; fine
-   at this app's actual scale).
+1. Rewrites every expense's and every **recurring rule's** `paidBy`/`splits` and every
+   settlement's `fromUid`/`toUid` from `placeholderId` → the new real `uid`, in one Firestore
+   batch (500-write limit — this is explicitly **not** built to handle a placeholder
+   referenced by hundreds of expenses; fine at this app's actual scale). The move goes
+   through `moveMemberInLedgerEntry` (`src/lib/groups/move-member.ts`): if the real uid
+   already has a stake in the same entry (someone who left and rejoins by claiming a
+   placeholder), the two stakes are **added**, never overwritten — overwriting silently
+   dropped an amount and broke `sum(splits) === amountMinor`.
 2. Replaces the placeholder's `members` entry with a real one, adds the uid to `memberUids`.
 3. Calls `recomputeGroupBalances` afterward.
 
@@ -84,4 +96,5 @@ chatReads) in one call. No soft-delete at the group level (unlike expenses — s
 [[Data Model]]).
 
 ## Related
+
 [[Data Model]] · [[Data Access Pattern]] · [[Balances and Settlements]] · [[Admin Panel]]

@@ -20,7 +20,7 @@ Authorization: Bearer $CRON_SECRET
 
 Vercel automatically sends this header when invoking a configured cron job if `CRON_SECRET`
 is set as an env var — see [[Environment and Config]]. If the header doesn't match, the route
-returns 401. This is the *only* write path in the codebase authorized by a shared secret
+returns 401. This is the _only_ write path in the codebase authorized by a shared secret
 instead of `getSession()`.
 
 ## `addPeriod` — advancing the schedule
@@ -41,7 +41,46 @@ off-by-one issues.
 periods per rule per invocation. This bound exists so a cron outage (Vercel incident, a
 deploy that broke the route) can't produce an unbounded backlog of expenses once it resumes —
 worst case is 24 periods materialized per rule per run, and the remainder catches up on
-subsequent daily invocations.
+subsequent daily invocations. `today` is `utcToday()` (`schedule.ts`) — the UTC calendar day,
+shared with "resume" below so both agree on which periods are past.
+
+## One period, one booking — even when runs overlap
+
+Each period is booked by `bookNextPeriod` in **one Firestore transaction**: read the rule,
+create the expense, advance `nextRunDate` — all or nothing. The expense id is derived, not
+random: `recurringExpenseId(ruleId, date)` = `rec_{ruleId}_{yyyy-mm-dd}`. Together that means
+a run that dies half-way, a retried invocation, or two overlapping runs can never book the
+same period twice, and a booking someone soft-deleted stays deleted (its doc still exists, so
+the period counts as booked). Before 2026-09 the add and the advance were separate writes, so
+a timeout between them re-booked the period the next day.
+
+## Keeps the balance cache fresh
+
+Every group that got a new expense has `recomputeGroupBalances` run afterwards — the same
+thing every Server Action does after a ledger write (see [[Money Invariants]]). The cron used
+to skip it, so the groups list's "du schuldest …" went stale after every booking until
+someone's next manual edit.
+
+## Never books a rule that names a non-member ("ghost debt")
+
+A rule's template names members (`paidBy`, `splits`) and is booked as-is for months. If one of
+those uids is no longer in `group.members`, the booked expense gives them a balance the group
+page never shows — it only names debts for `Object.keys(members)` (see [[Groups and
+Members]]). `src/lib/recurring/rule-members.ts` holds the checks; three places use them:
+
+- **Claiming a placeholder** rewrites recurring rules along with expenses and settlements.
+- **Leaving / removing** a member is refused (`"in-recurring-rule"`) while any rule — active
+  _or paused_, since a paused one can be resumed — still names them.
+- **The cron** pauses (`active: false`) instead of booking a rule that names a non-member,
+  e.g. one left behind before the two checks above existed; it then reads "Pausiert".
+  Resuming such a rule is refused (`"rule-member-missing"`) — delete it and create it anew.
+
+## Pause means skip, not defer
+
+`setRecurringRuleActive({ active: true })` moves `nextRunDate` to `firstRunOnOrAfter(...)` —
+the first date on the rule's own cadence that is today or later. Without it, resuming a rule
+paused in June made the next cron run book June through September at once. Pausing leaves
+`nextRunDate` untouched.
 
 ## Materialized expenses skip validation that already happened
 
@@ -53,4 +92,5 @@ you change what recurring rules can store, make sure creation-time validation st
 the invariants in [[Money Invariants]] hold for every future materialized expense.
 
 ## Related
+
 [[Money Invariants]] · [[Expenses and Splitting]] · [[Environment and Config]] (CRON_SECRET) · [[Deployment and Production Debugging]]

@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { materializeDueRecurringRules } from "@/lib/recurring/materialize";
+import { utcToday } from "@/lib/recurring/schedule";
 
 /**
  * Triggered daily by Vercel Cron (see vercel.json) — not a user-facing
@@ -14,7 +15,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const today = new Date().toISOString().slice(0, 10);
-  const result = await materializeDueRecurringRules(today);
+  const result = await materializeDueRecurringRules(utcToday());
   return NextResponse.json(result);
 }

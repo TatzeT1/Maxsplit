@@ -122,7 +122,9 @@ function MemberRow({
       setError(
         result.error === "unsettled-balance"
           ? t("groups.unsettledBalanceError")
-          : t("groups.removeMemberError"),
+          : result.error === "in-recurring-rule"
+            ? t("groups.removeInRecurringRuleError")
+            : t("groups.removeMemberError"),
       );
     }
     setBusy(false);

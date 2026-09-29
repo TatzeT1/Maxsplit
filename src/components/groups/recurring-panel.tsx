@@ -30,6 +30,8 @@ function recurringActionErrorMessage(code: string, t: ReturnType<typeof useT>): 
   switch (code) {
     case "not-owner":
       return t("recurring.errorNotOwner");
+    case "rule-member-missing":
+      return t("recurring.errorMemberMissing");
     case "forbidden":
       return t("errors.forbidden");
     case "not-found":

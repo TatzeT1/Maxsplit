@@ -210,6 +210,10 @@ export const en: Dictionary = {
     removeMemberConfirmBody: "{{name}} will lose access to this group.",
     removeMemberError: "Removing failed.",
     unsettledBalanceError: "There's still an open balance. Settle up first, then try again.",
+    leaveInRecurringRuleError:
+      "You're still part of a recurring expense. It has to be deleted before you can leave.",
+    removeInRecurringRuleError:
+      "This person is still part of a recurring expense. Delete that rule first.",
     roleChangeError: "Couldn't change the role.",
     leaveGroup: "Leave group",
     leaveGroupConfirm: "Really leave this group?",
@@ -722,6 +726,8 @@ export const en: Dictionary = {
     empty: "No recurring expenses.",
     saveError: "Couldn't save it.",
     errorNotOwner: "You can only edit or delete your own rules.",
+    errorMemberMissing:
+      "Someone in this rule is no longer in the group. Delete it and create it again.",
   },
   activity: {
     expenseAdded: "{{name}} added “{{description}}”",

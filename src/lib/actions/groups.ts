@@ -5,11 +5,20 @@ import { FieldValue } from "firebase-admin/firestore";
 import { getSession, type Session } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { generateInviteCode, normalizeInviteCode } from "@/lib/groups/invite-code";
+import { moveMemberInLedgerEntry } from "@/lib/groups/move-member";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { computeBalances } from "@/lib/money/balances";
 import { pickPaymentDetails } from "@/lib/payment/member-payment-details";
-import type { Expense, Group, GroupMember, GroupRole, Settlement } from "@/lib/types";
+import { ruleNamesMember } from "@/lib/recurring/rule-members";
+import type {
+  Expense,
+  Group,
+  GroupMember,
+  GroupRole,
+  RecurringRule,
+  Settlement,
+} from "@/lib/types";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -68,6 +77,21 @@ async function computeMemberBalance(
 
   const balances = computeBalances(balanceExpenses, settlements);
   return balances[uid] ?? 0;
+}
+
+/**
+ * Whether any recurring rule — active or paused, since a paused one can be
+ * resumed — still names `uid` as payer or participant. Leaving or removing
+ * such a member would leave the rule booking expenses on a uid the group page
+ * no longer shows (a "ghost debt", see lib/recurring/rule-members.ts), so both
+ * are refused until the rule is deleted.
+ */
+async function isNamedInRecurringRule(
+  groupRef: FirebaseFirestore.DocumentReference,
+  uid: string,
+): Promise<boolean> {
+  const rules = await groupRef.collection("recurring").get();
+  return rules.docs.some((doc) => ruleNamesMember(doc.data() as RecurringRule, uid));
 }
 
 const MAX_INVITE_CODE_ATTEMPTS = 5;
@@ -244,13 +268,16 @@ export async function previewGroupByInviteCode(input: { inviteCode: string }): P
 }
 
 /**
- * Rewrites every expense/settlement referencing `placeholderId` to
- * `session.uid` instead, so a new real member "becomes" an existing
- * placeholder rather than starting a second, disconnected identity — the
- * whole point of placeholders is that the ledger is already correct once
- * the real person shows up. One batch (500-write Firestore limit) is plenty
- * at this app's scale; this isn't built to handle a group with hundreds of
- * expenses referencing one placeholder.
+ * Rewrites every expense, recurring rule and settlement referencing
+ * `placeholderId` to `session.uid` instead, so a new real member "becomes"
+ * an existing placeholder rather than starting a second, disconnected
+ * identity — the whole point of placeholders is that the ledger is already
+ * correct once the real person shows up. Recurring rules matter as much as
+ * past expenses: a rule still naming the placeholder would keep booking
+ * expenses on a uid that's no longer in `members` (see rule-members.ts).
+ * One batch (500-write Firestore limit) is plenty at this app's scale; this
+ * isn't built to handle a group with hundreds of expenses referencing one
+ * placeholder.
  */
 async function claimPlaceholder(
   groupRef: FirebaseFirestore.DocumentReference,
@@ -263,23 +290,14 @@ async function claimPlaceholder(
 
   const batch = adminDb.batch();
 
-  const expensesSnap = await groupRef.collection("expenses").get();
-  for (const doc of expensesSnap.docs) {
-    const expense = doc.data() as Expense;
-    const updates: Record<string, unknown> = {};
-    if (placeholderId in expense.paidBy) {
-      const paidBy = { ...expense.paidBy };
-      paidBy[session.uid] = paidBy[placeholderId];
-      delete paidBy[placeholderId];
-      updates.paidBy = paidBy;
-    }
-    if (placeholderId in expense.splits) {
-      const splits = { ...expense.splits };
-      splits[session.uid] = splits[placeholderId];
-      delete splits[placeholderId];
-      updates.splits = splits;
-    }
-    if (Object.keys(updates).length > 0) batch.update(doc.ref, updates);
+  const [expensesSnap, rulesSnap] = await Promise.all([
+    groupRef.collection("expenses").get(),
+    groupRef.collection("recurring").get(),
+  ]);
+  for (const doc of [...expensesSnap.docs, ...rulesSnap.docs]) {
+    const entry = doc.data() as Pick<Expense, "paidBy" | "splits">;
+    const updates = moveMemberInLedgerEntry(entry, placeholderId, session.uid);
+    if (updates) batch.update(doc.ref, updates);
   }
 
   const settlementsSnap = await groupRef.collection("settlements").get();
@@ -361,6 +379,9 @@ export async function leaveGroup(input: { groupId: string }): Promise<ActionResu
 
   const balance = await computeMemberBalance(groupRef, session.uid);
   if (balance !== 0) return { ok: false, error: "unsettled-balance" };
+  if (await isNamedInRecurringRule(groupRef, session.uid)) {
+    return { ok: false, error: "in-recurring-rule" };
+  }
 
   await groupRef.update({
     memberUids: FieldValue.arrayRemove(session.uid),
@@ -407,6 +428,9 @@ export async function removeMember(input: {
 
   const balance = await computeMemberBalance(groupRef, input.uid);
   if (balance !== 0) return { ok: false, error: "unsettled-balance" };
+  if (await isNamedInRecurringRule(groupRef, input.uid)) {
+    return { ok: false, error: "in-recurring-rule" };
+  }
 
   await groupRef.update({
     memberUids: FieldValue.arrayRemove(input.uid),
