@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
+import { getVapidConfig } from "@/lib/push/vapid";
 
 export default async function OnboardingPage({
   searchParams,
@@ -52,6 +53,8 @@ export default async function OnboardingPage({
         paypalMeHandle={session.paypalMeHandle ?? ""}
         accountHolderName={session.accountHolderName ?? ""}
         exitTo={exitTo}
+        uid={session.uid}
+        vapidPublicKey={getVapidConfig()?.publicKey ?? null}
       />
     </div>
   );

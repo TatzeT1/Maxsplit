@@ -95,6 +95,11 @@ export const en: Dictionary = {
     featureBalanceTitle: "Settle up balances",
     featureBalanceDescription:
       "Keep track and settle open amounts directly via PayPal or bank transfer.",
+    notificationsTitle: "Turn on notifications",
+    notificationsSubtitle:
+      "Stay in the loop: get a message when someone adds an expense with you or pays you back — even when Split is closed.",
+    notificationsEnable: "Turn on now",
+    notificationsLater: "Later",
     continueButton: "Continue",
     backButton: "Back",
     paymentTitle: "Set up payment details",

@@ -96,6 +96,11 @@ export const de = {
     featureBalanceTitle: "Salden ausgleichen",
     featureBalanceDescription:
       "Behalt den Überblick und gleich offene Beträge direkt per PayPal oder Überweisung aus.",
+    notificationsTitle: "Benachrichtigungen aktivieren",
+    notificationsSubtitle:
+      "Bleib auf dem Laufenden: Du bekommst eine Nachricht, wenn jemand eine Ausgabe mit dir einträgt oder dir Geld schickt — auch wenn Split geschlossen ist.",
+    notificationsEnable: "Jetzt aktivieren",
+    notificationsLater: "Später",
     continueButton: "Weiter",
     backButton: "Zurück",
     paymentTitle: "Zahlungsdaten einrichten",
