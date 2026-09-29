@@ -25,6 +25,11 @@ export async function clearLocalData(): Promise<void> {
     // (Firebase Auth shares its state across tabs) and clears it then.
     console.error("Could not clear the offline copy", error);
   }
+  // The worker empties its saved pages too — and drops a save still in flight,
+  // which would otherwise put this person's page back after the wipe below.
+  const worker = (await navigator.serviceWorker?.getRegistration("/"))?.active;
+  worker?.postMessage({ type: "forget-pages" });
+
   if (!("caches" in window)) return;
   for (const name of await caches.keys()) {
     if (!name.startsWith(PAGES_CACHE_PREFIX)) continue;

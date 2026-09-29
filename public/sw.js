@@ -4,6 +4,9 @@
 //     app's static files and the last copy of every page opened on this
 //     device, so the installed app opens without a connection. The data on
 //     those pages comes from Firestore's own cache (IndexedDB), not from here.
+//     Most page changes never reach this worker as navigations — the app moves
+//     between pages client-side — so the app also reports each page it shows
+//     ("save-page", from components/service-worker-registration.tsx).
 //  2. Push notifications (brain: Features/Push Notifications): it shows what
 //     the server sends and opens the right page when one is tapped.
 //
@@ -13,7 +16,7 @@
 // worker (and re-saves offline.html) when this file's bytes change, and
 // activate then drops every cache of an older version.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const PAGES_CACHE = `split-pages-${VERSION}`;
 const ASSETS_CACHE = `split-assets-${VERSION}`;
 const OFFLINE_PAGE = "/offline.html";
@@ -25,6 +28,13 @@ const OFFLINE_PAGE = "/offline.html";
 const NAVIGATION_TIMEOUT_MS = 6000;
 /** Build files pile up across deploys (their names change every build); past this many, the oldest go. */
 const MAX_ASSETS = 300;
+/** A saved page younger than this isn't fetched again when the app shows it. */
+const RESAVE_AFTER_MS = 10 * 60 * 1000;
+/**
+ * On every saved page: when it was saved. The browser stops this worker
+ * between visits, so the copy itself has to remember.
+ */
+const SAVED_AT = "X-Split-Saved-At";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -91,11 +101,17 @@ async function navigate(event, url) {
       // Redirects (signed out, "/" → "/groups") and errors are never saved.
       if (response.ok && response.type === "basic" && !response.redirected) {
         const copy = response.clone();
+        // The app reports this page as soon as it shows it; that's no reason
+        // to fetch it a second time.
+        saving.add(key);
         caches
           .open(PAGES_CACHE)
-          .then((cache) => cache.put(key, copy))
+          .then((cache) => cache.put(key, savedCopy(copy.body, copy.headers)))
           .catch(() => {})
-          .finally(settle);
+          .finally(() => {
+            saving.delete(key);
+            settle();
+          });
       } else {
         settle();
       }
@@ -121,6 +137,100 @@ async function navigate(event, url) {
   } catch {
     const cache = await caches.open(PAGES_CACHE);
     return fallback ?? (await cache.match(OFFLINE_PAGE)) ?? Response.error();
+  }
+}
+
+/** Pages that are never saved: the API, the public settlement PDF, and the fallback itself. */
+function isSavablePage(url) {
+  return (
+    url.origin === self.location.origin &&
+    !url.pathname.startsWith("/api/") &&
+    !url.pathname.startsWith("/share/") &&
+    url.pathname !== OFFLINE_PAGE
+  );
+}
+
+/**
+ * Pages being saved right now — by a page load, or because the app showed
+ * them (a new worker taking over even hears about the page on screen twice).
+ */
+const saving = new Set();
+/**
+ * Bumped by "forget-pages" (sign-out): a save still in flight from before
+ * must not put the previous person's page back into the emptied cache.
+ */
+let pagesGeneration = 0;
+
+self.addEventListener("message", (event) => {
+  const data = event.data;
+  if (data?.type === "save-page" && typeof data.path === "string") {
+    const url = new URL(data.path, self.location.origin);
+    if (isSavablePage(url)) event.waitUntil(savePage(url).catch(() => {}));
+  } else if (data?.type === "forget-pages") {
+    pagesGeneration++;
+    event.waitUntil(forgetPages());
+  }
+});
+
+/**
+ * Saves the page the app is showing — fetched afresh with the session cookie,
+ * as a full page load would get it — plus the build files it needs, so it
+ * opens offline even though this browser never loaded it as a whole page.
+ */
+async function savePage(url) {
+  const key = url.origin + url.pathname;
+  if (saving.has(key)) return;
+  saving.add(key);
+  try {
+    const cache = await caches.open(PAGES_CACHE);
+    const saved = await cache.match(key);
+    if (saved && Date.now() - Number(saved.headers.get(SAVED_AT)) < RESAVE_AFTER_MS) return;
+
+    const generation = pagesGeneration;
+    // A redirect (signed out, "/" → "/groups") isn't followed: nothing to keep
+    // there, and the app reports the page it lands on by itself.
+    const response = await fetch(url.pathname, {
+      headers: { Accept: "text/html" },
+      redirect: "manual",
+    });
+    if (!response.ok || response.type !== "basic") return;
+    const html = await response.text();
+    if (generation !== pagesGeneration) return;
+    await cache.put(key, savedCopy(html, { "Content-Type": "text/html; charset=utf-8" }));
+    await saveBuildFiles(html);
+  } finally {
+    saving.delete(key);
+  }
+}
+
+/** A page's copy for PAGES_CACHE, stamped with when it was saved. */
+function savedCopy(body, headers) {
+  const stamped = new Headers(headers);
+  stamped.set(SAVED_AT, String(Date.now()));
+  return new Response(body, { headers: stamped });
+}
+
+/** The /_next/static files a saved page refers to, so its scripts, styles and fonts load offline. */
+async function saveBuildFiles(html) {
+  const cache = await caches.open(ASSETS_CACHE);
+  const paths = new Set(html.match(/\/_next\/static\/[^"'\s\\)]+/g) ?? []);
+  for (const path of [...paths].slice(0, 80)) {
+    if (await cache.match(path)) continue;
+    try {
+      const response = await fetch(path);
+      if (response.ok) await cache.put(path, response);
+    } catch {
+      // One missing file only matters offline; the next save tries again.
+    }
+  }
+  await trim(cache);
+}
+
+/** Empties the saved pages, keeping only the offline fallback. */
+async function forgetPages() {
+  const cache = await caches.open(PAGES_CACHE);
+  for (const request of await cache.keys()) {
+    if (new URL(request.url).pathname !== OFFLINE_PAGE) await cache.delete(request);
   }
 }
 
