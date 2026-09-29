@@ -1,12 +1,27 @@
 "use client";
 
-import { ArrowRight, Check, Copy, Download } from "lucide-react";
+import { ArrowRight, Check, Copy, Download, FileSpreadsheet, RotateCcw } from "lucide-react";
 import { type CSSProperties, useMemo, useState } from "react";
 import { SectionHeading } from "@/components/groups/section-heading";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { useT } from "@/components/locale-provider";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { getOrCreateSettlementShareToken } from "@/lib/actions/settlement-share";
+import {
+  getOrCreateSettlementShareToken,
+  rotateSettlementShareToken,
+} from "@/lib/actions/settlement-share";
+import { buildGroupCsv, groupCsvFileName } from "@/lib/export/group-csv";
 import { formatMoney } from "@/lib/format/money";
 import {
   computeMemberTotals,
@@ -14,8 +29,23 @@ import {
   simplifyDebts,
   type BalanceExpense,
 } from "@/lib/money/balances";
+import { utcToday } from "@/lib/recurring/schedule";
 import { cn } from "@/lib/utils";
-import type { GroupMember, Settlement } from "@/lib/types";
+import type { Expense, GroupMember, Settlement } from "@/lib/types";
+
+/**
+ * Saves a file the browser built itself. A blob download never navigates the
+ * tab — on a phone, especially as an installed standalone PWA, navigating to
+ * a file strands the user there with no browser chrome and no way back.
+ */
+function saveBlob(blob: Blob, fileName: string) {
+  const blobUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(blobUrl);
+}
 
 /** "+12,50 €" / "−12,50 €" — a real minus sign, so it lines up with the plus. */
 function formatSigned(amountMinor: number, currency: string): string {
@@ -96,25 +126,37 @@ function EveryoneChart({
 
 export function BalancesTab({
   groupId,
+  groupName,
   balances,
+  expenses,
   balanceExpenses,
   settlements,
   members,
   currentUid,
   currency,
+  hasShareLink,
+  canManage,
 }: {
   groupId: string;
+  groupName: string;
   balances: Record<string, number>;
+  /** Live expenses, for the CSV export — `balanceExpenses` has only the money. */
+  expenses: Expense[];
   balanceExpenses: BalanceExpense[];
   settlements: Settlement[];
   members: Record<string, GroupMember>;
   currentUid: string;
   currency: string;
+  /** Whether a public PDF link has ever been minted (`group.settlementShareToken`). */
+  hasShareLink: boolean;
+  /** Owners and admins may reset that link. */
+  canManage: boolean;
 }) {
   const t = useT();
   const [pdfState, setPdfState] = useState<"idle" | "pending" | "error">("idle");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [resetState, setResetState] = useState<"idle" | "pending" | "done" | "error">("idle");
 
   const transfers = useMemo(() => simplifyDebts(balances), [balances]);
   // "Before" count: every outstanding debtor->creditor pair in the whole
@@ -151,17 +193,32 @@ export function BalancesTab({
     try {
       const response = await fetch(url);
       if (!response.ok) throw new Error("PDF fetch failed");
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = "schuldenausgleich.pdf";
-      link.click();
-      URL.revokeObjectURL(blobUrl);
+      saveBlob(await response.blob(), "schuldenausgleich.pdf");
       setPdfState("idle");
     } catch {
       setPdfState("error");
     }
+  }
+
+  /** Built from what this page already has loaded — no server round trip, works offline. */
+  function handleExportCsv() {
+    const csv = buildGroupCsv({ expenses, settlements, members, currency, t });
+    saveBlob(
+      new Blob([csv], { type: "text/csv;charset=utf-8" }),
+      groupCsvFileName(groupName, t("csvExport.fileName"), utcToday()),
+    );
+  }
+
+  async function handleResetShareLink() {
+    setResetState("pending");
+    const result = await rotateSettlementShareToken({ groupId });
+    if (!result.ok) {
+      setResetState("error");
+      return;
+    }
+    setShareUrl(`${window.location.origin}/share/settlement/${groupId}/${result.data.token}`);
+    setLinkCopied(false);
+    setResetState("done");
   }
 
   async function handleCopyShareLink() {
@@ -299,6 +356,11 @@ export function BalancesTab({
           {pdfState === "error" && (
             <p className="text-destructive text-xs">{t("balances.downloadPdfError")}</p>
           )}
+          <Button type="button" variant="outline" className="h-11 w-full" onClick={handleExportCsv}>
+            <FileSpreadsheet />
+            {t("csvExport.button")}
+          </Button>
+          <p className="text-muted-foreground text-xs">{t("csvExport.hint")}</p>
           {shareUrl && (
             <div className="flex flex-col gap-1">
               <button
@@ -310,6 +372,44 @@ export function BalancesTab({
                 {linkCopied ? t("balances.linkCopied") : t("balances.copyLink")}
               </button>
               <p className="text-muted-foreground text-xs">{t("balances.shareLinkHint")}</p>
+            </div>
+          )}
+          {canManage && (hasShareLink || shareUrl) && (
+            <div className="flex flex-col gap-1">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button
+                    type="button"
+                    disabled={resetState === "pending"}
+                    className="text-muted-foreground hover:text-foreground flex min-h-8 w-fit items-center gap-1.5 text-xs"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    {t("balances.resetShareLink")}
+                  </button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t("balances.resetShareLinkTitle")}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t("balances.resetShareLinkBody")}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                    <AlertDialogAction variant="destructive" onClick={handleResetShareLink}>
+                      {t("balances.resetShareLinkConfirm")}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+              {resetState === "done" && (
+                <p role="status" className="text-muted-foreground text-xs">
+                  {t("balances.resetShareLinkDone")}
+                </p>
+              )}
+              {resetState === "error" && (
+                <p className="text-destructive text-xs">{t("balances.resetShareLinkError")}</p>
+              )}
             </div>
           )}
         </div>

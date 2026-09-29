@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
+import { isGroupManager } from "@/lib/groups/permissions";
 import { computeBalances, type BalanceExpense } from "@/lib/money/balances";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
@@ -337,12 +338,16 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
           >
             <BalancesTab
               groupId={groupId}
+              groupName={group.name}
               balances={balances}
+              expenses={expenses}
               balanceExpenses={balanceExpenses}
               settlements={settlements}
               members={group.members}
               currentUid={user.uid}
               currency={group.currency}
+              hasShareLink={!!group.settlementShareToken}
+              canManage={isGroupManager(group.members[user.uid]?.role)}
             />
           </TabsContent>
           <TabsContent

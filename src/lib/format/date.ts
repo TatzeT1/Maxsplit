@@ -48,3 +48,18 @@ export function formatMonthKey(monthKey: string): string {
   const [year, month] = monthKey.split("-").map(Number);
   return monthYearFormatter.format(new Date(Date.UTC(year, month - 1, 1)));
 }
+
+const isoDateFormatter = new Intl.DateTimeFormat("de-DE", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+/**
+ * Formats a stored "yyyy-mm-dd" date as "12.08.2026". Parsed and formatted in
+ * UTC (like formatMonthKey), so the device's offset can't move it a day.
+ */
+export function formatIsoDate(isoDate: string): string {
+  return isoDateFormatter.format(new Date(`${isoDate}T00:00:00Z`));
+}

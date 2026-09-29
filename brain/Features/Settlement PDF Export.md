@@ -15,14 +15,19 @@ checked Server Action. This route is deliberately different: it needs **no sessi
 no Firebase Auth** — the whole point is a link a group member can send to someone outside the
 app (or without an account) so they can see who owes whom.
 
-## The link *is* the access control
+## The link _is_ the access control
 
 `getOrCreateSettlementShareToken` (a normal, session-checked Server Action — only a group
-member can *mint* the link) generates a random token (`randomBytes(18).toString("base64url")`)
+member can _mint_ the link) generates a random token (`randomBytes(18).toString("base64url")`)
 lazily, on first request, and stores it at `group.settlementShareToken`. The route handler
 then checks `token === group.settlementShareToken` — **knowing the `groupId` alone is not
-enough**, you need the token too. There's no expiry and no rotation; treat the token as a
-capability, and don't build anything that logs or exposes it outside the share flow.
+enough**, you need the token too. There's no expiry; treat the token as a capability, and
+don't build anything that logs or exposes it outside the share flow.
+
+**Rotation (2026-09):** owners and admins can "Link zurücksetzen" in the Salden tab's export
+section — `rotateSettlementShareToken` writes a fresh token, so every link handed out so far
+404s, and the next "Als PDF herunterladen" shares the new one. Managers only, because it
+breaks the link for everyone the group already sent it to.
 
 ## No file is ever stored
 
@@ -42,5 +47,18 @@ disagree — then hands the results to `renderSettlementPdf` along with the grou
 currency, and the request's own origin (for a `shareUrl` printed in the document). Locale is
 read server-side via `getLocale()` (see [[i18n]]) so the PDF matches the group's language.
 
+## Sibling: the CSV export
+
+Next to the PDF sits "Als CSV exportieren" (`src/lib/export/group-csv.ts`). Unlike the PDF it
+never touches the server: it's built in the browser from the ledger the group page already
+has loaded, and it's for spreadsheets, not for sharing — every live expense and payment,
+oldest first, one column per person holding that row's effect on their balance, and a "Saldo"
+row whose per-person totals equal `computeBalances` (a departed member still in the ledger
+keeps a column, or the columns wouldn't net to zero). Written for a German Excel: `;`
+separator, decimal comma without thousands dots, UTF-8 BOM, CRLF. Text cells that start like a
+formula (`=`, `+`, `-`, `@`) get a leading `'` — descriptions come from other members, and
+Excel would otherwise execute them (CSV injection).
+
 ## Related
+
 [[Balances and Settlements]] · [[Money Invariants]] · [[Data Access Pattern]] (this route is the one exception to "reads go through the client SDK")

@@ -33,12 +33,12 @@ were not picked, so they live in the Gruppe tab.
 
 ## Tabs
 
-| Tab          | Contents                                                                                                                                                                                           |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ausgaben** | Search (from 6 expenses on) · category chips with totals (filter _and_ spending breakdown, replaced the stats card and a `<select>`) · ledger grouped by month, each month one card with its total |
-| **Salden**   | "Wer steht wo" diverging bars (everyone's net balance around a zero line) · "So werdet ihr quitt" (`simplifyDebts`, your transfers tinted) · "Bezahlt vs. Anteil" as a real `<table>` · PDF export |
-| **Spiele**   | "Wer hat wie viel vergambelt?" podium (top 3) + list · "Bisher verschont" · last 5 game rounds with who lost                                                                                       |
-| **Gruppe**   | Invite (native share sheet, copy fallback) · members (one card, rows) · recurring rules (actions in the ⋯ menu) · edit group · leave/delete, last and set apart                                    |
+| Tab          | Contents                                                                                                                                                                                                                                 |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Ausgaben** | Search (from 6 expenses on) · category chips with totals (filter _and_ spending breakdown, replaced the stats card and a `<select>`) · ledger grouped by month, each month one card with its total                                       |
+| **Salden**   | "Wer steht wo" diverging bars (everyone's net balance around a zero line) · "So werdet ihr quitt" (`simplifyDebts`, your transfers tinted) · "Bezahlt vs. Anteil" as a real `<table>` · export: PDF, CSV, "Link zurücksetzen" (managers) |
+| **Spiele**   | "Wer hat wie viel vergambelt?" podium (top 3) + list · "Bisher verschont" · last 5 game rounds with who lost                                                                                                                             |
+| **Gruppe**   | Invite (native share sheet, copy fallback) · members (one card, rows) · recurring rules (actions in the ⋯ menu) · edit group · leave/delete, last and set apart                                                                          |
 
 The active tab lives in `?tab=` (`expenses` is the default and drops the param). It's written
 with `window.history.replaceState`, which Next integrates with `useSearchParams` — no server
