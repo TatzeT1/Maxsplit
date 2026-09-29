@@ -24,7 +24,7 @@ backed role more robustly).
 > match. Without that gate, an attacker could register `max123.tietz@gmail.com` via bare
 > email/password sign-up (which never confirms the address, so `email_verified: false`) and
 > inherit full admin. Google Sign-In always sets `email_verified: true`, so the real admin is
-> never affected by this check — it only ever blocks an *unverified* claim of that email. See
+> never affected by this check — it only ever blocks an _unverified_ claim of that email. See
 > the same pattern generalized in [[Two Auth States]] and the `Session.emailVerified` doc
 > comment in `src/lib/auth/session.ts`.
 
@@ -48,6 +48,13 @@ check a third way if you add a new admin surface.
 - `adminSetUserBanned` — see below.
 - `adminResetOnboarding` — clears `onboardingCompletedAt` so the setup guide auto-shows again
   on next sign-in (support / testing the first-run flow against a real account).
+- `adminResyncPaymentDetails` — "Resync payment details" on the dashboard: re-copies every
+  user's payment details from `users/{uid}` onto their member entry in each group. The repair
+  for a drifted denormalized copy (see [[Onboarding and Payment Details]]); idempotent, writes
+  only entries that differ and reports how many group docs it touched.
+
+The admin panel's own copy is English and hardcoded — it's an internal tool with one user,
+not product surface, so it deliberately sits outside the [[i18n]] dictionary.
 
 ## Banning a user, precisely
 
@@ -67,4 +74,5 @@ An admin **cannot ban themselves** (`"cannot-ban-self"`) or ban another admin
 (`"cannot-ban-admin"`, checked via `isAdminEmail` on the target's stored email).
 
 ## Related
+
 [[Two Auth States]] · [[Firestore Rules]] · [[Money Invariants]] · [[Groups and Members]]

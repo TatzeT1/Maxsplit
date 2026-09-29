@@ -9,7 +9,7 @@ route `src/app/onboarding/page.tsx`. Payment details: `src/lib/actions/profile.t
 `src/lib/payment/{validate,paypal-me}.ts`, `payment-details-form.tsx`,
 `payment-methods-guide.tsx`.
 
-## Onboarding is a one-way flag, set by finish *or* skip
+## Onboarding is a one-way flag, set by finish _or_ skip
 
 `completeOnboarding()` sets `users/{uid}.onboardingCompletedAt` to an ISO timestamp — and it's
 called identically whether the user finished the guide or hit "Überspringen" (skip). Both
@@ -23,7 +23,7 @@ guide content without re-triggering the redirect flow.
 
 `updatePaymentDetails` (in `profile.ts`) lets a user set `paypalEmail`, `iban`, and/or
 `paypalMeHandle` on their own `users/{uid}` doc. Nothing in this app ever moves money — these
-fields exist purely so group members can see *how* to pay someone back after a settlement is
+fields exist purely so group members can see _how_ to pay someone back after a settlement is
 recorded (see `payment-methods-guide.tsx`). Each of the three fields is independently
 optional; "leave empty to hide it" per the German copy in `de.ts`.
 
@@ -31,14 +31,14 @@ optional; "leave empty to hide it" per the German copy in `de.ts`.
 
 - **IBAN**: format regex (`^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$`) **plus** the real ISO 7064
   mod-97-10 checksum every valid IBAN satisfies. This catches typos at entry time rather than
-  letting a broken IBAN surface later as a failed bank transfer someone else attempts. `
-  normalizeIban` strips whitespace and uppercases before either check.
+  letting a broken IBAN surface later as a failed bank transfer someone else attempts.
+  `normalizeIban` strips whitespace and uppercases before either check.
 - **PayPal.Me**: users can paste either a bare handle (`maxrobin`) or a full profile URL
   (`https://www.paypal.me/maxrobin/`, with or without scheme/`www.`/trailing slash).
   `normalizePaypalMeHandle` extracts just the handle from a pasted URL so the app always stores
   and works with the bare form internally (see `buildPaypalMeLink` in `paypal-me.ts` for how
   it's turned back into a link for display). Handles are case-sensitive on purpose — the regex
-  doesn't touch case, only the URL-matching step is case-insensitive on the *domain*.
+  doesn't touch case, only the URL-matching step is case-insensitive on the _domain_.
 - **Email** (PayPal email): a permissive format check only — no delivery/ownership
   verification, consistent with "display only, no verification" above.
 
@@ -47,8 +47,21 @@ optional; "leave empty to hide it" per the German copy in `de.ts`.
 Once saved, `paypalEmail`/`iban`/`paypalMeHandle` are copied onto every `GroupMember` entry
 the user currently holds (see [[Data Model]]) — so a group's member list can render payment
 info without an extra `users/{uid}` read per member. This copy is **not the source of
-truth**; `updatePaymentDetails` is the only writer, and it's responsible for keeping every
-group's copy in sync when a user changes their details.
+truth** (`users/{uid}` is). The field list lives once, in `MEMBER_PAYMENT_FIELDS`
+(`src/lib/payment/member-payment-details.ts`), and every writer of the copy goes through it:
+
+- `realMemberFromSession` (`lib/actions/groups.ts`) — the one place a real member entry is
+  minted: creating a group, joining by code, claiming a placeholder.
+- `syncMemberPaymentDetails` (`src/lib/payment/sync-member-payment-details.ts`) — rewrites the
+  copy in every group the user is in; used by `updatePaymentDetails` and the admin resync.
+
+> [!bug] Why the single list exists
+> Until 2026-09 the three membership paths each built the member entry by hand and all three
+> copied `paypalEmail` + `iban` but **not** `paypalMeHandle`. Since onboarding asks for
+> payment details _before_ a user joins anything, most members never got the "Jetzt zahlen"
+> PayPal.Me button in `BalanceHero`. Existing data is repaired with the admin panel's
+> "Resync payment details" (see [[Admin Panel]]).
 
 ## Related
+
 [[Data Model]] · [[Admin Panel]] · [[Balances and Settlements]] (what these details are ultimately used to display alongside)

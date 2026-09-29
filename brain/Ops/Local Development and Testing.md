@@ -53,11 +53,22 @@ Google anmelden") — no real Google account needed.
   guarantees (rounding remainders, multi-payer attribution, zero-sum) are actually pinned down —
   read these before changing split/balance logic, they encode the invariants as concrete cases,
   not just prose.
-- **`pnpm test:rules`** (`vitest.rules.config.ts`) — `firebase emulators:exec --only
-  firestore,storage "vitest run --config vitest.rules.config.ts"`. Exercises
-  `src/lib/firebase/firestore.rules.test.ts` against a real emulator instance, using
+- **`pnpm test:rules`** (`vitest.rules.config.ts`) — runs
+  `firebase emulators:exec --only firestore,storage "vitest run --config vitest.rules.config.ts"`.
+  Exercises `src/lib/firebase/firestore.rules.test.ts` against a real emulator instance, using
   `@firebase/rules-unit-testing` — covers membership checks, deny-by-default, and negative
   cases (non-member denied) per the original Definition-of-Done brief in `plan.md`.
+- **`pnpm test:emulator`** (`vitest.emulator.config.ts`, files named `*.emulator.test.ts`) —
+  integration tests that run the real Server Actions and the recurring cron against the
+  Firestore emulator: the queries, batches and transactions the pure-module tests can't
+  reach. `getSession` is swapped for `src/test/session-mock.ts` (`signInAs(...)` picks the
+  caller), `server-only` is aliased to a stub, the database is wiped before every test, and
+  `src/test/fixtures.ts` seeds production-shaped docs through the Admin SDK. Add a case here
+  whenever a bug lives in an action rather than in `src/lib/money/` — every bug found in the
+  2026-09 review (payment-detail copy, recurring ghost debts, cron duplicates) did.
+
+Neither emulator suite is in the default `pnpm test` gate (both need Java); CI runs both —
+see [[Deployment and Production Debugging]].
 
 ## Prerequisites
 
@@ -65,4 +76,5 @@ Node 20+, pnpm, **Java 11+** (the Firestore/Storage emulators are JVM-based — 
 `java -version` if `pnpm emulators` fails to start).
 
 ## Related
+
 [[Environment and Config]] · [[Firestore Rules]] · [[Money Invariants]] · [[Deployment and Production Debugging]]

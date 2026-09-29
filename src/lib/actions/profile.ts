@@ -3,6 +3,8 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { pickPaymentDetails } from "@/lib/payment/member-payment-details";
+import { syncMemberPaymentDetails } from "@/lib/payment/sync-member-payment-details";
 import {
   isValidEmail,
   isValidIban,
@@ -95,22 +97,10 @@ export async function updatePaymentDetails(input: {
     { merge: true },
   );
 
-  const groups = await adminDb
-    .collection("groups")
-    .where("memberUids", "array-contains", session.uid)
-    .get();
-
-  if (!groups.empty) {
-    const batch = adminDb.batch();
-    for (const doc of groups.docs) {
-      batch.update(doc.ref, {
-        [`members.${session.uid}.paypalEmail`]: paypalEmail || FieldValue.delete(),
-        [`members.${session.uid}.iban`]: iban || FieldValue.delete(),
-        [`members.${session.uid}.paypalMeHandle`]: paypalMeHandle || FieldValue.delete(),
-      });
-    }
-    await batch.commit();
-  }
+  await syncMemberPaymentDetails(
+    session.uid,
+    pickPaymentDetails({ paypalEmail, iban, paypalMeHandle }),
+  );
 
   return { ok: true, data: null };
 }

@@ -4,6 +4,8 @@ import { FieldValue } from "firebase-admin/firestore";
 import { isAdminEmail, isAdminSession } from "@/lib/auth/admin";
 import { getSession, type Session } from "@/lib/auth/session";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { pickPaymentDetails } from "@/lib/payment/member-payment-details";
+import { syncMemberPaymentDetails } from "@/lib/payment/sync-member-payment-details";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -82,6 +84,29 @@ export async function adminSetUserBanned(input: {
   );
 
   return { ok: true, data: null };
+}
+
+/**
+ * Re-copies every user's payment details from their profile (the source of
+ * truth) onto their member entry in each of their groups — the repair for a
+ * denormalized copy that drifted. It exists because groups created, joined
+ * or claimed before those paths copied `paypalMeHandle` never received it.
+ * Idempotent: only entries that differ are written, and the result counts
+ * how many group docs were, so a second run reports 0.
+ */
+export async function adminResyncPaymentDetails(): Promise<
+  ActionResult<{ users: number; groupsUpdated: number }>
+> {
+  const session = await requireAdminActionSession();
+  if (!session) return { ok: false, error: "forbidden" };
+
+  const usersSnap = await adminDb.collection("users").get();
+  let groupsUpdated = 0;
+  for (const userDoc of usersSnap.docs) {
+    groupsUpdated += await syncMemberPaymentDetails(userDoc.id, pickPaymentDetails(userDoc.data()));
+  }
+
+  return { ok: true, data: { users: usersSnap.size, groupsUpdated } };
 }
 
 /**

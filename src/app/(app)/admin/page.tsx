@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { AdminMaintenanceActions } from "@/components/admin/admin-maintenance-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminStats } from "@/lib/admin/stats";
 import { listGroups } from "@/lib/admin/groups";
@@ -39,6 +40,8 @@ export default async function AdminPage() {
           ))}
         </div>
       </div>
+
+      <AdminMaintenanceActions />
 
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-medium">Users ({users.length})</h2>

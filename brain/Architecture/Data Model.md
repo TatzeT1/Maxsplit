@@ -57,9 +57,11 @@ Everything hangs off `groups/{groupId}`. Key fields and why they're shaped the w
 `isPlaceholder: boolean` marks a member added by name only, with no Firebase Auth account —
 lets a group's ledger be correct before everyone has actually joined the app. See
 [[Groups and Members]] for the full lifecycle (creation → claiming). Never present in
-`memberUids`. Payment fields (`paypalEmail`, `iban`, `paypalMeHandle`) are a **denormalized
-copy** of the owning user's profile data, kept in sync by `updatePaymentDetails`
-(`src/lib/actions/profile.ts`) — not the source of truth, which is `users/{uid}`.
+`memberUids`. Payment fields (`MEMBER_PAYMENT_FIELDS`: `paypalEmail`, `iban`,
+`paypalMeHandle`) are a **denormalized copy** of the owning user's profile data — written when
+a real member entry is minted (`realMemberFromSession`) and kept in sync by
+`updatePaymentDetails` — not the source of truth, which is `users/{uid}`. An unset field is
+absent; entries written before 2026-09 may hold `""` instead, which reads the same.
 
 ## `Expense`
 

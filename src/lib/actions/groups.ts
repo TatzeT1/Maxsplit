@@ -2,15 +2,38 @@
 
 import { randomUUID } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
-import { getSession } from "@/lib/auth/session";
+import { getSession, type Session } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { generateInviteCode, normalizeInviteCode } from "@/lib/groups/invite-code";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { computeBalances } from "@/lib/money/balances";
+import { pickPaymentDetails } from "@/lib/payment/member-payment-details";
 import type { Expense, Group, GroupMember, GroupRole, Settlement } from "@/lib/types";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; error: string };
+
+/**
+ * A real (non-placeholder) member entry for the caller, including the
+ * denormalized copy of their payment details (see GroupMember in
+ * lib/types.ts). The one place a real member is minted — creating a group,
+ * joining one, claiming a placeholder — so those three can't drift apart
+ * field by field again (all three once dropped `paypalMeHandle`, hiding the
+ * PayPal.Me button in every group joined after the handle was set).
+ */
+function realMemberFromSession(
+  session: Session,
+  init: { role: GroupRole; joinedAt: string; fallbackDisplayName?: string },
+): GroupMember {
+  return {
+    displayName: session.displayName ?? init.fallbackDisplayName ?? "",
+    photoURL: session.photoURL ?? "",
+    joinedAt: init.joinedAt,
+    role: init.role,
+    isPlaceholder: false,
+    ...pickPaymentDetails(session),
+  };
+}
 
 /**
  * A member's net balance (minor units) across the group's whole ledger, not
@@ -75,15 +98,7 @@ export async function createGroup(input: {
   const now = new Date().toISOString();
 
   const members: Record<string, GroupMember> = {
-    [session.uid]: {
-      displayName: session.displayName ?? "",
-      photoURL: session.photoURL ?? "",
-      joinedAt: now,
-      role: "owner",
-      isPlaceholder: false,
-      paypalEmail: session.paypalEmail ?? "",
-      iban: session.iban ?? "",
-    },
+    [session.uid]: realMemberFromSession(session, { role: "owner", joinedAt: now }),
   };
 
   // Optional placeholder members entered at creation time, same shape
@@ -241,13 +256,7 @@ async function claimPlaceholder(
   groupRef: FirebaseFirestore.DocumentReference,
   group: Omit<Group, "id">,
   placeholderId: string,
-  session: {
-    uid: string;
-    displayName: string | null;
-    photoURL: string | null;
-    paypalEmail: string | null;
-    iban: string | null;
-  },
+  session: Session,
 ): Promise<string | null> {
   const placeholder = group.members[placeholderId];
   if (!placeholder || !placeholder.isPlaceholder) return "invalid-placeholder";
@@ -282,15 +291,11 @@ async function claimPlaceholder(
     if (Object.keys(updates).length > 0) batch.update(doc.ref, updates);
   }
 
-  const claimedMember: GroupMember = {
-    displayName: session.displayName ?? placeholder.displayName,
-    photoURL: session.photoURL ?? "",
-    joinedAt: new Date().toISOString(),
+  const claimedMember = realMemberFromSession(session, {
     role: placeholder.role,
-    isPlaceholder: false,
-    paypalEmail: session.paypalEmail ?? "",
-    iban: session.iban ?? "",
-  };
+    joinedAt: new Date().toISOString(),
+    fallbackDisplayName: placeholder.displayName,
+  });
   batch.update(groupRef, {
     memberUids: FieldValue.arrayUnion(session.uid),
     [`members.${placeholderId}`]: FieldValue.delete(),
@@ -328,15 +333,10 @@ export async function joinGroupByInviteCode(input: {
     return { ok: true, data: { groupId: groupDoc.id } };
   }
 
-  const member: GroupMember = {
-    displayName: session.displayName ?? "",
-    photoURL: session.photoURL ?? "",
-    joinedAt: new Date().toISOString(),
+  const member = realMemberFromSession(session, {
     role: "member",
-    isPlaceholder: false,
-    paypalEmail: session.paypalEmail ?? "",
-    iban: session.iban ?? "",
-  };
+    joinedAt: new Date().toISOString(),
+  });
 
   await groupDoc.ref.update({
     memberUids: FieldValue.arrayUnion(session.uid),
