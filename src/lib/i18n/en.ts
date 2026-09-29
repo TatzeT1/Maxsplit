@@ -697,10 +697,19 @@ export const en: Dictionary = {
     giroCodeShow: "Show GiroCode",
     giroCodePayTitle: "Pay by bank transfer",
     giroCodePayBody:
-      "Scan the code with your banking app, for example from your laptop. Many apps can also read it from a screenshot.",
+      "Scan the code from a second screen, e.g. with Split open on a laptop – your banking app then fills in the transfer.",
     giroCodeShowTitle: "{{name}} pays by bank transfer",
     giroCodeShowBody:
-      "{{name}} scans the code with their banking app – recipient, IBAN, amount and reference are then filled in.",
+      "Hold the code out to {{name}} – once scanned, recipient, IBAN, amount and reference are filled in.",
+    giroCodeScanLead: "Scan it in a banking app only:",
+    giroCodeScanPay:
+      "Transfer → QR or camera icon. Your phone's camera app only reads the code as text.",
+    giroCodeScanShow:
+      "{{name}} opens Transfer → QR or camera icon there. The regular camera app only reads the code as text.",
+    giroCodeSaveImage: "Save as image",
+    giroCodeSaveImageHint:
+      "Only have your phone? Some banking apps can also read the code from your photos.",
+    giroCodeSaveImageFailed: "Couldn't save the image. Take a screenshot instead.",
     giroCodeRecipient: "Recipient",
     giroCodeIban: "IBAN",
     giroCodeAmount: "Amount",

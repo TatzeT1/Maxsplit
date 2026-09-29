@@ -32,7 +32,8 @@ Each of _your_ lines on `BalanceHero` carries its actions:
 
 - **"Du schuldest X"** — "Jetzt bezahlen" (PayPal.Me), copy PayPal email / IBAN, **GiroCode**,
   "Bezahlt eintragen". The GiroCode dialog (`girocode-dialog.tsx`, `mode="pay"`) shows X's EPC
-  QR code for scanning from a second screen or a screenshot.
+  QR code for scanning from a second screen, plus **"Als Bild sichern"** for a payer with only
+  one phone.
 - **"X schuldet dir"** — **"Erinnern"** opens WhatsApp with `buildReminderMessage`'s text (who,
   group, amount written out, your PayPal.Me link and IBAN, a link to the group), and
   **"GiroCode zeigen"** (`mode="show"`) shows _your_ code for X to scan across the table.
@@ -41,6 +42,23 @@ Why both directions: a phone can't scan its own screen, so the payer's own GiroC
 with a second device, while showing yours to the person next to you works with one phone
 each. GiroCodes are euro-only (EPC), need the recipient's IBAN, and are addressed to the
 account holder name when set ([[Onboarding and Payment Details]]).
+
+**Only a banking app can read a GiroCode — not the phone's camera app.** The payload is plain
+text (`BCD` / `002` / …), not a URL, so iOS Camera or Google Lens can only offer a web search
+for it — which is exactly what happened in real use (2026-09). There's no URL scheme every
+banking app answers to, so the code can't be made camera-friendly; instead both dialogs lead
+with "Nur in der Banking-App scannen: Überweisung → QR- oder Kamera-Symbol".
+
+"Als Bild sichern" (`qrCodePngFile` in `components/qr-code.tsx`) draws the code on a canvas,
+~720px wide with a caption (amount, recipient, reference; long names end in "…"), and hands it
+over: on iOS (`isIosDevice`, `lib/platform.ts`) through the share sheet —
+`navigator.share({ files })`, whose "Bild sichern" is how a web app's picture reaches Photos,
+where banking apps look (a download would land in Files) — elsewhere as a plain download
+(`lib/export/save-blob.ts`). The PNG is built synchronously (`toDataURL`, not `toBlob`)
+because iOS refuses a share that no longer runs inside the tap. Only some banking apps import
+codes from pictures; the hint says "manche". Closing the sheet is not an error; any other
+failure shows "Mach stattdessen einen Screenshot". Verified by decoding the shared/downloaded
+PNG with jsQR in Playwright, with a stubbed share sheet.
 
 The reminder writes the amount out in words and treats the PayPal.Me link as a shortcut only:
 PayPal drops a link's pre-filled amount when its native app takes over — even from an

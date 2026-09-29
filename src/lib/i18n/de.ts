@@ -709,10 +709,19 @@ export const de = {
     giroCodeShow: "GiroCode zeigen",
     giroCodePayTitle: "Per Überweisung zahlen",
     giroCodePayBody:
-      "Scann den Code mit deiner Banking-App, zum Beispiel vom Laptop aus. Viele Apps lesen ihn auch aus einem Screenshot.",
+      "Scann den Code von einem zweiten Bildschirm, etwa mit Split am Laptop – deine Banking-App füllt dann die Überweisung aus.",
     giroCodeShowTitle: "{{name}} zahlt per Überweisung",
     giroCodeShowBody:
-      "{{name}} scannt den Code mit der Banking-App – Empfänger, IBAN, Betrag und Verwendungszweck sind dann ausgefüllt.",
+      "Halt {{name}} den Code hin – nach dem Scannen sind Empfänger, IBAN, Betrag und Verwendungszweck ausgefüllt.",
+    giroCodeScanLead: "Nur in der Banking-App scannen:",
+    giroCodeScanPay:
+      "Überweisung → QR- oder Kamera-Symbol. Die Kamera-App deines Handys liest den Code nur als Text.",
+    giroCodeScanShow:
+      "{{name}} öffnet dort Überweisung → QR- oder Kamera-Symbol. Die normale Kamera-App liest den Code nur als Text.",
+    giroCodeSaveImage: "Als Bild sichern",
+    giroCodeSaveImageHint:
+      "Nur dein Handy zur Hand? Manche Banking-Apps lesen den Code auch aus deinen Fotos.",
+    giroCodeSaveImageFailed: "Das Bild ließ sich nicht sichern. Mach stattdessen einen Screenshot.",
     giroCodeRecipient: "Empfänger",
     giroCodeIban: "IBAN",
     giroCodeAmount: "Betrag",

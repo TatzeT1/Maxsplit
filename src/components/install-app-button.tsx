@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/locale-provider";
+import { isIosDevice } from "@/lib/platform";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -65,12 +66,7 @@ function isStandalone(): boolean {
 }
 
 function isIosSnapshot(): boolean {
-  // iPadOS 13+ reports as "MacIntel" in the UA string, so a touch-capable
-  // "Mac" is really an iPad.
-  const isIosDevice =
-    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  return isIosDevice && !isStandalone();
+  return isIosDevice() && !isStandalone();
 }
 
 /**

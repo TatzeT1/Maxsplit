@@ -22,6 +22,7 @@ import {
   rotateSettlementShareToken,
 } from "@/lib/actions/settlement-share";
 import { buildGroupCsv, groupCsvFileName } from "@/lib/export/group-csv";
+import { saveBlob } from "@/lib/export/save-blob";
 import { formatMoney } from "@/lib/format/money";
 import {
   computeMemberTotals,
@@ -32,20 +33,6 @@ import {
 import { utcToday } from "@/lib/recurring/schedule";
 import { cn } from "@/lib/utils";
 import type { Expense, GroupMember, Settlement } from "@/lib/types";
-
-/**
- * Saves a file the browser built itself. A blob download never navigates the
- * tab — on a phone, especially as an installed standalone PWA, navigating to
- * a file strands the user there with no browser chrome and no way back.
- */
-function saveBlob(blob: Blob, fileName: string) {
-  const blobUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = blobUrl;
-  link.download = fileName;
-  link.click();
-  URL.revokeObjectURL(blobUrl);
-}
 
 /** "+12,50 €" / "−12,50 €" — a real minus sign, so it lines up with the plus. */
 function formatSigned(amountMinor: number, currency: string): string {
