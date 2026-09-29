@@ -791,6 +791,13 @@ export const de = {
     dataLoadFailed: "Daten konnten nicht geladen werden. Lade die Seite neu.",
     errorCode: "Fehlercode: {{code}}",
     sessionExpired: "Deine Sitzung ist abgelaufen. Du wirst zur Anmeldung weitergeleitet …",
+    pageErrorTitle: "Da ist etwas schiefgelaufen",
+    pageErrorBody:
+      "Diese Ansicht konnte nicht angezeigt werden. Deine Einträge sind davon nicht betroffen.",
+    retry: "Nochmal versuchen",
+    backToGroups: "Zu deinen Gruppen",
+    notFoundTitle: "Seite nicht gefunden",
+    notFoundBody: "Diesen Link gibt es nicht (mehr) – vielleicht wurde die Gruppe gelöscht.",
   },
   settlementPdf: {
     badge: "Abrechnungsbeleg",

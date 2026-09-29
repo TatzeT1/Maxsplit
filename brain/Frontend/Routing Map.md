@@ -45,6 +45,26 @@ api/
    only gets stopped inside the admin page itself, via `notFound()` (404, not a redirect —
    see [[Admin Panel]] for why that distinction matters).
 
+## Error and 404 boundaries
+
+A render error used to fall through to Next's built-in English "Application error" page — no
+retry, no way back. Now (all German, all rendering `PageError`, `src/components/page-error.tsx`):
+
+- `app/(app)/error.tsx` — a page under the signed-in shell failed; the fallback renders
+  _inside_ the shell, so the sidebar stays usable.
+- `app/error.tsx` — anything else below the root layout, including `(app)/layout.tsx` itself
+  (an `error.tsx` never wraps the layout of its own segment).
+- `app/global-error.tsx` — the root layout itself failed. It replaces the whole document, so
+  it has no `LocaleProvider` (translates with `translate(DEFAULT_LOCALE, …)` directly), no
+  theme script (static `dark`, the default theme) and imports `globals.css` itself.
+- `app/not-found.tsx` — unmatched URLs and every `notFound()`, including the admin pages'
+  deliberate 404 for non-admins; its copy never confirms a route exists.
+
+Next 16.3 hands error boundaries `retry` (re-fetch and re-render the segment), which
+replaced the older `reset`. `PageError` always `console.error`s the error and shows its
+`digest` (the id that matches a production server error to the logs) — a crash is never
+silent, the same rule as for Firestore listeners ([[Two Auth States]]).
+
 ## `/share/settlement/[groupId]/[token]` is structurally outside `(app)`
 
 It's not nested under the `(app)` route group at all, specifically so it never goes through

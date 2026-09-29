@@ -779,6 +779,12 @@ export const en: Dictionary = {
     dataLoadFailed: "Couldn't load data. Please reload the page.",
     errorCode: "Error code: {{code}}",
     sessionExpired: "Your session expired. Redirecting you to sign in again …",
+    pageErrorTitle: "Something went wrong",
+    pageErrorBody: "This view couldn't be shown. Your entries aren't affected.",
+    retry: "Try again",
+    backToGroups: "Go to your groups",
+    notFoundTitle: "Page not found",
+    notFoundBody: "This link doesn't exist (anymore) – maybe the group was deleted.",
   },
   settlementPdf: {
     badge: "Settlement Receipt",
