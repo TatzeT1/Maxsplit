@@ -18,6 +18,7 @@ import {
 import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
+import { NeedsConnection } from "@/components/needs-connection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { deleteMessage, markChatRead, sendMessage } from "@/lib/actions/messages";
 import { MAX_MESSAGE_LENGTH } from "@/lib/chat/constants";
@@ -28,6 +29,10 @@ import { formatDate, formatTime } from "@/lib/format/date";
 import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
 import { useVisibleHeight } from "@/lib/use-visible-height";
 import { avatarGradient, cn } from "@/lib/utils";
+import { callAction } from "@/lib/call-action";
+import { useScreenSync } from "@/lib/offline/sync-marks";
+import { useLiveSources } from "@/lib/offline/use-live-sources";
+import { useOnline } from "@/lib/use-online";
 import type { ChatMessage, Group } from "@/lib/types";
 
 const MAX_LOADED_MESSAGES = 300;
@@ -188,6 +193,8 @@ function GameInviteBubble({
   );
 }
 
+const LIVE_SOURCES = ["group", "messages"] as const;
+
 export function ChatClient({ groupId }: { groupId: string }) {
   const user = useCurrentUser();
   const [group, setGroup] = useState<Group | null>(null);
@@ -204,6 +211,9 @@ export function ChatClient({ groupId }: { groupId: string }) {
   const atBottomRef = useRef(true);
   const visibleHeight = useVisibleHeight(rootRef);
   const t = useT();
+  const online = useOnline();
+  const { live, received, report } = useLiveSources(LIVE_SOURCES);
+  const syncedAt = useScreenSync(user ? `${user.uid}:chat:${groupId}` : null, live);
 
   // Grows the composer with its content instead of leaving typed text
   // scrolling inside a fixed one-line box (rows={1} alone doesn't resize).
@@ -218,14 +228,16 @@ export function ChatClient({ groupId }: { groupId: string }) {
     if (!user) return;
     return onSnapshot(
       doc(db, "groups", groupId),
+      { includeMetadataChanges: true },
       (snapshot) => {
         setGroup(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Group) : null);
+        report("group", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("group", error));
       },
     );
-  }, [groupId, user]);
+  }, [groupId, user, report]);
 
   useEffect(() => {
     if (!user) return;
@@ -236,19 +248,22 @@ export function ChatClient({ groupId }: { groupId: string }) {
     );
     return onSnapshot(
       messagesQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
         setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ChatMessage));
+        report("messages", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("chat-messages", error));
       },
     );
-  }, [groupId, user]);
+  }, [groupId, user, report]);
 
   useEffect(() => {
-    if (!user || messages === null) return;
-    void markChatRead({ groupId });
-  }, [groupId, user, messages]);
+    if (!user || messages === null || !online) return;
+    // Best effort: a receipt that doesn't arrive is simply sent with the next one.
+    markChatRead({ groupId }).catch(() => {});
+  }, [groupId, user, messages, online]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -265,10 +280,10 @@ export function ChatClient({ groupId }: { groupId: string }) {
 
   async function submitMessage() {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || !online) return;
     setSending(true);
     setActionError(null);
-    const result = await sendMessage({ groupId, text: trimmed });
+    const result = await callAction(() => sendMessage({ groupId, text: trimmed }));
     setSending(false);
     if (!result.ok) {
       setActionError(
@@ -318,6 +333,16 @@ export function ChatClient({ groupId }: { groupId: string }) {
             <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Offline without a copy of this chat on this device: say so instead of a
+  // skeleton that never resolves or an empty conversation.
+  if (user && !online && !live && (syncedAt === null || (received("group") && !group))) {
+    return (
+      <div {...frameProps}>
+        <NeedsConnection body={t("offline.chatNotSynced")} />
       </div>
     );
   }
@@ -467,7 +492,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
               type="submit"
               size="icon"
               className="shrink-0 rounded-full"
-              disabled={sending || !text.trim()}
+              disabled={sending || !text.trim() || !online}
               aria-label={t("chat.send")}
               onMouseDown={(event) => event.preventDefault()}
             >

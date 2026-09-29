@@ -41,6 +41,8 @@ import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
+import { callAction } from "@/lib/call-action";
+import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
 import type { CategoryId, Expense, GameExpenseDraft, GroupMember, SplitMode } from "@/lib/types";
 
@@ -80,6 +82,8 @@ function expenseErrorMessage(code: string, t: ReturnType<typeof useT>): string {
       return t("errors.forbidden");
     case "not-found":
       return t("errors.notFound");
+    case "network":
+      return t("errors.notSaved");
     default:
       return t("expenses.saveError");
   }
@@ -237,6 +241,7 @@ export function AddExpenseDialog({
   // expense reuses the split numbers, but no game round was played for it.
   const [viaLottery, setViaLottery] = useState(expenseToEdit?.viaLottery ?? false);
   const t = useT();
+  const online = useOnline();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
   const router = useRouter();
@@ -418,9 +423,11 @@ export function AddExpenseDialog({
       viaLottery,
     };
 
-    const result = expenseToEdit
-      ? await editExpense({ ...payload, expenseId: expenseToEdit.id })
-      : await addExpense(payload);
+    const result = await callAction(() =>
+      expenseToEdit
+        ? editExpense({ ...payload, expenseId: expenseToEdit.id })
+        : addExpense(payload),
+    );
 
     setLoading(false);
     if (!result.ok) {
@@ -712,7 +719,7 @@ export function AddExpenseDialog({
               {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
             <DialogFooter>
-              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              <Button type="submit" size="lg" className="w-full" disabled={loading || !online}>
                 {loading ? t("common.loading") : t("common.save")}
               </Button>
             </DialogFooter>

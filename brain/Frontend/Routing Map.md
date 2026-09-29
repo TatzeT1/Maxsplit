@@ -30,6 +30,10 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
 api/
   /api/auth/session                  POST mints session cookie, DELETE clears it
   /api/cron/recurring                GET, Bearer $CRON_SECRET only — see Recurring Expenses
+
+public/ (static, not routes)
+  /sw.js                             the service worker — offline start + push; no-cache headers
+  /offline.html                      what the worker shows for a page never saved on this device
 ```
 
 ## Layering of guards

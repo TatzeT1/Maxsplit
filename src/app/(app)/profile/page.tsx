@@ -2,11 +2,13 @@ import { Sparkles } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
+import { NotificationSettings } from "@/components/notification-settings";
 import { PaymentDetailsForm } from "@/components/payment-details-form";
 import { PaymentMethodsGuide } from "@/components/payment-methods-guide";
 import { ProfileForm } from "@/components/profile-form";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
+import { getVapidConfig } from "@/lib/push/vapid";
 import { avatarGradient } from "@/lib/utils";
 
 export default async function ProfilePage() {
@@ -15,6 +17,8 @@ export default async function ProfilePage() {
 
   const t = await getServerT();
   const name = session.displayName || session.email || "?";
+  // Read at request time and handed down, not NEXT_PUBLIC_: see lib/push/vapid.ts.
+  const vapidPublicKey = getVapidConfig()?.publicKey ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
@@ -62,6 +66,20 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
       </div>
+      {vapidPublicKey && (
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold">{t("notifications.title")}</h2>
+          <Card>
+            <CardContent>
+              <NotificationSettings
+                uid={session.uid}
+                vapidPublicKey={vapidPublicKey}
+                prefs={session.notificationPrefs}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

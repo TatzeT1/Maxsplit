@@ -279,10 +279,13 @@ byte-for-byte what applying a result by hand produces. After "Herausfordern" the
 resets and closes and the app navigates to the game page, so the same bill can't be saved
 twice. If a loser left the group meanwhile, nothing is booked and `autoBookError` says so.
 
-**Invites.** No push notifications exist, so `createTournament` posts a chat message with
-`gameInvite` (a join card in the chat), the group banner says "X fordert dich heraus!",
-and the creator gets `OnlineInviteCard` — a prefilled WhatsApp message (`wa.me`) plus copy
-link — until the first move. Shared links go through `/play/[groupId]/[tournamentId]`,
+**Invites.** Whoever turned push on gets a "Herausforderung" push, and then "Du bist dran"
+when a match of theirs is waiting or the opponent moved — skipped while they watch the
+game or the group page's banner (`useTournamentPresence`); see [[Push Notifications]].
+For everyone else `createTournament` also posts a chat message with `gameInvite` (a join
+card in the chat), the group banner says "X fordert dich heraus!", and the creator gets
+`OnlineInviteCard` — a prefilled WhatsApp message (`wa.me`) plus copy link — until the
+first move. Offline, game pages show "Dafür brauchst du Internet" ([[Offline Mode]]). Shared links go through `/play/[groupId]/[tournamentId]`,
 which survives WhatsApp's cookie-less in-app browser by routing through sign-in.
 One game runs per group at a time (unchanged `createTournament` rule).
 

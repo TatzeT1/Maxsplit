@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useT } from "@/components/locale-provider";
-import { isIosDevice } from "@/lib/platform";
+import { isIosDevice, isStandalone } from "@/lib/platform";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -54,15 +54,6 @@ function getInstallPromptServerSnapshot() {
 
 function noSubscription() {
   return () => {};
-}
-
-function isStandalone(): boolean {
-  return (
-    window.matchMedia("(display-mode: standalone)").matches ||
-    // iOS Safari never fires beforeinstallprompt/display-mode and instead
-    // exposes this non-standard flag once launched from the home screen.
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
 }
 
 function isIosSnapshot(): boolean {

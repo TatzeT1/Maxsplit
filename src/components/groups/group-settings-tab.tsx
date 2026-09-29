@@ -23,12 +23,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { deleteGroup, leaveGroup } from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { useOnline } from "@/lib/use-online";
 import type { Group, RecurringRule } from "@/lib/types";
 
 /** The owner deletes, everyone else leaves — each behind a confirmation, and last on the page. */
 function LeaveOrDeleteGroup({ group, currentUid }: { group: Group; currentUid: string }) {
   const router = useRouter();
   const t = useT();
+  const online = useOnline();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isOwner = group.members[currentUid]?.role === "owner";
@@ -72,7 +74,7 @@ function LeaveOrDeleteGroup({ group, currentUid }: { group: Group; currentUid: s
           <Button
             variant={isOwner ? "destructive" : "outline"}
             className="h-11 w-full justify-start"
-            disabled={busy}
+            disabled={busy || !online}
           >
             {isOwner ? <Trash2 /> : <LogOut />}
             {isOwner ? t("groups.deleteGroup") : t("groups.leaveGroup")}
@@ -121,6 +123,7 @@ export function GroupSettingsTab({
   currentUid: string;
 }) {
   const t = useT();
+  const online = useOnline();
   const canManage = isGroupManager(group.members[currentUid]?.role);
 
   return (
@@ -155,7 +158,7 @@ export function GroupSettingsTab({
             group={group}
             currencyLocked={hasBookings || recurringRules.length > 0}
             trigger={
-              <Button variant="outline" className="h-11 w-full justify-start">
+              <Button variant="outline" className="h-11 w-full justify-start" disabled={!online}>
                 <Pencil />
                 <span className="flex-1 text-left">{t("groups.editGroup")}</span>
                 <ChevronRight className="text-muted-foreground" />

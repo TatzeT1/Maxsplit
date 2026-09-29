@@ -11,7 +11,8 @@ duplicating every field here would just rot.
 ## Collections
 
 ```
-users/{uid}
+users/{uid}                                (.notificationPrefs — see Push Notifications)
+pushSubscriptions/{sha256(endpoint)}       (server-only: one device's push subscription)
 groups/{groupId}
   groups/{groupId}/expenses/{expenseId}
   groups/{groupId}/settlements/{settlementId}
@@ -22,6 +23,7 @@ groups/{groupId}
   groups/{groupId}/tournaments/{tournamentId}
   groups/{groupId}/tournaments/{tournamentId}/liveMatches/{matchId}   (online play, doc id == bracket match id)
   groups/{groupId}/tournaments/{tournamentId}/liveSecrets/{matchId}   (hidden memory deck — no client reads)
+  groups/{groupId}/tournaments/{tournamentId}/presence/{uid}          (server-only "watching" heartbeat)
 ```
 
 All money is **integer minor units** (cents) plus an ISO-4217 `currency` string. Never a

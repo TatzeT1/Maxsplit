@@ -47,6 +47,10 @@ re-deriving it from scratch by reading every file.
   bracket for all four duel games, syncing across every player's own phone
 - [[Admin Panel]] — the single hardcoded admin email, ban, group moderation
 - [[Onboarding and Payment Details]] — first-run guide, PayPal/IBAN details
+- [[Offline Mode]] — view-only offline: Firestore's IndexedDB cache, the service worker,
+  "Stand …" sync marks, and why every saving button is disabled offline
+- [[Push Notifications]] — Web Push (VAPID, no FCM) for four events, per-device
+  subscriptions, presence so "Du bist dran" skips someone already watching
 
 ### Frontend — how the UI is built
 

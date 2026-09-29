@@ -8,6 +8,7 @@ import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { JoinGroupDialog } from "@/components/groups/join-group-dialog";
 import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
 import { useT } from "@/components/locale-provider";
+import { NeedsConnection } from "@/components/needs-connection";
 import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
@@ -15,6 +16,9 @@ import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
+import { useScreenSync } from "@/lib/offline/sync-marks";
+import { useLiveSources } from "@/lib/offline/use-live-sources";
+import { useOnline } from "@/lib/use-online";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { Group } from "@/lib/types";
 
@@ -56,11 +60,16 @@ function GroupBalanceBadge({ group, uid }: { group: Group; uid: string }) {
   );
 }
 
+const LIVE_SOURCES = ["groups"] as const;
+
 export default function GroupsPage() {
   const user = useCurrentUser();
   const [groups, setGroups] = useState<Group[] | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const t = useT();
+  const online = useOnline();
+  const { live, report } = useLiveSources(LIVE_SOURCES);
+  const syncedAt = useScreenSync(user ? `${user.uid}:groups` : null, live);
 
   useEffect(() => {
     if (!user) return;
@@ -70,6 +79,7 @@ export default function GroupsPage() {
     );
     return onSnapshot(
       groupsQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
         setErrorCode(null);
         setGroups(
@@ -77,12 +87,19 @@ export default function GroupsPage() {
             .map((doc) => ({ id: doc.id, ...doc.data() }) as Group)
             .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
         );
+        report("groups", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("groups", error));
       },
     );
-  }, [user]);
+  }, [user, report]);
+
+  // Offline before this device ever loaded the list: an empty cache would
+  // read as "Du hast noch keine Gruppen".
+  if (user && !online && !live && syncedAt === null) {
+    return <NeedsConnection body={t("offline.groupsNotSynced")} />;
+  }
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">

@@ -23,6 +23,7 @@ import {
 } from "@/lib/actions/settlement-share";
 import { buildGroupCsv, groupCsvFileName } from "@/lib/export/group-csv";
 import { saveBlob } from "@/lib/export/save-blob";
+import { useOnline } from "@/lib/use-online";
 import { formatMoney } from "@/lib/format/money";
 import {
   computeMemberTotals,
@@ -140,6 +141,7 @@ export function BalancesTab({
   canManage: boolean;
 }) {
   const t = useT();
+  const online = useOnline();
   const [pdfState, setPdfState] = useState<"idle" | "pending" | "error">("idle");
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
@@ -334,7 +336,7 @@ export function BalancesTab({
             type="button"
             variant="outline"
             className="h-11 w-full"
-            disabled={pdfState === "pending"}
+            disabled={pdfState === "pending" || !online}
             onClick={handleDownloadPdf}
           >
             <Download />
@@ -367,8 +369,8 @@ export function BalancesTab({
                 <AlertDialogTrigger asChild>
                   <button
                     type="button"
-                    disabled={resetState === "pending"}
-                    className="text-muted-foreground hover:text-foreground flex min-h-8 w-fit items-center gap-1.5 text-xs"
+                    disabled={resetState === "pending" || !online}
+                    className="text-muted-foreground hover:text-foreground flex min-h-8 w-fit items-center gap-1.5 text-xs disabled:opacity-50"
                   >
                     <RotateCcw className="h-3 w-3" />
                     {t("balances.resetShareLink")}

@@ -22,7 +22,9 @@ export const de = {
     moreActions: "Weitere Aktionen",
     somethingWentWrong: "Da ist etwas schiefgelaufen.",
     unsavedChanges: "Du hast ungespeicherte Änderungen.",
-    offline: "Keine Verbindung — Änderungen werden gerade nicht gespeichert.",
+    offline: "Offline – nur ansehen",
+    unreachable: "Keine Verbindung – nur ansehen",
+    syncedAt: "Stand {{time}}",
   },
   nav: {
     groups: "Gruppen",
@@ -857,6 +859,61 @@ export const de = {
     backToGroups: "Zu deinen Gruppen",
     notFoundTitle: "Seite nicht gefunden",
     notFoundBody: "Diesen Link gibt es nicht (mehr) – vielleicht wurde die Gruppe gelöscht.",
+    notSaved:
+      "Das hat nicht geklappt – nichts gespeichert. Prüf deine Verbindung und versuch's nochmal.",
+  },
+  offline: {
+    needsConnectionTitle: "Dafür brauchst du Internet",
+    groupsNotSynced:
+      "Deine Gruppen waren auf diesem Gerät noch nicht geladen. Sobald du wieder online bist, erscheinen sie hier.",
+    groupNotSynced:
+      "Diese Gruppe war auf diesem Gerät noch nicht offen. Sobald du wieder online bist, lädt sie.",
+    chatNotSynced:
+      "Dieser Chat war auf diesem Gerät noch nicht offen. Sobald du wieder online bist, lädt er.",
+    gameNeedsConnection:
+      "Spiele laufen live über den Server – ohne Verbindung geht es nicht weiter.",
+  },
+  push: {
+    groupTitle: "{{group}}",
+    expenseAdded: "{{actor}} hat „{{description}}“ eingetragen",
+    expenseRecurring: "„{{description}}“ wurde automatisch gebucht",
+    expenseGame: "„{{description}}“ wurde nach dem Spiel gebucht",
+    impactOwe: "du schuldest dafür {{amount}}",
+    impactGetBack: "du bekommst {{amount}} zurück",
+    settlementReceived: "{{from}} hat dir {{amount}} gezahlt",
+    challengeTitle: "Herausforderung in {{group}}",
+    challenge: "{{name}} fordert dich zu {{game}} heraus",
+    challengeStake: "{{name}} fordert dich zu {{game}} heraus – es geht um {{stake}}",
+    turnTitle: "Du bist dran",
+    turnMove: "{{name}} hat gezogen – {{game}} in {{group}}",
+    turnReady: "Dein Match gegen {{name}} wartet – {{game}} in {{group}}",
+    testTitle: "Split",
+    testBody: "Benachrichtigungen funktionieren auf diesem Gerät.",
+  },
+  notifications: {
+    title: "Benachrichtigungen",
+    intro: "Push-Nachrichten auf diesem Gerät – auch wenn Split gerade geschlossen ist.",
+    enable: "Auf diesem Gerät einschalten",
+    enabling: "Wird eingeschaltet …",
+    disable: "Auf diesem Gerät ausschalten",
+    activeOnDevice: "Auf diesem Gerät eingeschaltet.",
+    test: "Test-Nachricht senden",
+    testSent: "Gesendet – sie sollte gleich erscheinen.",
+    testFailed:
+      "Die Test-Nachricht ging nicht raus. Schalt die Benachrichtigungen aus und wieder ein.",
+    unsupported: "Dieser Browser kann keine Push-Nachrichten empfangen.",
+    iosInstall:
+      "Auf dem iPhone kommen Push-Nachrichten nur an, wenn Split auf dem Home-Bildschirm liegt: Teilen → „Zum Home-Bildschirm“, Split von dort öffnen und hier einschalten.",
+    denied:
+      "Benachrichtigungen für Split sind blockiert. Erlaube sie in den Einstellungen deines Browsers (auf dem iPhone: Einstellungen → Mitteilungen → Split).",
+    error: "Das Einschalten hat nicht geklappt. Versuch's nochmal.",
+    eventsTitle: "Worüber du Bescheid bekommst",
+    eventsHint: "Gilt für alle deine Geräte.",
+    eventExpense: "Neue Ausgabe mit dir",
+    eventSettlement: "Zahlung erhalten",
+    eventChallenge: "Herausforderung zu einem Spiel",
+    eventTurn: "Du bist dran im Spiel",
+    prefsSaveError: "Konnte nicht gespeichert werden.",
   },
   settlementPdf: {
     badge: "Abrechnungsbeleg",

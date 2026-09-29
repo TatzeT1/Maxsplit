@@ -2,7 +2,14 @@
 
 import { type FirebaseApp, getApps, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
-import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import {
+  connectFirestoreEmulator,
+  type Firestore,
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 import { connectStorageEmulator, getStorage } from "firebase/storage";
 import { getFirebaseClientConfig, useFirebaseEmulators } from "./config";
 
@@ -12,9 +19,30 @@ function getClientApp(): FirebaseApp {
   return initializeApp(getFirebaseClientConfig());
 }
 
+/**
+ * Firestore with its cache in IndexedDB instead of memory: every listener
+ * first answers from the copy this device last saw — at once when the app
+ * opens, and at all while offline — then with the live data. The offline
+ * mode (view-only, see [[Offline Mode]]) rests on this. Multi-tab, so a
+ * second open tab shares the cache instead of falling back to memory.
+ * Server rendering has no IndexedDB and never attaches a listener, so it
+ * keeps the plain in-memory instance.
+ */
+function createDb(app: FirebaseApp): Firestore {
+  if (typeof window === "undefined") return getFirestore(app);
+  try {
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch {
+    // Already initialized: this module re-evaluates across Fast Refresh in dev.
+    return getFirestore(app);
+  }
+}
+
 export const app = getClientApp();
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+export const db = createDb(app);
 export const storage = getStorage(app);
 
 // Connecting an emulator twice throws, so guard with a module-level flag —

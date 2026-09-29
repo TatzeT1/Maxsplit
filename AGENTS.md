@@ -61,6 +61,21 @@ never by discarding the error.
 The same rule generalizes: a failure state must never be indistinguishable from
 a loading state.
 
+## Offline is view-only
+
+Firestore keeps a persistent cache and `public/sw.js` saves pages, so the app
+opens without a connection (brain: Offline Mode). Writes are Server Actions with
+nothing to queue them, so:
+
+- every control that saves is disabled on `!useOnline()` and calls its action
+  through `callAction` — a thrown call becomes a visible error, not a spinner
+  that never stops;
+- a listener-backed screen reports `metadata.fromCache` (`useLiveSources`,
+  `useScreenSync`) and renders `NeedsConnection` offline when this device has no
+  copy — an empty cache must never pass for "nothing here";
+- bump `VERSION` in `public/sw.js` whenever its caching rules or
+  `offline.html` change, or devices keep the old worker.
+
 ## Mobile is the primary surface — two iOS rules
 
 Both of these shipped as "the chat is unusable on my phone" bugs and are

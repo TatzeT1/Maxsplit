@@ -74,6 +74,20 @@ Google anmelden") — no real Google account needed.
 Neither emulator suite is in the default `pnpm test` gate (both need Java); CI runs both —
 see [[Deployment and Production Debugging]].
 
+Push delivery (`src/lib/push/notify.ts`, built on `after()`, which throws outside a
+request) is swapped for `src/test/push-mock.ts` in every emulator test — read what an
+action would have sent from `sentPushes`. An action that needs the request's language
+(`getServerT`, a cookie) must be mocked per test file, as `push.emulator.test.ts` does.
+
+**Service worker, offline and push by hand.** The worker only registers in production
+builds (`pnpm build && pnpm start`), never in `pnpm dev`. Offline: Playwright's
+`setOffline` doesn't reach `navigator.onLine` on a reused page — use CDP
+`Network.emulateNetworkConditions` after each load and stop the Next server so the
+worker's own fetches fail. Push: headless shell reports notifications as denied; use
+`channel: "chromium"` to see the worker show one (CDP `ServiceWorker.deliverPushMessage`),
+and a fake HTTPS push service plus `PUSH_EXTRA_ENDPOINT_HOSTS` to follow a real send. See
+[[Offline Mode]] and [[Push Notifications]].
+
 ## Prerequisites
 
 Node 20+, pnpm, **Java 11+** (the Firestore/Storage emulators are JVM-based — check with

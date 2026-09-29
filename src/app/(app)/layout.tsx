@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
+import { PushSubscriptionSync } from "@/components/push-subscription-sync";
 import { SessionGuard } from "@/components/session-guard";
 import { isAdminSession } from "@/lib/auth/admin";
 import { getSession } from "@/lib/auth/session";
@@ -14,6 +15,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <main className="flex flex-1 flex-col">
         <SessionGuard>{children}</SessionGuard>
       </main>
+      <PushSubscriptionSync />
     </div>
   );
 }

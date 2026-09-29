@@ -1,6 +1,9 @@
 import "server-only";
 import { adminDb } from "@/lib/firebase/admin";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
+import { expensePushes } from "@/lib/push/messages";
+import { notifyAfterResponse } from "@/lib/push/notify";
+import type { PendingPush } from "@/lib/push/types";
 import { ruleHasMissingMembers } from "@/lib/recurring/rule-members";
 import { addPeriod } from "@/lib/recurring/schedule";
 import type { Expense, Group, RecurringRule } from "@/lib/types";
@@ -44,22 +47,28 @@ function expenseFromRule(rule: Omit<RecurringRule, "id">, date: string): Omit<Ex
 async function bookNextPeriod(
   ruleRef: FirebaseFirestore.DocumentReference,
   today: string,
-): Promise<"booked" | "already-booked" | "nothing-due"> {
+): Promise<
+  | { outcome: "booked"; expenseId: string; expense: Omit<Expense, "id"> }
+  | { outcome: "already-booked" | "nothing-due" }
+> {
   return adminDb.runTransaction(async (tx) => {
     const ruleSnap = await tx.get(ruleRef);
-    if (!ruleSnap.exists) return "nothing-due";
+    if (!ruleSnap.exists) return { outcome: "nothing-due" };
     const rule = ruleSnap.data() as Omit<RecurringRule, "id">;
-    if (!rule.active || rule.nextRunDate > today) return "nothing-due";
+    if (!rule.active || rule.nextRunDate > today) return { outcome: "nothing-due" };
 
     const expensesRef = ruleRef.parent.parent!.collection("expenses");
     const expenseRef = expensesRef.doc(recurringExpenseId(ruleRef.id, rule.nextRunDate));
     const existing = await tx.get(expenseRef);
+    const expense = expenseFromRule(rule, rule.nextRunDate);
 
-    if (!existing.exists) tx.create(expenseRef, expenseFromRule(rule, rule.nextRunDate));
+    if (!existing.exists) tx.create(expenseRef, expense);
     tx.update(ruleRef, {
       nextRunDate: addPeriod(rule.nextRunDate, rule.startDate, rule.frequency),
     });
-    return existing.exists ? "already-booked" : "booked";
+    return existing.exists
+      ? { outcome: "already-booked" }
+      : { outcome: "booked", expenseId: expenseRef.id, expense };
   });
 }
 
@@ -78,6 +87,9 @@ async function bookNextPeriod(
  * recomputed, exactly as the Server Actions do after a write — without it,
  * the groups list showed a stale "du schuldest …" until someone's next edit.
  *
+ * Everyone a booking touches gets a "Neue Ausgabe mit dir" push, sent after
+ * the cron's response like every other push (lib/push/notify.ts).
+ *
  * Runs with the Admin SDK on a schedule (Vercel Cron -> route handler), not
  * per-user like the Server Actions in src/lib/actions — there is no session
  * to check here, only the route handler's shared-secret guard.
@@ -87,6 +99,7 @@ export async function materializeDueRecurringRules(
 ): Promise<{ created: number; paused: number }> {
   let created = 0;
   let paused = 0;
+  const pushes: PendingPush[] = [];
   const groupsSnap = await adminDb.collection("groups").get();
 
   for (const groupDoc of groupsSnap.docs) {
@@ -108,9 +121,20 @@ export async function materializeDueRecurringRules(
       }
 
       for (let run = 0; run < MAX_CATCH_UP_RUNS; run++) {
-        const outcome = await bookNextPeriod(ruleDoc.ref, today);
-        if (outcome === "nothing-due") break;
-        if (outcome === "booked") createdInGroup++;
+        const result = await bookNextPeriod(ruleDoc.ref, today);
+        if (result.outcome === "nothing-due") break;
+        if (result.outcome !== "booked") continue;
+        createdInGroup++;
+        pushes.push(
+          ...expensePushes({
+            groupId: groupDoc.id,
+            group,
+            expenseId: result.expenseId,
+            expense: result.expense,
+            origin: "recurring",
+            actorUid: null,
+          }),
+        );
       }
     }
 
@@ -118,5 +142,6 @@ export async function materializeDueRecurringRules(
     created += createdInGroup;
   }
 
+  notifyAfterResponse(pushes);
   return { created, paused };
 }

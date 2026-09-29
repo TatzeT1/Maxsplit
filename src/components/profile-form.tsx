@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { updateDisplayName } from "@/lib/actions/profile";
 import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
+import { callAction } from "@/lib/call-action";
+import { useOnline } from "@/lib/use-online";
 
 export function ProfileForm({ displayName, email }: { displayName: string; email: string }) {
   const [name, setName] = useState(displayName);
@@ -15,6 +17,7 @@ export function ProfileForm({ displayName, email }: { displayName: string; email
   const [status, setStatus] = useState<"idle" | "success" | "error" | "invalid">("idle");
   const router = useRouter();
   const t = useT();
+  const online = useOnline();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -24,7 +27,7 @@ export function ProfileForm({ displayName, email }: { displayName: string; email
     }
     setLoading(true);
     setStatus("idle");
-    const result = await updateDisplayName({ displayName: name });
+    const result = await callAction(() => updateDisplayName({ displayName: name }));
     setLoading(false);
     if (!result.ok) {
       setStatus("error");
@@ -62,7 +65,7 @@ export function ProfileForm({ displayName, email }: { displayName: string; email
       {status === "success" && (
         <p className="text-muted-foreground text-sm">{t("profile.saveSuccess")}</p>
       )}
-      <Button type="submit" disabled={loading || !name.trim()}>
+      <Button type="submit" disabled={loading || !name.trim() || !online}>
         {loading ? t("common.loading") : t("profile.save")}
       </Button>
     </form>

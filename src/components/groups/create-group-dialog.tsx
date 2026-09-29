@@ -21,6 +21,7 @@ import { createGroup } from "@/lib/actions/groups";
 import { SUPPORTED_CURRENCIES } from "@/lib/currencies";
 import { GROUP_ICONS } from "@/lib/emoji";
 import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
+import { useOnline } from "@/lib/use-online";
 
 export function CreateGroupDialog() {
   const [open, setOpen] = useState(false);
@@ -32,6 +33,7 @@ export function CreateGroupDialog() {
   const [error, setError] = useState(false);
   const router = useRouter();
   const t = useT();
+  const online = useOnline();
 
   function updateMemberName(index: number, value: string) {
     setMemberNames((current) => current.map((n, i) => (i === index ? value : n)));
@@ -76,7 +78,7 @@ export function CreateGroupDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>{t("groups.create")}</Button>
+        <Button disabled={!online}>{t("groups.create")}</Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>

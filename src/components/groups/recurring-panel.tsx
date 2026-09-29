@@ -23,6 +23,7 @@ import { formatDayMonth } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { cn } from "@/lib/utils";
+import { useOnline } from "@/lib/use-online";
 import type { GroupMember, GroupRole, RecurringRule } from "@/lib/types";
 
 /** Turns a server ActionResult error code into a message that says what to fix. */
@@ -56,6 +57,7 @@ function RuleRow({
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
+  const online = useOnline();
   const canManage = rule.createdBy === currentUid || isGroupManager(currentRole);
 
   async function handleToggleActive() {
@@ -110,7 +112,7 @@ function RuleRow({
         </span>
         {canManage && (
           <RowActions>
-            <DropdownMenuItem disabled={busy} onSelect={handleToggleActive}>
+            <DropdownMenuItem disabled={busy || !online} onSelect={handleToggleActive}>
               {rule.active ? (
                 <>
                   <Pause className="h-3.5 w-3.5" />
@@ -125,7 +127,7 @@ function RuleRow({
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
-              disabled={busy}
+              disabled={busy || !online}
               onSelect={() => setDeleteOpen(true)}
             >
               <Trash2 className="h-3.5 w-3.5" />

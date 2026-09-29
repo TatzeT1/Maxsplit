@@ -76,6 +76,12 @@ service cloud.firestore {
         match /liveSecrets/{matchId} {
           allow read, write: if false;
         }
+
+        // Who is looking at the game right now (markTournamentPresence) —
+        // only the push sender reads it, to skip "Du bist dran" for them.
+        match /presence/{uid} {
+          allow read, write: if false;
+        }
       }
 
       // Doc id == uid, so a member can only ever read their own read
@@ -85,6 +91,13 @@ service cloud.firestore {
           isGroupMember(groupId);
         allow write: if false;
       }
+    }
+
+    // Push subscriptions (lib/push/store.ts): a device's push endpoint and
+    // encryption keys. Only the server reads or writes them — a client that
+    // could read one could learn someone else's devices.
+    match /pushSubscriptions/{subscriptionId} {
+      allow read, write: if false;
     }
 
     // Deny-all backstop for anything not explicitly matched above.

@@ -1,0 +1,157 @@
+<!doctype html>
+<!--
+  The service worker's (public/sw.js) answer to a page opened offline that
+  this device never saved. Self-contained on purpose — inline styles, no
+  build files — so it renders even when nothing else is cached. Colors are
+  the app's own tokens (globals.css), in the theme the app would use: the
+  same stored choice and dark default as THEME_INIT_SCRIPT in app/layout.tsx.
+-->
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Split – offline</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --background: oklch(0.19 0.028 235);
+        --foreground: oklch(0.96 0.014 75);
+        --muted: oklch(0.72 0.02 235);
+        --primary: oklch(0.72 0.18 45);
+        --primary-foreground: oklch(0.18 0.03 45);
+      }
+      :root.light {
+        color-scheme: light;
+        --background: oklch(0.98 0.012 75);
+        --foreground: oklch(0.24 0.035 250);
+        --muted: oklch(0.5 0.03 250);
+        --primary: oklch(0.62 0.19 42);
+        --primary-foreground: oklch(0.99 0.012 60);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: calc(env(safe-area-inset-top) + 24px) 16px calc(env(safe-area-inset-bottom) + 24px);
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        text-align: center;
+      }
+      main {
+        max-width: 22rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.25rem;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      button,
+      a {
+        min-height: 44px;
+        padding: 0 18px;
+        border-radius: 12px;
+        border: 1px solid color-mix(in oklch, var(--foreground) 20%, transparent);
+        background: transparent;
+        color: var(--foreground);
+        font: inherit;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: var(--primary-foreground);
+      }
+    </style>
+    <script>
+      try {
+        var stored = localStorage.getItem("theme");
+        var light =
+          stored === "light" ||
+          (stored === "system" && window.matchMedia("(prefers-color-scheme: light)").matches);
+        if (light) document.documentElement.classList.add("light");
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <main>
+      <svg
+        width="28"
+        height="28"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M12 20h.01" />
+        <path d="M8.5 16.43a5 5 0 0 1 7 0" />
+        <path d="M5 12.86a10 10 0 0 1 5.17-2.69" />
+        <path d="M19 12.86a10 10 0 0 0-2-1.43" />
+        <path d="M2 8.82a15 15 0 0 1 4.18-2.65" />
+        <path d="M22 8.82a15 15 0 0 0-11.29-3.76" />
+        <path d="m2 2 20 20" />
+      </svg>
+      <h1 data-de="Dafür brauchst du Internet" data-en="You need a connection for this">
+        Dafür brauchst du Internet
+      </h1>
+      <p
+        data-de="Diese Seite war auf diesem Gerät noch nicht offen. Alles, was du schon einmal angesehen hast, geht auch offline."
+        data-en="This page hasn't been opened on this device yet. Everything you've looked at before works offline too."
+      >
+        Diese Seite war auf diesem Gerät noch nicht offen. Alles, was du schon einmal angesehen
+        hast, geht auch offline.
+      </p>
+      <div class="actions">
+        <button
+          type="button"
+          onclick="location.reload()"
+          data-de="Nochmal versuchen"
+          data-en="Try again"
+        >
+          Nochmal versuchen
+        </button>
+        <a href="/groups" data-de="Zu deinen Gruppen" data-en="Your groups">Zu deinen Gruppen</a>
+      </div>
+    </main>
+    <script>
+      // The app keeps its language in the "locale" cookie (LocaleProvider).
+      if (/(?:^|;\s*)locale=en(?:;|$)/.test(document.cookie)) {
+        document.documentElement.lang = "en";
+        document.title = "Split – offline";
+        for (const el of document.querySelectorAll("[data-en]")) el.textContent = el.dataset.en;
+      }
+    </script>
+  </body>
+</html>

@@ -259,4 +259,37 @@ describe("firestore.rules", () => {
     const alice = testEnv.authenticatedContext("alice").firestore();
     await assertFails(getDoc(doc(alice, "groups/group1/tournaments/t1/liveSecrets/m1")));
   });
+
+  it("denies everyone, the owner included, access to push subscriptions", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("pushSubscriptions/sub1")
+        .set({ uid: "alice", endpoint: "https://fcm.googleapis.com/fcm/send/abc" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "pushSubscriptions/sub1")));
+    await assertFails(
+      setDoc(doc(alice, "pushSubscriptions/sub2"), {
+        uid: "alice",
+        endpoint: "https://fcm.googleapis.com/fcm/send/def",
+      }),
+    );
+  });
+
+  it("denies a member from reading or faking game presence", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1/presence/alice")
+        .set({ at: "2026-09-29T12:00:00.000Z" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1/tournaments/t1/presence/alice")));
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/tournaments/t1/presence/alice"), {
+        at: "2026-09-29T12:00:00.000Z",
+      }),
+    );
+  });
 });

@@ -24,6 +24,7 @@ import { isGroupManager } from "@/lib/groups/permissions";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { avatarGradient, cn } from "@/lib/utils";
 import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
+import { useOnline } from "@/lib/use-online";
 import type { GroupMember, GroupRole } from "@/lib/types";
 
 function CopyChip({ label, value }: { label: string; value: string }) {
@@ -95,6 +96,7 @@ function MemberRow({
   const [removeOpen, setRemoveOpen] = useState(false);
   const [nameInput, setNameInput] = useState(member.displayName);
   const t = useT();
+  const online = useOnline();
   const isSelf = uid === currentUid;
   const canManage =
     isGroupManager(currentRole) &&
@@ -182,7 +184,7 @@ function MemberRow({
               variant="ghost"
               size="icon-sm"
               aria-label={t("common.save")}
-              disabled={busy}
+              disabled={busy || !online}
               onClick={handleRename}
             >
               <Check className="h-3.5 w-3.5" />
@@ -210,20 +212,20 @@ function MemberRow({
         {canManage && !renaming && (
           <RowActions>
             {canRename && (
-              <DropdownMenuItem onSelect={startRenaming}>
+              <DropdownMenuItem disabled={!online} onSelect={startRenaming}>
                 <Pencil className="h-3.5 w-3.5" />
                 {t("groups.renamePlaceholder")}
               </DropdownMenuItem>
             )}
             {currentRole === "owner" && !member.isPlaceholder && (
-              <DropdownMenuItem disabled={busy} onSelect={handleRoleChange}>
+              <DropdownMenuItem disabled={busy || !online} onSelect={handleRoleChange}>
                 <ShieldCheck className="h-3.5 w-3.5" />
                 {member.role === "admin" ? t("groups.removeAdmin") : t("groups.makeAdmin")}
               </DropdownMenuItem>
             )}
             <DropdownMenuItem
               variant="destructive"
-              disabled={busy}
+              disabled={busy || !online}
               onSelect={() => setRemoveOpen(true)}
             >
               <UserMinus className="h-3.5 w-3.5" />

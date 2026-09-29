@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { assertFirebaseClientEnvFormat } from "./src/lib/firebase/config";
+import { assertVapidEnvFormat } from "./src/lib/push/vapid";
 
 // Fail the build on a malformed NEXT_PUBLIC_FIREBASE_* value rather than
 // inlining it into the client bundle. These are baked in at build time, so a
@@ -8,6 +9,12 @@ import { assertFirebaseClientEnvFormat } from "./src/lib/firebase/config";
 // Auth working while every Firestore read was denied. A red build with the
 // offending variable named is the cheapest possible place to catch that.
 assertFirebaseClientEnvFormat();
+
+// Same idea for the Web Push key pair (lib/push/vapid.ts): optional — none
+// means push is off — but a half-set or swapped pair fails here rather than
+// at the first push, where it would only show up as notifications that
+// silently never arrive.
+assertVapidEnvFormat();
 
 // Baseline security headers applied to every route. Deliberately excludes a
 // Content-Security-Policy: a strict CSP has to be tuned against the running app
@@ -46,6 +53,18 @@ const nextConfig: NextConfig = {
             value: "same-origin-allow-popups",
           },
           ...securityHeaders,
+        ],
+      },
+      {
+        // The service worker (public/sw.js). Never cached: a browser only
+        // installs a new version when this file's bytes change, and a cached
+        // copy would pin every device to the old one. Its own strict CSP —
+        // it only ever fetches from this origin.
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Security-Policy", value: "default-src 'self'; script-src 'self'" },
         ],
       },
     ];

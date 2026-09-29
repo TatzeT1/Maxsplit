@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { joinGroupByInviteCode, previewGroupByInviteCode } from "@/lib/actions/groups";
 import { cn } from "@/lib/utils";
+import { useOnline } from "@/lib/use-online";
 
 interface Preview {
   groupId: string;
@@ -32,6 +33,7 @@ export function JoinGroupDialog() {
   const [error, setError] = useState(false);
   const router = useRouter();
   const t = useT();
+  const online = useOnline();
 
   function reset() {
     setInviteCode("");
@@ -90,7 +92,9 @@ export function JoinGroupDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline">{t("groups.join")}</Button>
+        <Button variant="outline" disabled={!online}>
+          {t("groups.join")}
+        </Button>
       </DialogTrigger>
       <DialogContent>
         {!preview ? (

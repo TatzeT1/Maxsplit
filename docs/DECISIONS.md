@@ -232,3 +232,50 @@ both as a plain 1-vs-1 and inside a tournament, with "on one device" still selec
   only (their rules are simple enough to express), keeping results server-side.
 - If fast real-time games are added, a dedicated realtime channel (RTDB / WebSocket) per
   match would replace per-move Server Actions.
+
+## ADR-004: Offline is view-only; push is plain Web Push, without FCM
+
+**Status:** Accepted
+**Date:** 2026-09-29
+
+### Context
+
+Two owner requests: the installed app should open and show its data without a
+connection, and people should hear about four things on their phones — "Du bist dran",
+a challenge, a new expense involving them, a payment received. For offline, the owner
+chose "only view" over offline writes.
+
+### Decision
+
+- **Offline reads only.** Firestore's persistent IndexedDB cache supplies the data; a
+  hand-written service worker (`public/sw.js`) keeps build files and the last copy of each
+  page. No Serwist/next-pwa dependency, no `experimental.useOffline`.
+- **No offline writes.** Writes stay Server Actions (ADR-001) with nothing to queue them;
+  offline, every saving control is disabled, and `callAction` turns a failed call into a
+  visible "nichts gespeichert" instead of a hang.
+- **Stale must not pass for live.** Per-screen sync marks show "Stand …"; a screen with
+  no copy on the device says it needs a connection.
+- **Sign-out wipes the device**: the offline copy, saved pages, sync marks, and the push
+  subscription.
+- **Push via the browsers' own push services** (VAPID + `web-push`), not Firebase Cloud
+  Messaging: no extra vendor or SDK, end-to-end encrypted payloads, works for iOS
+  home-screen apps. Subscriptions live in a server-only top-level collection keyed by
+  endpoint (one account per device); keys are runtime env vars, not `NEXT_PUBLIC_*`.
+- **Pushes go out after the response** (`after()`), so they can't slow or fail an action.
+- **"Du bist dran" respects presence**: a server-only heartbeat doc per watching player.
+  (ADR-003's "no presence" still holds for the players themselves — this is push-only.)
+
+### Consequences
+
+- Offline shows only what this device loaded before. iOS evicts a non-installed site's
+  storage after a week without use.
+- iPhones get pushes only as a home-screen app (iOS 16.4+).
+- The worker needs a `VERSION` bump when its caching or `offline.html` changes.
+- A presence write every 20 s per player while a game is on screen.
+- Push is off until `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` are set in Vercel.
+
+### What would make us reverse this
+
+- A real need to enter expenses offline: idempotent action ids plus an outbox (or
+  Next's offline retries), in a new ADR.
+- Native apps: then APNs/FCM through their SDKs instead of Web Push.

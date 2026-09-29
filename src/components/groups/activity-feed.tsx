@@ -31,6 +31,7 @@ import type { TranslationKey } from "@/lib/i18n/translate";
 import { computeCategoryTotals } from "@/lib/money/category-totals";
 import { expenseImpactFor } from "@/lib/money/expense-impact";
 import { cn } from "@/lib/utils";
+import { useOnline } from "@/lib/use-online";
 import type {
   ActivityLogEntry,
   ActivityLogType,
@@ -120,6 +121,7 @@ function ExpenseRow({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const t = useT();
+  const online = useOnline();
   const canEdit = expense.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const payerUids = Object.keys(expense.paidBy);
   const paidByText =
@@ -200,19 +202,19 @@ function ExpenseRow({
             from also triggering the row's onClick above. */}
         <span onClick={(event) => event.stopPropagation()}>
           <RowActions>
-            <DropdownMenuItem onSelect={() => setDuplicateOpen(true)}>
+            <DropdownMenuItem disabled={!online} onSelect={() => setDuplicateOpen(true)}>
               <Copy className="h-3.5 w-3.5" />
               {t("expenses.duplicate")}
             </DropdownMenuItem>
             {canEdit && (
               <>
-                <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                <DropdownMenuItem disabled={!online} onSelect={() => setEditOpen(true)}>
                   <Pencil className="h-3.5 w-3.5" />
                   {t("common.edit")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   variant="destructive"
-                  disabled={deleting}
+                  disabled={deleting || !online}
                   onSelect={() => setDeleteOpen(true)}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -286,6 +288,7 @@ function SettlementRow({
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const t = useT();
+  const online = useOnline();
   const canEdit = settlement.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const fromName = members[settlement.fromUid]?.displayName ?? "?";
   const toName = members[settlement.toUid]?.displayName ?? "?";
@@ -318,13 +321,13 @@ function SettlementRow({
         </div>
         {canEdit && (
           <RowActions>
-            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+            <DropdownMenuItem disabled={!online} onSelect={() => setEditOpen(true)}>
               <Pencil className="h-3.5 w-3.5" />
               {t("common.edit")}
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
-              disabled={deleting}
+              disabled={deleting || !online}
               onSelect={() => setDeleteOpen(true)}
             >
               <Trash2 className="h-3.5 w-3.5" />

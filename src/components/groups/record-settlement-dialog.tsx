@@ -17,7 +17,9 @@ import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { editSettlement, recordSettlement } from "@/lib/actions/settlements";
 import { parseMoneyInput } from "@/lib/format/money";
+import { callAction } from "@/lib/call-action";
 import { MAX_NOTE_LENGTH } from "@/lib/ledger-input";
+import { useOnline } from "@/lib/use-online";
 import type { GroupMember, Settlement } from "@/lib/types";
 
 function todayIsoDate(): string {
@@ -41,6 +43,8 @@ function settlementErrorMessage(code: string, t: ReturnType<typeof useT>): strin
       return t("errors.forbidden");
     case "not-found":
       return t("errors.notFound");
+    case "network":
+      return t("errors.notSaved");
     default:
       return t("settlements.saveError");
   }
@@ -96,6 +100,7 @@ export function RecordSettlementDialog({
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
+  const online = useOnline();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -112,9 +117,11 @@ export function RecordSettlementDialog({
     setLoading(true);
     setError(null);
     const payload = { groupId, fromUid, toUid, amountMinor, currency, date, note };
-    const result = settlementToEdit
-      ? await editSettlement({ ...payload, settlementId: settlementToEdit.id })
-      : await recordSettlement(payload);
+    const result = await callAction(() =>
+      settlementToEdit
+        ? editSettlement({ ...payload, settlementId: settlementToEdit.id })
+        : recordSettlement(payload),
+    );
     setLoading(false);
 
     if (!result.ok) {
@@ -219,7 +226,7 @@ export function RecordSettlementDialog({
               {error && <p className="text-destructive text-sm">{error}</p>}
             </div>
             <DialogFooter>
-              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              <Button type="submit" size="lg" className="w-full" disabled={loading || !online}>
                 {loading ? t("common.loading") : t("common.save")}
               </Button>
             </DialogFooter>

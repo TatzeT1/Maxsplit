@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { readNotificationPrefs, type NotificationPrefs } from "@/lib/push/types";
 
 export const SESSION_COOKIE_NAME = "session";
 
@@ -23,6 +24,8 @@ export interface Session {
   accountHolderName: string | null;
   /** ISO timestamp once the user has finished or skipped the onboarding setup guide; null until then. @see completeOnboarding in lib/actions/onboarding.ts */
   onboardingCompletedAt: string | null;
+  /** Which push events this user wants, on every device (lib/push/types.ts). */
+  notificationPrefs: NotificationPrefs;
 }
 
 /**
@@ -56,6 +59,7 @@ export async function getSession(): Promise<Session | null> {
       paypalMeHandle: (profile?.paypalMeHandle as string | undefined) || null,
       accountHolderName: (profile?.accountHolderName as string | undefined) || null,
       onboardingCompletedAt: (profile?.onboardingCompletedAt as string | undefined) || null,
+      notificationPrefs: readNotificationPrefs(profile?.notificationPrefs),
     };
   } catch {
     return null;

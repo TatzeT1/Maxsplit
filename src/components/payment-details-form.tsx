@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { updatePaymentDetails } from "@/lib/actions/profile";
 import { EPC_MAX_NAME_CHARS } from "@/lib/payment/epc-qr";
+import { callAction } from "@/lib/call-action";
+import { useOnline } from "@/lib/use-online";
 
 export function PaymentDetailsForm({
   paypalEmail,
@@ -42,17 +44,20 @@ export function PaymentDetailsForm({
   >("idle");
   const router = useRouter();
   const t = useT();
+  const online = useOnline();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
     setStatus("idle");
-    const result = await updatePaymentDetails({
-      paypalEmail: email,
-      iban: ibanValue,
-      paypalMeHandle: handle,
-      accountHolderName: holder,
-    });
+    const result = await callAction(() =>
+      updatePaymentDetails({
+        paypalEmail: email,
+        iban: ibanValue,
+        paypalMeHandle: handle,
+        accountHolderName: holder,
+      }),
+    );
     setLoading(false);
     if (!result.ok) {
       setStatus(
@@ -150,7 +155,7 @@ export function PaymentDetailsForm({
       {status === "success" && (
         <p className="text-muted-foreground text-sm">{t("profile.saveSuccess")}</p>
       )}
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading || !online}>
         {loading ? t("common.loading") : (submitLabel ?? t("profile.save"))}
       </Button>
     </form>

@@ -42,6 +42,9 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
   tournaments/{id}   → read: isGroupMember(groupId). write: false. See Split Games.
     liveMatches/{id} → read: isGroupMember(groupId). write: false. (online play)
     liveSecrets/{id} → read, write: false — the hidden memory deck; nobody may peek.
+    presence/{uid}   → read, write: false — only the push sender reads it.
+
+pushSubscriptions/{id} → read, write: false — devices' push endpoints and keys, server-only.
 
 {document=**}        → deny-all backstop for anything unmatched.
 ```

@@ -9,20 +9,24 @@ gate: `next.config.ts`.
 
 ## Every env var
 
-| Var | Public? | Purpose |
-|---|---|---|
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | yes | Firebase client config |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | yes | Firebase client config |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | yes | Firebase client config |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | yes | Firebase client config |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | yes | Firebase client config |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | yes | Firebase client config |
-| `NEXT_PUBLIC_USE_FIREBASE_EMULATORS` | yes | `"true"` routes the **client** SDK at local emulators |
-| `FIREBASE_AUTH_EMULATOR_HOST` | no | Admin SDK auto-detects this standard name → routes server-side Auth calls to the emulator |
-| `FIRESTORE_EMULATOR_HOST` | no | same, for Firestore |
-| `FIREBASE_STORAGE_EMULATOR_HOST` | no | same, for Storage |
-| `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64` | no | base64-encoded service account JSON, powers `firebase-admin` |
-| `CRON_SECRET` | no | Bearer token Vercel Cron sends automatically — see [[Recurring Expenses]] |
+| Var                                        | Public? | Purpose                                                                                                                                                                                                |
+| ------------------------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_FIREBASE_API_KEY`             | yes     | Firebase client config                                                                                                                                                                                 |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`         | yes     | Firebase client config                                                                                                                                                                                 |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID`          | yes     | Firebase client config                                                                                                                                                                                 |
+| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`      | yes     | Firebase client config                                                                                                                                                                                 |
+| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | yes     | Firebase client config                                                                                                                                                                                 |
+| `NEXT_PUBLIC_FIREBASE_APP_ID`              | yes     | Firebase client config                                                                                                                                                                                 |
+| `NEXT_PUBLIC_USE_FIREBASE_EMULATORS`       | yes     | `"true"` routes the **client** SDK at local emulators                                                                                                                                                  |
+| `FIREBASE_AUTH_EMULATOR_HOST`              | no      | Admin SDK auto-detects this standard name → routes server-side Auth calls to the emulator                                                                                                              |
+| `FIRESTORE_EMULATOR_HOST`                  | no      | same, for Firestore                                                                                                                                                                                    |
+| `FIREBASE_STORAGE_EMULATOR_HOST`           | no      | same, for Storage                                                                                                                                                                                      |
+| `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64`      | no      | base64-encoded service account JSON, powers `firebase-admin`                                                                                                                                           |
+| `CRON_SECRET`                              | no      | Bearer token Vercel Cron sends automatically — see [[Recurring Expenses]]                                                                                                                              |
+| `VAPID_PUBLIC_KEY`                         | no*     | Web Push key pair, read at **runtime** (\*the public half reaches the browser as a prop, never inlined). Both or neither — none means push is off. Format-checked at build. See [[Push Notifications]] |
+| `VAPID_PRIVATE_KEY`                        | no      | the private half of the pair — generate with `npx web-push generate-vapid-keys`                                                                                                                        |
+| `VAPID_SUBJECT`                            | no      | optional contact for push services; defaults to `https://$VERCEL_PROJECT_PRODUCTION_URL`                                                                                                               |
+| `PUSH_EXTRA_ENDPOINT_HOSTS`                | no      | **local tests only**: extra push-endpoint hosts (a fake push service); never set in production                                                                                                         |
 
 Only set the three `*_EMULATOR_HOST` vars **together with**
 `NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true` — the client flag and the server-side host vars are
@@ -62,4 +66,5 @@ without a `.env.local` yet still gets a clear, familiar error instead of a confi
 somewhere unrelated.
 
 ## Related
+
 [[Two Auth States]] · [[Deployment and Production Debugging]] · [[Local Development and Testing]]

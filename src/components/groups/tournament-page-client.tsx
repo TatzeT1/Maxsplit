@@ -5,6 +5,7 @@ import { ArrowLeft, Wifi } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useT } from "@/components/locale-provider";
+import { NeedsConnection } from "@/components/needs-connection";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TOURNAMENT_GAME_CONFIGS } from "@/components/groups/split-game/tournament/tournament-game-configs";
 import { TournamentView } from "@/components/groups/split-game/tournament/tournament-view";
@@ -12,6 +13,8 @@ import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { useTournament } from "@/lib/games/use-tournament";
+import { useTournamentPresence } from "@/lib/games/use-tournament-presence";
+import { useOnline } from "@/lib/use-online";
 import type { Group, GroupMember } from "@/lib/types";
 
 /**
@@ -33,6 +36,14 @@ export function TournamentPageClient({
   const [group, setGroup] = useState<Group | null>(null);
   const [groupErrorCode, setGroupErrorCode] = useState<string | null>(null);
   const { tournament, errorCode: tournamentErrorCode } = useTournament(groupId, tournamentId);
+  const online = useOnline();
+  // A player looking at their game needs no "Du bist dran" push.
+  useTournamentPresence(
+    groupId,
+    user && tournament?.status === "running" && user.uid in tournament.entrants
+      ? tournamentId
+      : null,
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -48,6 +59,13 @@ export function TournamentPageClient({
   }, [groupId, user]);
 
   const errorCode = groupErrorCode ?? tournamentErrorCode;
+
+  // Every move and result goes through the server; offline, a cached board
+  // would only invite taps that can't land. (It also keeps the runner from
+  // trying to open a match it can't reach.)
+  if (user && !online) {
+    return <NeedsConnection body={t("offline.gameNeedsConnection")} />;
+  }
 
   if (user && errorCode) {
     return (

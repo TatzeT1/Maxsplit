@@ -14,6 +14,7 @@ import { simplifyDebts } from "@/lib/money/balances";
 import { buildPaypalMeLink } from "@/lib/payment/paypal-me";
 import { buildReminderMessage, whatsAppShareUrl } from "@/lib/payment/reminder";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
+import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
 
@@ -83,10 +84,18 @@ function PayActions({
   onMarkPaid: () => void;
 }) {
   const t = useT();
+  const online = useOnline();
 
   return (
     <div className="flex flex-wrap gap-2 pt-3">
-      <Button type="button" variant="secondary" size="sm" className="h-10" onClick={onMarkPaid}>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className="h-10"
+        disabled={!online}
+        onClick={onMarkPaid}
+      >
         {t("balances.markPaid")}
       </Button>
       {member?.paypalMeHandle ? (

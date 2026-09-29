@@ -6,6 +6,8 @@ import { isCategoryId } from "@/lib/categories";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isIsoDate, isValidDescription, isValidEmoji } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
+import { expensePushes } from "@/lib/push/messages";
+import { notifyAfterResponse } from "@/lib/push/notify";
 import {
   splitByPercent,
   splitByShares,
@@ -160,7 +162,7 @@ export async function addExpense(
 
   const resolved = await resolveExpense(input, session);
   if (!resolved.ok) return { ok: false, error: resolved.error };
-  const { groupRef, splits } = resolved;
+  const { group, groupRef, splits } = resolved;
 
   const now = new Date().toISOString();
   const expense: Omit<Expense, "id"> = {
@@ -182,6 +184,16 @@ export async function addExpense(
 
   const docRef = await groupRef.collection("expenses").add(expense);
   await recomputeGroupBalances(groupRef);
+  notifyAfterResponse(
+    expensePushes({
+      groupId: input.groupId,
+      group,
+      expenseId: docRef.id,
+      expense,
+      origin: "added",
+      actorUid: session.uid,
+    }),
+  );
   return { ok: true, data: { expenseId: docRef.id } };
 }
 

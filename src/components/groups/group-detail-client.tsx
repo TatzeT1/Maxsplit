@@ -16,6 +16,7 @@ import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { TournamentBanner } from "@/components/groups/tournament-banner";
 import { useT } from "@/components/locale-provider";
+import { NeedsConnection } from "@/components/needs-connection";
 import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,10 +26,14 @@ import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { computeBalances, type BalanceExpense } from "@/lib/money/balances";
+import { useScreenSync } from "@/lib/offline/sync-marks";
+import { useLiveSources } from "@/lib/offline/use-live-sources";
+import { useOnline } from "@/lib/use-online";
 import { avatarGradient, cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
 
 const TABS = ["expenses", "balances", "games", "group"] as const;
+const LIVE_SOURCES = ["group", "expenses", "settlements", "activityLog", "recurring"] as const;
 type GroupTab = (typeof TABS)[number];
 const DEFAULT_TAB: GroupTab = "expenses";
 
@@ -92,19 +97,24 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
   const tab = parseTab(searchParams.get("tab"));
   const [tabsSentinel, setTabsSentinel] = useState<HTMLDivElement | null>(null);
   const tabsPinned = useIsPinned(tabsSentinel);
+  const online = useOnline();
+  const { live, received, report } = useLiveSources(LIVE_SOURCES);
+  const syncedAt = useScreenSync(user ? `${user.uid}:group:${groupId}` : null, live);
 
   useEffect(() => {
     if (!user) return;
     return onSnapshot(
       doc(db, "groups", groupId),
+      { includeMetadataChanges: true },
       (snapshot) => {
         setGroup(snapshot.exists() ? ({ id: snapshot.id, ...snapshot.data() } as Group) : null);
+        report("group", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("group", error));
       },
     );
-  }, [groupId, user]);
+  }, [groupId, user, report]);
 
   useEffect(() => {
     if (!user) return;
@@ -114,18 +124,20 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     );
     return onSnapshot(
       expensesQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
         setExpenses(
           snapshot.docs
             .map((d) => ({ id: d.id, ...d.data() }) as Expense)
             .filter((expense) => !expense.deletedAt),
         );
+        report("expenses", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("expenses", error));
       },
     );
-  }, [groupId, user]);
+  }, [groupId, user, report]);
 
   useEffect(() => {
     if (!user) return;
@@ -135,14 +147,16 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     );
     return onSnapshot(
       settlementsQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
         setSettlements(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Settlement));
+        report("settlements", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("settlements", error));
       },
     );
-  }, [groupId, user]);
+  }, [groupId, user, report]);
 
   useEffect(() => {
     if (!user) return;
@@ -153,27 +167,31 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     );
     return onSnapshot(
       activityLogQuery,
+      { includeMetadataChanges: true },
       (snapshot) => {
         setActivityLog(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as ActivityLogEntry));
+        report("activityLog", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("activityLog", error));
       },
     );
-  }, [groupId, user]);
+  }, [groupId, user, report]);
 
   useEffect(() => {
     if (!user) return;
     return onSnapshot(
       collection(db, "groups", groupId, "recurring"),
+      { includeMetadataChanges: true },
       (snapshot) => {
         setRecurringRules(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as RecurringRule));
+        report("recurring", snapshot);
       },
       (error) => {
         setErrorCode(reportSnapshotError("recurring", error));
       },
     );
-  }, [groupId, user]);
+  }, [groupId, user, report]);
 
   function selectTab(next: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -199,6 +217,13 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         </div>
       </div>
     );
+  }
+
+  // Offline without this group's ledger on this device — never opened here,
+  // or its document gone from the cache: say so, rather than let an empty
+  // cache pass for "Alle sind quitt" or leave a skeleton that never resolves.
+  if (user && !online && !live && (syncedAt === null || (received("group") && !group))) {
+    return <NeedsConnection body={t("offline.groupNotSynced")} />;
   }
 
   if (
@@ -389,7 +414,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
               currency={group.currency}
               currentUid={user.uid}
               trigger={
-                <Button size="lg" className="shadow-e2 w-full">
+                <Button size="lg" className="shadow-e2 w-full" disabled={!online}>
                   <Plus />
                   {t("expenses.add")}
                 </Button>
@@ -406,6 +431,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
                   size="lg"
                   className="shadow-e2"
                   aria-label={t("settlements.record")}
+                  disabled={!online}
                 >
                   <ArrowLeftRight />
                   {t("settlements.recordShort")}

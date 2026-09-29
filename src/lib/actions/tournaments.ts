@@ -11,6 +11,7 @@ import {
   applyOnlineMove,
   initialLiveState,
   isOnlineMatch,
+  liveTurn,
   nextAttempt,
   type LiveSecret,
   type OnlineMove,
@@ -21,6 +22,10 @@ import { getServerT } from "@/lib/i18n/server";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { buildGameExpense, validateGameExpenseDraft } from "@/lib/money/game-expense";
+import { challengePushes, expensePushes, newlyReadyMatches, turnPush } from "@/lib/push/messages";
+import { notifyAfterResponse } from "@/lib/push/notify";
+import { presenceRef } from "@/lib/push/store";
+import type { PendingPush } from "@/lib/push/types";
 import {
   MAX_TOURNAMENT_ENTRANTS,
   bracketLoserUids,
@@ -34,6 +39,7 @@ import {
 import type {
   ChatMessage,
   DuelGameId,
+  Expense,
   GameExpenseDraft,
   Group,
   LiveMatch,
@@ -73,12 +79,17 @@ function applyBracketUpdate(input: {
   tournament: TournamentDoc;
   next: BracketUpdate;
   at: string;
-}): { finished: boolean; booked: boolean } {
+}): {
+  finished: boolean;
+  booked: boolean;
+  bookedExpense: { id: string; expense: Omit<Expense, "id"> } | null;
+} {
   const { tx, tournamentRef, groupRef, group, tournament, next, at } = input;
   const merged = { ...tournament, ...next };
   const finished = isBracketFinished(merged);
   const update: Record<string, unknown> = { matches: next.matches, updatedAt: at };
   let booked = false;
+  let bookedExpense: { id: string; expense: Omit<Expense, "id"> } | null = null;
 
   if (finished) {
     const loserUids = bracketLoserUids(merged);
@@ -96,18 +107,84 @@ function applyBracketUpdate(input: {
         update.autoBookError = draftError ?? "member-left";
       } else {
         const expenseRef = groupRef.collection("expenses").doc();
-        tx.set(
-          expenseRef,
-          buildGameExpense({ draft, loserUids, createdBy: tournament.createdBy, now: at }),
-        );
+        const expense = buildGameExpense({
+          draft,
+          loserUids,
+          createdBy: tournament.createdBy,
+          now: at,
+        });
+        tx.set(expenseRef, expense);
         update.expenseId = expenseRef.id;
         booked = true;
+        bookedExpense = { id: expenseRef.id, expense };
       }
     }
   }
 
   tx.update(tournamentRef, update);
-  return { finished, booked };
+  return { finished, booked, bookedExpense };
+}
+
+function entrantName(
+  group: Omit<Group, "id">,
+  tournament: Pick<TournamentDoc, "entrants">,
+  uid: string,
+): string {
+  return group.members[uid]?.displayName ?? tournament.entrants[uid]?.displayName ?? "";
+}
+
+/**
+ * The pushes a bracket update causes: "Du bist dran" to both players of every
+ * online match it just made playable, and "Neue Ausgabe" when it booked the
+ * stake — for everyone the expense touches who wasn't playing (the players
+ * watched the result happen).
+ */
+function bracketPushes(input: {
+  groupId: string;
+  group: Omit<Group, "id">;
+  tournamentId: string;
+  before: TournamentDoc;
+  next: BracketUpdate;
+  bookedExpense: { id: string; expense: Omit<Expense, "id"> } | null;
+}): PendingPush[] {
+  const { groupId, group, tournamentId, before } = input;
+  const after = { ...before, ...input.next };
+  const pushes: PendingPush[] = [];
+  for (const match of newlyReadyMatches(before.matches, after.matches)) {
+    if (!isOnlineMatch(after, match)) continue;
+    const [first, second] = match.players as [string, string];
+    for (const [uid, opponent] of [
+      [first, second],
+      [second, first],
+    ]) {
+      pushes.push(
+        turnPush({
+          uid,
+          opponentName: entrantName(group, after, opponent),
+          reason: "ready",
+          groupId,
+          group,
+          tournamentId,
+          matchId: match.id,
+          gameId: after.gameId,
+        }),
+      );
+    }
+  }
+  if (input.bookedExpense) {
+    pushes.push(
+      ...expensePushes({
+        groupId,
+        group,
+        expenseId: input.bookedExpense.id,
+        expense: input.bookedExpense.expense,
+        origin: "game",
+        actorUid: null,
+        skip: Object.keys(after.entrants),
+      }),
+    );
+  }
+  return pushes;
 }
 
 /** Untrusted client input → a well-formed move, or `null`. The rules engine validates the rest. */
@@ -260,9 +337,10 @@ export async function createTournament(input: {
   const batch = adminDb.batch();
   batch.set(docRef, tournament);
 
-  // An online game needs the other side to *notice* it — there are no push
-  // notifications, so the group chat is where the challenge lands. The text
-  // is the fallback; the chat renders `gameInvite` as a join card.
+  // An online game needs the other side to *notice* it. Whoever turned push
+  // on gets a "Herausforderung" (below, after the commit); the group chat is
+  // where it lands for everyone else. The text is the fallback; the chat
+  // renders `gameInvite` as a join card.
   if (playMode === "online") {
     const t = await getServerT();
     const challenger = group.members[session.uid]?.displayName ?? "";
@@ -284,6 +362,19 @@ export async function createTournament(input: {
   }
 
   await batch.commit();
+  if (playMode === "online") {
+    notifyAfterResponse(
+      challengePushes({
+        groupId: input.groupId,
+        group,
+        tournamentId: docRef.id,
+        gameId: input.gameId,
+        stake: tournament.stake,
+        poolUids,
+        actorUid: session.uid,
+      }),
+    );
+  }
   return { ok: true, data: { tournamentId: docRef.id } };
 }
 
@@ -404,7 +495,8 @@ export async function reportTournamentMatchResult(input: {
   const at = new Date().toISOString();
 
   const result = await adminDb.runTransaction<
-    { ok: true; finished: boolean; booked: boolean } | { ok: false; error: string }
+    | { ok: true; finished: boolean; booked: boolean; pushes: PendingPush[] }
+    | { ok: false; error: string }
   >(async (tx) => {
     const snap = await tx.get(tournamentRef);
     if (!snap.exists) return { ok: false, error: "not-found" };
@@ -433,11 +525,20 @@ export async function reportTournamentMatchResult(input: {
       next,
       at,
     });
-    return { ok: true, ...outcome };
+    const pushes = bracketPushes({
+      groupId: input.groupId,
+      group: membership.group,
+      tournamentId: input.tournamentId,
+      before: tournament,
+      next,
+      bookedExpense: outcome.bookedExpense,
+    });
+    return { ok: true, finished: outcome.finished, booked: outcome.booked, pushes };
   });
 
   if (!result.ok) return { ok: false, error: result.error };
   if (result.booked) await recomputeGroupBalances(membership.groupRef);
+  notifyAfterResponse(result.pushes);
   return { ok: true, data: { tournamentFinished: result.finished } };
 }
 
@@ -494,47 +595,62 @@ export async function openOnlineMatch(input: {
   const liveRef = tournamentRef.collection("liveMatches").doc(input.matchId);
   const secretRef = tournamentRef.collection("liveSecrets").doc(input.matchId);
 
-  const result = await adminDb.runTransaction<{ ok: true } | { ok: false; error: string }>(
-    async (tx) => {
-      const [snap, liveSnap] = await Promise.all([tx.get(tournamentRef), tx.get(liveRef)]);
-      if (!snap.exists) return { ok: false, error: "not-found" };
-      const tournament = snap.data() as TournamentDoc;
-      const match = tournament.matches[input.matchId];
-      if (!match) return { ok: false, error: "match-not-found" };
-      if (!isOnlineMatch(tournament, match)) return { ok: false, error: "not-online" };
-      if (!match.players.includes(session.uid)) return { ok: false, error: "not-a-player" };
-      if (liveSnap.exists) return { ok: true };
-      if (tournament.status !== "running") return { ok: false, error: "tournament-not-running" };
+  const result = await adminDb.runTransaction<
+    { ok: true; push: PendingPush | null } | { ok: false; error: string }
+  >(async (tx) => {
+    const [snap, liveSnap] = await Promise.all([tx.get(tournamentRef), tx.get(liveRef)]);
+    if (!snap.exists) return { ok: false, error: "not-found" };
+    const tournament = snap.data() as TournamentDoc;
+    const match = tournament.matches[input.matchId];
+    if (!match) return { ok: false, error: "match-not-found" };
+    if (!isOnlineMatch(tournament, match)) return { ok: false, error: "not-online" };
+    if (!match.players.includes(session.uid)) return { ok: false, error: "not-a-player" };
+    if (liveSnap.exists) return { ok: true, push: null };
+    if (tournament.status !== "running") return { ok: false, error: "tournament-not-running" };
 
-      const at = new Date().toISOString();
-      const claimed = claimMatch(
-        tournament,
-        input.matchId,
-        { byUid: session.uid, claimId: randomUUID(), claimedAt: at },
-        { takeover: false },
-      );
-      if ("error" in claimed) return { ok: false, error: claimed.error };
+    const at = new Date().toISOString();
+    const claimed = claimMatch(
+      tournament,
+      input.matchId,
+      { byUid: session.uid, claimId: randomUUID(), claimedAt: at },
+      { takeover: false },
+    );
+    if ("error" in claimed) return { ok: false, error: claimed.error };
 
-      const { state, secret } = initialLiveState(tournament.gameId, freshDeck(tournament.gameId));
-      const live: Omit<LiveMatch, "id"> = {
-        gameId: tournament.gameId,
-        players: match.players as [string, string],
-        attempt: 0,
-        state,
-        version: 0,
-        lastDrawAt: null,
-        winnerUid: null,
-        finish: null,
-        updatedAt: at,
-      };
-      tx.update(tournamentRef, { matches: claimed.matches, updatedAt: at });
-      tx.set(liveRef, live);
-      if (secret) tx.set(secretRef, secret);
-      return { ok: true };
-    },
-  );
+    const { state, secret } = initialLiveState(tournament.gameId, freshDeck(tournament.gameId));
+    const live: Omit<LiveMatch, "id"> = {
+      gameId: tournament.gameId,
+      players: match.players as [string, string],
+      attempt: 0,
+      state,
+      version: 0,
+      lastDrawAt: null,
+      winnerUid: null,
+      finish: null,
+      updatedAt: at,
+    };
+    tx.update(tournamentRef, { matches: claimed.matches, updatedAt: at });
+    tx.set(liveRef, live);
+    if (secret) tx.set(secretRef, secret);
+
+    // The board is up and this player is at it: the other one gets a
+    // "Dein Match wartet" — unless they're already watching.
+    const opponent = match.players.find((uid) => uid !== session.uid) as string;
+    const push = turnPush({
+      uid: opponent,
+      opponentName: entrantName(membership.group, tournament, session.uid),
+      reason: "ready",
+      groupId: input.groupId,
+      group: membership.group,
+      tournamentId: input.tournamentId,
+      matchId: input.matchId,
+      gameId: tournament.gameId,
+    });
+    return { ok: true, push };
+  });
 
   if (!result.ok) return { ok: false, error: result.error };
+  if (result.push) notifyAfterResponse([result.push]);
   return { ok: true, data: null };
 }
 
@@ -564,7 +680,8 @@ export async function playOnlineMove(input: {
   const secretRef = tournamentRef.collection("liveSecrets").doc(input.matchId);
 
   const result = await adminDb.runTransaction<
-    { ok: true; version: number; booked: boolean } | { ok: false; error: string }
+    | { ok: true; version: number; booked: boolean; pushes: PendingPush[] }
+    | { ok: false; error: string }
   >(async (tx) => {
     const [snap, liveSnap, secretSnap] = await Promise.all([
       tx.get(tournamentRef),
@@ -593,9 +710,29 @@ export async function playOnlineMove(input: {
     const version = live.version + 1;
     const { outcome } = applied;
 
+    // "Du bist dran" for whoever moves next, when that's now the other
+    // player — a found memory pair keeps the turn, the reaction duel has none.
+    const handOver = (state: LiveMatch["state"], players: readonly string[]): PendingPush[] => {
+      const turn = liveTurn(state);
+      const nextUid = turn === null ? null : players[turn];
+      if (!nextUid || nextUid === session.uid) return [];
+      return [
+        turnPush({
+          uid: nextUid,
+          opponentName: entrantName(membership.group, tournament, session.uid),
+          reason: "move",
+          groupId: input.groupId,
+          group: membership.group,
+          tournamentId: input.tournamentId,
+          matchId: input.matchId,
+          gameId: tournament.gameId,
+        }),
+      ];
+    };
+
     if (outcome.kind === "continue") {
       tx.update(liveRef, { state: applied.state, version, updatedAt: at });
-      return { ok: true, version, booked: false };
+      return { ok: true, version, booked: false, pushes: handOver(applied.state, live.players) };
     }
 
     if (outcome.kind === "draw") {
@@ -609,7 +746,12 @@ export async function playOnlineMove(input: {
         updatedAt: at,
       });
       if (replay.secret) tx.set(secretRef, replay.secret);
-      return { ok: true, version, booked: false };
+      return {
+        ok: true,
+        version,
+        booked: false,
+        pushes: handOver(replay.state, replay.players),
+      };
     }
 
     const winnerUid = live.players[outcome.player];
@@ -632,7 +774,7 @@ export async function playOnlineMove(input: {
       finish: { reason: outcome.reason, at },
       updatedAt: at,
     });
-    const { booked } = applyBracketUpdate({
+    const { booked, bookedExpense } = applyBracketUpdate({
       tx,
       tournamentRef,
       groupRef: membership.groupRef,
@@ -641,10 +783,48 @@ export async function playOnlineMove(input: {
       next,
       at,
     });
-    return { ok: true, version, booked };
+    const pushes = bracketPushes({
+      groupId: input.groupId,
+      group: membership.group,
+      tournamentId: input.tournamentId,
+      before: tournament,
+      next,
+      bookedExpense,
+    });
+    return { ok: true, version, booked, pushes };
   });
 
   if (!result.ok) return { ok: false, error: result.error };
   if (result.booked) await recomputeGroupBalances(membership.groupRef);
+  notifyAfterResponse(result.pushes);
   return { ok: true, data: { version: result.version } };
+}
+
+/**
+ * "I'm looking at this game": the tournament page and the group page's game
+ * banner send this every 20 seconds while visible — and `watching: false`
+ * when hidden or left — so a "Du bist dran" push skips a player who's
+ * already watching (lib/push/deliver.ts). Only the server reads it.
+ */
+export async function markTournamentPresence(input: {
+  groupId: string;
+  tournamentId: string;
+  watching: boolean;
+}): Promise<ActionResult<null>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+  if (
+    typeof input.tournamentId !== "string" ||
+    !/^[A-Za-z0-9_-]{1,128}$/.test(input.tournamentId)
+  ) {
+    return { ok: false, error: "not-found" };
+  }
+
+  const membership = await requireGroupMembership(input.groupId, session.uid);
+  if ("error" in membership) return { ok: false, error: membership.error };
+
+  const ref = presenceRef(input.groupId, input.tournamentId, session.uid);
+  if (input.watching) await ref.set({ at: new Date().toISOString() });
+  else await ref.delete();
+  return { ok: true, data: null };
 }

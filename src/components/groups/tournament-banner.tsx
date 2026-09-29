@@ -7,6 +7,7 @@ import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
 import { isOnlineMatch } from "@/lib/games/online-match";
 import { bracketProgress } from "@/lib/games/tournament-status";
 import { useRunningTournaments } from "@/lib/games/use-tournament";
+import { useTournamentPresence } from "@/lib/games/use-tournament-presence";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,6 +20,13 @@ import { cn } from "@/lib/utils";
 export function TournamentBanner({ groupId, currentUid }: { groupId: string; currentUid: string }) {
   const t = useT();
   const { tournaments, errorCode } = useRunningTournaments(groupId);
+  // This banner turns "Du bist dran!" live, so a player on the group page
+  // counts as watching their online game — no push needed.
+  const running = tournaments[0];
+  useTournamentPresence(
+    groupId,
+    running?.playMode === "online" && currentUid in running.entrants ? running.id : null,
+  );
 
   // Per AGENTS.md: a failed listener must never look like "no tournament".
   if (errorCode) {

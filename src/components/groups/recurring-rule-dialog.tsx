@@ -18,6 +18,7 @@ import { createRecurringRule } from "@/lib/actions/recurring";
 import { CATEGORY_IDS, categoryLabel } from "@/lib/categories";
 import { parseMoneyInput } from "@/lib/format/money";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
+import { useOnline } from "@/lib/use-online";
 import type { CategoryId, GroupMember, RecurringFrequency } from "@/lib/types";
 
 function todayIsoDate(): string {
@@ -68,6 +69,7 @@ export function RecurringRuleDialog({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const t = useT();
+  const online = useOnline();
 
   function toggleParticipant(uid: string) {
     setParticipantUids((current) =>
@@ -120,7 +122,7 @@ export function RecurringRuleDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" disabled={!online}>
           {t("recurring.add")}
         </Button>
       </DialogTrigger>

@@ -6,6 +6,8 @@ import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isIsoDate, MAX_NOTE_LENGTH } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
+import { settlementPushes } from "@/lib/push/messages";
+import { notifyAfterResponse } from "@/lib/push/notify";
 import type { ActivityLogEntry, Group, Settlement } from "@/lib/types";
 import type { ActionResult } from "./groups";
 
@@ -82,6 +84,15 @@ export async function recordSettlement(
 
   const docRef = await groupRef.collection("settlements").add(settlement);
   await recomputeGroupBalances(groupRef);
+  notifyAfterResponse(
+    settlementPushes({
+      groupId: input.groupId,
+      group,
+      settlementId: docRef.id,
+      settlement,
+      actorUid: session.uid,
+    }),
+  );
   return { ok: true, data: { settlementId: docRef.id } };
 }
 

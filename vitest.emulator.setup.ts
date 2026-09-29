@@ -1,5 +1,6 @@
 import { generateKeyPairSync } from "node:crypto";
 import { beforeEach, vi } from "vitest";
+import { clearSentPushes } from "@/test/push-mock";
 
 // Runs before every emulator integration test file (vitest.emulator.config.ts).
 
@@ -23,8 +24,10 @@ process.env.GCLOUD_PROJECT = EMULATOR_PROJECT_ID;
 process.env.FIRESTORE_EMULATOR_HOST ??= "127.0.0.1:8080";
 
 vi.mock("@/lib/auth/session", () => import("@/test/session-mock"));
+vi.mock("@/lib/push/notify", () => import("@/test/push-mock"));
 
 beforeEach(async () => {
+  clearSentPushes();
   const response = await fetch(
     `http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${EMULATOR_PROJECT_ID}/databases/(default)/documents`,
     { method: "DELETE" },

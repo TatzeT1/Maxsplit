@@ -63,6 +63,16 @@ Applied to every route via `headers()`:
 > breaks auth_. This is tracked as a deliberate gap, not guessed at. Don't add a strict CSP
 > without testing sign-in end-to-end against it.
 
+`/sw.js` gets its own headers: `Cache-Control: no-cache, no-store, must-revalidate` (a
+browser only installs a new worker when the file's bytes change — a cached copy would pin
+every device to the old one) and a strict `default-src 'self'` CSP. See [[Offline Mode]].
+
+**Push needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` in Vercel** (Production). Without
+them push is off and the profile hides its section; a malformed pair fails the build.
+Runtime vars — a redeploy picks them up, no cache-less rebuild needed. Failed sends are
+logged as "Push to a device of <uid> failed (<status>)"; 404/410 subscriptions are
+deleted silently. See [[Push Notifications]].
+
 The COOP override exists because **Vercel's platform default is a stricter COOP that silently
 blocks `signInWithPopup`**: the opener tab can no longer poll `window.closed` on the popup, so
 `onAuthStateChanged` never fires client-side — even though the server session cookie was set

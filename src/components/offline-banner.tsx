@@ -1,43 +1,59 @@
 "use client";
 
 import { WifiOff } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { useT } from "@/components/locale-provider";
+import { formatDayMonth, formatTime } from "@/lib/format/date";
+import { useCurrentScreenSync } from "@/lib/offline/sync-marks";
+import { useOnline } from "@/lib/use-online";
 
-function subscribe(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
+/**
+ * How long a screen may go without live data while the device claims to be
+ * online before the banner calls the connection lost — well past the second
+ * or two a normal start from the cache takes to turn live. Covers the Wi-Fi
+ * that's connected but goes nowhere, which `navigator.onLine` reports as fine.
+ */
+const UNREACHABLE_AFTER_MS = 8000;
+
+/** True once `active` has held for `delayMs` without interruption. */
+function useActiveFor(active: boolean, delayMs: number): boolean {
+  const [state, setState] = useState({ active, elapsed: false });
+  // Restart the clock on every change — adjusted during render, React's
+  // pattern for state that follows a prop.
+  if (state.active !== active) setState({ active, elapsed: false });
+
+  useEffect(() => {
+    if (!active) return;
+    const timer = window.setTimeout(() => setState({ active: true, elapsed: true }), delayMs);
+    return () => window.clearTimeout(timer);
+  }, [active, delayMs]);
+
+  return active && state.active && state.elapsed;
 }
 
-function getSnapshot() {
-  return navigator.onLine;
-}
-
-// The server has no network state of its own — assume online so the first
-// paint matches what SSR always renders (nothing), and let the client
-// snapshot correct it immediately after hydration if the device is offline.
-function getServerSnapshot() {
-  return true;
+/** "29.09., 14:32" — with the day, because a copy can just as well be from last week. */
+function formatSyncedAt(at: number): string {
+  const date = new Date(at);
+  return `${formatDayMonth(date)}, ${formatTime(date)}`;
 }
 
 /**
- * Split has no offline write queue (see AGENTS.md: writes are Server
- * Actions, not direct client Firestore writes, so there's nothing for the
- * browser to replay on reconnect). Without this, losing signal mid-session
- * looks identical to everything working — a save silently does nothing and
- * `onSnapshot` listeners just stop updating. This banner is the minimum fix:
- * make the offline state visible instead of indistinguishable from normal.
+ * Offline, the app is view-only: Firestore shows its cached copy
+ * (lib/firebase/client.ts) and everything that saves is disabled, because
+ * writes are Server Actions with nothing to queue them (ADR-001). This banner
+ * says so, and how old the copy on screen is ("Stand 29.09., 14:32", from the
+ * screen's sync mark) — without it, stale data would look exactly like live
+ * data, and a disabled button like a broken one.
  */
 export function OfflineBanner() {
-  const isOnline = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const online = useOnline();
+  const screen = useCurrentScreenSync();
+  const unreachable = useActiveFor(online && screen !== null && !screen.live, UNREACHABLE_AFTER_MS);
   const t = useT();
 
-  if (isOnline) return null;
+  if (online && !unreachable) return null;
 
+  const syncedAt = screen?.syncedAt;
   return (
     <div
       role="status"
@@ -45,7 +61,10 @@ export function OfflineBanner() {
       style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" }}
     >
       <WifiOff className="size-4 shrink-0" aria-hidden="true" />
-      {t("common.offline")}
+      <span>
+        {online ? t("common.unreachable") : t("common.offline")}
+        {syncedAt ? ` · ${t("common.syncedAt", { time: formatSyncedAt(syncedAt) })}` : null}
+      </span>
     </div>
   );
 }
