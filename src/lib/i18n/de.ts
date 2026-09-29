@@ -77,7 +77,7 @@ export const de = {
     guideIbanTitle: "IBAN",
     guideIbanSummary: "Für eine klassische Überweisung von deiner Bank.",
     guideIbanDetail:
-      "Öffne deine Banking-App, kopiere deine IBAN und füg sie hier ein. Mitglieder, die dir Geld schulden, sehen sie nur bei sich und können sie mit einem Tap kopieren, um sie in ihrer eigenen Überweisung einzufügen.",
+      "Öffne deine Banking-App, kopiere deine IBAN und füg sie hier ein. Mitglieder, die dir Geld schulden, sehen sie nur bei sich: zum Kopieren oder als GiroCode, den ihre Banking-App samt Betrag und Verwendungszweck einliest. Trag dafür den Kontoinhaber so ein, wie er bei deiner Bank steht.",
     onboardingReplayLink: "Setup-Guide erneut ansehen",
   },
   onboarding: {

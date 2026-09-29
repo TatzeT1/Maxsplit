@@ -77,7 +77,7 @@ export const en: Dictionary = {
     guideIbanTitle: "IBAN",
     guideIbanSummary: "For a classic bank transfer.",
     guideIbanDetail:
-      "Open your banking app, copy your IBAN, and paste it here. Members who owe you money only see it on their own screen and can copy it with a tap to paste into their own transfer.",
+      "Open your banking app, copy your IBAN, and paste it here. Members who owe you money only see it on their own screen: to copy, or as a GiroCode their banking app reads along with the amount and reference. For that, enter the account holder exactly as your bank has it.",
     onboardingReplayLink: "Watch the setup guide again",
   },
   onboarding: {

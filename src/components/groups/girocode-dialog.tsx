@@ -15,6 +15,7 @@ import {
 import { formatMoney } from "@/lib/format/money";
 import { buildEpcPayload } from "@/lib/payment/epc-qr";
 import { formatIban } from "@/lib/payment/validate";
+import { cn } from "@/lib/utils";
 
 /**
  * A GiroCode (EPC QR, see lib/payment/epc-qr.ts) for one balance line, with
@@ -87,7 +88,8 @@ export function GiroCodeDialog({
           {details.map((detail) => (
             <div key={detail.label} className="contents">
               <dt className="text-muted-foreground">{detail.label}</dt>
-              <dd className={detail.mono ? "font-mono text-[0.8rem] break-all" : "break-words"}>
+              {/* IBANs wrap between their groups of four, never inside one. */}
+              <dd className={cn("break-words", detail.mono && "font-mono text-[0.8rem]")}>
                 {detail.value}
               </dd>
             </div>
