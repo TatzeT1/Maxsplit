@@ -4,6 +4,10 @@ import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } f
 import { useT } from "@/components/locale-provider";
 import { ConnectFourGrid } from "@/components/groups/split-game/connect-four-board";
 import { MemoryGrid } from "@/components/groups/split-game/memory-board";
+import {
+  ReactionPadContent,
+  type ReactionArt,
+} from "@/components/groups/split-game/reaction-board";
 import { TicTacToeGrid } from "@/components/groups/split-game/tic-tac-toe-board";
 import {
   REACTION_ONLINE_TIMEOUT_MS,
@@ -220,6 +224,17 @@ export function OnlineReaction({ live, state, me, names, colors, onMove }: Onlin
   else if (phase === "reported") label = mine ?? "";
   else label = t("expenses.reactionSteady");
 
+  const myReport = myResult ?? localReport;
+  const iFalseStarted =
+    myReport === "falseStart" || (typeof myReport === "object" && myReport?.kind === "falseStart");
+  let art: ReactionArt | null;
+  if (me !== null && live.winnerUid === live.players[me]) art = "trophy";
+  else if (iFalseStarted) art = "tooEarly";
+  else if (phase === "arming" || phase === "waiting") art = "ready";
+  else if (phase === "steady") art = "steady";
+  else if (phase === "go") art = "go";
+  else art = null;
+
   const color = me === null ? colors[0] : colors[me];
   const showGo = phase === "go";
 
@@ -237,7 +252,7 @@ export function OnlineReaction({ live, state, me, names, colors, onMove }: Onlin
           backgroundColor: showGo ? color : `color-mix(in oklch, ${color} 18%, var(--muted))`,
         }}
       >
-        {label}
+        <ReactionPadContent art={art} label={label} dim={phase === "waiting"} />
       </button>
       {me !== null && (
         <p className="text-muted-foreground text-center text-xs">

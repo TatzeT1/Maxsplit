@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import { preload } from "react-dom";
 import { useT } from "@/components/locale-provider";
 import { duelPalettes } from "@/lib/games/member-colors";
 import { randomInt } from "@/lib/games/random";
@@ -36,6 +38,54 @@ function padResultText(
     return t("expenses.reactionFalseStart");
   }
   return t("expenses.reactionFaster");
+}
+
+/** The sticker a pad shows for its current moment, from "put your finger ready" to the verdict. */
+export type ReactionArt = "ready" | "steady" | "go" | "tooEarly" | "trophy";
+
+const REACTION_ART_SRC: Record<ReactionArt, string> = {
+  ready: "/duel/rx-ready.webp",
+  steady: "/duel/rx-steady.webp",
+  go: "/duel/rx-go.webp",
+  tooEarly: "/duel/rx-too-early.webp",
+  trophy: "/duel/trophy.webp",
+};
+
+/**
+ * A pad's sticker above its label — shared by the one-phone pads and the
+ * online pad. Every sticker is preloaded as soon as a pad first renders: the
+ * swap to "Los!" is the moment the whole game measures, and an image still
+ * loading there would read as lag.
+ */
+export function ReactionPadContent({
+  art,
+  label,
+  dim = false,
+}: {
+  art: ReactionArt | null;
+  label: string;
+  dim?: boolean;
+}) {
+  for (const src of Object.values(REACTION_ART_SRC)) preload(src, { as: "image" });
+  return (
+    <span className="flex flex-col items-center gap-2">
+      {art !== null && (
+        <Image
+          src={REACTION_ART_SRC[art]}
+          alt=""
+          width={96}
+          height={96}
+          unoptimized
+          draggable={false}
+          className={cn(
+            "size-[min(96px,13dvh)] drop-shadow-md transition-opacity duration-(--duration-fast)",
+            dim && "opacity-50",
+          )}
+        />
+      )}
+      <span>{label}</span>
+    </span>
+  );
 }
 
 /**
@@ -147,6 +197,15 @@ export function ReactionBoard({ players, members, locked, onWin, onDraw }: DuelB
     };
   }
 
+  function padArt(pad: 0 | 1): ReactionArt | null {
+    if (phase === "arming") return "ready";
+    if (phase === "steady") return "steady";
+    if (phase === "go") return taps[pad] === null ? "go" : null;
+    if (verdict === null || verdict === "tooClose" || verdict.kind !== "win") return null;
+    if (verdict.winner === pad) return "trophy";
+    return verdict.reason === "falseStart" ? "tooEarly" : null;
+  }
+
   function padLabel(pad: 0 | 1): string {
     if (phase === "arming")
       return ready[pad] ? t("expenses.reactionReady") : t("expenses.reactionTapWhenReady");
@@ -191,7 +250,11 @@ export function ReactionBoard({ players, members, locked, onWin, onDraw }: DuelB
                 : `color-mix(in oklch, ${pad === 0 ? colorA : colorB} 18%, var(--muted))`,
             }}
           >
-            {padLabel(pad)}
+            <ReactionPadContent
+              art={padArt(pad)}
+              label={padLabel(pad)}
+              dim={phase === "arming" && ready[pad]}
+            />
           </button>
         ))}
       </div>
