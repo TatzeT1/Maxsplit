@@ -19,6 +19,7 @@ import {
   splitGameInfo,
   type SplitGameId,
 } from "@/components/groups/split-game/game-catalog";
+import { preloadSplitGame } from "@/components/groups/split-game/game-loaders";
 import { SplitGamePreview } from "@/components/groups/split-game/game-preview";
 import { GameTileImage } from "@/components/groups/split-game/game-tile-image";
 
@@ -47,6 +48,8 @@ export function SplitGamePickerDialog({
   const [direction, setDirection] = useState<1 | -1>(1);
 
   function openPreview(id: SplitGameId) {
+    // The games load on demand; fetch this one while its preview is read.
+    preloadSplitGame(id);
     setDirection(1);
     setSelectedId(id);
   }

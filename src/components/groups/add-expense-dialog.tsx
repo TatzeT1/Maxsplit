@@ -17,18 +17,18 @@ import { Select } from "@/components/ui/select";
 import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
-import { SplitLotteryDialog } from "@/components/groups/split-lottery-dialog";
-import { SplitWheelDialog } from "@/components/groups/split-wheel-dialog";
-import { SplitSlotDialog } from "@/components/groups/split-slot-dialog";
-import { SplitScratchDialog } from "@/components/groups/split-scratch-dialog";
-import { SplitTicTacToeDialog } from "@/components/groups/split-tic-tac-toe-dialog";
-import { SplitConnectFourDialog } from "@/components/groups/split-connect-four-dialog";
-import { SplitMemoryDialog } from "@/components/groups/split-memory-dialog";
-import { SplitReactionDialog } from "@/components/groups/split-reaction-dialog";
+import type { SplitGameId } from "@/components/groups/split-game/game-catalog";
 import {
+  SplitConnectFourDialog,
   SplitGamePickerDialog,
-  type SplitGameId,
-} from "@/components/groups/split-game-picker-dialog";
+  SplitLotteryDialog,
+  SplitMemoryDialog,
+  SplitReactionDialog,
+  SplitScratchDialog,
+  SplitSlotDialog,
+  SplitTicTacToeDialog,
+  SplitWheelDialog,
+} from "@/components/groups/split-game/lazy-dialogs";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -227,6 +227,12 @@ export function AddExpenseDialog({
   // "open" for the one currently active id, so this replaces what would
   // otherwise be eight parallel booleans as the picker's tile list grows.
   const [activeGame, setActiveGame] = useState<SplitGameId | null>(null);
+  // The picker and each game are lazy chunks (lazy-dialogs.tsx), mounted the
+  // first time they're opened and kept mounted after that: a duel game keeps
+  // its running tournament across close and reopen, which unmounting on close
+  // would throw away.
+  const [pickerMounted, setPickerMounted] = useState(false);
+  const [mountedGames, setMountedGames] = useState<ReadonlySet<SplitGameId>>(() => new Set());
   // Only inherited on an actual edit, never on duplicate — a duplicated
   // expense reuses the split numbers, but no game round was played for it.
   const [viaLottery, setViaLottery] = useState(expenseToEdit?.viaLottery ?? false);
@@ -235,8 +241,14 @@ export function AddExpenseDialog({
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
   const router = useRouter();
 
+  function openGamePicker() {
+    setPickerMounted(true);
+    setGamePickerOpen(true);
+  }
+
   function handleSelectGame(game: SplitGameId) {
     setGamePickerOpen(false);
+    setMountedGames((mounted) => (mounted.has(game) ? mounted : new Set(mounted).add(game)));
     setActiveGame(game);
   }
 
@@ -587,7 +599,7 @@ export function AddExpenseDialog({
                   ))}
                   <button
                     type="button"
-                    onClick={() => setGamePickerOpen(true)}
+                    onClick={openGamePicker}
                     className="text-muted-foreground hover:bg-muted hover:text-foreground flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95"
                   >
                     🎮 {t("expenses.splitGame")}
@@ -707,89 +719,107 @@ export function AddExpenseDialog({
           </form>
         )}
       </DialogContent>
-      <SplitGamePickerDialog
-        open={gamePickerOpen}
-        onOpenChange={setGamePickerOpen}
-        onSelectGame={handleSelectGame}
-      />
-      <SplitLotteryDialog
-        open={activeGame === "lottery"}
-        onOpenChange={(next) => setActiveGame(next ? "lottery" : null)}
-        members={members}
-        memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
-      />
-      <SplitWheelDialog
-        open={activeGame === "wheel"}
-        onOpenChange={(next) => setActiveGame(next ? "wheel" : null)}
-        members={members}
-        memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
-      />
-      <SplitSlotDialog
-        open={activeGame === "slot"}
-        onOpenChange={(next) => setActiveGame(next ? "slot" : null)}
-        members={members}
-        memberUids={memberUids}
-        amountMinor={amountMinor}
-        currency={currency}
-        onResolve={handleSplitGameResolveAmounts}
-      />
-      <SplitScratchDialog
-        open={activeGame === "scratch"}
-        onOpenChange={(next) => setActiveGame(next ? "scratch" : null)}
-        members={members}
-        memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
-      />
-      <SplitTicTacToeDialog
-        open={activeGame === "tictactoe"}
-        onOpenChange={(next) => setActiveGame(next ? "tictactoe" : null)}
-        members={members}
-        memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
-        groupId={groupId}
-        currentUid={currentUid}
-        stake={{ description, amountMinor, currency }}
-        expenseDraft={expenseDraft}
-        onServerGameStarted={handleServerGameStarted}
-      />
-      <SplitConnectFourDialog
-        open={activeGame === "connectfour"}
-        onOpenChange={(next) => setActiveGame(next ? "connectfour" : null)}
-        members={members}
-        memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
-        groupId={groupId}
-        currentUid={currentUid}
-        stake={{ description, amountMinor, currency }}
-        expenseDraft={expenseDraft}
-        onServerGameStarted={handleServerGameStarted}
-      />
-      <SplitMemoryDialog
-        open={activeGame === "memory"}
-        onOpenChange={(next) => setActiveGame(next ? "memory" : null)}
-        members={members}
-        memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
-        groupId={groupId}
-        currentUid={currentUid}
-        stake={{ description, amountMinor, currency }}
-        expenseDraft={expenseDraft}
-        onServerGameStarted={handleServerGameStarted}
-      />
-      <SplitReactionDialog
-        open={activeGame === "reaction"}
-        onOpenChange={(next) => setActiveGame(next ? "reaction" : null)}
-        members={members}
-        memberUids={memberUids}
-        onResolve={handleSplitGameResolve}
-        groupId={groupId}
-        currentUid={currentUid}
-        stake={{ description, amountMinor, currency }}
-        expenseDraft={expenseDraft}
-        onServerGameStarted={handleServerGameStarted}
-      />
+      {pickerMounted && (
+        <SplitGamePickerDialog
+          open={gamePickerOpen}
+          onOpenChange={setGamePickerOpen}
+          onSelectGame={handleSelectGame}
+        />
+      )}
+      {mountedGames.has("lottery") && (
+        <SplitLotteryDialog
+          open={activeGame === "lottery"}
+          onOpenChange={(next) => setActiveGame(next ? "lottery" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+        />
+      )}
+      {mountedGames.has("wheel") && (
+        <SplitWheelDialog
+          open={activeGame === "wheel"}
+          onOpenChange={(next) => setActiveGame(next ? "wheel" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+        />
+      )}
+      {mountedGames.has("slot") && (
+        <SplitSlotDialog
+          open={activeGame === "slot"}
+          onOpenChange={(next) => setActiveGame(next ? "slot" : null)}
+          members={members}
+          memberUids={memberUids}
+          amountMinor={amountMinor}
+          currency={currency}
+          onResolve={handleSplitGameResolveAmounts}
+        />
+      )}
+      {mountedGames.has("scratch") && (
+        <SplitScratchDialog
+          open={activeGame === "scratch"}
+          onOpenChange={(next) => setActiveGame(next ? "scratch" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+        />
+      )}
+      {mountedGames.has("tictactoe") && (
+        <SplitTicTacToeDialog
+          open={activeGame === "tictactoe"}
+          onOpenChange={(next) => setActiveGame(next ? "tictactoe" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+          groupId={groupId}
+          currentUid={currentUid}
+          stake={{ description, amountMinor, currency }}
+          expenseDraft={expenseDraft}
+          onServerGameStarted={handleServerGameStarted}
+        />
+      )}
+      {mountedGames.has("connectfour") && (
+        <SplitConnectFourDialog
+          open={activeGame === "connectfour"}
+          onOpenChange={(next) => setActiveGame(next ? "connectfour" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+          groupId={groupId}
+          currentUid={currentUid}
+          stake={{ description, amountMinor, currency }}
+          expenseDraft={expenseDraft}
+          onServerGameStarted={handleServerGameStarted}
+        />
+      )}
+      {mountedGames.has("memory") && (
+        <SplitMemoryDialog
+          open={activeGame === "memory"}
+          onOpenChange={(next) => setActiveGame(next ? "memory" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+          groupId={groupId}
+          currentUid={currentUid}
+          stake={{ description, amountMinor, currency }}
+          expenseDraft={expenseDraft}
+          onServerGameStarted={handleServerGameStarted}
+        />
+      )}
+      {mountedGames.has("reaction") && (
+        <SplitReactionDialog
+          open={activeGame === "reaction"}
+          onOpenChange={(next) => setActiveGame(next ? "reaction" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+          groupId={groupId}
+          currentUid={currentUid}
+          stake={{ description, amountMinor, currency }}
+          expenseDraft={expenseDraft}
+          onServerGameStarted={handleServerGameStarted}
+        />
+      )}
     </Dialog>
   );
 }

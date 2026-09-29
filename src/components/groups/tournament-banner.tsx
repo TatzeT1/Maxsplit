@@ -3,7 +3,7 @@
 import { ChevronRight, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/components/locale-provider";
-import { TOURNAMENT_GAME_CONFIGS } from "@/components/groups/split-game/tournament/tournament-game-configs";
+import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
 import { isOnlineMatch } from "@/lib/games/online-match";
 import { bracketProgress } from "@/lib/games/tournament-status";
 import { useRunningTournaments } from "@/lib/games/use-tournament";
@@ -33,7 +33,9 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
   if (tournaments.length === 0) return null;
   // createTournament enforces at most one running tournament per group.
   const tournament = tournaments[0];
-  const config = TOURNAMENT_GAME_CONFIGS[tournament.gameId];
+  // Only the game's name and emoji — not TOURNAMENT_GAME_CONFIGS, whose boards would ride
+  // along into every group page.
+  const config = DUEL_GAME_META[tournament.gameId];
   const progress = bracketProgress(tournament);
 
   const online = tournament.playMode === "online";

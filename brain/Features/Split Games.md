@@ -286,6 +286,22 @@ link — until the first move. Shared links go through `/play/[groupId]/[tournam
 which survives WhatsApp's cookie-less in-app browser by routing through sign-in.
 One game runs per group at a time (unchanged `createTournament` rule).
 
+## Loaded on demand
+
+The picker and all eight game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
+`next/dynamic`) — before 2026-09 they were static imports of `AddExpenseDialog`, so every
+group page shipped every game. `AddExpenseDialog` mounts the picker, and each game, the first
+time it's opened and then **keeps it mounted**: a duel game holds its running tournament
+across close/reopen (see above), which unmounting on close would lose. A game's chunk is
+prefetched when its tile's preview opens (`preloadSplitGame`, `split-game/game-loaders.ts`),
+so "Los geht's" rarely waits; if it does, a non-blocking spinner shows.
+
+Anything outside the game dialogs that only needs to _name_ a duel game (banner, chat invite)
+uses `DUEL_GAME_META` (`lib/games/duel-game-ids.ts`), never `TOURNAMENT_GAME_CONFIGS`, whose
+four boards would otherwise ride along into every group page — the tournament banner did
+exactly that until 2026-09. Measured with the production build, the group page's up-front JS
+went from 1337 to 1213 KiB (398 → 372 KiB gzip).
+
 ## The picker: two categories and a preview step
 
 `SplitGamePickerDialog` used to be a flat 2×2 tile grid that handed off straight into a game's
