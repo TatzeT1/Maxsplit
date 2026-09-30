@@ -10,10 +10,17 @@ export const gameLoaders = {
   wheel: () => import("@/components/groups/split-wheel-dialog"),
   slot: () => import("@/components/groups/split-slot-dialog"),
   scratch: () => import("@/components/groups/split-scratch-dialog"),
+  balloon: () => import("@/components/groups/split-balloon-dialog"),
+  duckrace: () => import("@/components/groups/split-duck-race-dialog"),
+  dicecup: () => import("@/components/groups/split-dice-dialog"),
+  pegboard: () => import("@/components/groups/split-pegboard-dialog"),
   tictactoe: () => import("@/components/groups/split-tic-tac-toe-dialog"),
   connectfour: () => import("@/components/groups/split-connect-four-dialog"),
   memory: () => import("@/components/groups/split-memory-dialog"),
   reaction: () => import("@/components/groups/split-reaction-dialog"),
+  rps: () => import("@/components/groups/split-rps-dialog"),
+  nim: () => import("@/components/groups/split-nim-dialog"),
+  dots: () => import("@/components/groups/split-dots-dialog"),
 } satisfies Record<SplitGameId, () => Promise<unknown>>;
 
 /**

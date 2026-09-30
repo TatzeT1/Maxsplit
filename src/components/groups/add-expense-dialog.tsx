@@ -19,11 +19,18 @@ import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
 import type { SplitGameId } from "@/components/groups/split-game/game-catalog";
 import {
+  SplitBalloonDialog,
   SplitConnectFourDialog,
+  SplitDiceDialog,
+  SplitDotsDialog,
+  SplitDuckRaceDialog,
   SplitGamePickerDialog,
   SplitLotteryDialog,
   SplitMemoryDialog,
+  SplitNimDialog,
+  SplitPegboardDialog,
   SplitReactionDialog,
+  SplitRpsDialog,
   SplitScratchDialog,
   SplitSlotDialog,
   SplitTicTacToeDialog,
@@ -771,6 +778,42 @@ export function AddExpenseDialog({
           onResolve={handleSplitGameResolve}
         />
       )}
+      {mountedGames.has("balloon") && (
+        <SplitBalloonDialog
+          open={activeGame === "balloon"}
+          onOpenChange={(next) => setActiveGame(next ? "balloon" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+        />
+      )}
+      {mountedGames.has("duckrace") && (
+        <SplitDuckRaceDialog
+          open={activeGame === "duckrace"}
+          onOpenChange={(next) => setActiveGame(next ? "duckrace" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+        />
+      )}
+      {mountedGames.has("dicecup") && (
+        <SplitDiceDialog
+          open={activeGame === "dicecup"}
+          onOpenChange={(next) => setActiveGame(next ? "dicecup" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+        />
+      )}
+      {mountedGames.has("pegboard") && (
+        <SplitPegboardDialog
+          open={activeGame === "pegboard"}
+          onOpenChange={(next) => setActiveGame(next ? "pegboard" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+        />
+      )}
       {mountedGames.has("tictactoe") && (
         <SplitTicTacToeDialog
           open={activeGame === "tictactoe"}
@@ -817,6 +860,48 @@ export function AddExpenseDialog({
         <SplitReactionDialog
           open={activeGame === "reaction"}
           onOpenChange={(next) => setActiveGame(next ? "reaction" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+          groupId={groupId}
+          currentUid={currentUid}
+          stake={{ description, amountMinor, currency }}
+          expenseDraft={expenseDraft}
+          onServerGameStarted={handleServerGameStarted}
+        />
+      )}
+      {mountedGames.has("rps") && (
+        <SplitRpsDialog
+          open={activeGame === "rps"}
+          onOpenChange={(next) => setActiveGame(next ? "rps" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+          groupId={groupId}
+          currentUid={currentUid}
+          stake={{ description, amountMinor, currency }}
+          expenseDraft={expenseDraft}
+          onServerGameStarted={handleServerGameStarted}
+        />
+      )}
+      {mountedGames.has("nim") && (
+        <SplitNimDialog
+          open={activeGame === "nim"}
+          onOpenChange={(next) => setActiveGame(next ? "nim" : null)}
+          members={members}
+          memberUids={memberUids}
+          onResolve={handleSplitGameResolve}
+          groupId={groupId}
+          currentUid={currentUid}
+          stake={{ description, amountMinor, currency }}
+          expenseDraft={expenseDraft}
+          onServerGameStarted={handleServerGameStarted}
+        />
+      )}
+      {mountedGames.has("dots") && (
+        <SplitDotsDialog
+          open={activeGame === "dots"}
+          onOpenChange={(next) => setActiveGame(next ? "dots" : null)}
           members={members}
           memberUids={memberUids}
           onResolve={handleSplitGameResolve}

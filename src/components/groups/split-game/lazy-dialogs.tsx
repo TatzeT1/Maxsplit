@@ -5,9 +5,9 @@ import dynamic from "next/dynamic";
 import { useT } from "@/components/locale-provider";
 import { gameLoaders } from "@/components/groups/split-game/game-loaders";
 
-// The picker and the eight split-game dialogs, each split into its own chunk.
+// The picker and the fifteen split-game dialogs, each split into its own chunk.
 // They used to be static imports of AddExpenseDialog, so every visit to a
-// group page downloaded all eight games — boards, bracket, online play, sound
+// group page downloaded every game — boards, bracket, online play, sound
 // — although most expenses are entered without one. Now a game's code loads
 // when its preview opens in the picker (preloadSplitGame in game-loaders.ts),
 // and the dialog renders once that has arrived.
@@ -51,6 +51,21 @@ export const SplitScratchDialog = dynamic(
   () => gameLoaders.scratch().then((m) => m.SplitScratchDialog),
   { loading: GameLoading },
 );
+export const SplitBalloonDialog = dynamic(
+  () => gameLoaders.balloon().then((m) => m.SplitBalloonDialog),
+  { loading: GameLoading },
+);
+export const SplitDuckRaceDialog = dynamic(
+  () => gameLoaders.duckrace().then((m) => m.SplitDuckRaceDialog),
+  { loading: GameLoading },
+);
+export const SplitDiceDialog = dynamic(() => gameLoaders.dicecup().then((m) => m.SplitDiceDialog), {
+  loading: GameLoading,
+});
+export const SplitPegboardDialog = dynamic(
+  () => gameLoaders.pegboard().then((m) => m.SplitPegboardDialog),
+  { loading: GameLoading },
+);
 export const SplitTicTacToeDialog = dynamic(
   () => gameLoaders.tictactoe().then((m) => m.SplitTicTacToeDialog),
   { loading: GameLoading },
@@ -67,3 +82,12 @@ export const SplitReactionDialog = dynamic(
   () => gameLoaders.reaction().then((m) => m.SplitReactionDialog),
   { loading: GameLoading },
 );
+export const SplitRpsDialog = dynamic(() => gameLoaders.rps().then((m) => m.SplitRpsDialog), {
+  loading: GameLoading,
+});
+export const SplitNimDialog = dynamic(() => gameLoaders.nim().then((m) => m.SplitNimDialog), {
+  loading: GameLoading,
+});
+export const SplitDotsDialog = dynamic(() => gameLoaders.dots().then((m) => m.SplitDotsDialog), {
+  loading: GameLoading,
+});

@@ -1,7 +1,21 @@
 import type { TranslationKey } from "@/lib/i18n/translate";
 
 export type SplitGameId =
-  "lottery" | "wheel" | "slot" | "scratch" | "tictactoe" | "connectfour" | "memory" | "reaction";
+  | "lottery"
+  | "wheel"
+  | "slot"
+  | "scratch"
+  | "balloon"
+  | "duckrace"
+  | "dicecup"
+  | "pegboard"
+  | "tictactoe"
+  | "connectfour"
+  | "memory"
+  | "reaction"
+  | "rps"
+  | "nim"
+  | "dots";
 
 export type SplitGameCategory = "luck" | "skill";
 
@@ -79,6 +93,43 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     howKey: "expenses.gameHowScratch",
   },
   {
+    id: "balloon",
+    category: "luck",
+    emoji: "🎈",
+    imageSrc: "/game-tiles/balloon.jpg",
+    nameKey: "expenses.gameNameBalloon",
+    blurbKey: "expenses.gameBlurbBalloon",
+    howKey: "expenses.gameHowBalloon",
+  },
+  {
+    id: "duckrace",
+    category: "luck",
+    emoji: "🦆",
+    imageSrc: "/game-tiles/duck-race.jpg",
+    nameKey: "expenses.gameNameDuckRace",
+    blurbKey: "expenses.gameBlurbDuckRace",
+    howKey: "expenses.gameHowDuckRace",
+  },
+  {
+    // 🎲 already belongs to the lottery, so the cup gets the tumbler.
+    id: "dicecup",
+    category: "luck",
+    emoji: "🥃",
+    imageSrc: "/game-tiles/dice-cup.jpg",
+    nameKey: "expenses.gameNameDice",
+    blurbKey: "expenses.gameBlurbDice",
+    howKey: "expenses.gameHowDice",
+  },
+  {
+    id: "pegboard",
+    category: "luck",
+    emoji: "🎱",
+    imageSrc: "/game-tiles/pegboard.jpg",
+    nameKey: "expenses.gameNamePegboard",
+    blurbKey: "expenses.gameBlurbPegboard",
+    howKey: "expenses.gameHowPegboard",
+  },
+  {
     id: "tictactoe",
     category: "skill",
     emoji: "⭕",
@@ -113,6 +164,33 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     nameKey: "expenses.gameNameReaction",
     blurbKey: "expenses.gameBlurbReaction",
     howKey: "expenses.gameHowReaction",
+  },
+  {
+    id: "rps",
+    category: "skill",
+    emoji: "✊",
+    imageSrc: "/game-tiles/rock-paper-scissors.jpg",
+    nameKey: "expenses.gameNameRps",
+    blurbKey: "expenses.gameBlurbRps",
+    howKey: "expenses.gameHowRps",
+  },
+  {
+    id: "nim",
+    category: "skill",
+    emoji: "🥢",
+    imageSrc: "/game-tiles/nim.jpg",
+    nameKey: "expenses.gameNameNim",
+    blurbKey: "expenses.gameBlurbNim",
+    howKey: "expenses.gameHowNim",
+  },
+  {
+    id: "dots",
+    category: "skill",
+    emoji: "✏️",
+    imageSrc: "/game-tiles/dots-and-boxes.jpg",
+    nameKey: "expenses.gameNameDots",
+    blurbKey: "expenses.gameBlurbDots",
+    howKey: "expenses.gameHowDots",
   },
 ];
 
