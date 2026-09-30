@@ -5,6 +5,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -25,16 +26,18 @@ import {
 } from "@/components/groups/split-game/rps-board";
 import { TicTacToeGrid } from "@/components/groups/split-game/tic-tac-toe-board";
 import { replayDots } from "@/lib/games/dots-and-boxes";
-import { replayNim } from "@/lib/games/nim";
+import { nimLateMove, replayNim } from "@/lib/games/nim";
 import {
   REACTION_ONLINE_TIMEOUT_MS,
   replayConnectFour,
   replayTicTacToe,
   type OnlineMove,
 } from "@/lib/games/online-match";
+import { randomInt } from "@/lib/games/random";
 import { rpsScore, type RpsHand } from "@/lib/games/rock-paper-scissors";
 import { ticTacToeNextToVanish, ticTacToeVariantForAttempt } from "@/lib/games/tic-tac-toe";
 import { playBuzzerSound, playGoSound, playTickSound } from "@/lib/sound/game-sounds";
+import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
 import type { LiveMatch, LiveMatchState } from "@/lib/types";
 
@@ -285,19 +288,35 @@ export function OnlineReaction({ live, state, me, names, colors, onMove }: Onlin
   );
 }
 
+/**
+ * The online matchstick duel. The fuse burns on both phones, but only the
+ * phone whose player is on the move ever acts on it: when it runs out, that
+ * phone plays the late move (one match, flagged as late so both screens can
+ * say "too slow"). Offline it stands still — a move could not be sent anyway.
+ */
 export function OnlineNim({ live, state, me, names, colors, busy, onMove }: OnlineBoardProps) {
-  if (state.gameId !== "nim") return null;
-  const replay = replayNim(state.moves);
-  const myTurn = me !== null && replay.turn === me && live.winnerUid === null;
+  const online = useOnline();
+  const moves = state.gameId === "nim" ? state.moves : null;
+  const replay = useMemo(() => (moves ? replayNim(moves) : null), [moves]);
+  if (!replay) return null;
+
+  const decided = live.winnerUid !== null;
+  const myTurn = me !== null && replay.turn === me && !decided;
+  const burnt = () => {
+    const late = nimLateMove(replay.rows, randomInt);
+    if (late) onMove({ kind: "take", row: late.row, count: late.count, late: true });
+  };
   return (
     <NimGrid
-      rows={replay.rows}
-      last={replay.last}
+      replay={replay}
       colors={colors}
       names={names}
-      turnColor={colors[replay.turn]}
-      disabled={!myTurn || busy}
+      canAct={myTurn && !busy}
+      fuseRunning={!decided && online}
+      fuseSound={myTurn}
+      onBurnt={myTurn && !busy ? burnt : undefined}
       onTake={(row, count) => onMove({ kind: "take", row, count })}
+      onSkip={() => onMove({ kind: "skip" })}
     />
   );
 }

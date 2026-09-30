@@ -24,6 +24,8 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | K.-o.-Modus                       | "Knockout mode"                      | the picker's name for the knockout-ladder mechanic that scales a duel game to a pool bigger than 2 — [[Split Games]]  |
 | Stechen                           | "Roll-off" — a tie-break             | the Würfelbecher rolls again among only the people level on the line between paying and not — [[Split Games]]         |
 | Mäxchen                           | pub dice game                        | the Würfelbecher ranks two-dice rolls like it: 21 beats everything, then the doubles, then the rest — [[Split Games]] |
+| Lunte                             | "fuse"                               | the matchstick duel's move clock, shorter as matches run out; a burnt one plays a late move — [[Split Games]]         |
+| Joker                             | one skipped move                     | the matchstick duel's once-per-player skip: pass the move on without taking — [[Split Games]]                         |
 
 ## Domain vocabulary
 

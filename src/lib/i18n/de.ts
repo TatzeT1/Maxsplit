@@ -334,7 +334,7 @@ export const de = {
     gameNameRps: "Schnick-Schnack-Schnuck",
     gameBlurbRps: "Schere, Stein, Papier — wer zweimal gewinnt.",
     gameNameNim: "Streichholz-Duell",
-    gameBlurbNim: "Wer das letzte Hölzchen nimmt, zahlt.",
+    gameBlurbNim: "Die Lunte brennt — wer das letzte Hölzchen nimmt, zahlt.",
     gameNameDots: "Käsekästchen",
     gameBlurbDots: "Linien ziehen, Kästchen schließen.",
     gameHowLottery:
@@ -364,7 +364,7 @@ export const de = {
     gameHowRps:
       "Zu zweit wählt ihr gleichzeitig eine Hand: Schere, Stein oder Papier — und deckt sie gemeinsam auf. Wer zuerst zwei Runden gewinnt, gewinnt das Duell, wer verliert, zahlt. Gleiche Hände heißen: nochmal.",
     gameHowNim:
-      "In vier Reihen liegen 1, 3, 5 und 7 Streichhölzer. Abwechselnd nehmt ihr beliebig viele aus genau einer Reihe. Wer das allerletzte Streichholz nimmt, verliert und zahlt. Unentschieden gibt es nicht.",
+      "In vier Reihen liegen 1, 3, 5 und 7 Streichhölzer. Abwechselnd nehmt ihr beliebig viele aus genau einer Reihe — wer das allerletzte nehmen muss, verliert und zahlt. Dabei brennt eine Lunte: Je weniger Hölzer noch liegen, desto kürzer wird sie, und wer zu lange zögert, für den wird gezogen. Außerdem hat jede Person einen Joker und darf einmal aussetzen. Unentschieden gibt es nicht.",
     gameHowDots:
       "Auf einem Feld aus 4×4 Punkten zieht ihr abwechselnd eine Linie zwischen zwei Nachbarpunkten. Wer ein Kästchen schließt, bekommt es und darf nochmal. Wer am Ende mehr der neun Kästchen hat, gewinnt — Unentschieden ist unmöglich. Wer verliert, zahlt.",
     duelCountHint: "So viele Duelle werden gespielt — wer eins verliert, zahlt.",
@@ -434,14 +434,26 @@ export const de = {
     rpsRoundsTitle: "Bisherige Runden",
     rpsScoreLabel: "{{name}}: {{count}} Runden gewonnen",
     nimTitle: "Streichholz-Duell",
-    nimIntro: "Zu zweit Streichhölzer nehmen — wer das allerletzte nimmt, verliert und zahlt.",
-    nimHint: "Tipp Streichhölzer aus einer Reihe an, dann „Nehmen“.",
+    nimIntro:
+      "Zu zweit Streichhölzer nehmen — wer das allerletzte nimmt, verliert und zahlt. Die Lunte brennt, und einmal darf jede Person aussetzen.",
+    nimHint: "Tipp auf ein Streichholz: Es und alle rechts davon wandern mit. Dann „Nehmen“.",
     nimTake: "{{count}} nehmen",
     nimTakeNone: "Nehmen",
     nimRowLabel: "Reihe {{row}}, {{count}} übrig",
-    nimMatchLabel: "Streichholz {{n}} in Reihe {{row}}",
+    nimMatchLabel: "Ab Streichholz {{n}} in Reihe {{row}} wählen",
     nimLastMove: "{{name}} hat {{count}} genommen.",
+    nimLastLate: "Zu langsam! Für {{name}} wurde 1 Hölzchen genommen.",
+    nimLastSkip: "{{name}} setzt aus — Joker verbraucht!",
+    nimLastOne: "Nur noch ein Hölzchen! {{name}} muss es nehmen.",
+    nimLastOneJoker: "Nur noch ein Hölzchen! {{name}} muss es nehmen — oder den Joker spielen.",
     nimRemaining: "Noch im Spiel: {{count}} — wer das letzte nimmt, verliert.",
+    nimJokerTitle: "Joker",
+    nimSkip: "Aussetzen",
+    nimSkipLabel: "Joker spielen: aussetzen, ohne etwas zu nehmen",
+    nimJokerReady: "{{name}}: Joker bereit",
+    nimJokerUsed: "{{name}}: Joker verbraucht",
+    nimFuseLabel: "Lunte: noch {{seconds}} Sekunden",
+    nimFuseUnlit: "Die Lunte wird nach dem ersten Zug angezündet.",
     dotsTitle: "Käsekästchen",
     dotsIntro:
       "Zu zweit Linien ziehen — wer ein Kästchen schließt, bekommt es und darf nochmal. Wer am Ende mehr Kästchen hat, gewinnt.",

@@ -120,7 +120,8 @@ One online match's move-by-move board, `tournaments/{id}/liveMatches/{matchId}`.
 only by `playOnlineMove`/`openOnlineMatch`; both players and spectators `onSnapshot` it.
 `state` is per-game and **flat** — Firestore rejects nested arrays, so Tic-Tac-Toe and Vier
 gewinnt store a move list (`moves` / `columns`) that is replayed through the pure rule
-modules instead of a board. `players` swap on every draw replay (`attempt` +1), so colors
+modules instead of a board (a matchstick-duel action is one small integer: a take, the same
+take flagged "played by the fuse", or a joker — see `nim.ts`). `players` swap on every draw replay (`attempt` +1), so colors
 are keyed to the _person_ (the bracket match's player order), not the seat. The memory
 deck lives in `liveSecrets/{matchId}`, which rules make unreadable — faces only reach the
 public `state` once flipped.

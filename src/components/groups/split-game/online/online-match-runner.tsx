@@ -130,11 +130,18 @@ export function OnlineMatchRunner({
   }, [needsOpening, openAttempt, groupId, tournament.id, match.id]);
 
   // A move from the other phone lands — a small click, so an away glance
-  // at the screen isn't the only way to notice it's your turn again.
+  // at the screen isn't the only way to notice it's your turn again. (The
+  // matchstick board sounds every move itself: a struck match, a joker, a
+  // burnt fuse.)
   const lastVersionRef = useRef<number | null>(null);
   useEffect(() => {
     if (!live) return;
-    if (lastVersionRef.current !== null && live.version > lastVersionRef.current && !busy) {
+    if (
+      lastVersionRef.current !== null &&
+      live.version > lastVersionRef.current &&
+      !busy &&
+      live.gameId !== "nim"
+    ) {
       playReelStopSound();
     }
     lastVersionRef.current = live.version;

@@ -22,7 +22,14 @@ import {
 } from "@/lib/games/connect-four";
 import { applyDotsMove, isValidDotsMove, replayDots } from "@/lib/games/dots-and-boxes";
 import { MEMORY_CARD_COUNT, MEMORY_PAIR_COUNT, memoryOutcome } from "@/lib/games/memory-duel";
-import { applyNimMove, encodeNimMove, isValidNimMove, replayNim } from "@/lib/games/nim";
+import {
+  applyNimMove,
+  canNimSkip,
+  encodeNimMove,
+  encodeNimSkip,
+  isValidNimMove,
+  replayNim,
+} from "@/lib/games/nim";
 import { REACTION_TIE_WINDOW_MS } from "@/lib/games/reaction-duel";
 import { isRpsHand, rpsMatchWinner, type RpsHand } from "@/lib/games/rock-paper-scissors";
 import {
@@ -52,7 +59,10 @@ export type OnlineMove =
   | { kind: "ready" }
   | { kind: "reaction"; report: ReactionReport }
   | { kind: "pick"; hand: RpsHand }
-  | { kind: "take"; row: number; count: number }
+  /** `late`: the matchstick fuse burnt down and this phone took one match for its player — always a single match. */
+  | { kind: "take"; row: number; count: number; late?: boolean }
+  /** The matchstick duel's joker: pass the move on without taking anything. One per player. */
+  | { kind: "skip" }
   | { kind: "line"; index: number }
   | { kind: "forfeit" };
 
@@ -383,14 +393,25 @@ export function applyOnlineMove(input: {
     }
 
     case "nim": {
-      if (move.kind !== "take") return { error: "wrong-game" };
+      if (move.kind !== "take" && move.kind !== "skip") return { error: "wrong-game" };
       const replay = replayNim(state.moves);
       if (replay.turn !== player) return { error: "not-your-turn" };
+      if (move.kind === "skip") {
+        // One joker each: once it is spent, a skip is just an invalid move.
+        if (!canNimSkip(replay, player)) return { error: "invalid-move" };
+        return {
+          state: { gameId: "nim", moves: [...state.moves, encodeNimSkip()] },
+          outcome: { kind: "continue" },
+        };
+      }
       if (!isValidNimMove(replay.rows, move.row, move.count)) return { error: "invalid-move" };
+      // Only the fuse takes on someone's behalf, and only ever a single match.
+      const late = move.late === true;
+      if (late && move.count !== 1) return { error: "invalid-move" };
       const result = applyNimMove(replay.rows, move.row, move.count, player);
       const next: LiveMatchState = {
         gameId: "nim",
-        moves: [...state.moves, encodeNimMove(move.row, move.count)],
+        moves: [...state.moves, encodeNimMove(move.row, move.count, late)],
       };
       // Taking the very last match loses, so the *other* player wins.
       if (result.loser !== null) {

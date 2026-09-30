@@ -208,8 +208,10 @@ function parseOnlineMove(raw: unknown): OnlineMove | null {
       return isRpsHand(move.hand) ? { kind: "pick", hand: move.hand } : null;
     case "take":
       return typeof move.row === "number" && typeof move.count === "number"
-        ? { kind: "take", row: move.row, count: move.count }
+        ? { kind: "take", row: move.row, count: move.count, late: move.late === true }
         : null;
+    case "skip":
+      return { kind: "skip" };
     case "line":
       return typeof move.index === "number" ? { kind: "line", index: move.index } : null;
     case "ready":

@@ -330,7 +330,7 @@ export const en: Dictionary = {
     gameNameRps: "Rock-paper-scissors",
     gameBlurbRps: "Rock, paper, scissors — win twice.",
     gameNameNim: "Matchstick duel",
-    gameBlurbNim: "Whoever takes the last match pays.",
+    gameBlurbNim: "The fuse is burning — whoever takes the last match pays.",
     gameNameDots: "Dots and boxes",
     gameBlurbDots: "Draw lines, close boxes.",
     gameHowLottery:
@@ -360,7 +360,7 @@ export const en: Dictionary = {
     gameHowRps:
       "Two people pick a hand at the same time — rock, paper or scissors — and reveal them together. First to win two rounds wins the duel, and whoever loses pays. The same hand twice means: again.",
     gameHowNim:
-      "Four rows hold 1, 3, 5 and 7 matches. You take turns taking as many as you like from exactly one row. Whoever takes the very last match loses and pays. There are no draws.",
+      "Four rows hold 1, 3, 5 and 7 matches. You take turns taking as many as you like from exactly one row — whoever has to take the very last match loses and pays. A fuse burns while you play: the fewer matches are left, the shorter it gets, and if you hesitate too long a match is taken for you. Everyone also has one joker and may skip a move once. There are no draws.",
     gameHowDots:
       "On a field of 4×4 dots you take turns drawing a line between two neighbouring dots. Whoever closes a box keeps it and goes again. Whoever has more of the nine boxes at the end wins — a tie is impossible. Whoever loses pays.",
     duelCountHint: "That's how many duels get played — whoever loses one pays.",
@@ -428,14 +428,26 @@ export const en: Dictionary = {
     rpsRoundsTitle: "Rounds so far",
     rpsScoreLabel: "{{name}}: {{count}} rounds won",
     nimTitle: "Matchstick duel",
-    nimIntro: "Two players take matches — whoever takes the very last one loses and pays.",
-    nimHint: "Tap matches from one row, then “Take”.",
+    nimIntro:
+      "Two players take matches — whoever takes the very last one loses and pays. The fuse is burning, and each of you may skip a move once.",
+    nimHint: "Tap a match: it and everything to its right comes along. Then “Take”.",
     nimTake: "Take {{count}}",
     nimTakeNone: "Take",
     nimRowLabel: "Row {{row}}, {{count}} left",
-    nimMatchLabel: "Match {{n}} in row {{row}}",
+    nimMatchLabel: "Pick from match {{n}} in row {{row}} to the end",
     nimLastMove: "{{name}} took {{count}}.",
+    nimLastLate: "Too slow! One match was taken for {{name}}.",
+    nimLastSkip: "{{name}} skips — joker spent!",
+    nimLastOne: "Only one match left! {{name}} has to take it.",
+    nimLastOneJoker: "Only one match left! {{name}} has to take it — or play the joker.",
     nimRemaining: "Still in play: {{count}} — whoever takes the last one loses.",
+    nimJokerTitle: "Joker",
+    nimSkip: "Skip",
+    nimSkipLabel: "Play the joker: skip without taking anything",
+    nimJokerReady: "{{name}}: joker ready",
+    nimJokerUsed: "{{name}}: joker spent",
+    nimFuseLabel: "Fuse: {{seconds}} seconds left",
+    nimFuseUnlit: "The fuse is lit after the first move.",
     dotsTitle: "Dots and boxes",
     dotsIntro:
       "Two players draw lines — whoever closes a box keeps it and goes again. Whoever has more boxes at the end wins.",

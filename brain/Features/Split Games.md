@@ -49,7 +49,7 @@ The fifteen games split into two categories, each with its own resolution engine
 | 🥃 Würfelbecher            | `split-dice-dialog.tsx`         | Two dice each, Mäxchen ranking, lowest pays; ties on the line roll off ("Stechen")              |
 | 🎱 Kugelfall               | `split-pegboard-dialog.tsx`     | A ball bounces down a pegboard into the pre-drawn payer's slot; the slot is then plugged        |
 | ✊ Schnick-Schnack-Schnuck | `split-rps-dialog.tsx`          | Hidden simultaneous hands, first to two round wins; a drawn round replays                       |
-| 🥢 Streichholz-Duell       | `split-nim-dialog.tsx`          | Misère Nim on 1·3·5·7 — whoever takes the last match loses                                      |
+| 🥢 Streichholz-Duell       | `split-nim-dialog.tsx`          | Misère Nim on 1·3·5·7 under a shrinking fuse, with one joker each — last match loses            |
 | ✏️ Käsekästchen            | `split-dots-dialog.tsx`         | 4×4 dots, 9 boxes (odd — no tie); closing a box earns another move                              |
 
 ## The shared draw engine (wheel + scratch)
@@ -455,19 +455,38 @@ All three are tournament- and online-enabled from the start and use the shell un
   `playOnlineMove` stores in the same transaction (`online-rps.emulator.test.ts` plays a whole
   match against the Firestore emulator and checks that no hand ever shows in the public doc).
   There are no turns (`liveTurn` is `null`), so the online runner shows no "Du bist dran" for it.
-- **🥢 Streichholz-Duell** — `nim.ts`, `nim-board.tsx`. Misère Nim on 1·3·5·7: take any number
-  from one row, whoever takes the last match loses, so no draw. With perfect play the _second_
-  player wins (`nim.test.ts` proves it by brute force), which is why the ladder's random pairing
-  order matters. Moves are stored as one integer each (`row * 8 + count`).
+- **🥢 Streichholz-Duell** — `nim.ts`, `nim-board.tsx`, `use-turn-fuse.ts`. Misère Nim on 1·3·5·7:
+  take any number from one row, whoever takes the last match loses, so no draw. Plain Nim is a
+  solved puzzle — with perfect play the _second_ player wins, which almost nobody at a table knows,
+  so for everyone else the first twelve moves feel arbitrary and nothing on screen says how close
+  the end is. Two rules make the stakes visible:
+  - **The fuse (Lunte).** A match burns down along the top of the board. Its length shrinks with
+    the matches left (`nimFuseSeconds`: 15 s on a full board, 6 s once three or fewer remain), so
+    the last moves are the hurried ones. It is lit by the first move. When it runs out, one match
+    from a random open row is taken for the slow player (`nimLateMove`) and both screens say "Zu
+    langsam!". The hook counts only visible time, so a phone put down doesn't come back to a spent
+    turn; only the phone whose player is on the move acts on it, and it stands still offline.
+  - **The joker.** Each player may once skip a move instead of taking (`NIM_JOKERS`), which hands
+    the same position to the opponent — the one way to flip who is stuck with the last match, and
+    nobody knows when the other will spend it. It ends in a joker duel over the last match: with
+    one match left, whoever still holds a joker wins it. The brute-force solver in `nim.test.ts`
+    shows the second player _still_ wins with perfect play, so nothing is skewed.
+    Taking is one tap on the first match you want plus "Nehmen": the pick runs from there to the end
+    of the row. A taken match flares off the board, the last match's head pulses, and a red glow
+    creeps in once four or fewer are left. A match is stored as a flat list of small integers
+    (`nim.ts` explains the codes): `row * 8 + count`, +32 when the fuse played it, 100 for a joker —
+    so moves stored before the fuse and joker existed replay exactly as they did.
 - **✏️ Käsekästchen** — `dots-and-boxes.ts`, `dots-board.tsx`. 4×4 dots make 3×3 boxes; nine is
   odd, so it cannot end level (the Memory-Duell trick). Closing a box earns another move —
   turns are therefore not strictly alternating, and online the match is the flat list of line
   numbers replayed through `replayDots`. Lines are numbered 0–23, the twelve horizontal first.
   Every line has a finger-sized (44 px) tap target laid over the SVG.
 
-`NimGrid` and `DotsGrid` are stateless views shared by the one-phone board and the online board,
-like the grids of the first four duels; the online runner predicts the viewer's own move for
-them (open information), but not for the hidden-hand game.
+`NimGrid` and `DotsGrid` are views shared by the one-phone board and the online board, like the
+grids of the first four duels (`NimGrid` owns only its current pick and the fuse's clock); the
+online runner predicts the viewer's own move for them (open information), but not for the
+hidden-hand game. `online-nim.emulator.test.ts` covers the joker and the late take against the
+Firestore emulator.
 
 ## Related
 

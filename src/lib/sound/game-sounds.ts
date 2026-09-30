@@ -429,3 +429,51 @@ export function playPencilSound(): void {
   noiseBurst(ctx, now, 0.11, 0.05, "highpass", 3400, 0.6);
   noiseBurst(ctx, now + 0.02, 0.08, 0.03, "bandpass", 5200, 1.2);
 }
+
+/**
+ * A match being struck: the rasp of the head on the box, then the soft "fff"
+ * of the flame catching and a tiny crackle. Played for every take in the
+ * matchstick duel.
+ */
+export function playMatchStrikeSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.09, 0.09, "highpass", 2400 + Math.random() * 500, 0.8);
+  noiseBurst(ctx, now + 0.07, 0.22, 0.07, "bandpass", 1500, 0.5);
+  tone(ctx, 1400 + Math.random() * 300, now + 0.1, 0.02, "square", 0.012);
+}
+
+/**
+ * One tick of the matchstick duel's fuse in its last seconds — higher and
+ * sharper the closer the end, so the ear feels it tighten even with the eyes
+ * on the board.
+ */
+export function playFuseTickSound(secondsLeft: number): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const urgency = 1 - Math.min(Math.max(secondsLeft, 1), 5) / 5;
+  tone(ctx, 620 + urgency * 700, now, 0.05, "triangle", 0.07 + urgency * 0.05);
+  noiseBurst(ctx, now, 0.02, 0.04, "bandpass", 3000, 2);
+}
+
+/** A puff of breath and a sinking note: the joker blowing the match out to skip a move. */
+export function playSkipSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  breathNoise(ctx, now, 0.3, 0.11);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(520, now);
+  osc.frequency.exponentialRampToValueAtTime(240, now + 0.22);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.05, now + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.24);
+}

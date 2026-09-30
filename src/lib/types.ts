@@ -305,7 +305,11 @@ export type LiveMatchState =
       /** Who has locked in a hand for the current round. The hand itself stays in `liveSecrets` until both are in. */
       locked: [boolean, boolean];
     }
-  /** Flat list of moves, each `row * 8 + count` (see `encodeNimMove`), replayed through `lib/games/nim.ts`. */
+  /**
+   * Flat list of actions, each a small integer — a take is `row * 8 + count`
+   * (+32 when the fuse made it for a slow player), a joker is 100 — replayed
+   * through `lib/games/nim.ts` (see `encodeNimMove`, `encodeNimSkip`).
+   */
   | { gameId: "nim"; moves: number[] }
   /** Flat list of drawn line numbers in order (see `lib/games/dots-and-boxes.ts`); extra turns come from replaying it. */
   | { gameId: "dots"; lines: number[] };

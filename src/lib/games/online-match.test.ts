@@ -474,6 +474,13 @@ describe("rock-paper-scissors online", () => {
 describe("matchstick duel online", () => {
   const start = initialLiveState("nim").state;
   const take = (row: number, count: number): OnlineMove => ({ kind: "take", row, count });
+  /** Plays the moves from the start, asserting every one is accepted. */
+  function played(moves: OnlineMove[]) {
+    const result = playAll(start, moves);
+    if ("error" in result) throw new Error(result.error);
+    return result;
+  }
+  const movesOf = (state: LiveMatchState) => (state as { moves: number[] }).moves;
 
   it("starts from 1·3·5·7 with player 0 to move", () => {
     expect(start).toEqual({ gameId: "nim", moves: [] });
@@ -520,6 +527,102 @@ describe("matchstick duel online", () => {
     expect(result).toMatchObject({ outcome: { kind: "win", player: 1, reason: "win" } });
     if ("error" in result) throw new Error(result.error);
     expect(nimTotal(replayNim((result.state as { moves: number[] }).moves).rows)).toBe(0);
+  });
+
+  describe("the joker", () => {
+    const skip: OnlineMove = { kind: "skip" };
+    const attemptAfter = (moves: OnlineMove[]) => {
+      const after = played(moves);
+      return (player: 0 | 1, move: OnlineMove) =>
+        applyOnlineMove({
+          live: live(after.state),
+          secret: null,
+          player,
+          move,
+          drawSignalDelay: noDelay,
+        });
+    };
+
+    it("passes the move on without taking anything, once per player", () => {
+      const result = played([skip]);
+      expect(result.outcome).toEqual({ kind: "continue" });
+      const replay = replayNim(movesOf(result.state));
+      expect([...replay.rows]).toEqual([1, 3, 5, 7]);
+      expect(replay.turn).toBe(1);
+      expect(replay.jokers).toEqual([0, 1]);
+      expect(liveTurn(result.state)).toBe(1);
+    });
+
+    it("is refused a second time, and out of turn", () => {
+      // p0 skips, p1 takes one match: p0 is on the move again — without a joker.
+      const attempt = attemptAfter([skip, take(0, 1)]);
+      expect(attempt(0, skip)).toEqual({ error: "invalid-move" });
+      expect(attempt(1, skip)).toEqual({ error: "not-your-turn" });
+    });
+
+    it("gives the other player their own joker to answer with", () => {
+      const result = played([skip, skip]);
+      const replay = replayNim(movesOf(result.state));
+      expect(replay.jokers).toEqual([0, 0]);
+      expect(replay.turn).toBe(0);
+    });
+
+    it("decides who is stuck with the last match", () => {
+      const result = playAll(start, [
+        take(0, 1), // p0
+        take(1, 3), // p1
+        take(2, 5), // p0
+        take(3, 6), // p1 leaves one match — p0 would have to take it
+        skip, // p0 spends the joker instead
+        take(3, 1), // p1 is forced to take the last one
+      ]);
+      expect(result).toMatchObject({ outcome: { kind: "win", player: 0, reason: "win" } });
+    });
+
+    it("is not a move in any other game", () => {
+      expect(
+        applyOnlineMove({
+          live: live(initialLiveState("tictactoe").state),
+          secret: null,
+          player: 0,
+          move: skip,
+          drawSignalDelay: noDelay,
+        }),
+      ).toEqual({ error: "wrong-game" });
+    });
+  });
+
+  describe("the fuse", () => {
+    const late = (row: number, count: number): OnlineMove => ({
+      kind: "take",
+      row,
+      count,
+      late: true,
+    });
+
+    it("takes a single match for a slow player and remembers that it was late", () => {
+      const result = played([late(3, 1)]);
+      const replay = replayNim(movesOf(result.state));
+      expect([...replay.rows]).toEqual([1, 3, 5, 6]);
+      expect(replay.last).toMatchObject({ kind: "take", player: 0, late: true });
+      expect(replay.turn).toBe(1);
+    });
+
+    it("never takes more than one match, and still obeys the rules", () => {
+      const attempt = (move: OnlineMove) =>
+        applyOnlineMove({
+          live: live(start),
+          secret: null,
+          player: 0,
+          move,
+          drawSignalDelay: noDelay,
+        });
+      expect(attempt(late(3, 2))).toEqual({ error: "invalid-move" });
+      expect(attempt(late(9, 1))).toEqual({ error: "invalid-move" });
+      expect(attempt({ kind: "take", row: 3, count: 2, late: false })).toMatchObject({
+        outcome: { kind: "continue" },
+      });
+    });
   });
 });
 
