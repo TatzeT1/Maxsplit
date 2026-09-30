@@ -107,7 +107,7 @@ export function TicTacToeGrid({
   const t = useT();
   return (
     <div
-      className="shadow-e1 mx-auto grid w-full max-w-[280px] grid-cols-3 gap-2 rounded-xl bg-cover bg-center p-2.5"
+      className="shadow-e1 mx-auto grid w-full max-w-[min(28rem,var(--game-board-h,280px))] grid-cols-3 gap-2 rounded-xl bg-cover bg-center p-2.5"
       style={{ backgroundImage: "url(/duel/ttt-board.webp)" }}
     >
       {cells.map((value, index) => {

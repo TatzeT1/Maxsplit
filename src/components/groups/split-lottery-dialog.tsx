@@ -7,12 +7,12 @@ import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { springs } from "@/lib/motion";
@@ -486,7 +486,7 @@ export function SplitLotteryDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <GameDialogContent>
         <AnimatePresence>
           {flash && (
             <motion.div
@@ -860,7 +860,15 @@ export function SplitLotteryDialog({
                 </div>
 
                 {/* The board gets a frame of its own so the cards read as laid out on a table. */}
-                <div className="bg-muted/30 relative rounded-xl border p-2">
+                {/*
+                  Always four rows (landscape) or four columns (portrait, so a
+                  phone's height goes to bigger faces instead of 8 tiny ones
+                  across): cap the width so the whole grid fits the stage.
+                */}
+                <div
+                  className="bg-muted/30 relative mx-auto w-full max-w-[calc(var(--game-board-h,100vh)_*_var(--lottery-cols)_/_4)] rounded-xl border p-2 portrait:max-w-[calc(var(--game-board-h,100vh)_*_4_/_var(--lottery-cols))]"
+                  style={{ "--lottery-cols": boardCols } as CSSProperties}
+                >
                   <span
                     aria-hidden="true"
                     className="bg-paper-texture pointer-events-none absolute inset-0 rounded-xl opacity-60"
@@ -869,6 +877,7 @@ export function SplitLotteryDialog({
                     className={cn(
                       "relative grid",
                       GRID_COLUMN_CLASS[cells.length] ?? "grid-cols-6",
+                      "portrait:grid-cols-4",
                       cells.length > 24 ? "gap-1" : "gap-1.5",
                     )}
                   >
@@ -947,7 +956,7 @@ export function SplitLotteryDialog({
             </motion.div>
           </AnimatePresence>
         </DialogFooter>
-      </DialogContent>
+      </GameDialogContent>
     </Dialog>
   );
 }

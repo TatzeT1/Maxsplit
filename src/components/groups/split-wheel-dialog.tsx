@@ -12,12 +12,12 @@ import {
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GameDialogContent, StageScale } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
 import { memberColor, memberInk } from "@/lib/games/member-colors";
 import { useSequentialDraw } from "@/lib/games/use-sequential-draw";
@@ -254,7 +254,7 @@ export function SplitWheelDialog({
         this the scrim and cards would briefly overhang the scroll box and
         flash a horizontal scrollbar.
       */}
-      <DialogContent className="overflow-x-hidden sm:max-w-md">
+      <GameDialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎡</span>
@@ -324,90 +324,93 @@ export function SplitWheelDialog({
               peg at each rim, cream name chips printed in the person's own
               ink, and a hub that shows whoever the wheel last caught.
             */}
-            <div className="relative mx-auto flex items-center justify-center pt-5 pb-2">
-              <motion.svg
-                aria-hidden="true"
-                viewBox="0 0 24 36"
-                className="absolute top-0 left-1/2 z-10 h-9 w-6 -translate-x-1/2 drop-shadow-[0_2px_2px_color-mix(in_oklch,var(--foreground)_30%,transparent)]"
-                style={{ rotate: flapperRotate, transformOrigin: "50% 10px" }}
-              >
-                <path d="M12 35 L4.5 14 A8.5 8.5 0 1 1 19.5 14 Z" fill="var(--primary)" />
-                <circle cx="12" cy="10" r="3" fill="var(--primary-foreground)" />
-              </motion.svg>
-              <div
-                className="bg-card shadow-e2 ring-foreground/10 relative rounded-full p-1.5 ring-1"
-                style={{ width: WHEEL_SIZE + 12, height: WHEEL_SIZE + 12 }}
-              >
-                <motion.div
-                  className="absolute inset-1.5 overflow-hidden rounded-full"
-                  style={{
-                    background: `conic-gradient(${remaining
-                      .map((uid, index) => {
-                        const from = (index * 360) / remaining.length;
-                        const to = ((index + 1) * 360) / remaining.length;
-                        return `${memberColor(members[uid].displayName)} ${from}deg ${to}deg`;
-                      })
-                      .join(", ")})`,
-                  }}
-                  animate={{ rotate: rotation }}
-                  transition={
-                    reduceMotion
-                      ? { duration: 0 }
-                      : { duration: spinDuration, ease: [0.1, 0.6, 0.1, 1] }
-                  }
-                  onUpdate={handleSpinUpdate}
-                  onAnimationComplete={handleSpinComplete}
-                >
-                  {remaining.length > 1 &&
-                    remaining.map((uid, index) => (
-                      <div
-                        key={`divider-${uid}`}
-                        aria-hidden="true"
-                        className="absolute inset-0 flex justify-center"
-                        style={{ transform: `rotate(${index * segAngle}deg)` }}
-                      >
-                        <span className="bg-card/85 relative h-1/2 w-0.5">
-                          <span className="bg-card ring-foreground/20 shadow-e1 absolute top-1 left-1/2 size-2.5 -translate-x-1/2 rounded-full ring-1" />
-                        </span>
-                      </div>
-                    ))}
-                  {remaining.map((uid, index) => {
-                    const mid = (index + 0.5) * segAngle;
-                    const name = members[uid].displayName;
-                    return (
-                      <div
-                        key={uid}
-                        aria-hidden="true"
-                        className="absolute inset-0 flex justify-center"
-                        style={{ transform: `rotate(${mid}deg)` }}
-                      >
-                        <span
-                          className="bg-card shadow-e1 mt-4 flex size-7 items-center justify-center rounded-full text-xs font-bold"
-                          style={{ color: memberInk(name) }}
-                        >
-                          {name.charAt(0).toUpperCase() || "?"}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </motion.div>
-                <div
+            {/* 252px wheel + 20px flapper room above + 8px below. */}
+            <StageScale width={WHEEL_SIZE + 12} height={WHEEL_SIZE + 12 + 28}>
+              <div className="relative mx-auto flex items-center justify-center pt-5 pb-2">
+                <motion.svg
                   aria-hidden="true"
-                  className="bg-card shadow-e2 ring-foreground/10 absolute top-1/2 left-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full ring-1"
+                  viewBox="0 0 24 36"
+                  className="absolute top-0 left-1/2 z-10 h-9 w-6 -translate-x-1/2 drop-shadow-[0_2px_2px_color-mix(in_oklch,var(--foreground)_30%,transparent)]"
+                  style={{ rotate: flapperRotate, transformOrigin: "50% 10px" }}
                 >
-                  {lastLoserUid && !spinning ? (
-                    <span key={lastLoserUid} className="animate-laugh-land block rounded-full">
-                      <GameAvatar
-                        name={members[lastLoserUid].displayName}
-                        className="size-9 text-sm"
-                      />
-                    </span>
-                  ) : (
-                    <span className="bg-primary size-2.5 rounded-full" />
-                  )}
+                  <path d="M12 35 L4.5 14 A8.5 8.5 0 1 1 19.5 14 Z" fill="var(--primary)" />
+                  <circle cx="12" cy="10" r="3" fill="var(--primary-foreground)" />
+                </motion.svg>
+                <div
+                  className="bg-card shadow-e2 ring-foreground/10 relative rounded-full p-1.5 ring-1"
+                  style={{ width: WHEEL_SIZE + 12, height: WHEEL_SIZE + 12 }}
+                >
+                  <motion.div
+                    className="absolute inset-1.5 overflow-hidden rounded-full"
+                    style={{
+                      background: `conic-gradient(${remaining
+                        .map((uid, index) => {
+                          const from = (index * 360) / remaining.length;
+                          const to = ((index + 1) * 360) / remaining.length;
+                          return `${memberColor(members[uid].displayName)} ${from}deg ${to}deg`;
+                        })
+                        .join(", ")})`,
+                    }}
+                    animate={{ rotate: rotation }}
+                    transition={
+                      reduceMotion
+                        ? { duration: 0 }
+                        : { duration: spinDuration, ease: [0.1, 0.6, 0.1, 1] }
+                    }
+                    onUpdate={handleSpinUpdate}
+                    onAnimationComplete={handleSpinComplete}
+                  >
+                    {remaining.length > 1 &&
+                      remaining.map((uid, index) => (
+                        <div
+                          key={`divider-${uid}`}
+                          aria-hidden="true"
+                          className="absolute inset-0 flex justify-center"
+                          style={{ transform: `rotate(${index * segAngle}deg)` }}
+                        >
+                          <span className="bg-card/85 relative h-1/2 w-0.5">
+                            <span className="bg-card ring-foreground/20 shadow-e1 absolute top-1 left-1/2 size-2.5 -translate-x-1/2 rounded-full ring-1" />
+                          </span>
+                        </div>
+                      ))}
+                    {remaining.map((uid, index) => {
+                      const mid = (index + 0.5) * segAngle;
+                      const name = members[uid].displayName;
+                      return (
+                        <div
+                          key={uid}
+                          aria-hidden="true"
+                          className="absolute inset-0 flex justify-center"
+                          style={{ transform: `rotate(${mid}deg)` }}
+                        >
+                          <span
+                            className="bg-card shadow-e1 mt-4 flex size-7 items-center justify-center rounded-full text-xs font-bold"
+                            style={{ color: memberInk(name) }}
+                          >
+                            {name.charAt(0).toUpperCase() || "?"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                  <div
+                    aria-hidden="true"
+                    className="bg-card shadow-e2 ring-foreground/10 absolute top-1/2 left-1/2 flex size-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full ring-1"
+                  >
+                    {lastLoserUid && !spinning ? (
+                      <span key={lastLoserUid} className="animate-laugh-land block rounded-full">
+                        <GameAvatar
+                          name={members[lastLoserUid].displayName}
+                          className="size-9 text-sm"
+                        />
+                      </span>
+                    ) : (
+                      <span className="bg-primary size-2.5 rounded-full" />
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </StageScale>
 
             <AnimatePresence>
               {flash && (
@@ -463,7 +466,7 @@ export function SplitWheelDialog({
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
+      </GameDialogContent>
     </Dialog>
   );
 }

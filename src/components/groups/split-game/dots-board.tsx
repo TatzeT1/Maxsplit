@@ -152,7 +152,7 @@ export function DotsGrid({
 }) {
   const t = useT();
   return (
-    <div className="bg-card shadow-e1 relative mx-auto aspect-square w-full max-w-[300px] rounded-xl border">
+    <div className="bg-card shadow-e1 relative mx-auto aspect-square w-full max-w-[min(30rem,var(--game-board-h,300px))] rounded-xl border">
       <svg
         viewBox={`0 0 ${VIEW} ${VIEW}`}
         className="absolute inset-0 size-full"

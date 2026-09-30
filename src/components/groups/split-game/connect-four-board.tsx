@@ -88,7 +88,7 @@ export function ConnectFourGrid({
   const reduceMotion = useReducedMotion();
   return (
     <div
-      className="mx-auto grid w-full max-w-[320px] grid-cols-7 gap-1 bg-size-[100%_100%] p-3"
+      className="mx-auto grid w-full max-w-[min(34rem,calc(var(--game-board-h,274px)_*_1.17))] grid-cols-7 gap-1 bg-size-[100%_100%] p-3"
       style={{ backgroundImage: "url(/duel/c4-board.webp)" }}
     >
       {Array.from({ length: CF_COLUMNS }, (_, col) => {

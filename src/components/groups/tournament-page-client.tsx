@@ -1,12 +1,12 @@
 "use client";
 
 import { doc, onSnapshot } from "firebase/firestore";
-import { ArrowLeft, Wifi } from "lucide-react";
-import Link from "next/link";
+import { Wifi } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "@/components/locale-provider";
 import { NeedsConnection } from "@/components/needs-connection";
 import { Skeleton } from "@/components/ui/skeleton";
+import { GamePageStage } from "@/components/groups/split-game/game-stage";
 import { TOURNAMENT_GAME_CONFIGS } from "@/components/groups/split-game/tournament/tournament-game-configs";
 import { TournamentView } from "@/components/groups/split-game/tournament/tournament-view";
 import { db } from "@/lib/firebase/client";
@@ -59,6 +59,7 @@ export function TournamentPageClient({
   }, [groupId, user]);
 
   const errorCode = groupErrorCode ?? tournamentErrorCode;
+  const closeHref = `/groups/${groupId}`;
 
   // Every move and result goes through the server; offline, a cached board
   // would only invite taps that can't land. (It also keeps the runner from
@@ -69,21 +70,21 @@ export function TournamentPageClient({
 
   if (user && errorCode) {
     return (
-      <div className="mx-auto w-full max-w-2xl p-4">
+      <GamePageStage closeHref={closeHref} title={null}>
         <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
           <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
           <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
         </div>
-      </div>
+      </GamePageStage>
     );
   }
 
   if (!group || !tournament || !user) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 p-4">
+      <GamePageStage closeHref={closeHref} title={<Skeleton className="h-7 w-40" />}>
         <Skeleton className="h-10 w-full" />
         <Skeleton className="h-32 w-full" />
-      </div>
+      </GamePageStage>
     );
   }
 
@@ -105,15 +106,9 @@ export function TournamentPageClient({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl min-w-0 flex-col gap-4 p-4">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/groups/${groupId}`}
-          aria-label={t("common.back")}
-          className="hover:bg-accent -ml-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors active:scale-95"
-        >
-          <ArrowLeft className="h-4.5 w-4.5" />
-        </Link>
+    <GamePageStage
+      closeHref={closeHref}
+      title={
         <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-semibold">
           <span aria-hidden="true">{config.emoji}</span>
           <span className="truncate">{t(config.titleKey)}</span>
@@ -126,8 +121,8 @@ export function TournamentPageClient({
                 : t("expenses.onlineBadgeTournament")}
           </span>
         </h1>
-      </div>
-
+      }
+    >
       <TournamentView
         groupId={groupId}
         tournament={tournament}
@@ -137,6 +132,6 @@ export function TournamentPageClient({
         config={config}
         inDialog={false}
       />
-    </div>
+    </GamePageStage>
   );
 }

@@ -5,12 +5,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
 import { PEGBOARD_MAX_SLOTS, planBallPath } from "@/lib/games/pegboard";
 import {
@@ -197,7 +197,7 @@ export function SplitPegboardDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-x-hidden sm:max-w-md">
+      <GameDialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎱</span>
@@ -251,8 +251,12 @@ export function SplitPegboardDialog({
 
             <div
               aria-hidden="true"
-              className="relative mx-auto w-full max-w-[320px] rounded-2xl border-[6px] border-[#8a5a2b] bg-linear-to-b from-[#fff6df] to-[#f4dba8] shadow-[inset_0_2px_8px_rgb(80_40_0/0.3)]"
-              style={{ aspectRatio: `${BOARD_WIDTH} / ${height}` }}
+              className="relative mx-auto w-full rounded-2xl border-[6px] border-[#8a5a2b] bg-linear-to-b from-[#fff6df] to-[#f4dba8] shadow-[inset_0_2px_8px_rgb(80_40_0/0.3)]"
+              style={{
+                aspectRatio: `${BOARD_WIDTH} / ${height}`,
+                // As wide as the stage's height budget allows, 320px outside one.
+                maxWidth: `min(32rem, calc(var(--game-board-h, ${(320 * height) / BOARD_WIDTH}px) * ${BOARD_WIDTH / height}))`,
+              }}
             >
               <svg viewBox={`0 0 ${BOARD_WIDTH} ${height}`} className="absolute inset-0 size-full">
                 {pegPositions(slots).map((peg) => (
@@ -424,7 +428,7 @@ export function SplitPegboardDialog({
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
+      </GameDialogContent>
     </Dialog>
   );
 }

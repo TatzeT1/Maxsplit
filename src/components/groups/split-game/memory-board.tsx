@@ -138,7 +138,8 @@ export interface MemoryGridCard {
 }
 
 /**
- * The 6×3 card grid, stateless — shared by the one-phone board and the
+ * The card grid — 6×3, or 3×6 on a portrait screen so the cards use the
+ * phone's height instead of shrinking to fit six across — stateless — shared by the one-phone board and the
  * online board, where a face only exists client-side once the server has
  * revealed it.
  */
@@ -155,7 +156,7 @@ export function MemoryGrid({
 }) {
   return (
     <div
-      className="mx-auto grid w-full max-w-[340px] grid-cols-6 gap-1.5 rounded-xl border bg-cover bg-center p-2.5"
+      className="mx-auto grid w-full max-w-[min(40rem,calc(var(--game-board-h,170px)_*_2))] grid-cols-6 gap-1.5 rounded-xl border bg-cover bg-center p-2.5 portrait:max-w-[min(30rem,calc(var(--game-board-h,680px)_/_2))] portrait:grid-cols-3"
       style={{ backgroundImage: "url(/memory/background.webp)" }}
     >
       {cards.map((card, index) => (

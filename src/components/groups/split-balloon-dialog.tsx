@@ -5,12 +5,12 @@ import { AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GameDialogContent, StageScale } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
 import {
   BALLOON_MAX_PUMPS_PER_TURN,
@@ -189,7 +189,7 @@ export function SplitBalloonDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-x-hidden sm:max-w-md">
+      <GameDialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎈</span>
@@ -247,15 +247,17 @@ export function SplitBalloonDialog({
 
             {!showVerdict && (
               <div className="relative flex min-h-[260px] items-end justify-center overflow-hidden rounded-xl border bg-linear-to-b from-sky-200/40 to-transparent py-2">
-                {/* A fresh balloon per payer: the key restarts it small. */}
-                {!over && !popping && (
-                  <BalloonFigure
-                    key={game.losers.length}
-                    fullness={game.pumps / game.maxPumps}
-                    color={memberColor(holderName)}
-                  />
-                )}
-                {popping && <PopBurst key={popping.id} color={popping.color} />}
+                <StageScale width={192} height={250} className="self-end">
+                  {/* A fresh balloon per payer: the key restarts it small. */}
+                  {!over && !popping && (
+                    <BalloonFigure
+                      key={game.losers.length}
+                      fullness={game.pumps / game.maxPumps}
+                      color={memberColor(holderName)}
+                    />
+                  )}
+                  {popping && <PopBurst key={popping.id} color={popping.color} />}
+                </StageScale>
               </div>
             )}
 
@@ -337,7 +339,7 @@ export function SplitBalloonDialog({
             </>
           )}
         </DialogFooter>
-      </DialogContent>
+      </GameDialogContent>
     </Dialog>
   );
 }

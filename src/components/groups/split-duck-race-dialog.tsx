@@ -5,12 +5,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
 import {
   DUCK_PROGRESS_STEPS,
@@ -224,7 +224,7 @@ export function SplitDuckRaceDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="overflow-x-hidden sm:max-w-md">
+      <GameDialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🦆</span>
@@ -438,7 +438,7 @@ export function SplitDuckRaceDialog({
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
+      </GameDialogContent>
     </Dialog>
   );
 }

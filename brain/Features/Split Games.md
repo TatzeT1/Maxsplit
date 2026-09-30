@@ -353,6 +353,33 @@ unclear. It's now a two-step flow, driven entirely by one table
 Adding another game later means adding one row to `SPLIT_GAMES` plus its translation keys (and, for the dialog, a `gameLoaders` entry and a mount in `add-expense-dialog.tsx`) — the
 picker itself doesn't change.
 
+## The full-screen stage (2026-10)
+
+Every game plays on the whole screen, not in a centered dialog card — the small card over the
+dimmed group page felt like a tab inside the app rather than being _in_ the game.
+`split-game/game-stage.tsx` holds it:
+
+- `GameDialogContent` — drop-in for `DialogContent` in all nine game dialogs (the eight luck
+  games and `DuelGameDialog`, which covers the seven duels). Same Radix dialog (focus trap,
+  Escape, `onOpenChange`), rendered as a fixed `inset-0` frame with its own scroller: the
+  `DialogHeader` sticks under the notch, the `DialogFooter` sticks above the home indicator,
+  auto margins center the board between them, and a ✕ sits top right. Content is capped at
+  `max-w-2xl` and centered, so desktop gets the same stage with a sensibly sized board. The
+  picker and `StartGameDialog` stay ordinary dialogs — they choose a game, they aren't one.
+- `GamePageStage` — the same frame for `TournamentPageClient` (online matches and brackets). It
+  lays itself (`z-40`) over the `(app)` layout's sidebar and mobile header; its ✕ links back to
+  the group.
+- **Boards grow with the stage.** The frame sets `--game-board-h` (viewport height minus
+  ~320px of chrome, `STAGE_CHROME_PX`). Grid boards cap their width at
+  `min(<cap>, --game-board-h × aspect)` — width-bound on a phone, height-bound on a short or wide
+  window — and fall back to their old pixel size where the variable is unset. Memory and the
+  lottery flip to a **portrait layout** (3×6 cards, 4 columns of faces) on a portrait screen, so
+  a phone's height goes to bigger cards instead of shrinking six across. Fixed-pixel figures (the
+  wheel, the balloon) are wrapped in `StageScale`, a transform that scales them up to the room
+  available (never below 1, at most 1.6×).
+- On a phone the stacked footer's `flex-1` buttons would get a 0 height basis inside the
+  column and collapse to a sliver; the stage resets them to `basis-auto` below `sm`.
+
 ## Shared UI pieces
 
 - `GamePoolChecklist` — just the "who's playing" member checklist, used directly by the slot

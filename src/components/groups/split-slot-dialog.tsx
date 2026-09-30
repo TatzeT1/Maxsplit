@@ -5,12 +5,12 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -327,7 +327,7 @@ export function SplitSlotDialog({
         this the scrim and cards would briefly overhang the scroll box and
         flash a horizontal scrollbar.
       */}
-      <DialogContent className="overflow-x-hidden sm:max-w-md">
+      <GameDialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎰</span>
@@ -634,7 +634,7 @@ export function SplitSlotDialog({
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
+      </GameDialogContent>
     </Dialog>
   );
 }

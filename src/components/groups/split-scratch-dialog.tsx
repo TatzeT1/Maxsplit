@@ -5,12 +5,12 @@ import { AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
-  DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
 import { useSequentialDraw } from "@/lib/games/use-sequential-draw";
 import {
@@ -161,7 +161,7 @@ export function SplitScratchDialog({
         this the scrim and cards would briefly overhang the scroll box and
         flash a horizontal scrollbar.
       */}
-      <DialogContent className="overflow-x-hidden sm:max-w-md">
+      <GameDialogContent>
         {/*
           Over the whole dialog rather than just the cards, like the
           lottery's takeover: with two or three players the card grid is
@@ -224,7 +224,7 @@ export function SplitScratchDialog({
               })}
             />
 
-            <div className="grid grid-cols-3 gap-2">
+            <div className="mx-auto grid w-full max-w-lg grid-cols-3 gap-2">
               {poolUids.map((uid) => (
                 <ScratchCard
                   key={uid}
@@ -276,7 +276,7 @@ export function SplitScratchDialog({
             </Button>
           )}
         </DialogFooter>
-      </DialogContent>
+      </GameDialogContent>
     </Dialog>
   );
 }
