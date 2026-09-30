@@ -75,7 +75,7 @@ ExpenseSplit>` where `ExpenseSplit = { rawValue, amountMinor }` — `rawValue` i
 - `deletedAt: string | null` — **soft delete**. Every read that aggregates expenses
   (balances, PDF export, activity) filters `!expense.deletedAt`. Deleted expenses are never
   hard-removed, so the activity log and history stay coherent.
-- `viaLottery?: boolean` — set when the split came from any of the eight 🎲🎡🎰🎫⭕🔴🧠⚡ split
+- `viaLottery?: boolean` — set when the split came from any of the fifteen 🎲🎡🎰🎫🎈🦆🥃🎱⭕🔴🧠⚡✊🥢✏️ split
   mini-games (see [[Split Games]]) rather than manual entry. The name predates every game but
   the original lottery and is kept as-is rather than migrated. Forward-only marker; rounds
   played before a given game shipped aren't retroactively flagged.

@@ -2,46 +2,55 @@
 tags: [feature, split-games, fun]
 ---
 
-# Split Games (🎲🎡🎰🎫 · ⭕🔴🧠⚡)
+# Split Games (🎲🎡🎰🎫🎈🦆🥃🎱 · ⭕🔴🧠⚡✊🥢✏️)
 
 Picker: `src/components/groups/split-game-picker-dialog.tsx`. Shared "luck" engine:
 `src/lib/games/` (`use-sequential-draw.ts`, `random.ts`, `member-colors.ts`) and
 `src/components/groups/split-game/` (`game-pool-checklist.tsx`, `game-pool-setup-step.tsx`,
 `game-result-banner.tsx`, `game-progress-pips.tsx`, `game-avatar.tsx`, `scratch-card.tsx`).
-Shared "skill" engine (the four duel games — see below): `src/lib/games/knockout-ladder.ts` +
+Shared "skill" engine (the seven duel games — see below): `src/lib/games/knockout-ladder.ts` +
 `use-knockout-ladder.ts`, `src/components/groups/split-game/duel-game-dialog.tsx` (the shell),
 `duel-ladder.tsx`, `duel-turn-banner.tsx`. Picker data: `split-game/game-catalog.ts` +
-`game-preview.tsx`. Sound: `src/lib/sound/game-sounds.ts`.
+`game-preview.tsx`. Sound: `src/lib/sound/game-sounds.ts`. The seven games of the second batch
+(ballon, ducks, dice cup, pegboard, rock-paper-scissors, Nim, dots and boxes) are described in
+[[#The second batch: seven more games (2026-10)]].
 
 ## What it is
 
 A family of gamified alternatives to manually choosing a split, all reachable from the same
 "🎮 Spiel" button in `add-expense-dialog.tsx`: tapping it opens `SplitGamePickerDialog`, a
 two-category tile picker (see [[#The picker: two categories and a preview step]]), which hands
-off to one of eight game dialogs. Every game is, like [[Split Lottery]] before it, purely a
+off to one of fifteen game dialogs. Every game is, like [[Split Lottery]] before it, purely a
 **front-end input mechanism** that flows through the same `resolveExpense` / `buildSplits`
 pipeline as a manually-entered split (see [[Expenses and Splitting]]) — none of them bypass or
 duplicate the money-invariant logic. All of them but the slot machine resolve to a plain list
 of "loser" uids that `add-expense-dialog.tsx` turns into an equal exact split via `splitEqual`.
 The slot machine is the exception — see below.
 
-The eight games split into two categories, each with its own resolution engine:
+The fifteen games split into two categories, each with its own resolution engine:
 
-| Category                | Games                                                               | How "who pays" is decided                                               |
-| ----------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Glücksspiele** (luck) | 🎲 Lottery, 🎡 Wheel, 🎰 Slot, 🎫 Scratch                           | A crypto-random draw — see `useSequentialDraw` below                    |
-| **Minispiele** (skill)  | ⭕ Tic-Tac-Toe, 🔴 Vier gewinnt, 🧠 Memory-Duell, ⚡ Reaktionsduell | A 1-vs-1 duel, scaled to any pool size by a knockout ladder — see below |
+| Category                | Games                                                                                                                                  | How "who pays" is decided                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| **Glücksspiele** (luck) | 🎲 Lottery, 🎡 Wheel, 🎰 Slot, 🎫 Scratch, 🎈 Ballon, 🦆 Entenrennen, 🥃 Würfelbecher, 🎱 Kugelfall                                    | A crypto-random draw — `useSequentialDraw`, or the game's own hidden-odds engine (slot, balloon, dice) |
+| **Minispiele** (skill)  | ⭕ Tic-Tac-Toe, 🔴 Vier gewinnt, 🧠 Memory-Duell, ⚡ Reaktionsduell, ✊ Schnick-Schnack-Schnuck, 🥢 Streichholz-Duell, ✏️ Käsekästchen | A 1-vs-1 duel, scaled to any pool size by a knockout ladder — see below                                |
 
-| Game                 | Dialog                          | Mechanic                                                                                        |
-| -------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| 🎲 [[Split Lottery]] | `split-lottery-dialog.tsx`      | Tap-to-reveal grid, turn-based, up to 32 anonymous faces                                        |
-| 🎡 Glücksrad         | `split-wheel-dialog.tsx`        | Spin a wheel of the remaining pool; the needle picks the loser                                  |
-| 🎰 Spielautomat      | `split-slot-dialog.tsx`         | Pick a stake, pull the lever, repeat until the bill is fully allocated                          |
-| 🎫 Rubbellos         | `split-scratch-dialog.tsx`      | Everyone scratches their own card; whoever gets a blank pays                                    |
-| ⭕ Tic-Tac-Toe       | `split-tic-tac-toe-dialog.tsx`  | 3×3 grid, alternating marks; a draw replays and escalates to a vanishing "sudden death" variant |
-| 🔴 Vier gewinnt      | `split-connect-four-dialog.tsx` | 7×6 drop board, classic Connect Four rules; a draw (rare) just replays                          |
-| 🧠 Memory-Duell      | `split-memory-dialog.tsx`       | 9 pairs (18 cards) — an odd pair count makes an exact tie impossible                            |
-| ⚡ Reaktionsduell    | `split-reaction-dialog.tsx`     | Both tap "ready", then race a random-delay "Los!" signal; an early tap is a false start         |
+| Game                       | Dialog                          | Mechanic                                                                                        |
+| -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 🎲 [[Split Lottery]]       | `split-lottery-dialog.tsx`      | Tap-to-reveal grid, turn-based, up to 32 anonymous faces                                        |
+| 🎡 Glücksrad               | `split-wheel-dialog.tsx`        | Spin a wheel of the remaining pool; the needle picks the loser                                  |
+| 🎰 Spielautomat            | `split-slot-dialog.tsx`         | Pick a stake, pull the lever, repeat until the bill is fully allocated                          |
+| 🎫 Rubbellos               | `split-scratch-dialog.tsx`      | Everyone scratches their own card; whoever gets a blank pays                                    |
+| ⭕ Tic-Tac-Toe             | `split-tic-tac-toe-dialog.tsx`  | 3×3 grid, alternating marks; a draw replays and escalates to a vanishing "sudden death" variant |
+| 🔴 Vier gewinnt            | `split-connect-four-dialog.tsx` | 7×6 drop board, classic Connect Four rules; a draw (rare) just replays                          |
+| 🧠 Memory-Duell            | `split-memory-dialog.tsx`       | 9 pairs (18 cards) — an odd pair count makes an exact tie impossible                            |
+| ⚡ Reaktionsduell          | `split-reaction-dialog.tsx`     | Both tap "ready", then race a random-delay "Los!" signal; an early tap is a false start         |
+| 🎈 Ballon                  | `split-balloon-dialog.tsx`      | Pump 1–3× per turn against a secret burst point; whoever's pump pops it pays                    |
+| 🦆 Entenrennen             | `split-duck-race-dialog.tsx`    | Everyone is a duck, the race plays a pre-drawn order; the last duck across the line pays        |
+| 🥃 Würfelbecher            | `split-dice-dialog.tsx`         | Two dice each, Mäxchen ranking, lowest pays; ties on the line roll off ("Stechen")              |
+| 🎱 Kugelfall               | `split-pegboard-dialog.tsx`     | A ball bounces down a pegboard into the pre-drawn payer's slot; the slot is then plugged        |
+| ✊ Schnick-Schnack-Schnuck | `split-rps-dialog.tsx`          | Hidden simultaneous hands, first to two round wins; a drawn round replays                       |
+| 🥢 Streichholz-Duell       | `split-nim-dialog.tsx`          | Misère Nim on 1·3·5·7 — whoever takes the last match loses                                      |
+| ✏️ Käsekästchen            | `split-dots-dialog.tsx`         | 4×4 dots, 9 boxes (odd — no tie); closing a box earns another move                              |
 
 ## The shared draw engine (wheel + scratch)
 
@@ -99,7 +108,7 @@ A **draw** (Tic-Tac-Toe, Vier gewinnt, and Reaktionsduell's "too close to call")
 same match with the players swapped (`recordDraw`), so whoever went second starts this time.
 Memory-Duell can't draw at all — see below.
 
-## `DuelGameDialog`: the shared shell for all four duel games
+## `DuelGameDialog`: the shared shell for all duel games
 
 `src/components/groups/split-game/duel-game-dialog.tsx` is what `split-wheel-dialog.tsx` is to
 the wheel: every duel game mounts `<DuelGameDialog config={...} />` with a `Board` component and
@@ -261,6 +270,8 @@ when adding a new expense (it auto-books) and with ≥2 pool members who have an
   snapshot optimistically (`OnlineMatchRunner`) so a tap never feels laggy.
 - **Memory's deck is secret** (`liveSecrets`, unreadable by rules); a mismatch stays face up
   until the next flip, with a short local grace lock so the next player sees both cards.
+  Schnick-Schnack-Schnuck keeps its locked-in hands there too, and is the one game whose moves
+  change the secret — see [[#The second batch: seven more games (2026-10)]].
 - **Reaktionsduell measures on each phone.** The server draws the delay once both are
   ready; each phone counts it down itself, shows "Los!", and reports its own reaction time
   (or a false start). Network lag therefore never decides who was faster — the trade-off is
@@ -269,7 +280,7 @@ when adding a new expense (it auto-books) and with ≥2 pool members who have an
 - **Placeholders** have no phone: a match with one plays locally on its opponent's phone
   via the old claim flow (`isOnlineMatch` decides per match).
 - **"Spiel starten" — a duel without an expense form.** `StartGameButton` (Spiele tab + group
-  page) opens `StartGameDialog`: pick one of the four duels, who plays (real members only) and an
+  page) opens `StartGameDialog`: pick one of the seven duels, who plays (real members only) and an
   optional stake (default 0 €). Always online, always a bracket. **Stake 0** → `autoBook: null`,
   nothing is booked ("verliert" instead of "zahlt" via `TournamentStakeProvider`; a finished
   free game shows "nichts zu verrechnen"). **Stake > 0** → `autoBook` with `payerIsWinner: true`
@@ -310,7 +321,7 @@ One game runs per group at a time (unchanged `createTournament` rule).
 
 ## Loaded on demand
 
-The picker and all eight game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
+The picker and all fifteen game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
 `next/dynamic`) — before 2026-09 they were static imports of `AddExpenseDialog`, so every
 group page shipped every game. `AddExpenseDialog` mounts the picker, and each game, the first
 time it's opened and then **keeps it mounted**: a duel game holds its running tournament
@@ -339,7 +350,7 @@ unclear. It's now a two-step flow, driven entirely by one table
    pools bigger than two. "Los geht's" then hands off to that game's own dialog exactly as
    before; "Zurück" (or Escape) returns to the grid.
 
-Adding a ninth game later means adding one row to `SPLIT_GAMES` plus its translation keys — the
+Adding another game later means adding one row to `SPLIT_GAMES` plus its translation keys (and, for the dialog, a `gameLoaders` entry and a mount in `add-expense-dialog.tsx`) — the
 picker itself doesn't change.
 
 ## Shared UI pieces
@@ -364,21 +375,93 @@ picker itself doesn't change.
 `src/lib/games/member-colors.ts` gives the wheel's wedges and the slot machine's reels solid
 colors keyed off the same name hash `avatarGradient` uses (`nameHash` in `lib/utils.ts`), so a
 member's wheel wedge/reel color and their avatar chip always agree. `duelPalettes(nameA, nameB)`
-extends this for the four duel games: each player's own `memberColor`, except when both names
+extends this for the duel games: each player's own `memberColor`, except when both names
 hash to the same slot (a duel where both marks look identical is unreadable), in which case the
 second player is bumped to the opposite side of the palette wheel.
 
 ## The `viaLottery` flag, now shared
 
-All eight games set `Expense.viaLottery = true` when their result is applied — the field name is
+All fifteen games set `Expense.viaLottery = true` when their result is applied — the field name is
 a holdover from when the lottery was the only game (see [[Data Model]]), but its actual meaning
 has always been closer to "resolved via a split mini-game", so the existing
 `computeLotteryTotals` leaderboard (now the group page's Spiele tab, `games-tab.tsx` — see
-[[Group Page]]) already aggregates across all eight games
+[[Group Page]]) already aggregates across all fifteen games
 with zero code changes needed. Renaming the field would mean migrating live Firestore data for
 a purely cosmetic win, so it stays `viaLottery`. One side effect worth knowing: the leaderboard's
 title ("Wer hat wie viel vergambelt?") now also counts skill-game losses, which reads slightly
 oddly for a game of pure competence — a wording nuance, not a bug, and out of scope to fix here.
+
+## The second batch: seven more games (2026-10)
+
+Four more luck games and three more duels, picked to feel different from each other and from the
+first eight (a race to watch, a push-your-luck game, a dice roll with tie-breaks, a ball drop;
+a hidden-hand duel, Nim, dots and boxes). They plug into the same contracts as before — luck
+games `onResolve(loserUids)`, duels `DuelBoardProps` plus the shell's ladder, tournament and
+online modes — so the picker, the money pipeline and the leaderboard needed no changes. Each
+game keeps its rules in a pure, unit-tested module in `src/lib/games/` and the dialog only
+stages them. Shared bits: `use-game-pool-setup.ts` (the pool + payer-count state every luck
+dialog used to repeat) and the new synthesized sounds in `game-sounds.ts`. The luck games keep
+one person dry: at most `poolSize - 1` payers.
+
+Tile art is `public/game-tiles/<name>.jpg`. Everything _inside_ the games is SVG/CSS — the
+pegboard, the dice pips, the balloon, the ducks, the dot grid — with emoji for the three
+hands, so a game never waits on an image. 🥃 is the dice cup's emoji because 🎲 already belongs
+to the lottery.
+
+### Luck games
+
+- **🎈 Ballon** — `balloon.ts`, `split-balloon-dialog.tsx`, `balloon-figure.tsx`. Like the slot
+  machine it does **not** sit on `useSequentialDraw`: who pays depends on how many times each
+  person pumps (1–3 per turn, at least one before passing) and only the burst point is random —
+  drawn with `randomInt` when the balloon is first blown up, range from `balloonBurstRange`.
+  The balloon's size, wobble and face come only from `pumps / maxPumps`, never from the burst
+  point, so nothing on screen leaks it. A popper drops out and the next balloon goes to the seat
+  behind them; the pure module takes its randomness as a `BalloonRandom` argument.
+- **🦆 Entenrennen** — `duck-race.ts`, `split-duck-race-dialog.tsx`, `duck-figure.tsx`. Decide
+  first, animate after: the finishing order is one `secureShuffle`, the last _k_ ducks pay
+  (`duckRaceLosers`). `planDuckRace` only stages it — finish times strictly increase with a
+  minimum gap (`MIN_FINISH_GAP_SEC`), progress keyframes never go backwards and end on the line,
+  so ducks overtake but the order cannot change. Tapping a duck quacks; it is cosmetic.
+- **🥃 Würfelbecher** — `dice-cup.ts`, `split-dice-dialog.tsx`, `dice-figure.tsx`. Two dice per
+  person, ranked like the pub game Mäxchen (`diceRank`: 21 beats everything, then the doubles
+  66…11, then 65…31 by the bigger die first). The lowest roll pays; people level on the line
+  between paying and not roll off again — only they do (`resolveDiceRound`, "Stechen") — so no
+  payer is ever picked by seating order. `DiceGame` is the state machine, the dice are
+  `randomInt(1, 6)` drawn the instant the cup is shaken.
+- **🎱 Kugelfall** — `pegboard.ts`, `pegboard-layout.ts`, `split-pegboard-dialog.tsx`. Sits on
+  `useSequentialDraw`: the payers are fixed first, the ball's path is invented _backwards_ from
+  the target slot (`planBallPath`, a random walk in half-slot columns that the walls and the
+  remaining rows force to end there) and `ballFlight` turns it into keyframes and peg-click
+  times. Slot order is an independent shuffle. The board holds 2–12 people
+  (`PEGBOARD_MAX_SLOTS`); larger groups get a hint to use the wheel. The name avoids the trademark
+  "Plinko".
+
+### Duels
+
+All three are tournament- and online-enabled from the start and use the shell unchanged.
+
+- **✊ Schnick-Schnack-Schnuck** — `rock-paper-scissors.ts`, `rps-board.tsx`. First to two round
+  wins; a drawn round just replays _inside_ the board, so the match never draws and `onDraw` is
+  never called. One phone: split screen, a tap locks the hand instantly and shows only a padlock.
+  Online: the hands stay in `liveSecrets/{matchId}.picks` until both are in — the public state
+  only has `locked: [boolean, boolean]` and the revealed `rounds` (`{ p0, p1 }` objects: Firestore
+  has no nested arrays). `applyOnlineMove` therefore returns an optional new `secret`, which
+  `playOnlineMove` stores in the same transaction (`online-rps.emulator.test.ts` plays a whole
+  match against the Firestore emulator and checks that no hand ever shows in the public doc).
+  There are no turns (`liveTurn` is `null`), so the online runner shows no "Du bist dran" for it.
+- **🥢 Streichholz-Duell** — `nim.ts`, `nim-board.tsx`. Misère Nim on 1·3·5·7: take any number
+  from one row, whoever takes the last match loses, so no draw. With perfect play the _second_
+  player wins (`nim.test.ts` proves it by brute force), which is why the ladder's random pairing
+  order matters. Moves are stored as one integer each (`row * 8 + count`).
+- **✏️ Käsekästchen** — `dots-and-boxes.ts`, `dots-board.tsx`. 4×4 dots make 3×3 boxes; nine is
+  odd, so it cannot end level (the Memory-Duell trick). Closing a box earns another move —
+  turns are therefore not strictly alternating, and online the match is the flat list of line
+  numbers replayed through `replayDots`. Lines are numbered 0–23, the twelve horizontal first.
+  Every line has a finger-sized (44 px) tap target laid over the SVG.
+
+`NimGrid` and `DotsGrid` are stateless views shared by the one-phone board and the online board,
+like the grids of the first four duels; the online runner predicts the viewer's own move for
+them (open information), but not for the hidden-hand game.
 
 ## Related
 
