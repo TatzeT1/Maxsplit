@@ -408,6 +408,12 @@ pegboard, the dice pips, the balloon, the ducks, the dot grid — with emoji for
 hands, so a game never waits on an image. 🥃 is the dice cup's emoji because 🎲 already belongs
 to the lottery.
 
+The seven new tiles were generated as one 3×3 sheet (flat magenta gutters, two empty cells) and
+cut apart, which keeps the set stylistically uniform; each is a ~390 px square, plenty for the
+64/128 px the picker shows them at. To add a tile: cream background, thick dark-brown outlines,
+hero scene centred, and nothing important in the bottom-right quarter — `GameTileImage`'s
+emoji badge covers it.
+
 ### Luck games
 
 - **🎈 Ballon** — `balloon.ts`, `split-balloon-dialog.tsx`, `balloon-figure.tsx`. Like the slot
