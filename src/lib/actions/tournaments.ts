@@ -18,6 +18,7 @@ import {
 } from "@/lib/games/online-match";
 import { randomInt, secureShuffle } from "@/lib/games/random";
 import { REACTION_MAX_DELAY_MS, REACTION_MIN_DELAY_MS } from "@/lib/games/reaction-duel";
+import { isRpsHand } from "@/lib/games/rock-paper-scissors";
 import { getServerT } from "@/lib/i18n/server";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
@@ -203,6 +204,14 @@ function parseOnlineMove(raw: unknown): OnlineMove | null {
       return typeof move.column === "number" ? { kind: "column", column: move.column } : null;
     case "flip":
       return typeof move.index === "number" ? { kind: "flip", index: move.index } : null;
+    case "pick":
+      return isRpsHand(move.hand) ? { kind: "pick", hand: move.hand } : null;
+    case "take":
+      return typeof move.row === "number" && typeof move.count === "number"
+        ? { kind: "take", row: move.row, count: move.count }
+        : null;
+    case "line":
+      return typeof move.index === "number" ? { kind: "line", index: move.index } : null;
     case "ready":
       return { kind: "ready" };
     case "forfeit":
@@ -392,6 +401,9 @@ const GAME_TITLE_KEY = {
   connectfour: "expenses.connectFourTitle",
   memory: "expenses.memoryTitle",
   reaction: "expenses.reactionTitle",
+  rps: "expenses.rpsTitle",
+  nim: "expenses.nimTitle",
+  dots: "expenses.dotsTitle",
 } as const satisfies Record<DuelGameId, string>;
 
 /**
@@ -738,6 +750,10 @@ export async function playOnlineMove(input: {
         }),
       ];
     };
+
+    // A move that changes the match's hidden state (a locked-in or revealed
+    // Schnick-Schnack-Schnuck hand) is stored in the same transaction.
+    if (applied.secret) tx.set(secretRef, applied.secret);
 
     if (outcome.kind === "continue") {
       tx.update(liveRef, { state: applied.state, version, updatedAt: at });

@@ -3,6 +3,9 @@ import { TicTacToeBoard } from "@/components/groups/split-game/tic-tac-toe-board
 import { ConnectFourBoard } from "@/components/groups/split-game/connect-four-board";
 import { MemoryBoard } from "@/components/groups/split-game/memory-board";
 import { ReactionBoard } from "@/components/groups/split-game/reaction-board";
+import { RpsBoard } from "@/components/groups/split-game/rps-board";
+import { NimBoard } from "@/components/groups/split-game/nim-board";
+import { DotsBoard } from "@/components/groups/split-game/dots-board";
 import type { DuelGameId } from "@/lib/types";
 
 /**
@@ -42,5 +45,26 @@ export const TOURNAMENT_GAME_CONFIGS: Record<DuelGameId, DuelGameConfig> = {
     introKey: "expenses.reactionIntro",
     Board: ReactionBoard,
     gameId: "reaction",
+  },
+  rps: {
+    emoji: "✊",
+    titleKey: "expenses.rpsTitle",
+    introKey: "expenses.rpsIntro",
+    Board: RpsBoard,
+    gameId: "rps",
+  },
+  nim: {
+    emoji: "🥢",
+    titleKey: "expenses.nimTitle",
+    introKey: "expenses.nimIntro",
+    Board: NimBoard,
+    gameId: "nim",
+  },
+  dots: {
+    emoji: "✏️",
+    titleKey: "expenses.dotsTitle",
+    introKey: "expenses.dotsIntro",
+    Board: DotsBoard,
+    gameId: "dots",
   },
 };

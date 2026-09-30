@@ -26,6 +26,7 @@ import {
   useOutcomeKeys,
 } from "@/components/groups/split-game/tournament/tournament-fate";
 import { openOnlineMatch, playOnlineMove } from "@/lib/actions/tournaments";
+import { dotsScore, replayDots } from "@/lib/games/dots-and-boxes";
 import { duelPalettes } from "@/lib/games/member-colors";
 import { applyOnlineMove, liveTurn, type OnlineMove } from "@/lib/games/online-match";
 import { matchFates } from "@/lib/games/tournament-status";
@@ -33,15 +34,23 @@ import { useLiveMatch } from "@/lib/games/use-tournament";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { playAppliedSound, playLaughSound, playReelStopSound } from "@/lib/sound/game-sounds";
 import { cn } from "@/lib/utils";
-import type { GroupMember, LiveMatchState, Tournament, TournamentMatch } from "@/lib/types";
+import type {
+  DuelGameId,
+  GroupMember,
+  LiveMatchState,
+  Tournament,
+  TournamentMatch,
+} from "@/lib/types";
 
 const EYEBROW = "text-[11px] font-semibold tracking-[0.12em] uppercase";
 
-/** Hint under "Du bist dran" per game — the same copy the one-phone boards use. */
-const TURN_HINT: Record<"tictactoe" | "connectfour" | "memory", TranslationKey> = {
+/** Hint under "Du bist dran" per turn-based game — the same copy the one-phone boards use. */
+const TURN_HINT: Partial<Record<DuelGameId, TranslationKey>> = {
   tictactoe: "expenses.ticTacToeHint",
   connectfour: "expenses.connectFourHint",
   memory: "expenses.memoryHint",
+  nim: "expenses.nimHint",
+  dots: "expenses.dotsHint",
 };
 
 /** True while a replayed attempt hasn't had its first move yet — the window to say "that was a draw". */
@@ -55,6 +64,12 @@ function freshAttempt(state: LiveMatchState): boolean {
       return state.open.length === 0 && state.claimedBy.every((c) => c === -1);
     case "reaction":
       return !state.ready[0] && !state.ready[1];
+    case "rps":
+      return state.rounds.length === 0 && !state.locked[0] && !state.locked[1];
+    case "nim":
+      return state.moves.length === 0;
+    case "dots":
+      return state.lines.length === 0;
   }
 }
 
@@ -140,9 +155,15 @@ export function OnlineMatchRunner({
       const me = live.players.indexOf(currentUid);
       if (me === -1) return;
       setMoveError(null);
-      // Only the grid games are predicted locally: their rules need no hidden
-      // state, and a rejected guess simply snaps back on the next snapshot.
-      if (live.gameId === "tictactoe" || live.gameId === "connectfour") {
+      // Only the open-information games are predicted locally: their rules
+      // need no hidden state, and a rejected guess simply snaps back on the
+      // next snapshot.
+      if (
+        live.gameId === "tictactoe" ||
+        live.gameId === "connectfour" ||
+        live.gameId === "nim" ||
+        live.gameId === "dots"
+      ) {
         const guess = applyOnlineMove({
           live,
           secret: null,
@@ -255,10 +276,15 @@ export function OnlineMatchRunner({
   const Board = ONLINE_BOARDS[live.gameId];
 
   let status: { text: string; hint?: string; mine: boolean } | null = null;
-  if (!decided && turn !== null && live.gameId !== "reaction") {
+  if (!decided && turn !== null) {
     const mine = me !== null && turn === me;
+    const hintKey = TURN_HINT[live.gameId];
     status = mine
-      ? { text: t("expenses.onlineYourTurn"), hint: t(TURN_HINT[live.gameId]), mine }
+      ? {
+          text: t("expenses.onlineYourTurn"),
+          hint: hintKey ? t(hintKey) : undefined,
+          mine,
+        }
       : {
           text:
             me === null
@@ -268,6 +294,7 @@ export function OnlineMatchRunner({
         };
   }
 
+  const dotsTotals = state.gameId === "dots" ? dotsScore(replayDots(state.lines).state) : null;
   const scores =
     state.gameId === "memory"
       ? ([0, 1] as const).map((i) => (
@@ -275,7 +302,13 @@ export function OnlineMatchRunner({
             {t("expenses.memoryScoreLabel", { name: names[i], count: state.scores[i] })}
           </span>
         ))
-      : null;
+      : dotsTotals
+        ? ([0, 1] as const).map((i) => (
+            <span key={i} style={{ color: colors[i] }}>
+              {t("expenses.dotsScoreLabel", { name: names[i], count: dotsTotals[i] })}
+            </span>
+          ))
+        : null;
 
   const fates = matchFates(tournament.advance, match);
   const winnerUid = live.winnerUid;
@@ -316,7 +349,7 @@ export function OnlineMatchRunner({
                 <span className="truncate text-sm font-semibold">
                   {uid === currentUid ? t("expenses.tournamentYou") : nameOf(uid)}
                 </span>
-                {live.gameId !== "reaction" && (
+                {turn !== null && (
                   <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
                     <span
                       aria-hidden="true"

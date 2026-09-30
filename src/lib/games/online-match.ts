@@ -5,8 +5,9 @@
  * modified client can't place a mark out of turn, peek at a memory card it
  * hasn't flipped, or claim a win the board doesn't show. The per-game rules
  * themselves are the exact same modules the one-phone boards use
- * (`tic-tac-toe.ts`, `connect-four.ts`, `memory-duel.ts`, `reaction-duel.ts`);
- * this file only adds turn order, replay-from-moves and validation on top.
+ * (`tic-tac-toe.ts`, `connect-four.ts`, `memory-duel.ts`, `reaction-duel.ts`,
+ * `rock-paper-scissors.ts`, `nim.ts`, `dots-and-boxes.ts`); this file only
+ * adds turn order, replay-from-moves and validation on top.
  *
  * No `Date.now()` and no randomness in here — the one random input (the
  * reaction duel's signal delay, and the memory deck at creation) is passed
@@ -19,8 +20,11 @@ import {
   emptyConnectFourBoard,
   type ConnectFourBoard,
 } from "@/lib/games/connect-four";
+import { applyDotsMove, isValidDotsMove, replayDots } from "@/lib/games/dots-and-boxes";
 import { MEMORY_CARD_COUNT, MEMORY_PAIR_COUNT, memoryOutcome } from "@/lib/games/memory-duel";
+import { applyNimMove, encodeNimMove, isValidNimMove, replayNim } from "@/lib/games/nim";
 import { REACTION_TIE_WINDOW_MS } from "@/lib/games/reaction-duel";
+import { isRpsHand, rpsMatchWinner, type RpsHand } from "@/lib/games/rock-paper-scissors";
 import {
   EMPTY_TIC_TAC_TOE_STATE,
   applyTicTacToeMove,
@@ -47,11 +51,21 @@ export type OnlineMove =
   | { kind: "flip"; index: number }
   | { kind: "ready" }
   | { kind: "reaction"; report: ReactionReport }
+  | { kind: "pick"; hand: RpsHand }
+  | { kind: "take"; row: number; count: number }
+  | { kind: "line"; index: number }
   | { kind: "forfeit" };
 
-/** Hidden server-side state no client may read — `liveSecrets/{matchId}`. Only the memory deck needs one. */
+/**
+ * Hidden server-side state no client may read — `liveSecrets/{matchId}`. A
+ * match's secret has exactly one of these fields: the memory deck, or the
+ * picks Schnick-Schnack-Schnuck players have locked in but not yet revealed.
+ */
 export interface LiveSecret {
-  faces: string[];
+  /** Memory: the shuffled face of every card. */
+  faces?: string[];
+  /** Schnick-Schnack-Schnuck: each player's hand for the current round, `null` until they lock one in. */
+  picks?: (RpsHand | null)[];
 }
 
 export type OnlineOutcome =
@@ -104,6 +118,15 @@ export function initialLiveState(
         state: { gameId, ready: [false, false], signalDelayMs: null, results: [null, null] },
         secret: null,
       };
+    case "rps":
+      return {
+        state: { gameId, rounds: [], locked: [false, false] },
+        secret: { picks: [null, null] },
+      };
+    case "nim":
+      return { state: { gameId, moves: [] }, secret: null };
+    case "dots":
+      return { state: { gameId, lines: [] }, secret: null };
   }
 }
 
@@ -147,7 +170,7 @@ export function replayConnectFour(columns: number[]): {
   return { board, turn: (columns.length % 2) as 0 | 1, lastDrop, winCells };
 }
 
-/** Whose move it is, or `null` for the reaction duel, where both act at once. */
+/** Whose move it is, or `null` for the games where both act at once (reaction duel, Schnick-Schnack-Schnuck). */
 export function liveTurn(state: LiveMatchState): 0 | 1 | null {
   switch (state.gameId) {
     case "tictactoe":
@@ -156,7 +179,12 @@ export function liveTurn(state: LiveMatchState): 0 | 1 | null {
       return (state.columns.length % 2) as 0 | 1;
     case "memory":
       return state.turn;
+    case "nim":
+      return replayNim(state.moves).turn;
+    case "dots":
+      return replayDots(state.lines).turn;
     case "reaction":
+    case "rps":
       return null;
   }
 }
@@ -165,7 +193,9 @@ export function liveTurn(state: LiveMatchState): 0 | 1 | null {
  * Applies one move by `player` (0 or 1 — an index into `LiveMatch.players`).
  * `drawSignalDelay` is only called when a reaction duel's second player
  * becomes ready. A `"draw"` outcome returns the final drawn position; the
- * caller replays with `nextAttempt`.
+ * caller replays with `nextAttempt`. When a move changes the match's hidden
+ * state (a Schnick-Schnack-Schnuck pick), the new secret comes back in
+ * `secret` for the caller to store; absent, the stored secret is unchanged.
  */
 export function applyOnlineMove(input: {
   live: Pick<LiveMatch, "state" | "attempt" | "winnerUid">;
@@ -173,7 +203,9 @@ export function applyOnlineMove(input: {
   player: 0 | 1;
   move: OnlineMove;
   drawSignalDelay: () => number;
-}): { state: LiveMatchState; outcome: OnlineOutcome } | { error: OnlineMoveError } {
+}):
+  | { state: LiveMatchState; outcome: OnlineOutcome; secret?: LiveSecret }
+  | { error: OnlineMoveError } {
   const { live, secret, player, move } = input;
   if (live.winnerUid !== null) return { error: "match-finished" };
   const state = live.state;
@@ -232,7 +264,8 @@ export function applyOnlineMove(input: {
 
     case "memory": {
       if (move.kind !== "flip") return { error: "wrong-game" };
-      if (!secret) return { error: "missing-secret" };
+      const faces = secret?.faces;
+      if (!faces) return { error: "missing-secret" };
       if (state.turn !== player) return { error: "not-your-turn" };
       const index = move.index;
       if (!Number.isInteger(index) || index < 0 || index >= MEMORY_CARD_COUNT) {
@@ -243,7 +276,7 @@ export function applyOnlineMove(input: {
       const open = state.open.length >= 2 ? [] : state.open;
       if (open.some((card) => card.index === index)) return { error: "invalid-move" };
 
-      const nextOpen = [...open, { index, face: secret.faces[index] }];
+      const nextOpen = [...open, { index, face: faces[index] }];
       if (nextOpen.length < 2) {
         return { state: { ...state, open: nextOpen }, outcome: { kind: "continue" } };
       }
@@ -314,6 +347,69 @@ export function applyOnlineMove(input: {
         state: next,
         outcome: { kind: "win", player: report.ms < theirs.ms ? player : other, reason: "win" },
       };
+    }
+
+    case "rps": {
+      if (move.kind !== "pick") return { error: "wrong-game" };
+      if (!isRpsHand(move.hand)) return { error: "invalid-move" };
+      const picks = secret?.picks;
+      if (!picks) return { error: "missing-secret" };
+      // A pick is final: nobody gets to change their mind after seeing the other's lock-in.
+      if (state.locked[player] || (picks[player] ?? null) !== null) {
+        return { error: "invalid-move" };
+      }
+
+      const pending: [RpsHand | null, RpsHand | null] = [picks[0] ?? null, picks[1] ?? null];
+      pending[player] = move.hand;
+      if (pending[0] === null || pending[1] === null) {
+        // The other hand is still out: only "locked in" becomes public.
+        const locked: [boolean, boolean] = [pending[0] !== null, pending[1] !== null];
+        return {
+          state: { ...state, locked },
+          outcome: { kind: "continue" },
+          secret: { picks: pending },
+        };
+      }
+
+      // Both are in — reveal the round and start the next one with clean picks.
+      const rounds = [...state.rounds, { p0: pending[0], p1: pending[1] }];
+      const winner = rpsMatchWinner(rounds);
+      return {
+        state: { gameId: "rps", rounds, locked: [false, false] },
+        outcome:
+          winner === null ? { kind: "continue" } : { kind: "win", player: winner, reason: "win" },
+        secret: { picks: [null, null] },
+      };
+    }
+
+    case "nim": {
+      if (move.kind !== "take") return { error: "wrong-game" };
+      const replay = replayNim(state.moves);
+      if (replay.turn !== player) return { error: "not-your-turn" };
+      if (!isValidNimMove(replay.rows, move.row, move.count)) return { error: "invalid-move" };
+      const result = applyNimMove(replay.rows, move.row, move.count, player);
+      const next: LiveMatchState = {
+        gameId: "nim",
+        moves: [...state.moves, encodeNimMove(move.row, move.count)],
+      };
+      // Taking the very last match loses, so the *other* player wins.
+      if (result.loser !== null) {
+        return { state: next, outcome: { kind: "win", player: other, reason: "win" } };
+      }
+      return { state: next, outcome: { kind: "continue" } };
+    }
+
+    case "dots": {
+      if (move.kind !== "line") return { error: "wrong-game" };
+      const replay = replayDots(state.lines);
+      if (replay.turn !== player) return { error: "not-your-turn" };
+      if (!isValidDotsMove(replay.state, move.index)) return { error: "invalid-move" };
+      const result = applyDotsMove(replay.state, move.index, player);
+      const next: LiveMatchState = { gameId: "dots", lines: [...state.lines, move.index] };
+      if (result.winner !== null) {
+        return { state: next, outcome: { kind: "win", player: result.winner, reason: "win" } };
+      }
+      return { state: next, outcome: { kind: "continue" } };
     }
   }
 }

@@ -287,3 +287,145 @@ export function playGiggleSound(delaySeconds = 0): void {
     time += duration * 0.8;
   }
 }
+
+/**
+ * One stroke of the balloon pump: a short squeaky rise whose pitch climbs with
+ * how full the balloon already is (`fullness`, 0..1), plus a puff of air.
+ * Deliberately says nothing about the secret burst point — fullness comes from
+ * the visible size, which only ever shows how much air went in.
+ */
+export function playPumpSound(fullness = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const base = 240 + Math.min(Math.max(fullness, 0), 1) * 520;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(base, now);
+  osc.frequency.exponentialRampToValueAtTime(base * 1.35, now + 0.16);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.07, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.2);
+  noiseBurst(ctx, now, 0.12, 0.04, "bandpass", 1600, 0.7);
+}
+
+/** A balloon going off: a sharp crack of noise over a short, dropping thump. */
+export function playPopSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.14, 0.32, "highpass", 500, 0.5);
+  noiseBurst(ctx, now, 0.05, 0.25, "bandpass", 2400, 0.8);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(180, now);
+  osc.frequency.exponentialRampToValueAtTime(50, now + 0.14);
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(0.28, now + 0.004);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.16);
+}
+
+/** One nasal pulse of a quack: a sawtooth glide through two vowel-ish formants, like `playHaSyllable` but flatter and buzzier. */
+function quackPulse(
+  ctx: AudioContext,
+  startTime: number,
+  f0: number,
+  duration: number,
+  gainPeak: number,
+): void {
+  const osc = ctx.createOscillator();
+  osc.type = "sawtooth";
+  osc.frequency.setValueAtTime(f0, startTime);
+  osc.frequency.exponentialRampToValueAtTime(f0 * 0.68, startTime + duration);
+
+  const envelope = ctx.createGain();
+  envelope.gain.setValueAtTime(0, startTime);
+  envelope.gain.linearRampToValueAtTime(gainPeak, startTime + 0.01);
+  envelope.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+  const formant1 = ctx.createBiquadFilter();
+  formant1.type = "bandpass";
+  formant1.frequency.setValueAtTime(900, startTime);
+  formant1.Q.value = 5;
+  const formant2 = ctx.createBiquadFilter();
+  formant2.type = "bandpass";
+  formant2.frequency.setValueAtTime(1900, startTime);
+  formant2.Q.value = 6;
+  const formant2Gain = ctx.createGain();
+  formant2Gain.gain.value = 0.6;
+
+  osc.connect(formant1);
+  osc.connect(formant2);
+  formant1.connect(envelope);
+  formant2.connect(formant2Gain);
+  formant2Gain.connect(envelope);
+  envelope.connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+/** A rubber duck's "qua-ak": two quick pulses, the second a touch lower. */
+export function playQuackSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  const f0 = 380 + Math.random() * 60;
+  quackPulse(ctx, now, f0, 0.1, 0.16);
+  quackPulse(ctx, now + 0.11, f0 * 0.9, 0.13, 0.14);
+}
+
+/** Water slapping: a wash of mid noise with a bright sizzle on top — the start gun of the duck race. */
+export function playSplashSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.28, 0.12, "bandpass", 1500, 0.5);
+  noiseBurst(ctx, now + 0.04, 0.2, 0.06, "highpass", 3000, 0.6);
+}
+
+/** Dice rattling in a cup: a burst of dry clicks at uneven gaps. */
+export function playDiceRattleSound(seconds = 0.75): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const start = ctx.currentTime;
+  const end = start + seconds;
+  for (let time = start; time < end; time += 0.04 + Math.random() * 0.035) {
+    noiseBurst(
+      ctx,
+      time,
+      0.02,
+      0.07 + Math.random() * 0.04,
+      "bandpass",
+      1600 + Math.random() * 2200,
+      2.5,
+    );
+  }
+}
+
+/** Dice coming to rest on the table: one soft thud and a click. */
+export function playDiceLandSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  tone(ctx, 190, now, 0.08, "sine", 0.12);
+  noiseBurst(ctx, now, 0.03, 0.07, "bandpass", 1100, 1.1);
+}
+
+/** A pencil stroke: a short, dry scratch of high-passed noise — a Käsekästchen line being drawn. */
+export function playPencilSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.11, 0.05, "highpass", 3400, 0.6);
+  noiseBurst(ctx, now + 0.02, 0.08, 0.03, "bandpass", 5200, 1.2);
+}

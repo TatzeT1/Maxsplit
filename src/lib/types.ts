@@ -1,3 +1,5 @@
+import type { RpsRound } from "@/lib/games/rock-paper-scissors";
+
 export type GroupRole = "owner" | "admin" | "member";
 
 export interface GroupMember {
@@ -153,8 +155,9 @@ export interface ChatRead {
   lastReadAt: string;
 }
 
-/** The four 1-vs-1 duel split mini-games that can run as a tournament bracket — see [[Split Games]]. */
-export type DuelGameId = "tictactoe" | "connectfour" | "memory" | "reaction";
+/** The 1-vs-1 duel split mini-games that can run as a tournament bracket — see [[Split Games]]. */
+export type DuelGameId =
+  "tictactoe" | "connectfour" | "memory" | "reaction" | "rps" | "nim" | "dots";
 
 export type TournamentStatus = "running" | "finished" | "cancelled";
 
@@ -294,7 +297,18 @@ export type LiveMatchState =
       signalDelayMs: number | null;
       /** Each phone's own measured reaction, or a false start; `null` until reported. */
       results: [ReactionReport | null, ReactionReport | null];
-    };
+    }
+  | {
+      gameId: "rps";
+      /** Every round both players have revealed, in order — a drawn round stays in the list and is simply played again. */
+      rounds: RpsRound[];
+      /** Who has locked in a hand for the current round. The hand itself stays in `liveSecrets` until both are in. */
+      locked: [boolean, boolean];
+    }
+  /** Flat list of moves, each `row * 8 + count` (see `encodeNimMove`), replayed through `lib/games/nim.ts`. */
+  | { gameId: "nim"; moves: number[] }
+  /** Flat list of drawn line numbers in order (see `lib/games/dots-and-boxes.ts`); extra turns come from replaying it. */
+  | { gameId: "dots"; lines: number[] };
 
 export type ReactionReport = { kind: "time"; ms: number } | { kind: "falseStart" };
 

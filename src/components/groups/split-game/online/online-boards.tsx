@@ -1,20 +1,38 @@
 "use client";
 
-import { type PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
+import { Lock } from "lucide-react";
+import {
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useT } from "@/components/locale-provider";
 import { ConnectFourGrid } from "@/components/groups/split-game/connect-four-board";
+import { DotsGrid } from "@/components/groups/split-game/dots-board";
 import { MemoryGrid } from "@/components/groups/split-game/memory-board";
+import { NimGrid } from "@/components/groups/split-game/nim-board";
 import {
   ReactionPadContent,
   type ReactionArt,
 } from "@/components/groups/split-game/reaction-board";
+import {
+  RpsHandIcon,
+  RpsHandPicker,
+  RpsRoundRow,
+  RpsScoreStrip,
+} from "@/components/groups/split-game/rps-board";
 import { TicTacToeGrid } from "@/components/groups/split-game/tic-tac-toe-board";
+import { replayDots } from "@/lib/games/dots-and-boxes";
+import { replayNim } from "@/lib/games/nim";
 import {
   REACTION_ONLINE_TIMEOUT_MS,
   replayConnectFour,
   replayTicTacToe,
   type OnlineMove,
 } from "@/lib/games/online-match";
+import { rpsScore, type RpsHand } from "@/lib/games/rock-paper-scissors";
 import { ticTacToeNextToVanish, ticTacToeVariantForAttempt } from "@/lib/games/tic-tac-toe";
 import { playBuzzerSound, playGoSound, playTickSound } from "@/lib/sound/game-sounds";
 import { cn } from "@/lib/utils";
@@ -267,9 +285,142 @@ export function OnlineReaction({ live, state, me, names, colors, onMove }: Onlin
   );
 }
 
+export function OnlineNim({ live, state, me, names, colors, busy, onMove }: OnlineBoardProps) {
+  if (state.gameId !== "nim") return null;
+  const replay = replayNim(state.moves);
+  const myTurn = me !== null && replay.turn === me && live.winnerUid === null;
+  return (
+    <NimGrid
+      rows={replay.rows}
+      last={replay.last}
+      colors={colors}
+      names={names}
+      turnColor={colors[replay.turn]}
+      disabled={!myTurn || busy}
+      onTake={(row, count) => onMove({ kind: "take", row, count })}
+    />
+  );
+}
+
+export function OnlineDots({ live, state, me, names, colors, busy, onMove }: OnlineBoardProps) {
+  if (state.gameId !== "dots") return null;
+  const replay = replayDots(state.lines);
+  const myTurn = me !== null && replay.turn === me && live.winnerUid === null;
+  return (
+    <DotsGrid
+      state={replay.state}
+      lastLine={replay.last?.line ?? null}
+      colors={colors}
+      names={names}
+      disabled={!myTurn || busy}
+      onLine={(index) => onMove({ kind: "line", index })}
+    />
+  );
+}
+
+/**
+ * The online Schnick-Schnack-Schnuck: each phone shows only its own hands. A
+ * hand locks the moment it is picked and stays secret on the server until the
+ * other player has locked one too — then the round appears for both at once,
+ * in the list below. There are no turns, so the match has no "your move".
+ */
+export function OnlineRps({ live, state, me, names, colors, busy, onMove }: OnlineBoardProps) {
+  const t = useT();
+  // What this phone picked this round. The server keeps hands secret, so a
+  // reload forgets it — the pad then simply says "locked in".
+  const [myPick, setMyPick] = useState<{ round: number; hand: RpsHand } | null>(null);
+  if (state.gameId !== "rps") return null;
+
+  const round = state.rounds.length;
+  const decided = live.winnerUid !== null;
+  const other: 0 | 1 = me === 1 ? 0 : 1;
+  const iLocked = me !== null && state.locked[me];
+  const shownPick = iLocked && myPick?.round === round ? myPick.hand : null;
+
+  function pick(hand: RpsHand) {
+    setMyPick({ round, hand });
+    onMove({ kind: "pick", hand });
+  }
+
+  let pad: ReactNode = null;
+  if (!decided) {
+    if (me === null) {
+      // A spectator sees who has locked in, never what.
+      pad = (
+        <ul className="flex flex-col gap-1 text-sm">
+          {([0, 1] as const).map((seat) => (
+            <li key={seat} className="flex items-center justify-center gap-2">
+              <span style={{ color: colors[seat] }}>{names[seat]}</span>
+              {state.locked[seat] ? (
+                <Lock aria-hidden="true" className="text-muted-foreground size-4" />
+              ) : (
+                <span className="text-muted-foreground text-xs">{t("expenses.rpsChoosing")}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      );
+    } else if (iLocked) {
+      pad = (
+        <div className="flex flex-col items-center gap-2">
+          {shownPick ? (
+            <RpsHandIcon hand={shownPick} className="text-6xl" />
+          ) : (
+            <Lock aria-hidden="true" className="text-muted-foreground size-8" />
+          )}
+          <p className="text-muted-foreground text-sm font-medium">
+            {t("expenses.rpsLockedWaiting", { name: names[other] })}
+          </p>
+        </div>
+      );
+    } else {
+      pad = (
+        <div className="flex flex-col items-center gap-3">
+          <RpsHandPicker disabled={busy} onPick={pick} />
+          <p className="text-muted-foreground text-xs">
+            {state.locked[other]
+              ? t("expenses.rpsOpponentLocked", { name: names[other] })
+              : t("expenses.rpsHint")}
+          </p>
+        </div>
+      );
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div
+        className="flex flex-col gap-3 rounded-2xl p-3 select-none [-webkit-touch-callout:none]"
+        style={{
+          backgroundColor: `color-mix(in oklch, ${colors[me ?? 0]} 14%, var(--muted))`,
+        }}
+      >
+        <RpsScoreStrip names={names} colors={colors} score={rpsScore(state.rounds)} />
+        {pad && <div className="flex min-h-28 items-center justify-center">{pad}</div>}
+      </div>
+      {state.rounds.length > 0 && (
+        <ol aria-label={t("expenses.rpsRoundsTitle")} className="flex flex-col gap-1.5">
+          {state.rounds.map((played, index) => (
+            <RpsRoundRow
+              key={index}
+              round={played}
+              names={names}
+              colors={colors}
+              fresh={index === state.rounds.length - 1}
+            />
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 export const ONLINE_BOARDS = {
   tictactoe: OnlineTicTacToe,
   connectfour: OnlineConnectFour,
   memory: OnlineMemory,
   reaction: OnlineReaction,
+  rps: OnlineRps,
+  nim: OnlineNim,
+  dots: OnlineDots,
 } as const;

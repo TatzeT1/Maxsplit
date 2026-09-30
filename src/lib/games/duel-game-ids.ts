@@ -7,6 +7,9 @@ export const DUEL_GAME_IDS: readonly DuelGameId[] = [
   "connectfour",
   "memory",
   "reaction",
+  "rps",
+  "nim",
+  "dots",
 ];
 
 export function isDuelGameId(value: string): value is DuelGameId {
@@ -19,4 +22,7 @@ export const DUEL_GAME_META: Record<DuelGameId, { emoji: string; titleKey: Trans
   connectfour: { emoji: "🔴", titleKey: "expenses.connectFourTitle" },
   memory: { emoji: "🧠", titleKey: "expenses.memoryTitle" },
   reaction: { emoji: "⚡", titleKey: "expenses.reactionTitle" },
+  rps: { emoji: "✊", titleKey: "expenses.rpsTitle" },
+  nim: { emoji: "🥢", titleKey: "expenses.nimTitle" },
+  dots: { emoji: "✏️", titleKey: "expenses.dotsTitle" },
 };
