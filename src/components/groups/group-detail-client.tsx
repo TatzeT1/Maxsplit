@@ -11,6 +11,7 @@ import { BalanceHero } from "@/components/groups/balance-hero";
 import { BalancesTab } from "@/components/groups/balances-tab";
 import { ChatEntryCard } from "@/components/groups/chat-entry-card";
 import { GamesTab } from "@/components/groups/games-tab";
+import { StartGameButton } from "@/components/groups/start-game-button";
 import { GroupSettingsTab } from "@/components/groups/group-settings-tab";
 import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
@@ -325,6 +326,8 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         <TournamentBanner groupId={groupId} currentUid={user.uid} />
 
         <ChatEntryCard groupId={groupId} members={group.members} currentUid={user.uid} />
+
+        <StartGameButton groupId={groupId} group={group} currentUid={user.uid} className="w-full" />
 
         <Tabs value={tab} onValueChange={selectTab} className="pt-1">
           <div ref={setTabsSentinel} aria-hidden="true" />

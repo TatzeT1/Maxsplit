@@ -260,6 +260,12 @@ export interface GameExpenseDraft {
   category: CategoryId | null;
   emoji: string | null;
   paidBy: Record<string, number>;
+  /**
+   * A game played "for a stake" with no bill behind it: nobody paid up front,
+   * so the winner becomes the payer once the bracket is decided and the losers
+   * split the amount. `paidBy` is empty until then.
+   */
+  payerIsWinner?: boolean;
 }
 
 /**

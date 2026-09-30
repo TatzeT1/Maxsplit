@@ -23,11 +23,12 @@ import {
   FATE_ICON,
   FATE_TEXT_CLASS,
   MatchStakes,
+  useOutcomeKeys,
 } from "@/components/groups/split-game/tournament/tournament-fate";
 import { openOnlineMatch, playOnlineMove } from "@/lib/actions/tournaments";
 import { duelPalettes } from "@/lib/games/member-colors";
 import { applyOnlineMove, liveTurn, type OnlineMove } from "@/lib/games/online-match";
-import { matchFates, type MatchFate } from "@/lib/games/tournament-status";
+import { matchFates } from "@/lib/games/tournament-status";
 import { useLiveMatch } from "@/lib/games/use-tournament";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { playAppliedSound, playLaughSound, playReelStopSound } from "@/lib/sound/game-sounds";
@@ -35,12 +36,6 @@ import { cn } from "@/lib/utils";
 import type { GroupMember, LiveMatchState, Tournament, TournamentMatch } from "@/lib/types";
 
 const EYEBROW = "text-[11px] font-semibold tracking-[0.12em] uppercase";
-
-const OUTCOME_KEY: Record<MatchFate, TranslationKey> = {
-  safe: "expenses.tournamentOutcomeSafe",
-  pays: "expenses.tournamentOutcomePays",
-  advances: "expenses.tournamentOutcomeAdvances",
-};
 
 /** Hint under "Du bist dran" per game — the same copy the one-phone boards use. */
 const TURN_HINT: Record<"tictactoe" | "connectfour" | "memory", TranslationKey> = {
@@ -92,6 +87,7 @@ export function OnlineMatchRunner({
   onDone: () => void;
 }) {
   const t = useT();
+  const outcomeKeys = useOutcomeKeys();
   const { live, errorCode, loading } = useLiveMatch(groupId, tournament.id, match.id);
   const [openError, setOpenError] = useState<string | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -412,7 +408,7 @@ export function OnlineMatchRunner({
               return (
                 <span key={uid} className="flex items-center gap-1.5">
                   <Icon aria-hidden="true" className={cn("size-4", FATE_TEXT_CLASS[fate])} />
-                  {t(OUTCOME_KEY[fate], { name: nameOf(uid) })}
+                  {t(outcomeKeys[fate], { name: nameOf(uid) })}
                 </span>
               );
             })}

@@ -4,11 +4,12 @@ import { ChevronRight, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/components/locale-provider";
 import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
-import { isOnlineMatch } from "@/lib/games/online-match";
+import { isOnlineMatch, liveTurn } from "@/lib/games/online-match";
 import { bracketProgress } from "@/lib/games/tournament-status";
-import { useRunningTournaments } from "@/lib/games/use-tournament";
+import { useLiveMatch, useRunningTournaments } from "@/lib/games/use-tournament";
 import { useTournamentPresence } from "@/lib/games/use-tournament-presence";
 import { cn } from "@/lib/utils";
+import type { LiveMatch } from "@/lib/types";
 
 /**
  * Shows up on the group page whenever a tournament is running — the entry
@@ -17,6 +18,12 @@ import { cn } from "@/lib/utils";
  * Turns primary and pulses when the signed-in member has a match ready to
  * play right now; otherwise says how far along the tournament is.
  */
+/** Your move on a running board — the reaction duel has no turns, so there both players are "on". */
+function isMyTurn(live: LiveMatch, uid: string): boolean {
+  const turn = liveTurn(live.state);
+  return turn === null || live.players[turn] === uid;
+}
+
 export function TournamentBanner({ groupId, currentUid }: { groupId: string; currentUid: string }) {
   const t = useT();
   const { tournaments, errorCode } = useRunningTournaments(groupId);
@@ -27,6 +34,20 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
     groupId,
     running?.playMode === "online" && currentUid in running.entrants ? running.id : null,
   );
+
+  // Whose move it is lives on the match's board, not on the tournament: an
+  // online match that is running is only "yours to act on" while it's your turn.
+  const myPlayingOnline = running
+    ? Object.values(running.matches).find(
+        (match) =>
+          match.status === "playing" &&
+          match.players.includes(currentUid) &&
+          isOnlineMatch(running, match),
+      )
+    : undefined;
+  const { live } = useLiveMatch(groupId, running?.id ?? "", myPlayingOnline?.id ?? null, {
+    resync: false,
+  });
 
   // Per AGENTS.md: a failed listener must never look like "no tournament".
   if (errorCode) {
@@ -55,8 +76,22 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
     (match) =>
       match.players.includes(currentUid) &&
       (match.status === "ready" ||
-        (match.status === "playing" && isOnlineMatch(tournament, match))),
+        (match.status === "playing" &&
+          isOnlineMatch(tournament, match) &&
+          // Until the board has loaded we don't know whose turn it is — don't claim it's yours.
+          live !== null &&
+          live.winnerUid === null &&
+          isMyTurn(live, currentUid))),
   );
+  // The other side is on the move: say so instead of showing the plain progress line.
+  const waitingOn =
+    !hasReadyMatch && live && live.winnerUid === null
+      ? (() => {
+          const turn = liveTurn(live.state);
+          const uid = turn === null ? null : live.players[turn];
+          return uid && uid !== currentUid ? (tournament.entrants[uid]?.displayName ?? "") : null;
+        })()
+      : null;
   const challenger = tournament.entrants[tournament.createdBy]?.displayName ?? "";
   const title = online
     ? isDuel
@@ -97,11 +132,13 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
         >
           {hasReadyMatch
             ? yourTurnText
-            : t("expenses.tournamentBannerProgress", {
-                game: t(config.titleKey),
-                done: progress.doneCount,
-                total: progress.totalCount,
-              })}
+            : waitingOn
+              ? t("expenses.onlineWaitingForMove", { name: waitingOn })
+              : t("expenses.tournamentBannerProgress", {
+                  game: t(config.titleKey),
+                  done: progress.doneCount,
+                  total: progress.totalCount,
+                })}
         </p>
       </div>
       <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />

@@ -95,7 +95,10 @@ export function useLiveMatch(
   groupId: string,
   tournamentId: string,
   matchId: string | null,
+  /** The 3 s server double-check is for the board you're playing on; a glance from the group page doesn't need it. */
+  options: { resync?: boolean } = {},
 ): { live: LiveMatch | null; errorCode: string | null; loading: boolean } {
+  const resync = options.resync ?? true;
   const user = useCurrentUser();
   const [live, setLive] = useState<LiveMatch | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -129,7 +132,7 @@ export function useLiveMatch(
   // long while. While the match is undecided, ask the server directly every
   // few seconds and the moment the app comes back to the front. Only ever
   // moves forward (by `version`), so it can't undo a fresher snapshot.
-  const watching = !!user && !!matchId && live !== null && live.winnerUid === null;
+  const watching = resync && !!user && !!matchId && live !== null && live.winnerUid === null;
   useEffect(() => {
     if (!watching || !matchId) return;
     const ref = doc(db, "groups", groupId, "tournaments", tournamentId, "liveMatches", matchId);

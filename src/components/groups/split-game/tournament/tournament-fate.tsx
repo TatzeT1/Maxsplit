@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Receipt, ShieldCheck, type LucideIcon } from "lucide-react";
+import { createContext, useContext } from "react";
 import { useT } from "@/components/locale-provider";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { matchFates, type MatchFate } from "@/lib/games/tournament-status";
@@ -39,9 +40,34 @@ export const FATE_LABEL_KEY: Record<MatchFate, TranslationKey> = {
   advances: "expenses.tournamentAdvances",
 };
 
+/**
+ * Whether the game being shown is played for money. A game "just for fun"
+ * has nothing to pay, so its losers are just "out" — wording only; the
+ * bracket itself is identical.
+ */
+const StakeContext = createContext(true);
+export const TournamentStakeProvider = StakeContext.Provider;
+
+/** The label table for the surrounding game: "zahlt" with a stake, "verliert" without. */
+export function useFateLabelKeys(): Record<MatchFate, TranslationKey> {
+  const withStake = useContext(StakeContext);
+  return withStake ? FATE_LABEL_KEY : { ...FATE_LABEL_KEY, pays: "expenses.tournamentPaysFree" };
+}
+
+/** "{{name}} zahlt." / "{{name}} verliert." for a decided match. */
+export function useOutcomeKeys(): Record<MatchFate, TranslationKey> {
+  const withStake = useContext(StakeContext);
+  return {
+    safe: "expenses.tournamentOutcomeSafe",
+    pays: withStake ? "expenses.tournamentOutcomePays" : "expenses.tournamentOutcomePaysFree",
+    advances: "expenses.tournamentOutcomeAdvances",
+  };
+}
+
 export function FateBadge({ fate, className }: { fate: MatchFate; className?: string }) {
   const t = useT();
   const Icon = FATE_ICON[fate];
+  const labelKeys = useFateLabelKeys();
   return (
     <span
       className={cn(
@@ -51,7 +77,7 @@ export function FateBadge({ fate, className }: { fate: MatchFate; className?: st
       )}
     >
       <Icon aria-hidden="true" className="size-3" />
-      {t(FATE_LABEL_KEY[fate])}
+      {t(labelKeys[fate])}
     </span>
   );
 }

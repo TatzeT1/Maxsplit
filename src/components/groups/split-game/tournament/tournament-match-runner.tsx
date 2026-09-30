@@ -21,10 +21,10 @@ import {
   FATE_ICON,
   FATE_TEXT_CLASS,
   MatchStakes,
+  useOutcomeKeys,
 } from "@/components/groups/split-game/tournament/tournament-fate";
 import { releaseTournamentMatch, reportTournamentMatchResult } from "@/lib/actions/tournaments";
-import { matchFates, type MatchFate } from "@/lib/games/tournament-status";
-import type { TranslationKey } from "@/lib/i18n/translate";
+import { matchFates } from "@/lib/games/tournament-status";
 import { cn } from "@/lib/utils";
 import type { GroupMember, TournamentAdvance, TournamentMatch } from "@/lib/types";
 
@@ -32,12 +32,6 @@ const WIN_BEAT_MS = 650;
 const DRAW_HOLD_MS = 1400;
 
 type Phase = "handoff" | "live" | "decided";
-
-const OUTCOME_KEY: Record<MatchFate, TranslationKey> = {
-  safe: "expenses.tournamentOutcomeSafe",
-  pays: "expenses.tournamentOutcomePays",
-  advances: "expenses.tournamentOutcomeAdvances",
-};
 
 /**
  * Plays exactly one claimed match, entirely locally on this device — per the
@@ -74,6 +68,7 @@ export function TournamentMatchRunner({
   onDone: () => void;
 }) {
   const t = useT();
+  const outcomeKeys = useOutcomeKeys();
   const [phase, setPhase] = useState<Phase>("handoff");
   const [players, setPlayers] = useState<[string, string]>(match.players as [string, string]);
   const [attempt, setAttempt] = useState(0);
@@ -230,7 +225,7 @@ export function TournamentMatchRunner({
               return (
                 <span key={uid} className="flex items-center gap-1.5">
                   <Icon aria-hidden="true" className={cn("size-4", FATE_TEXT_CLASS[fate])} />
-                  {t(OUTCOME_KEY[fate], { name: nameOf(uid) })}
+                  {t(outcomeKeys[fate], { name: nameOf(uid) })}
                 </span>
               );
             })}

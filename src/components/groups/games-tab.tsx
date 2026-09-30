@@ -2,6 +2,7 @@
 
 import { type CSSProperties, useMemo } from "react";
 import { SectionHeading } from "@/components/groups/section-heading";
+import { StartGameButton } from "@/components/groups/start-game-button";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { useT } from "@/components/locale-provider";
 import { categoryColorClasses, categoryIconElement } from "@/lib/categories";
@@ -134,12 +135,19 @@ export function GamesTab({
         <p className="text-muted-foreground max-w-xs text-sm text-pretty">
           {t("expenses.gamesEmptyBody")}
         </p>
+        <StartGameButton groupId={group.id} group={group} currentUid={currentUid} />
       </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-7">
+      <StartGameButton
+        groupId={group.id}
+        group={group}
+        currentUid={currentUid}
+        className="w-full"
+      />
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <SectionHeading>{t("expenses.lotteryOverviewTitle")}</SectionHeading>

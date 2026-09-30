@@ -66,3 +66,35 @@ describe("buildGameExpense", () => {
     expect(expense.splits).toEqual({ b: { rawValue: 1000, amountMinor: 1000 } });
   });
 });
+
+describe("stake games (payerIsWinner)", () => {
+  const stake: GameExpenseDraft = { ...draft, paidBy: {}, payerIsWinner: true };
+
+  it("accepts a draft with no payer yet", () => {
+    expect(validateGameExpenseDraft(stake, members)).toBeNull();
+  });
+
+  it("rejects a preset payer", () => {
+    expect(validateGameExpenseDraft({ ...stake, paidBy: { a: 1000 } }, members)).toBe(
+      "invalid-payer",
+    );
+  });
+
+  it("books the winner as the payer and splits across the losers", () => {
+    const expense = buildGameExpense({
+      draft: stake,
+      loserUids: ["b", "c"],
+      winnerUid: "a",
+      createdBy: "a",
+      now: "2026-09-28T12:00:00.000Z",
+    });
+    expect(expense.paidBy).toEqual({ a: 1000 });
+    expect(expense.splits.b.amountMinor + expense.splits.c.amountMinor).toBe(1000);
+  });
+
+  it("refuses to build without a winner", () => {
+    expect(() =>
+      buildGameExpense({ draft: stake, loserUids: ["b"], createdBy: "a", now: "x" }),
+    ).toThrow();
+  });
+});

@@ -102,14 +102,19 @@ function applyBracketUpdate(input: {
       // Re-checked at finish, not just at start: someone may have left the
       // group (or the payer been removed) while the tournament ran.
       const draftError = validateGameExpenseDraft(draft, group.members);
+      // A stake game pays the winner: exactly one entrant is left standing.
+      const winnerUids = Object.keys(merged.entrants).filter((uid) => !loserUids.includes(uid));
+      const winnerUid = winnerUids.length === 1 ? winnerUids[0] : undefined;
+      const winnerMissing = draft.payerIsWinner && (!winnerUid || !(winnerUid in group.members));
       const losersPresent = loserUids.every((uid) => uid in group.members);
-      if (draftError || !losersPresent) {
+      if (draftError || !losersPresent || winnerMissing) {
         update.autoBookError = draftError ?? "member-left";
       } else {
         const expenseRef = groupRef.collection("expenses").doc();
         const expense = buildGameExpense({
           draft,
           loserUids,
+          winnerUid,
           createdBy: tournament.createdBy,
           now: at,
         });
@@ -286,6 +291,10 @@ export async function createTournament(input: {
     const draftError = validateGameExpenseDraft(autoBook, group.members);
     if (draftError) return { ok: false, error: draftError };
     if (autoBook.currency !== group.currency) return { ok: false, error: "invalid-currency" };
+    // "Winner takes the stake" needs one winner: play until everyone else has lost.
+    if (autoBook.payerIsWinner && input.targetLoserCount !== poolUids.length - 1) {
+      return { ok: false, error: "invalid-count" };
+    }
   }
 
   const tournamentsRef = groupRef.collection("tournaments");

@@ -6,7 +6,7 @@ import { useT } from "@/components/locale-provider";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import {
   FATE_ICON,
-  FATE_LABEL_KEY,
+  useFateLabelKeys,
   FATE_TEXT_CLASS,
 } from "@/components/groups/split-game/tournament/tournament-fate";
 import { layoutTree } from "@/lib/games/bracket-layout";
@@ -36,6 +36,7 @@ function PlayerRow({
   isYou: boolean;
 }) {
   const t = useT();
+  const fateKeys = useFateLabelKeys();
   if (!uid) {
     return (
       <div className="text-muted-foreground flex items-center gap-2 py-1 text-sm">
@@ -70,12 +71,12 @@ function PlayerRow({
           {t("expenses.tournamentYou")}
         </span>
       )}
-      {fate && <span className="sr-only">— {t(FATE_LABEL_KEY[fate])}</span>}
+      {fate && <span className="sr-only">— {t(fateKeys[fate])}</span>}
       {role === "champion" ? (
         <Crown aria-hidden="true" className="ml-auto size-3.5 shrink-0 text-amber-400" />
       ) : fate === "pays" ? (
         <span className="bg-destructive/15 text-destructive ml-auto shrink-0 rounded px-1 text-[10px] leading-4 font-semibold">
-          {t("expenses.tournamentPays")}
+          {t(fateKeys.pays)}
         </span>
       ) : (
         FateIcon && (
@@ -147,6 +148,7 @@ function MatchCard({
 /** What every mark on the bracket means — the first thing a first-time viewer needs and the one thing the tree alone can't say. */
 export function BracketLegend({ className }: { className?: string }) {
   const t = useT();
+  const fateKeys = useFateLabelKeys();
   const fates: MatchFate[] = ["safe", "advances", "pays"];
   return (
     <div
@@ -168,7 +170,7 @@ export function BracketLegend({ className }: { className?: string }) {
         return (
           <span key={fate} className="flex items-center gap-1">
             <Icon aria-hidden="true" className={cn("size-3.5", FATE_TEXT_CLASS[fate])} />
-            {t(FATE_LABEL_KEY[fate])}
+            {t(fateKeys[fate])}
           </span>
         );
       })}

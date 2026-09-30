@@ -268,6 +268,18 @@ when adding a new expense (it auto-books) and with ≥2 pool members who have an
   reports `REACTION_ONLINE_TIMEOUT_MS` so the match can't hang.
 - **Placeholders** have no phone: a match with one plays locally on its opponent's phone
   via the old claim flow (`isOnlineMatch` decides per match).
+- **"Spiel starten" — a duel without an expense form.** `StartGameButton` (Spiele tab + group
+  page) opens `StartGameDialog`: pick one of the four duels, who plays (real members only) and an
+  optional stake (default 0 €). Always online, always a bracket. **Stake 0** → `autoBook: null`,
+  nothing is booked ("verliert" instead of "zahlt" via `TournamentStakeProvider`; a finished
+  free game shows "nichts zu verrechnen"). **Stake > 0** → `autoBook` with `payerIsWinner: true`
+  (`paidBy: {}`) and `targetLoserCount = pool − 1`, so exactly one player is left standing;
+  `applyBracketUpdate` books the expense with the **winner as payer** and the losers splitting it
+  (`buildGameExpense({ winnerUid })`). `createTournament` rejects a `payerIsWinner` draft with any
+  other loser count. If the winner left the group meanwhile, `autoBookError` says so.
+- **The banner tells the truth about turns.** `TournamentBanner` reads the player's live board
+  (`useLiveMatch(..., { resync: false })`): "Du bist dran!" only when it really is their move
+  (or a fresh, unopened match); otherwise "Warte auf X …".
 - **Chat under the board.** `MatchChat` (`online/match-chat.tsx`) shows the latest group messages
   and a composer below every online match — same `messages` collection as [[Chat]], so nobody
   leaves the game to talk. Marks the chat read; offline it can't send.

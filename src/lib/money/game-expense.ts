@@ -18,6 +18,10 @@ export function validateGameExpenseDraft(
   if (!isIsoDate(draft.date)) return "invalid-date";
   if (draft.category !== null && !isCategoryId(draft.category)) return "invalid-category";
   if (!isValidEmoji(draft.emoji)) return "invalid-emoji";
+  if (draft.payerIsWinner) {
+    // The winner isn't known yet; a preset payer would contradict "winner takes it".
+    return Object.keys(draft.paidBy).length === 0 ? null : "invalid-payer";
+  }
   const payerUids = Object.keys(draft.paidBy);
   if (payerUids.length === 0) return "invalid-payer";
   if (!payerUids.every((uid) => uid in members)) return "forbidden";
@@ -40,11 +44,14 @@ export function validateGameExpenseDraft(
 export function buildGameExpense(input: {
   draft: GameExpenseDraft;
   loserUids: string[];
+  /** Required when the draft is `payerIsWinner`: the one player who didn't lose. */
+  winnerUid?: string;
   createdBy: string;
   now: string;
 }): Omit<Expense, "id"> {
-  const { draft, loserUids, createdBy, now } = input;
+  const { draft, loserUids, winnerUid, createdBy, now } = input;
   if (loserUids.length === 0) throw new Error("A game expense needs at least one loser");
+  if (draft.payerIsWinner && !winnerUid) throw new Error("A stake game needs a winner to pay");
   const amounts = splitEqual(draft.amountMinor, loserUids);
   const splits = Object.fromEntries(
     loserUids.map((uid) => [uid, { rawValue: amounts[uid], amountMinor: amounts[uid] }]),
@@ -56,7 +63,7 @@ export function buildGameExpense(input: {
     date: draft.date,
     category: draft.category,
     emoji: draft.emoji,
-    paidBy: draft.paidBy,
+    paidBy: draft.payerIsWinner ? { [winnerUid!]: draft.amountMinor } : draft.paidBy,
     splitMode: "exact",
     splits,
     createdBy,

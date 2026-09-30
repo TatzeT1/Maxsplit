@@ -12,7 +12,7 @@ import {
   Wifi,
   type LucideIcon,
 } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +34,7 @@ import {
   FATE_ICON,
   FATE_TEXT_CLASS,
   MatchStakes,
+  TournamentStakeProvider,
 } from "@/components/groups/split-game/tournament/tournament-fate";
 import { TournamentMatchRunner } from "@/components/groups/split-game/tournament/tournament-match-runner";
 import { OnlineMatchRunner } from "@/components/groups/split-game/online/online-match-runner";
@@ -424,7 +425,7 @@ function StandingsGroup({
  * reference. Playing a claimed match swaps the whole view for
  * `TournamentMatchRunner` until it's reported or left.
  */
-export function TournamentView({
+function TournamentViewBody({
   groupId,
   tournament,
   members,
@@ -727,6 +728,10 @@ export function TournamentView({
               <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
               {t("expenses.onlineBookFailed")}
             </p>
+          ) : tournament.playMode === "online" && !tournament.autoBook ? (
+            <p className="text-muted-foreground text-center text-xs">
+              {t("expenses.onlineFriendlyDone")}
+            </p>
           ) : onApply ? (
             <Button
               type="button"
@@ -993,5 +998,18 @@ export function TournamentView({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * A game played for a stake reads "zahlt"; one played just for fun has
+ * nothing to pay, so its losers are simply out (`TournamentStakeProvider`).
+ */
+export function TournamentView(props: ComponentProps<typeof TournamentViewBody>) {
+  const withStake = props.tournament.stake !== null || !!props.tournament.autoBook;
+  return (
+    <TournamentStakeProvider value={withStake}>
+      <TournamentViewBody {...props} />
+    </TournamentStakeProvider>
   );
 }
