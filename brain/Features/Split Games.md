@@ -268,6 +268,13 @@ when adding a new expense (it auto-books) and with ≥2 pool members who have an
   reports `REACTION_ONLINE_TIMEOUT_MS` so the match can't hang.
 - **Placeholders** have no phone: a match with one plays locally on its opponent's phone
   via the old claim flow (`isOnlineMatch` decides per match).
+- **Chat under the board.** `MatchChat` (`online/match-chat.tsx`) shows the latest group messages
+  and a composer below every online match — same `messages` collection as [[Chat]], so nobody
+  leaves the game to talk. Marks the chat read; offline it can't send.
+- **Moves arrive fast, and a stalled listener heals itself.** Firestore uses
+  `experimentalAutoDetectLongPolling` (buffering mobile networks/proxies delayed the stream), and
+  `useLiveMatch` backstops the listener with a `getDocFromServer` every 3 s while the match is
+  undecided, plus on `visibilitychange`/`focus`/`online` — it only ever applies a higher `version`.
 - **Forfeit** ("Aufgeben") ends your match as a loss — the escape hatch for "we're done".
 
 **Auto-booking.** The `AddExpenseDialog` hands the game a `GameExpenseDraft` (description,

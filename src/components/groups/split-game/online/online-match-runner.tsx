@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { useT } from "@/components/locale-provider";
 import { DuelDrawNotice } from "@/components/groups/split-game/duel-ladder";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
+import { MatchChat } from "@/components/groups/split-game/online/match-chat";
 import { ONLINE_BOARDS } from "@/components/groups/split-game/online/online-boards";
 import {
   FATE_ICON,
@@ -442,6 +443,8 @@ export function OnlineMatchRunner({
       {!decided && (
         <MatchStakes advance={tournament.advance} match={match} className="justify-center" />
       )}
+
+      <MatchChat groupId={groupId} members={members} currentUid={currentUid} />
 
       {me !== null && !decided && (
         <AlertDialog>

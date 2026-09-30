@@ -33,6 +33,10 @@ function createDb(app: FirebaseApp): Firestore {
   try {
     return initializeFirestore(app, {
       localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+      // Some mobile networks and proxies buffer the streaming (WebChannel)
+      // connection, so snapshots arrive seconds late or not at all. This
+      // probes the stream once and falls back to long polling if it stalls.
+      experimentalAutoDetectLongPolling: true,
     });
   } catch {
     // Already initialized: this module re-evaluates across Fast Refresh in dev.

@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, doc, onSnapshot, query, where } from "firebase/firestore";
+import { collection, doc, getDocFromServer, onSnapshot, query, where } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
@@ -81,6 +81,9 @@ export function useRunningTournaments(groupId: string): {
   return { tournaments, errorCode };
 }
 
+/** How often an undecided online match double-checks the server, beyond its listener. */
+const RESYNC_INTERVAL_MS = 3000;
+
 /**
  * Subscribes to one online match's live board. Same contract as
  * `useTournament`: an error must never read as "still loading", so callers
@@ -120,6 +123,41 @@ export function useLiveMatch(
       },
     );
   }, [groupId, tournamentId, matchId, user]);
+
+  // Safety net under the listener: a phone that was backgrounded, or sits on
+  // a network that buffers the stream, can miss the opponent's move for a
+  // long while. While the match is undecided, ask the server directly every
+  // few seconds and the moment the app comes back to the front. Only ever
+  // moves forward (by `version`), so it can't undo a fresher snapshot.
+  const watching = !!user && !!matchId && live !== null && live.winnerUid === null;
+  useEffect(() => {
+    if (!watching || !matchId) return;
+    const ref = doc(db, "groups", groupId, "tournaments", tournamentId, "liveMatches", matchId);
+    let cancelled = false;
+    const resync = () => {
+      if (document.visibilityState === "hidden" || !navigator.onLine) return;
+      getDocFromServer(ref)
+        .then((snapshot) => {
+          if (cancelled || !snapshot.exists()) return;
+          const fresh = { id: snapshot.id, ...snapshot.data() } as LiveMatch;
+          setLive((current) => (current && fresh.version > current.version ? fresh : current));
+        })
+        .catch(() => {
+          // The listener reports real errors; this is only a backstop.
+        });
+    };
+    const timer = setInterval(resync, RESYNC_INTERVAL_MS);
+    document.addEventListener("visibilitychange", resync);
+    window.addEventListener("online", resync);
+    window.addEventListener("focus", resync);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", resync);
+      window.removeEventListener("online", resync);
+      window.removeEventListener("focus", resync);
+    };
+  }, [watching, groupId, tournamentId, matchId]);
 
   return { live, errorCode, loading: !!matchId && !loaded && !errorCode };
 }
