@@ -4,7 +4,7 @@ tags: [feature, push, pwa]
 
 # Push Notifications
 
-Four events, each switchable in the profile (ADR-004 in `docs/DECISIONS.md`):
+Five events, each switchable in the profile (ADR-004 in `docs/DECISIONS.md`):
 
 | Event (`PushEvent`)              | Who gets it                                                       | Example                                                                |
 | -------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
@@ -12,6 +12,7 @@ Four events, each switchable in the profile (ADR-004 in `docs/DECISIONS.md`):
 | `settlement` — Zahlung erhalten  | the receiver, unless they entered it                              | "Ben hat dir 52,50 € gezahlt"                                          |
 | `challenge` — Herausforderung    | everyone drawn into an **online** game, minus the challenger      | "Max fordert dich zu Vier gewinnt heraus – es geht um Pizza · 36,00 €" |
 | `turn` — Du bist dran            | the player to move / whose match is waiting                       | "Lea hat gezogen – Tic-Tac-Toe in WG Küche"                            |
+| `chat` — Chat-Nachricht          | every other member with an account; one `tag` per group chat      | "Max: Wer bringt Getränke mit?"                                        |
 
 Placeholders never get one (no account, no device). Recurring bookings (cron) and a
 game's auto-booked stake also produce `expense` pushes — the stake one skips the game's
@@ -50,7 +51,16 @@ players, who watched it happen.
   Server-only data.
 - **Service worker** (`public/sw.js`, shared with [[Offline Mode]]): shows every push
   (Safari revokes the permission of a site whose pushes stay silent), same `tag` replaces
-  quietly, a tap focuses/navigates an open window or opens one — same origin only.
+  quietly, a tap focuses/navigates an open window or opens one — same origin only. After
+  showing one it posts `notification-shown` to open windows.
+- **Clearing what's been seen** (`src/lib/push/dismiss.ts`, run by
+  `ServiceWorkerRegistration`): while a page is visible, this device's notifications whose
+  `url` leads to that pathname are closed — on open, on return from the background, and on
+  `notification-shown`. Chat → that group's chat pushes; group page → its expense and
+  payment pushes; tournament → its challenge and turn. Every push is still delivered;
+  this only keeps the lock screen from filling with things already read. **Per device
+  only**: reading on the laptop can't clear the phone — that would take a silent push,
+  which Safari punishes (see above).
 
 ## The device side (`src/lib/push/client.ts`, `components/notification-settings.tsx`)
 

@@ -294,14 +294,21 @@ self.addEventListener("push", (event) => {
   // Every push must show something: Safari revokes the permission of a site
   // whose pushes stay silent.
   event.waitUntil(
-    self.registration.showNotification(data.title || "Split", {
-      body: data.body || "",
-      icon: "/icon",
-      // Same tag replaces the earlier notification quietly (a second "Du bist
-      // dran" for the same match doesn't buzz again).
-      tag: data.tag,
-      data: { url: data.url || "/groups" },
-    }),
+    (async () => {
+      await self.registration.showNotification(data.title || "Split", {
+        body: data.body || "",
+        icon: "/icon",
+        // Same tag replaces the earlier notification quietly (a second "Du bist
+        // dran" for the same match doesn't buzz again).
+        tag: data.tag,
+        data: { url: data.url || "/groups" },
+      });
+      // An open app clears it again if it's showing that page right now
+      // (lib/push/dismiss.ts) — otherwise a live chat piles up on the lock screen.
+      for (const client of await self.clients.matchAll({ type: "window" })) {
+        client.postMessage({ type: "notification-shown" });
+      }
+    })(),
   );
 });
 

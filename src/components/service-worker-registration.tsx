@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { dismissNotificationsFor } from "@/lib/push/dismiss";
 
 function workerEnabled(): boolean {
   return process.env.NODE_ENV === "production" && "serviceWorker" in navigator;
@@ -18,6 +19,9 @@ function workerEnabled(): boolean {
  * loads — without this it only ever saved pages opened by a full reload, and
  * the installed app opened offline to "Dafür brauchst du Internet" (found on
  * a real iPhone; a test that navigated with full page loads never showed it).
+ *
+ * And while a page is on screen, clears the notifications that lead to it
+ * (lib/push/dismiss.ts): read the chat, and its pushes leave the lock screen.
  */
 export function ServiceWorkerRegistration() {
   const pathname = usePathname();
@@ -43,6 +47,25 @@ export function ServiceWorkerRegistration() {
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
     return () =>
       navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!workerEnabled()) return;
+    const dismiss = () => {
+      if (document.visibilityState === "visible") void dismissNotificationsFor(pathname);
+    };
+    dismiss();
+    // Back from the background onto this page; or a push for it arriving while
+    // it's open (the worker has to show every push, then tells us).
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "notification-shown") dismiss();
+    };
+    document.addEventListener("visibilitychange", dismiss);
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => {
+      document.removeEventListener("visibilitychange", dismiss);
+      navigator.serviceWorker.removeEventListener("message", onMessage);
+    };
   }, [pathname]);
 
   return null;
