@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useEffect, useEffectEvent, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,6 +101,7 @@ import {
   LedPanel,
   RollupMoney,
   SlotWinBanner,
+  Sunburst,
   WIN_GOLD,
   WinLine,
   type BulbMode,
@@ -143,8 +144,6 @@ const REEL_DURATIONS = [1.3, 1.8, 2.3];
 const TEASE_DURATION = 4;
 /** A held pair's respin: one reel, always teased. */
 const RESPIN_DURATION = 2.6;
-/** How far a reel overshoots its landing spot before snapping back — a real reel doesn't stop dead. */
-const OVERSHOOT = ROW_HEIGHT * 0.22;
 /** A three-of-a-kind shows its lit line and pulsing symbols this long before the takeover. */
 const LINE_SHOW_MS = 750;
 /** How long amount bubbles float before the list is cleared. */
@@ -184,14 +183,85 @@ const IDLE_STRIPS: SlotSymbol[][] = [
   ["swords", "seven", "clover"],
 ];
 /**
- * The lever's resting and pulled angles. It pivots from the housing like the
- * handle of a desk stamp or a hole punch, swinging down through an arc, rather
- * than sliding down a track the way a one-armed bandit's does.
+ * Roughly what the full-screen stage needs besides the reels, top to bottom:
+ * title bar and safe areas, the info strip, the jackpot marquee and bulbs,
+ * the scroll hint, and the control deck. Whatever is left of the screen's
+ * height goes to the three reel rows.
  */
-const LEVER_REST_DEG = -34;
-const LEVER_PULLED_DEG = 32;
-/** A loose spring for the lever snapping back up: it should visibly bounce, like a real return spring. */
-const LEVER_RETURN_SPRING = { type: "spring", stiffness: 320, damping: 11, mass: 0.8 } as const;
+const STAGE_CHROME_PX = 470;
+/** The widest the stage's column gets (`max-w-2xl`), and what it keeps for padding, frame and gaps. */
+const STAGE_MAX_WIDTH = 672;
+const REEL_SIDE_ROOM = 64;
+
+/** The reels' size: as wide as a third of the screen allows, as tall as the screen's height allows. */
+function measureReels(): { width: number; row: number } {
+  if (typeof window === "undefined") return { width: ROW_HEIGHT, row: ROW_HEIGHT };
+  const width = Math.max(
+    ROW_HEIGHT,
+    Math.floor((Math.min(window.innerWidth, STAGE_MAX_WIDTH) - REEL_SIDE_ROOM) / 3),
+  );
+  const byHeight = (window.innerHeight - STAGE_CHROME_PX) / VISIBLE_ROWS;
+  const row = Math.round(Math.max(ROW_HEIGHT, Math.min(byHeight, width * 1.2)));
+  return { width, row };
+}
+
+/** `measureReels`, kept current as the window turns or resizes. */
+function useReelGeometry() {
+  const [geometry, setGeometry] = useState(measureReels);
+  useEffect(() => {
+    const update = () => setGeometry(measureReels());
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  return geometry;
+}
+
+/** The stage's scroller (see `GameDialogContent`), the element that scrolls the machine and the tallies below it. */
+function stageScroller(element: HTMLElement | null): HTMLElement | null {
+  return element?.closest<HTMLElement>("[data-slot=stage-scroller]") ?? null;
+}
+
+/**
+ * The height the screen has between the stage's sticky title bar and its
+ * control deck, so the machine fills the whole first screen and the tallies
+ * start just below it, a scroll away. Follows rotation, the deck growing a
+ * Halten/Risiko row, and the iOS toolbar coming and going.
+ */
+function useFirstScreen(
+  stageRef: RefObject<HTMLElement | null>,
+  active: boolean,
+): number | undefined {
+  const [height, setHeight] = useState<number>();
+  useEffect(() => {
+    const scroller = stageScroller(stageRef.current);
+    if (!active || !scroller) return;
+    const column = stageRef.current?.parentElement;
+    const header = scroller.querySelector<HTMLElement>("[data-slot=dialog-header]");
+    const footer = scroller.querySelector<HTMLElement>("[data-slot=dialog-footer]");
+    const update = () => {
+      const gap = column ? parseFloat(getComputedStyle(column).rowGap) || 0 : 0;
+      setHeight(
+        Math.floor(
+          scroller.clientHeight -
+            (header?.offsetHeight ?? 0) -
+            (footer?.offsetHeight ?? 0) -
+            gap * 2,
+        ),
+      );
+    };
+    const observer = new ResizeObserver(update);
+    for (const element of [scroller, header, footer]) if (element) observer.observe(element);
+    return () => observer.disconnect();
+  }, [stageRef, active]);
+  return height;
+}
+
+/** The casino the reels play in: dark whatever the app's theme, like the win banners. */
+const CASINO_FRAME =
+  "dark bg-[radial-gradient(ellipse_at_50%_30%,oklch(0.3_0.09_300),oklch(0.16_0.05_280)_55%,oklch(0.1_0.02_270))]";
+/** The reels' paper: bright like a real machine's, so the symbols pop. */
+const REEL_PAPER = "oklch(0.97 0.015 85)";
+const REEL_PAPER_GOLD = "oklch(0.95 0.06 88)";
 
 /** Crypto-backed randomness for the game module: who pays must not be predictable. */
 const cryptoRandom: SlotRandom = {
@@ -446,6 +516,10 @@ export function SplitSlotDialog({
   const idRef = useRef(0);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const reelsRef = useRef<HTMLDivElement | null>(null);
+  const infoRef = useRef<HTMLDivElement | null>(null);
+  const { width: reelWidth, row: rowHeight } = useReelGeometry();
+  /** How far a reel overshoots its landing spot before snapping back — a real reel doesn't stop dead. */
+  const overshoot = rowHeight * 0.22;
   const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
   const speed = turbo ? TURBO_SPEED : 1;
   const ms = (value: number) => Math.round(value * speed);
@@ -493,6 +567,10 @@ export function SplitSlotDialog({
   const pending = game?.pending ?? null;
   const choosing = pending && pending.type !== "gift" && !busy && !takeover ? pending : null;
   const gifting = pending?.type === "gift" && !takeover && !pulling && !announcing ? pending : null;
+  const overlayActive = Boolean(
+    choosing || gifting || giftShow || duelShow || takeover || gambleFlip,
+  );
+  const firstScreen = useFirstScreen(stageRef, step === "playing" && game !== null);
   const gambleOffer = game?.gamble && !busy && !pending ? game.gamble : null;
   const holdOffer = game?.hold && !busy && !pending ? game.hold : null;
 
@@ -715,7 +793,32 @@ export function SplitSlotDialog({
     if (respin && !reduceMotion) playDrumrollSound(RESPIN_DURATION * speed - 0.1);
   }
 
+  /**
+   * Brings the machine back into view if someone scrolled down to the
+   * tallies: every pull, hold and Risiko plays out up there.
+   */
+  function showMachine() {
+    const scroller = stageScroller(stageRef.current);
+    if (!scroller || scroller.scrollTop < 8) return;
+    scroller.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  /** Scrolls the stage down to the tallies, just under the sticky title bar. */
+  function showInfo() {
+    const info = infoRef.current;
+    const scroller = stageScroller(info);
+    if (!info || !scroller) return;
+    const header = scroller.querySelector<HTMLElement>("[data-slot=dialog-header]");
+    const top =
+      scroller.scrollTop +
+      info.getBoundingClientRect().top -
+      scroller.getBoundingClientRect().top -
+      (header?.offsetHeight ?? 0);
+    scroller.scrollTo({ top, behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
   function clearStage() {
+    showMachine();
     clearTimers();
     queueRef.current = [];
     setTakeover(null);
@@ -1286,12 +1389,13 @@ export function SplitSlotDialog({
     );
   }
 
-  const toolbarButton =
-    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-(--duration-fast) active:scale-95 disabled:opacity-50";
+  /** The round switches either side of the spin button. */
+  const deckToggle =
+    "flex size-11 shrink-0 items-center justify-center rounded-full text-lg ring-1 transition-[background-color,transform] duration-(--duration-fast) active:scale-90 disabled:opacity-50";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <GameDialogContent>
+      <GameDialogContent frameClassName={step === "playing" && game ? CASINO_FRAME : undefined}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎰</span>
@@ -1376,592 +1480,555 @@ export function SplitSlotDialog({
             <Paytable />
           </div>
         ) : (
-          <div ref={stageRef} className="relative flex flex-col gap-3">
-            <p aria-live="polite" className="sr-only">
-              {liveText}
-            </p>
+          <>
+            <div
+              ref={stageRef}
+              className="relative flex flex-col gap-2.5 text-white"
+              style={{ minHeight: firstScreen }}
+            >
+              {/* Light rays behind the machine, edge to edge and kept to the first screen. */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-4 bottom-0 left-1/2 w-screen -translate-x-1/2 overflow-hidden"
+              >
+                <Sunburst
+                  color={inFreeSpins ? "oklch(0.88 0.15 88 / 0.22)" : "oklch(0.8 0.12 300 / 0.14)"}
+                  className="top-1/2 left-1/2 size-[180vmax] -translate-x-1/2 -translate-y-1/2"
+                />
+              </span>
+              <p aria-live="polite" className="sr-only">
+                {liveText}
+              </p>
 
-            {done ? (
-              <div className="border-primary/30 bg-primary/5 animate-rise flex items-center justify-center gap-1.5 rounded-xl border p-2 text-sm font-medium">
-                <span aria-hidden="true">✓</span>
-                {t("expenses.slotFullyAllocated")}
-              </div>
-            ) : (
-              spinner && (
-                <div
-                  className={cn(
-                    "flex items-center justify-between gap-2 rounded-xl border p-2.5 transition-[border-color,background-color] duration-(--duration-base)",
-                    inFreeSpins && "border-[oklch(0.84_0.16_85)] bg-[oklch(0.84_0.16_85/0.08)]",
-                  )}
-                >
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <motion.span
-                      key={spinner}
-                      initial={reduceMotion ? false : { scale: 0.5, rotate: -14 }}
-                      animate={{ scale: 1, rotate: 0 }}
-                      transition={{ type: "spring", stiffness: 380, damping: 12 }}
-                      className="block shrink-0 rounded-full"
-                    >
-                      <GameAvatar name={name(spinner)} className="shadow-e1 size-10 text-base" />
-                    </motion.span>
-                    <span className="flex min-w-0 flex-col">
-                      <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
-                        {t("expenses.slotAtMachine")}
-                      </span>
-                      <span className="flex min-w-0 items-center gap-1">
-                        <span className="font-heading truncate text-lg leading-tight font-semibold">
-                          {name(spinner)}
+              {/* Top strip: who's at the machine, what's left of the bill. */}
+              {done ? (
+                <div className="animate-rise flex items-center justify-center gap-1.5 rounded-full bg-white/10 px-3 py-2 text-sm font-semibold ring-1 ring-white/15">
+                  <span aria-hidden="true">✓</span>
+                  {t("expenses.slotFullyAllocated")}
+                </div>
+              ) : (
+                spinner && (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <motion.span
+                        key={spinner}
+                        initial={reduceMotion ? false : { scale: 0.5, rotate: -14 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: "spring", stiffness: 380, damping: 12 }}
+                        className={cn(
+                          "block shrink-0 rounded-full",
+                          inFreeSpins && "shadow-[0_0_14px_oklch(0.84_0.16_85/0.8)]",
+                        )}
+                      >
+                        <GameAvatar
+                          name={name(spinner)}
+                          className="size-10 text-base ring-2 ring-white/70"
+                        />
+                      </motion.span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="text-[10px] font-semibold tracking-[0.14em] text-white/60 uppercase">
+                          {t("expenses.slotAtMachine")}
                         </span>
-                        <PlayerBadges game={game} uid={spinner} />
+                        <span className="flex min-w-0 items-center gap-1">
+                          <span className="font-heading truncate text-lg leading-tight font-semibold">
+                            {name(spinner)}
+                          </span>
+                          <PlayerBadges game={game} uid={spinner} />
+                        </span>
                       </span>
                     </span>
-                  </span>
-                  <span className="flex shrink-0 flex-col items-end gap-1">
-                    {inFreeSpins ? (
-                      <motion.span
-                        key={game.freeSpinsLeft}
-                        initial={reduceMotion ? false : { scale: 1.4 }}
-                        animate={{ scale: 1 }}
-                        className="rounded-full bg-[linear-gradient(180deg,oklch(0.9_0.13_90),oklch(0.75_0.16_70))] px-2 py-0.5 text-xs font-bold text-[oklch(0.3_0.07_60)] shadow-[0_0_10px_oklch(0.84_0.16_85/0.6)]"
-                      >
-                        🍒 {t("expenses.slotFreeSpinsBadge", { count: game.freeSpinsLeft })}
-                      </motion.span>
-                    ) : (
-                      <span
-                        className="flex items-center gap-1"
-                        aria-label={t("expenses.slotSpinCount", {
-                          current: spinNumber,
-                          total: SLOT_SPINS_PER_TURN,
-                        })}
-                      >
-                        {Array.from({ length: SLOT_SPINS_PER_TURN }, (_, index) => (
-                          <span
-                            key={index}
-                            className={cn(
-                              "block size-2.5 rounded-full border transition-colors duration-(--duration-base)",
-                              index < spinNumber - 1
-                                ? "border-primary bg-primary"
-                                : index === spinNumber - 1
-                                  ? "border-primary bg-primary/30"
-                                  : "border-border",
-                            )}
-                          />
-                        ))}
-                      </span>
-                    )}
-                    {upNext && (
-                      <span className="text-muted-foreground max-w-32 truncate text-xs">
-                        {t("expenses.slotNextUp", { name: name(upNext) })}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )
-            )}
-
-            <div className="bg-muted/40 flex flex-col gap-2.5 rounded-xl border p-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
-                    {t("expenses.slotRemainingLabel")}
-                  </span>
-                  <AnimatedMoney
-                    amountMinor={remaining}
-                    currency={currency}
-                    className="font-heading text-2xl leading-none font-semibold"
-                  />
-                </div>
-                <div className="flex flex-col items-end gap-0.5 text-right">
-                  <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
-                    {t("expenses.slotAllocatedLabel")}
-                  </span>
-                  <AnimatedMoney
-                    amountMinor={allocated}
-                    currency={currency}
-                    className="font-heading text-2xl leading-none font-semibold"
-                  />
-                </div>
-              </div>
-              <div className="bg-border relative h-1.5 overflow-hidden rounded-full">
-                <motion.div
-                  className="bg-primary absolute inset-y-0 left-0 rounded-full"
-                  animate={{
-                    width:
-                      amountMinor > 0 ? `${Math.min((allocated / amountMinor) * 100, 100)}%` : "0%",
-                  }}
-                  transition={reduceMotion ? { duration: 0 } : springs.weighted}
-                />
-              </div>
-            </div>
-
-            <div className="relative flex items-center justify-center py-1">
-              {/*
-                The cabinet: a paper card like every other surface in the app,
-                with a progressive-jackpot marquee and marquee bulbs, an LED
-                panel like a real machine's BET / WIN meters, and the reels in
-                pressed-in wells. During free spins it turns gold and fizzes,
-                and coins land above and below the payline.
-              */}
-              <motion.div
-                aria-hidden="true"
-                className={cn(
-                  "bg-card shadow-e2 relative flex flex-col gap-1.5 rounded-2xl px-3.5 py-2 ring-1 transition-shadow duration-(--duration-slow)",
-                  inFreeSpins
-                    ? "shadow-[0_0_24px_oklch(0.84_0.16_85/0.55)] ring-2 ring-[oklch(0.84_0.16_85)]"
-                    : "ring-foreground/10",
-                )}
-              >
-                <span className="bg-paper-texture pointer-events-none absolute inset-0 rounded-2xl opacity-70" />
-                {inFreeSpins && (
-                  <>
-                    <span className="pointer-events-none absolute inset-0 rounded-2xl bg-[oklch(0.84_0.16_85/0.12)]" />
-                    <AmbientBubbles count={14} className="absolute inset-0 rounded-2xl" />
-                  </>
-                )}
-                <JackpotMarquee
-                  label={t("expenses.slotJackpotLabel")}
-                  value={money(game.jackpotPotMinor)}
-                />
-                <BulbRow count={10} mode={bulbMode} />
-                <LedPanel
-                  cells={
-                    inFreeSpins || (game.coinPotMinor > 0 && !done)
-                      ? [
-                          {
-                            label: t("expenses.slotLedFreeSpins"),
-                            value: String(game.freeSpinsLeft),
-                            blink: true,
-                          },
-                          {
-                            label: t("expenses.slotLedPot"),
-                            value: money(game.coinPotMinor),
-                            blink: coinsFlying,
-                          },
-                          {
-                            label: t("expenses.slotLedMulti"),
-                            value: `×${game.freeSpinMultiplier}`,
-                            blink: game.freeSpinMultiplier > 1,
-                          },
-                        ]
-                      : [
-                          {
-                            label: t("expenses.slotLedStake"),
-                            value: money(game.stakeMinor),
-                          },
-                          {
-                            label: t("expenses.slotLedSpin"),
-                            value: done ? "–" : `${spinNumber}/${SLOT_SPINS_PER_TURN}`,
-                          },
-                          {
-                            label: t("expenses.slotLedLast"),
-                            value: landed ? t(OUTCOME_SHORT[landed.kind]) : "–",
-                            blink: landedGood,
-                            tone: landed && !landedGood && landed.kind !== "miss" ? "loss" : "win",
-                          },
-                        ]
-                  }
-                />
-                <span className="border-l-primary absolute top-[63%] left-1 -translate-y-1/2 border-y-[6px] border-l-[7px] border-y-transparent" />
-                <span className="border-r-primary absolute top-[63%] right-1 -translate-y-1/2 border-y-[6px] border-r-[7px] border-y-transparent" />
-                <div ref={reelsRef} className="relative flex gap-1.5">
-                  {[0, 1, 2].map((reelIndex) => {
-                    const spun = reels[reelIndex].length > 0;
-                    const strip = spun ? reels[reelIndex] : IDLE_STRIPS[reelIndex];
-                    const winnerIndex = strip.length - 3;
-                    const targetY = -(winnerIndex - 1) * ROW_HEIGHT;
-                    const teased = reelIndex === 2 && strip.length > STRIP_LENGTH;
-                    const inCombo = winReels.includes(reelIndex);
-                    const held = heldReels.includes(reelIndex);
-                    const mystery = !mysteryRevealed && mysteryReels.includes(reelIndex);
-                    const coin =
-                      landed && reelStopped[reelIndex]
-                        ? landed.coins.find((c) => c.reel === reelIndex)
-                        : undefined;
-                    const glowing =
-                      teasing &&
-                      ((heldReels.length === 0 && reelIndex === 2) ||
-                        (heldReels.length > 0 && !held));
-                    return (
-                      <div
-                        key={reelIndex}
-                        className={cn(
-                          "bg-muted shadow-pressed relative overflow-hidden rounded-lg transition-shadow duration-(--duration-base)",
-                          glowing && "ring-primary shadow-[0_0_18px_var(--primary)] ring-2",
-                          held && "ring-2 ring-[oklch(0.7_0.15_230)]",
-                          inFreeSpins && "bg-[oklch(0.84_0.16_85/0.14)]",
-                        )}
-                        style={{ width: ROW_HEIGHT, height: ROW_HEIGHT * VISIBLE_ROWS }}
-                      >
-                        <motion.div
-                          key={`${reelKeys[reelIndex]}-${reelIndex}`}
-                          className={cn(
-                            "flex flex-col transition-[filter] duration-150",
-                            !reelStopped[reelIndex] && "blur-[2px]",
-                          )}
-                          initial={{ y: 0 }}
-                          animate={{ y: spun ? [0, targetY - OVERSHOOT, targetY] : 0 }}
-                          transition={
-                            reduceMotion
-                              ? { duration: 0 }
-                              : {
-                                  duration: reelDuration(reelIndex, teased),
-                                  times: [0, teased ? 0.93 : 0.86, 1],
-                                  ease: [
-                                    teased ? [0.2, 0.45, 0.25, 1] : [0.12, 0.68, 0.12, 1],
-                                    [0.34, 1.56, 0.64, 1],
-                                  ],
-                                }
-                          }
-                          onAnimationComplete={() => handleReelStop(reelIndex)}
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      {inFreeSpins ? (
+                        <motion.span
+                          key={game.freeSpinsLeft}
+                          initial={reduceMotion ? false : { scale: 1.4 }}
+                          animate={{ scale: 1 }}
+                          className="rounded-full bg-[linear-gradient(180deg,oklch(0.9_0.13_90),oklch(0.75_0.16_70))] px-2 py-0.5 text-xs font-bold text-[oklch(0.3_0.07_60)] shadow-[0_0_10px_oklch(0.84_0.16_85/0.6)]"
                         >
-                          {strip.map((symbol, rowIndex) => (
-                            <ReelSymbol
-                              key={rowIndex}
-                              symbol={symbol}
-                              glow={lineColor}
-                              mystery={mystery && rowIndex === winnerIndex}
-                              flipIn={mysteryReels.includes(reelIndex) && rowIndex === winnerIndex}
-                              state={
-                                !landed || winReels.length === 0
-                                  ? "idle"
-                                  : rowIndex === winnerIndex && inCombo
-                                    ? "win"
-                                    : "dim"
-                              }
+                          🍒 {t("expenses.slotFreeSpinsBadge", { count: game.freeSpinsLeft })}
+                        </motion.span>
+                      ) : (
+                        <span
+                          className="flex items-center gap-1"
+                          aria-label={t("expenses.slotSpinCount", {
+                            current: spinNumber,
+                            total: SLOT_SPINS_PER_TURN,
+                          })}
+                        >
+                          {Array.from({ length: SLOT_SPINS_PER_TURN }, (_, index) => (
+                            <span
+                              key={index}
+                              className={cn(
+                                "block size-2.5 rounded-full border transition-colors duration-(--duration-base)",
+                                index < spinNumber - 1
+                                  ? "border-[oklch(0.84_0.16_85)] bg-[oklch(0.84_0.16_85)]"
+                                  : index === spinNumber - 1
+                                    ? "border-[oklch(0.84_0.16_85)] bg-[oklch(0.84_0.16_85/0.35)]"
+                                    : "border-white/30",
+                              )}
                             />
                           ))}
-                        </motion.div>
-                        {/* The drum curving away: rows fade into the well toward its edges. */}
-                        <span className="from-muted pointer-events-none absolute inset-x-0 top-0 h-9 bg-linear-to-b to-transparent" />
-                        <span className="from-muted pointer-events-none absolute inset-x-0 bottom-0 h-9 bg-linear-to-t to-transparent" />
-                        {/* Payline: the middle row is the one that counts. */}
-                        <span
-                          className={cn(
-                            "pointer-events-none absolute inset-x-0 border-y transition-colors duration-(--duration-base)",
-                            inCombo ? "border-transparent" : "border-primary/45",
-                          )}
-                          style={{
-                            top: ROW_HEIGHT,
-                            height: ROW_HEIGHT,
-                            backgroundColor: inCombo
-                              ? `color-mix(in oklch, ${lineColor} 18%, transparent)`
-                              : undefined,
-                          }}
-                        />
-                        {held && (
-                          <span className="absolute inset-x-0 bottom-1 z-20 text-center text-[9px] font-black tracking-wider text-[oklch(0.55_0.15_230)] uppercase">
-                            {t("expenses.slotHeld")}
-                          </span>
-                        )}
-                        {coin && landed && (
-                          <span
-                            key={`coin-${reelKeys[reelIndex]}`}
-                            className="absolute inset-x-0 z-20 flex items-center justify-center"
-                            style={{ top: coin.row * ROW_HEIGHT, height: ROW_HEIGHT }}
-                          >
-                            <CoinChip
-                              multiplier={coin.multiplier * landed.coinMultiplier}
-                              collect={coinsFlying}
-                            />
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {landed && winReels.length > 0 && (
-                    <WinLine
-                      key={reelKeys.join("-")}
-                      rowTop={ROW_HEIGHT}
-                      rowHeight={ROW_HEIGHT}
-                      color={lineColor}
+                        </span>
+                      )}
+                      {upNext && (
+                        <span className="max-w-32 truncate text-xs text-white/60">
+                          {t("expenses.slotNextUp", { name: name(upNext) })}
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                )
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-end justify-between gap-3">
+                  <span className="flex flex-col">
+                    <span className="text-[10px] font-semibold tracking-[0.14em] text-white/60 uppercase">
+                      {t("expenses.slotRemainingLabel")}
+                    </span>
+                    <AnimatedMoney
+                      amountMinor={remaining}
+                      currency={currency}
+                      className="font-heading text-xl leading-none font-semibold"
                     />
-                  )}
+                  </span>
+                  <span className="flex flex-col items-end">
+                    <span className="text-[10px] font-semibold tracking-[0.14em] text-white/60 uppercase">
+                      {t("expenses.slotAllocatedLabel")}
+                    </span>
+                    <AnimatedMoney
+                      amountMinor={allocated}
+                      currency={currency}
+                      className="font-heading text-xl leading-none font-semibold"
+                    />
+                  </span>
                 </div>
-                <BulbRow count={10} mode={bulbMode} />
-              </motion.div>
+                <div className="relative h-1.5 overflow-hidden rounded-full bg-white/15">
+                  <motion.div
+                    className="absolute inset-y-0 left-0 rounded-full bg-[linear-gradient(90deg,oklch(0.78_0.18_50),oklch(0.86_0.16_85))]"
+                    animate={{
+                      width:
+                        amountMinor > 0
+                          ? `${Math.min((allocated / amountMinor) * 100, 100)}%`
+                          : "0%",
+                    }}
+                    transition={reduceMotion ? { duration: 0 } : springs.weighted}
+                  />
+                </div>
+              </div>
 
               {/*
-                Decorative lever: purely a visual echo of the pull, not its own
-                control. It pivots from the housing's flank and swings through
-                an arc, like the handle of a desk stamp, then bounces back up
-                on a loose spring when the reels land.
-              */}
-              <div aria-hidden="true" className="relative h-24 w-14 shrink-0">
-                <span className="bg-card ring-foreground/10 shadow-e1 absolute top-1/2 left-0 h-12 w-3.5 -translate-y-1/2 rounded-r-lg ring-1" />
-                <motion.span
-                  className="absolute top-1/2 left-1.5 block h-2 w-11 origin-left -translate-y-1/2"
-                  initial={false}
-                  animate={{ rotate: pulling ? LEVER_PULLED_DEG : LEVER_REST_DEG }}
-                  transition={
-                    reduceMotion ? { duration: 0 } : pulling ? springs.snappy : LEVER_RETURN_SPRING
-                  }
-                >
-                  <span className="bg-foreground/25 absolute inset-y-0 right-2 left-0 rounded-full" />
-                  <span className="bg-primary ring-card shadow-e1 absolute top-1/2 right-0 h-7 w-4 -translate-y-1/2 rounded-full ring-2" />
-                </motion.span>
-                <span className="bg-card ring-foreground/20 shadow-e1 absolute top-1/2 left-0.5 size-3.5 -translate-y-1/2 rounded-full ring-1" />
-              </div>
-
-              <FloatingBubbles bubbles={bubbles} />
-            </div>
-
-            {!done && (
-              <div className="flex items-center justify-center gap-2">
-                <button
-                  type="button"
-                  aria-pressed={turbo}
-                  onClick={toggleTurbo}
-                  className={cn(
-                    toolbarButton,
-                    turbo
-                      ? "border-[oklch(0.84_0.16_85)] bg-[oklch(0.84_0.16_85/0.2)]"
-                      : "border-border hover:bg-muted",
-                  )}
-                >
-                  {t("expenses.slotTurbo")}
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={auto !== null}
-                  disabled={!spinner}
-                  onClick={() => setAuto(auto || !spinner ? null : { uid: spinner })}
-                  className={cn(
-                    toolbarButton,
-                    auto
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border hover:bg-muted",
-                  )}
-                >
-                  {auto ? t("expenses.slotAutoStop") : t("expenses.slotAuto")}
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={!soundOff}
-                  aria-label={t("expenses.slotSoundToggle")}
-                  onClick={toggleSound}
-                  className={cn(toolbarButton, "border-border hover:bg-muted")}
-                >
-                  {soundOff ? "🔇" : "🔊"}
-                </button>
-              </div>
-            )}
-
-            {done && <SlotAwards game={game} stats={stats} members={members} currency={currency} />}
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase">
-                {done ? t("expenses.gameResultEyebrow") : t("expenses.slotTallyLabel")}
-              </span>
-              <TallyList game={game} members={members} currency={currency} />
-            </div>
-
-            <Paytable />
-
-            {/* Clover or duel: the person who pulled it points at someone. */}
-            <AnimatePresence>
-              {choosing && (
+              The machine, as wide as the screen and as tall as it allows: a
+              dark cabinet in a gold neon frame with the progressive-jackpot
+              marquee and bulbs, and bright reels like a real machine's.
+              Light rays turn slowly behind it. During free spins it glows
+              gold and fizzes, and coins land above and below the payline.
+            */}
+              <div className="relative -mx-2 my-auto flex justify-center">
                 <motion.div
-                  key="choice"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
+                  aria-hidden="true"
                   className={cn(
-                    "absolute -inset-x-4 -inset-y-2 z-30 flex flex-col items-center justify-center gap-4 px-6 text-white",
-                    choosing.type === "duel"
-                      ? "bg-[radial-gradient(circle_at_50%_40%,oklch(0.32_0.07_250/0.96),oklch(0.12_0.03_260/0.96)_70%)]"
-                      : "bg-[radial-gradient(circle_at_50%_40%,oklch(0.36_0.1_150/0.95),oklch(0.14_0.03_260/0.95)_70%)]",
+                    "relative flex w-full flex-col items-center gap-2 rounded-[28px] bg-[linear-gradient(180deg,oklch(0.32_0.07_300),oklch(0.17_0.04_280))] px-2.5 py-2.5 ring-2 transition-shadow duration-(--duration-slow)",
+                    inFreeSpins
+                      ? "shadow-[0_0_44px_oklch(0.84_0.16_85/0.6),inset_0_1px_0_oklch(1_0_0/0.2)] ring-[oklch(0.88_0.15_88)]"
+                      : "shadow-[0_0_32px_oklch(0.84_0.16_85/0.28),inset_0_1px_0_oklch(1_0_0/0.15)] ring-[oklch(0.78_0.14_80)]",
                   )}
                 >
-                  <span aria-hidden="true" className="text-5xl">
-                    {choosing.type === "duel" ? "⚔️" : "🍀"}
-                  </span>
-                  <span className="font-heading text-center text-2xl font-semibold">
-                    {t(
-                      choosing.type === "duel"
-                        ? "expenses.slotDuelPick"
-                        : "expenses.slotChoiceTitle",
-                      { name: name(choosing.uid), amount: money(choosing.amountMinor) },
+                  {inFreeSpins && (
+                    <AmbientBubbles count={18} className="absolute inset-0 rounded-[28px]" />
+                  )}
+                  <JackpotMarquee
+                    label={t("expenses.slotJackpotLabel")}
+                    value={money(game.jackpotPotMinor)}
+                  />
+                  <BulbRow count={12} mode={bulbMode} />
+                  <div ref={reelsRef} className="relative flex justify-center gap-1.5 px-3">
+                    {/* Payline markers, pointing in from both sides. */}
+                    <span
+                      className="absolute left-0 -translate-y-1/2 border-y-[8px] border-l-[10px] border-y-transparent border-l-[oklch(0.84_0.16_85)]"
+                      style={{ top: rowHeight * 1.5 }}
+                    />
+                    <span
+                      className="absolute right-0 -translate-y-1/2 border-y-[8px] border-r-[10px] border-y-transparent border-r-[oklch(0.84_0.16_85)]"
+                      style={{ top: rowHeight * 1.5 }}
+                    />
+                    {[0, 1, 2].map((reelIndex) => {
+                      const spun = reels[reelIndex].length > 0;
+                      const strip = spun ? reels[reelIndex] : IDLE_STRIPS[reelIndex];
+                      const winnerIndex = strip.length - 3;
+                      const targetY = -(winnerIndex - 1) * rowHeight;
+                      const teased = reelIndex === 2 && strip.length > STRIP_LENGTH;
+                      const inCombo = winReels.includes(reelIndex);
+                      const held = heldReels.includes(reelIndex);
+                      const mystery = !mysteryRevealed && mysteryReels.includes(reelIndex);
+                      const coin =
+                        landed && reelStopped[reelIndex]
+                          ? landed.coins.find((c) => c.reel === reelIndex)
+                          : undefined;
+                      const glowing =
+                        teasing &&
+                        ((heldReels.length === 0 && reelIndex === 2) ||
+                          (heldReels.length > 0 && !held));
+                      const paper = inFreeSpins ? REEL_PAPER_GOLD : REEL_PAPER;
+                      return (
+                        <div
+                          key={reelIndex}
+                          className={cn(
+                            "relative overflow-hidden rounded-xl shadow-[inset_0_0_14px_oklch(0_0_0/0.35)] ring-1 ring-black/40 transition-shadow duration-(--duration-base)",
+                            glowing &&
+                              "shadow-[0_0_24px_oklch(0.84_0.16_85)] ring-4 ring-[oklch(0.84_0.16_85)]",
+                            held && "ring-4 ring-[oklch(0.7_0.15_230)]",
+                          )}
+                          style={{
+                            width: reelWidth,
+                            height: rowHeight * VISIBLE_ROWS,
+                            backgroundColor: paper,
+                          }}
+                        >
+                          <motion.div
+                            key={`${reelKeys[reelIndex]}-${reelIndex}`}
+                            className={cn(
+                              "flex flex-col transition-[filter] duration-150",
+                              !reelStopped[reelIndex] && "blur-[2px]",
+                            )}
+                            initial={{ y: 0 }}
+                            animate={{ y: spun ? [0, targetY - overshoot, targetY] : 0 }}
+                            transition={
+                              reduceMotion
+                                ? { duration: 0 }
+                                : {
+                                    duration: reelDuration(reelIndex, teased),
+                                    times: [0, teased ? 0.93 : 0.86, 1],
+                                    ease: [
+                                      teased ? [0.2, 0.45, 0.25, 1] : [0.12, 0.68, 0.12, 1],
+                                      [0.34, 1.56, 0.64, 1],
+                                    ],
+                                  }
+                            }
+                            onAnimationComplete={() => handleReelStop(reelIndex)}
+                          >
+                            {strip.map((symbol, rowIndex) => (
+                              <ReelSymbol
+                                key={rowIndex}
+                                symbol={symbol}
+                                glow={lineColor}
+                                rowHeight={rowHeight}
+                                mystery={mystery && rowIndex === winnerIndex}
+                                flipIn={
+                                  mysteryReels.includes(reelIndex) && rowIndex === winnerIndex
+                                }
+                                state={
+                                  !landed || winReels.length === 0
+                                    ? "idle"
+                                    : rowIndex === winnerIndex && inCombo
+                                      ? "win"
+                                      : "dim"
+                                }
+                              />
+                            ))}
+                          </motion.div>
+                          {/* The drum curving away: rows darken toward the reel's edges. */}
+                          <span className="pointer-events-none absolute inset-x-0 top-0 h-1/4 bg-linear-to-b from-black/35 to-transparent" />
+                          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-linear-to-t from-black/35 to-transparent" />
+                          {/* Payline: the middle row is the one that counts. */}
+                          <span
+                            className={cn(
+                              "pointer-events-none absolute inset-x-0 border-y-2 transition-colors duration-(--duration-base)",
+                              inCombo ? "border-transparent" : "border-[oklch(0.78_0.14_80/0.7)]",
+                            )}
+                            style={{
+                              top: rowHeight,
+                              height: rowHeight,
+                              backgroundColor: inCombo
+                                ? `color-mix(in oklch, ${lineColor} 22%, transparent)`
+                                : undefined,
+                            }}
+                          />
+                          {held && (
+                            <span className="absolute inset-x-0 bottom-1.5 z-20 text-center text-[10px] font-black tracking-wider text-[oklch(0.5_0.15_230)] uppercase">
+                              {t("expenses.slotHeld")}
+                            </span>
+                          )}
+                          {coin && landed && (
+                            <span
+                              key={`coin-${reelKeys[reelIndex]}`}
+                              className="absolute inset-x-0 z-20 flex items-center justify-center"
+                              style={{ top: coin.row * rowHeight, height: rowHeight }}
+                            >
+                              <CoinChip
+                                multiplier={coin.multiplier * landed.coinMultiplier}
+                                collect={coinsFlying}
+                              />
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {landed && winReels.length > 0 && (
+                      <WinLine
+                        key={reelKeys.join("-")}
+                        rowTop={rowHeight}
+                        rowHeight={rowHeight}
+                        color={lineColor}
+                      />
                     )}
-                  </span>
-                  <div className="grid w-full max-w-80 grid-cols-2 gap-2">
-                    {slotChoiceCandidates(game, choosing.uid).map((uid, index) => (
-                      <motion.button
-                        key={uid}
-                        type="button"
-                        data-choice=""
-                        onClick={() => choose(uid)}
-                        initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.06 }}
-                        className="flex flex-col items-center gap-1.5 rounded-xl bg-white/10 p-3 ring-1 ring-white/25 transition-colors hover:bg-white/20 active:scale-95"
-                      >
-                        <GameAvatar name={name(uid)} className="size-12 text-lg" />
-                        <span className="max-w-full truncate text-sm font-semibold">
-                          {name(uid)}
-                        </span>
-                      </motion.button>
-                    ))}
+                    <FloatingBubbles bubbles={bubbles} />
                   </div>
+                  <BulbRow count={12} mode={bulbMode} />
                 </motion.div>
-              )}
-            </AnimatePresence>
+              </div>
 
-            {/* Gift: pick one of three boxes. */}
-            <AnimatePresence>
-              {(gifting || giftShow) && (
-                <GiftPicker
-                  key="gift"
-                  title={t("expenses.slotGiftTitle", {
-                    name: name(gifting?.uid ?? giftShow?.outcome.uid ?? ""),
-                  })}
-                  boxes={giftBoxes.map(prizeFace)}
-                  picked={giftShow?.picked ?? null}
-                  onPick={openGift}
-                />
-              )}
-            </AnimatePresence>
-
-            {/* The duel's reels. */}
-            <AnimatePresence>
-              {duelShow && (
-                <DuelReveal
-                  key={duelShow.id}
-                  title={t("expenses.slotDuelTitle")}
-                  sides={[
-                    {
-                      name: name(duelShow.duel.challenger),
-                      symbol: duelShow.duel.challengerSymbol,
-                      loser: duelShow.duel.loser === duelShow.duel.challenger,
-                    },
-                    {
-                      name: name(duelShow.duel.opponent),
-                      symbol: duelShow.duel.opponentSymbol,
-                      loser: duelShow.duel.loser === duelShow.duel.opponent,
-                    },
-                  ]}
-                  resultLabel={t("expenses.slotDuelResult", {
-                    name: name(duelShow.duel.loser),
-                    amount: money(duelShow.charge?.amountMinor ?? 0),
-                  })}
-                />
-              )}
-            </AnimatePresence>
-
-            {/* The takeovers: a stamped slip for what costs, a casino banner for a win. */}
-            <AnimatePresence>
-              {takeover?.style === "slip" && takeover.kind === "bombs" && (
-                <BombFlash key={`bomb-${takeover.id}`} />
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {takeover?.style === "slip" && (
-                <CatchFlash
-                  key={takeover.id}
-                  seed={takeover.id}
-                  name={name(takeover.uid)}
-                  stampLabel={t(OUTCOME_SHORT[takeover.kind])}
-                  finale={takeover.finale || takeover.kind === "bombs"}
-                  caption={slipCaption(takeover)}
-                />
-              )}
-              {takeover?.style === "banner" && (
-                <SlotWinBanner
-                  key={takeover.id}
-                  tier={BANNER_TIER[takeover.result.kind] ?? "win"}
-                  tierLabel={t(BANNER_LABEL[takeover.result.kind] ?? "expenses.slotWinBig")}
-                  tone={isGoodResult(takeover.result) ? "gold" : "red"}
-                  name={name(takeover.result.spinner)}
-                  faces={takeover.result.faces}
-                  onDismiss={dismissTakeover}
+              {/* More below: the tallies, the paytable, the award show. */}
+              <button
+                type="button"
+                onClick={showInfo}
+                className="mx-auto flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold text-white/70 transition-colors hover:text-white"
+              >
+                {done ? t("expenses.slotMoreInfoDone") : t("expenses.slotMoreInfo")}
+                <motion.span
+                  aria-hidden="true"
+                  className="block"
+                  animate={reduceMotion ? undefined : { y: [0, 3, 0] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
                 >
-                  {bannerBody(takeover.result, takeover.finale)}
-                </SlotWinBanner>
+                  ↓
+                </motion.span>
+              </button>
+            </div>
+
+            {/*
+            Everything that takes over the screen: decisions, reveals, win
+            banners. A fixed layer over the whole stage, title bar and control
+            deck included, so a win fills the phone the way the reels do; inset
+            so the overlays' own negative inset lands on the screen's edges.
+            Outside the stage so the impact shake never moves it. The ✕ stays
+            on top.
+          */}
+            <div
+              className={cn(
+                "fixed inset-x-4 inset-y-2 z-[15] text-white",
+                !overlayActive && "pointer-events-none",
               )}
-              {takeover?.style === "wheel" && takeover.result.wheel && (
-                <BonusWheel
-                  key={takeover.id}
-                  title={t("expenses.slotWheelTitle")}
-                  segments={SLOT_WHEEL_SEGMENTS.map(prizeFace)}
-                  index={takeover.result.wheel.index}
-                  resultLabel={prizeFace(takeover.result.wheel.outcome.prize).label}
-                  onTick={playTickSound}
+            >
+              {/* Clover or duel: the person who pulled it points at someone. */}
+              <AnimatePresence>
+                {choosing && (
+                  <motion.div
+                    key="choice"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={cn(
+                      "absolute -inset-x-4 -inset-y-2 z-30 flex flex-col items-center justify-center gap-4 px-6 text-white",
+                      choosing.type === "duel"
+                        ? "bg-[radial-gradient(circle_at_50%_40%,oklch(0.32_0.07_250/0.96),oklch(0.12_0.03_260/0.96)_70%)]"
+                        : "bg-[radial-gradient(circle_at_50%_40%,oklch(0.36_0.1_150/0.95),oklch(0.14_0.03_260/0.95)_70%)]",
+                    )}
+                  >
+                    <span aria-hidden="true" className="text-5xl">
+                      {choosing.type === "duel" ? "⚔️" : "🍀"}
+                    </span>
+                    <span className="font-heading text-center text-2xl font-semibold">
+                      {t(
+                        choosing.type === "duel"
+                          ? "expenses.slotDuelPick"
+                          : "expenses.slotChoiceTitle",
+                        { name: name(choosing.uid), amount: money(choosing.amountMinor) },
+                      )}
+                    </span>
+                    <div className="grid w-full max-w-80 grid-cols-2 gap-2">
+                      {slotChoiceCandidates(game, choosing.uid).map((uid, index) => (
+                        <motion.button
+                          key={uid}
+                          type="button"
+                          data-choice=""
+                          onClick={() => choose(uid)}
+                          initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.06 }}
+                          className="flex flex-col items-center gap-1.5 rounded-xl bg-white/10 p-3 ring-1 ring-white/25 transition-colors hover:bg-white/20 active:scale-95"
+                        >
+                          <GameAvatar name={name(uid)} className="size-12 text-lg" />
+                          <span className="max-w-full truncate text-sm font-semibold">
+                            {name(uid)}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Gift: pick one of three boxes. */}
+              <AnimatePresence>
+                {(gifting || giftShow) && (
+                  <GiftPicker
+                    key="gift"
+                    title={t("expenses.slotGiftTitle", {
+                      name: name(gifting?.uid ?? giftShow?.outcome.uid ?? ""),
+                    })}
+                    boxes={giftBoxes.map(prizeFace)}
+                    picked={giftShow?.picked ?? null}
+                    onPick={openGift}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* The duel's reels. */}
+              <AnimatePresence>
+                {duelShow && (
+                  <DuelReveal
+                    key={duelShow.id}
+                    title={t("expenses.slotDuelTitle")}
+                    sides={[
+                      {
+                        name: name(duelShow.duel.challenger),
+                        symbol: duelShow.duel.challengerSymbol,
+                        loser: duelShow.duel.loser === duelShow.duel.challenger,
+                      },
+                      {
+                        name: name(duelShow.duel.opponent),
+                        symbol: duelShow.duel.opponentSymbol,
+                        loser: duelShow.duel.loser === duelShow.duel.opponent,
+                      },
+                    ]}
+                    resultLabel={t("expenses.slotDuelResult", {
+                      name: name(duelShow.duel.loser),
+                      amount: money(duelShow.charge?.amountMinor ?? 0),
+                    })}
+                  />
+                )}
+              </AnimatePresence>
+
+              {/* The takeovers: a stamped slip for what costs, a casino banner for a win. */}
+              <AnimatePresence>
+                {takeover?.style === "slip" && takeover.kind === "bombs" && (
+                  <BombFlash key={`bomb-${takeover.id}`} />
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {takeover?.style === "slip" && (
+                  <CatchFlash
+                    key={takeover.id}
+                    seed={takeover.id}
+                    name={name(takeover.uid)}
+                    stampLabel={t(OUTCOME_SHORT[takeover.kind])}
+                    finale={takeover.finale || takeover.kind === "bombs"}
+                    caption={slipCaption(takeover)}
+                  />
+                )}
+                {takeover?.style === "banner" && (
+                  <SlotWinBanner
+                    key={takeover.id}
+                    tier={BANNER_TIER[takeover.result.kind] ?? "win"}
+                    tierLabel={t(BANNER_LABEL[takeover.result.kind] ?? "expenses.slotWinBig")}
+                    tone={isGoodResult(takeover.result) ? "gold" : "red"}
+                    name={name(takeover.result.spinner)}
+                    faces={takeover.result.faces}
+                    onDismiss={dismissTakeover}
+                  >
+                    {bannerBody(takeover.result, takeover.finale)}
+                  </SlotWinBanner>
+                )}
+                {takeover?.style === "wheel" && takeover.result.wheel && (
+                  <BonusWheel
+                    key={takeover.id}
+                    title={t("expenses.slotWheelTitle")}
+                    segments={SLOT_WHEEL_SEGMENTS.map(prizeFace)}
+                    index={takeover.result.wheel.index}
+                    resultLabel={prizeFace(takeover.result.wheel.outcome.prize).label}
+                    onTick={playTickSound}
+                  />
+                )}
+                {takeover?.style === "pot" && (
+                  <SlotWinBanner
+                    key={takeover.id}
+                    tier="mega"
+                    tierLabel={t("expenses.slotWinPot")}
+                    name={name(takeover.result.spinner)}
+                    faces={["cherry", "cherry", "cherry"]}
+                    onDismiss={dismissTakeover}
+                  >
+                    {potBody(takeover.result, takeover.finale)}
+                  </SlotWinBanner>
+                )}
+              </AnimatePresence>
+              {takeover?.style === "banner" && OUTCOME_GLYPHS[takeover.result.kind] && (
+                <EmojiShower
+                  key={`shower-${takeover.id}`}
+                  anchorRef={reelsRef}
+                  seed={takeover.id * 7919}
+                  glyphs={OUTCOME_GLYPHS[takeover.result.kind] ?? []}
+                  mode="fountain"
+                  count={34}
+                />
+              )}
+              {takeover?.style === "slip" && OUTCOME_GLYPHS[takeover.kind] && (
+                <EmojiShower
+                  key={`shower-${takeover.id}`}
+                  anchorRef={reelsRef}
+                  seed={takeover.id * 7919}
+                  glyphs={OUTCOME_GLYPHS[takeover.kind] ?? []}
+                  count={18}
                 />
               )}
               {takeover?.style === "pot" && (
-                <SlotWinBanner
-                  key={takeover.id}
-                  tier="mega"
-                  tierLabel={t("expenses.slotWinPot")}
-                  name={name(takeover.result.spinner)}
-                  faces={["cherry", "cherry", "cherry"]}
-                  onDismiss={dismissTakeover}
-                >
-                  {potBody(takeover.result, takeover.finale)}
-                </SlotWinBanner>
-              )}
-            </AnimatePresence>
-            {takeover?.style === "banner" && OUTCOME_GLYPHS[takeover.result.kind] && (
-              <EmojiShower
-                key={`shower-${takeover.id}`}
-                anchorRef={reelsRef}
-                seed={takeover.id * 7919}
-                glyphs={OUTCOME_GLYPHS[takeover.result.kind] ?? []}
-                mode="fountain"
-                count={34}
-              />
-            )}
-            {takeover?.style === "slip" && OUTCOME_GLYPHS[takeover.kind] && (
-              <EmojiShower
-                key={`shower-${takeover.id}`}
-                anchorRef={reelsRef}
-                seed={takeover.id * 7919}
-                glyphs={OUTCOME_GLYPHS[takeover.kind] ?? []}
-                count={18}
-              />
-            )}
-            {takeover?.style === "pot" && (
-              <EmojiShower
-                key={`pot-${takeover.id}`}
-                anchorRef={reelsRef}
-                seed={takeover.id * 7919}
-                glyphs={["🪙", "🪙", "🪙", "💶"]}
-                mode="fountain"
-                count={40}
-              />
-            )}
-            {takeover?.style === "banner" && takeover.result.kind === "jackpot" && (
-              <EmojiShower
-                key={`rain-${takeover.id}`}
-                seed={takeover.id * 104729}
-                glyphs={["🪙", "🪙", "🪙", "💶"]}
-                mode="rain"
-                count={56}
-                delay={0.3}
-              />
-            )}
-
-            {/* Risiko: the coin flip on a loss. */}
-            <AnimatePresence>
-              {gambleFlip && (
-                <GambleFlip
-                  key={gambleFlip.id}
-                  won={gambleFlip.won}
-                  title={t("expenses.slotRiskTitle")}
-                  stakeLabel={t("expenses.slotRiskStake", {
-                    name: name(gambleFlip.uid),
-                    amount: money(gambleFlip.stakeMinor),
-                  })}
-                  resultLabel={
-                    gambleFlip.won
-                      ? t("expenses.slotRiskWon")
-                      : t("expenses.slotRiskLost", {
-                          amount: money(gambleFlip.stakeMinor + gambleFlip.deltaMinor),
-                        })
-                  }
+                <EmojiShower
+                  key={`pot-${takeover.id}`}
+                  anchorRef={reelsRef}
+                  seed={takeover.id * 7919}
+                  glyphs={["🪙", "🪙", "🪙", "💶"]}
+                  mode="fountain"
+                  count={40}
                 />
               )}
-            </AnimatePresence>
-          </div>
+              {takeover?.style === "banner" && takeover.result.kind === "jackpot" && (
+                <EmojiShower
+                  key={`rain-${takeover.id}`}
+                  seed={takeover.id * 104729}
+                  glyphs={["🪙", "🪙", "🪙", "💶"]}
+                  mode="rain"
+                  count={56}
+                  delay={0.3}
+                />
+              )}
+
+              {/* Risiko: the coin flip on a loss. */}
+              <AnimatePresence>
+                {gambleFlip && (
+                  <GambleFlip
+                    key={gambleFlip.id}
+                    won={gambleFlip.won}
+                    title={t("expenses.slotRiskTitle")}
+                    stakeLabel={t("expenses.slotRiskStake", {
+                      name: name(gambleFlip.uid),
+                      amount: money(gambleFlip.stakeMinor),
+                    })}
+                    resultLabel={
+                      gambleFlip.won
+                        ? t("expenses.slotRiskWon")
+                        : t("expenses.slotRiskLost", {
+                            amount: money(gambleFlip.stakeMinor + gambleFlip.deltaMinor),
+                          })
+                    }
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div ref={infoRef} className="flex flex-col gap-3 pt-4 text-white">
+              {done && (
+                <SlotAwards game={game} stats={stats} members={members} currency={currency} />
+              )}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold tracking-[0.12em] text-white/60 uppercase">
+                  {done ? t("expenses.gameResultEyebrow") : t("expenses.slotTallyLabel")}
+                </span>
+                <TallyList game={game} members={members} currency={currency} />
+              </div>
+              <Paytable />
+            </div>
+          </>
         )}
 
         <DialogFooter>
@@ -1991,15 +2058,52 @@ export function SplitSlotDialog({
               </Button>
             </>
           ) : (
-            <>
+            <div className="flex w-full flex-col gap-2">
+              <LedPanel
+                cells={
+                  inFreeSpins || game.coinPotMinor > 0
+                    ? [
+                        {
+                          label: t("expenses.slotLedFreeSpins"),
+                          value: String(game.freeSpinsLeft),
+                          blink: true,
+                        },
+                        {
+                          label: t("expenses.slotLedPot"),
+                          value: money(game.coinPotMinor),
+                          blink: coinsFlying,
+                        },
+                        {
+                          label: t("expenses.slotLedMulti"),
+                          value: `×${game.freeSpinMultiplier}`,
+                          blink: game.freeSpinMultiplier > 1,
+                        },
+                      ]
+                    : [
+                        {
+                          label: t("expenses.slotLedStake"),
+                          value: money(game.stakeMinor),
+                        },
+                        {
+                          label: t("expenses.slotLedSpin"),
+                          value: `${spinNumber}/${SLOT_SPINS_PER_TURN}`,
+                        },
+                        {
+                          label: t("expenses.slotLedLast"),
+                          value: landed ? t(OUTCOME_SHORT[landed.kind]) : "–",
+                          blink: landedGood,
+                          tone: landed && !landedGood && landed.kind !== "miss" ? "loss" : "win",
+                        },
+                      ]
+                }
+              />
               {(gambleOffer || holdOffer) && (
-                <div className="flex flex-1 gap-2">
+                <div className="flex gap-2">
                   {holdOffer && (
                     <Button
                       type="button"
                       variant="outline"
-                      size="lg"
-                      className="flex-1 border-[oklch(0.7_0.15_230)] font-bold"
+                      className="h-11 flex-1 border-[oklch(0.7_0.15_230)] font-bold"
                       onClick={holdAndRespin}
                     >
                       {t("expenses.slotHold")}
@@ -2009,8 +2113,7 @@ export function SplitSlotDialog({
                     <Button
                       type="button"
                       variant="outline"
-                      size="lg"
-                      className="flex-1 border-[oklch(0.84_0.16_85)] font-bold"
+                      className="h-11 flex-1 border-[oklch(0.84_0.16_85)] font-bold"
                       onClick={risk}
                     >
                       {gambleOffer.step === 0
@@ -2020,30 +2123,71 @@ export function SplitSlotDialog({
                   )}
                 </div>
               )}
-              <Button
-                type="button"
-                size="lg"
-                className={cn(
-                  "flex-1 font-bold",
-                  inFreeSpins &&
-                    "bg-[linear-gradient(180deg,oklch(0.9_0.13_90),oklch(0.72_0.16_65))] text-[oklch(0.28_0.07_55)] shadow-[0_0_16px_oklch(0.84_0.16_85/0.6)] hover:brightness-105",
-                )}
-                disabled={busy || pending !== null}
-                onClick={pull}
-              >
-                {pending
-                  ? t(
-                      pending.type === "gift"
-                        ? "expenses.slotGiftWaiting"
-                        : pending.type === "duel"
-                          ? "expenses.slotDuelWaiting"
-                          : "expenses.slotChoiceWaiting",
-                    )
-                  : inFreeSpins
-                    ? `🍒 ${t("expenses.slotPullFree")}`
-                    : `${t("expenses.slotPull")} · ${spinNumber}/${SLOT_SPINS_PER_TURN}`}
-              </Button>
-            </>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  aria-pressed={turbo}
+                  aria-label={t("expenses.slotTurbo")}
+                  onClick={toggleTurbo}
+                  className={cn(
+                    deckToggle,
+                    turbo
+                      ? "bg-[oklch(0.84_0.16_85)] text-[oklch(0.25_0.06_60)] ring-[oklch(0.84_0.16_85)]"
+                      : "bg-white/10 text-white ring-white/20",
+                  )}
+                >
+                  ⚡
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={auto !== null}
+                  aria-label={auto ? t("expenses.slotAutoStop") : t("expenses.slotAuto")}
+                  disabled={!spinner}
+                  onClick={() => setAuto(auto || !spinner ? null : { uid: spinner })}
+                  className={cn(
+                    deckToggle,
+                    auto
+                      ? "bg-[oklch(0.7_0.17_150)] text-white ring-[oklch(0.7_0.17_150)]"
+                      : "bg-white/10 text-white ring-white/20",
+                  )}
+                >
+                  {auto ? "⏹" : "🔁"}
+                </button>
+                <motion.button
+                  type="button"
+                  disabled={busy || pending !== null}
+                  onClick={pull}
+                  whileTap={reduceMotion ? undefined : { scale: 0.95 }}
+                  className={cn(
+                    "h-14 min-w-0 flex-1 truncate rounded-full px-4 text-base font-black tracking-wide uppercase transition-[filter,opacity] disabled:opacity-60",
+                    inFreeSpins
+                      ? "bg-[linear-gradient(180deg,oklch(0.92_0.13_90),oklch(0.72_0.16_65))] text-[oklch(0.28_0.07_55)] shadow-[0_0_22px_oklch(0.84_0.16_85/0.7)]"
+                      : "bg-[linear-gradient(180deg,oklch(0.8_0.17_55),oklch(0.62_0.21_35))] text-white shadow-[0_6px_22px_oklch(0.65_0.2_40/0.55),inset_0_1px_0_oklch(1_0_0/0.35)]",
+                  )}
+                >
+                  {pending
+                    ? t(
+                        pending.type === "gift"
+                          ? "expenses.slotGiftWaiting"
+                          : pending.type === "duel"
+                            ? "expenses.slotDuelWaiting"
+                            : "expenses.slotChoiceWaiting",
+                      )
+                    : inFreeSpins
+                      ? `🍒 ${t("expenses.slotPullFree")}`
+                      : `${t("expenses.slotPull")} · ${spinNumber}/${SLOT_SPINS_PER_TURN}`}
+                </motion.button>
+                <button
+                  type="button"
+                  aria-pressed={!soundOff}
+                  aria-label={t("expenses.slotSoundToggle")}
+                  onClick={toggleSound}
+                  className={cn(deckToggle, "bg-white/10 text-white ring-white/20")}
+                >
+                  {soundOff ? "🔇" : "🔊"}
+                </button>
+              </div>
+            </div>
           )}
         </DialogFooter>
       </GameDialogContent>

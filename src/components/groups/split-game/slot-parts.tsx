@@ -26,7 +26,11 @@ import type { GroupMember } from "@/lib/types";
  * streak, shield and boost, and the award show at the end.
  */
 
-/** Row height in px — the classic three-row window with the payline in the middle. */
+/**
+ * The reels' smallest row height in px — the classic three-row window with the
+ * payline in the middle. On the full-screen stage the dialog measures the
+ * room it has and grows the rows from here (`useReelGeometry`).
+ */
 export const ROW_HEIGHT = 64;
 
 export const OUTCOME_TITLE: Record<SlotOutcomeKind, TranslationKey> = {
@@ -116,6 +120,7 @@ export function ReelSymbol({
   glow,
   mystery = false,
   flipIn = false,
+  rowHeight = ROW_HEIGHT,
 }: {
   symbol: SlotSymbol;
   state: SymbolState;
@@ -123,13 +128,17 @@ export function ReelSymbol({
   mystery?: boolean;
   /** Turn over onto the symbol as it mounts: a mystery symbol being revealed. */
   flipIn?: boolean;
+  rowHeight?: number;
 }) {
   const reduceMotion = useReducedMotion();
   return (
-    <span className="flex shrink-0 items-center justify-center" style={{ height: ROW_HEIGHT }}>
+    <span className="flex shrink-0 items-center justify-center" style={{ height: rowHeight }}>
       <motion.span
         className="block"
-        style={{ filter: state === "win" ? `drop-shadow(0 0 8px ${glow})` : undefined }}
+        style={{
+          filter: state === "win" ? `drop-shadow(0 0 8px ${glow})` : undefined,
+          fontSize: Math.round(rowHeight * 0.6),
+        }}
         animate={
           state === "win" && !reduceMotion
             ? { scale: [1, 1.28, 1.08, 1.22, 1.1], rotate: [0, -6, 4, -2, 0] }
@@ -142,7 +151,14 @@ export function ReelSymbol({
         }
       >
         {mystery ? (
-          <span className="flex size-12 items-center justify-center rounded-lg bg-[linear-gradient(135deg,oklch(0.55_0.2_300),oklch(0.45_0.2_270))] text-3xl font-black text-white shadow-[0_0_12px_oklch(0.6_0.22_300/0.7)]">
+          <span
+            className="flex items-center justify-center rounded-xl bg-[linear-gradient(135deg,oklch(0.55_0.2_300),oklch(0.45_0.2_270))] font-black text-white shadow-[0_0_12px_oklch(0.6_0.22_300/0.7)]"
+            style={{
+              width: Math.round(rowHeight * 0.75),
+              height: Math.round(rowHeight * 0.75),
+              fontSize: Math.round(rowHeight * 0.45),
+            }}
+          >
             ?
           </span>
         ) : (
@@ -152,7 +168,7 @@ export function ReelSymbol({
             animate={{ rotateY: 0, scale: 1 }}
             transition={{ duration: 0.35 }}
           >
-            <SlotSymbolFace symbol={symbol} className="text-[40px]" />
+            <SlotSymbolFace symbol={symbol} />
           </motion.span>
         )}
       </motion.span>

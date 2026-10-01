@@ -147,6 +147,29 @@ On top of the table:
 
 ### Presentation, modelled on online slots
 
+- **The machine is the whole screen**, not a box inside the game. While it plays,
+  `GameDialogContent` gets `frameClassName` with a dark casino gradient (`dark` class, so the
+  sticky title bar and control deck turn dark too), whatever the app's theme.
+  - `useFirstScreen` measures the height between the sticky title bar and the control deck
+    (a `ResizeObserver` on the `data-slot="stage-scroller"` scroller, header and footer). The
+    stage takes exactly that as its `minHeight`: who is at the machine and the bill's progress
+    at the top, the cabinet centered, "Mehr Infos ↓" at the bottom.
+  - The reels size off the window (`useReelGeometry`): a third of the column wide, as tall as
+    the leftover height allows, at most 1.2× their width. Cream paper, so the symbols pop on
+    the dark cabinet.
+  - Tallies, paytable and, at the end, the award show sit *below* the first screen. A scroll
+    or the "Mehr Infos" / "Zur Preisverleihung" button gets there. Any pull scrolls back up
+    (`showMachine`).
+  - Scroll with `scroller.scrollTo`, never `scrollIntoView`. That also scrolls the
+    `overflow-x-hidden` scroller *sideways*, shoving the whole stage left.
+  - The light rays behind the cabinet sit in a clipping span the size of the first screen. An
+    unclipped `180vmax` sunburst made the scroller far taller than its content.
+  - Every overlay (takeovers, decisions, reveals) lives in one `fixed` layer above the title
+    bar and the deck, below the ✕. It sits *outside* the stage, because the impact shake
+    transforms the stage, and a transformed ancestor would trap a fixed child. The layer is
+    `pointer-events-none` unless an overlay is up.
+  - The lever is gone. The deck is the LED panel, Halten/Risiko when offered, and round
+    toggles (⚡ 🔁 🔊) around one big "Drehen" pill.
 - **On the cabinet:**
   - A red-on-black progressive jackpot marquee (`JackpotMarquee`).
   - Marquee bulbs (`BulbRow`).
@@ -171,7 +194,7 @@ On top of the table:
   - `GambleFlip`: a 3D coin for Risiko.
   - Halten is a footer button. The held reels show "Gehalten", and the odd one respins under a
     drum roll.
-- **Toolbar:**
+- **Deck toggles:**
   - ⚡ Turbo runs every timing at 40 %.
   - 🔁 Auto-Serie pulls the rest of the series and stops at decisions, at a turn change and at
     the end. It is driven by an effect plus `useEffectEvent`.

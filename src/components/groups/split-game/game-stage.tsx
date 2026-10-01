@@ -72,12 +72,15 @@ const CLOSE_BUTTON =
  * Drop-in replacement for `DialogContent` in a game dialog: same Radix
  * dialog (focus trap, Escape, `onOpenChange`), rendered as a full-screen
  * stage. Children are the usual `DialogHeader` / body / `DialogFooter`.
+ * `frameClassName` dresses the whole frame, e.g. the slot machine's dark
+ * casino backdrop while the reels are in play.
  */
 export function GameDialogContent({
   className,
+  frameClassName,
   children,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & { frameClassName?: string }) {
   const t = useT();
   return (
     <DialogPrimitive.Portal>
@@ -85,11 +88,15 @@ export function GameDialogContent({
         data-slot="dialog-content"
         className={cn(
           STAGE_FRAME,
+          frameClassName,
           "data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-6 data-closed:animate-out data-closed:fade-out-0 data-closed:slide-out-to-bottom-6 duration-(--duration-base) ease-(--ease-entrance) data-closed:duration-(--duration-fast)",
         )}
         {...props}
       >
-        <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+        <div
+          data-slot="stage-scroller"
+          className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
+        >
           <div className={cn(STAGE_COLUMN, className)}>{children}</div>
         </div>
         <DialogPrimitive.Close className={CLOSE_BUTTON}>
@@ -119,7 +126,10 @@ export function GamePageStage({
   const t = useT();
   return (
     <div className={cn(STAGE_FRAME, "z-40")}>
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+      <div
+        data-slot="stage-scroller"
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
+      >
         <div className={STAGE_COLUMN}>
           <div data-slot="dialog-header" className="flex flex-col gap-2">
             {title}
