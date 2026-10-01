@@ -5,9 +5,19 @@ import {
   SLOT_PAYTABLE,
   SLOT_SPINS_PER_TURN,
   SLOT_TOTAL_WEIGHT,
+  SLOT_BOOST_SPINS,
+  SLOT_DUEL_RANK,
+  SLOT_FREE_SPIN_MAX_MULTIPLIER,
   SLOT_GAMBLE_MAX_STEPS,
+  SLOT_PITY_AFTER,
+  SLOT_PRIZE_FREE_SPINS,
+  SLOT_WHEEL_SEGMENTS,
   applySlotChoice,
   applySlotGamble,
+  applySlotGiftPick,
+  applySlotHold,
+  drawSlotDuel,
+  drawSlotHold,
   applySlotOutcome,
   drawSlotGamble,
   drawSlotOutcome,
@@ -117,8 +127,8 @@ describe("stake for a game length", () => {
     expect(niceStakeMinor(0.3)).toBe(1);
   });
 
-  it("charges about a stake and a quarter per pull at a table of four, wilds included", () => {
-    expect(expectedStakesPerSpin(4)).toBeCloseTo(1.252, 5);
+  it("charges about one and a half stakes per pull at a table of four, wilds and prizes included", () => {
+    expect(expectedStakesPerSpin(4)).toBeCloseTo(1.399, 5);
   });
 
   it("asks for a smaller stake the longer the game should run", () => {
@@ -256,8 +266,13 @@ describe("jackpot", () => {
     const state = play(game(["a", "b", "c"], 2000, 100), "lemons", "miss");
     expect(slotSpinner(state)).toBe("a");
     const result = applySlotOutcome(state, "jackpot", FACES);
-    expect(result.charges).toEqual([{ uid: "a", amountMinor: -400 }]);
-    expect(result.state.tallies).toEqual({});
+    // The miss grew the progressive jackpot by half a stake; b and c pay it.
+    expect(result.charges).toEqual([
+      { uid: "a", amountMinor: -400 },
+      { uid: "b", amountMinor: 25 },
+      { uid: "c", amountMinor: 25 },
+    ]);
+    expect(result.state.tallies).toEqual({ b: 25, c: 25 });
     expect(slotActiveSeats(result.state)).toEqual(["b", "c"]);
     expect(slotSpinner(result.state)).toBe("b");
     expect(result.state.turnSpinsLeft).toBe(SLOT_SPINS_PER_TURN);
@@ -347,19 +362,19 @@ describe("die Rechnung", () => {
 describe("Glücksklee", () => {
   it("waits for the spinner to point at someone, who then pays two stakes", () => {
     const after = applySlotOutcome(game(["a", "b", "c"], 10_000, 100), "clover", FACES).state;
-    expect(after.pendingChoice).toEqual({ uid: "a", amountMinor: 200 });
+    expect(after.pending).toEqual({ type: "clover", uid: "a", amountMinor: 200 });
     expect(slotChoiceCandidates(after, "a")).toEqual(["b", "c"]);
     expect(() => spinSlot(after, seededRandom(1))).toThrow();
     expect(() => applySlotChoice(after, "a")).toThrow();
     const chosen = applySlotChoice(after, "c");
     expect(chosen.charge).toEqual({ uid: "c", amountMinor: 200 });
     expect(chosen.state.tallies).toEqual({ c: 200 });
-    expect(chosen.state.pendingChoice).toBeNull();
+    expect(chosen.state.pending).toBeNull();
   });
 
   it("charges the only other player straight away", () => {
     const after = applySlotOutcome(game(["a", "b"], 10_000, 100), "clover", FACES).state;
-    expect(after.pendingChoice).toBeNull();
+    expect(after.pending).toBeNull();
     expect(after.tallies).toEqual({ b: 200 });
   });
 });
@@ -400,15 +415,16 @@ describe("coins in free spins", () => {
     expect(result.state.coinPotMinor).toBe(700);
     expect(result.potPayout).toBeNull();
     state = play(result.state, "pair");
+    // The third free spin counts its coins three times over.
     result = applySlotOutcome(state, "pair", FACES, { coins: [coin(1, 1)] });
     expect(result.potPayout).toEqual({
-      totalMinor: 800,
+      totalMinor: 1000,
       charges: [
-        { uid: "b", amountMinor: 400 },
-        { uid: "c", amountMinor: 400 },
+        { uid: "b", amountMinor: 500 },
+        { uid: "c", amountMinor: 500 },
       ],
     });
-    expect(result.state.tallies).toEqual({ b: 400, c: 400 });
+    expect(result.state.tallies).toEqual({ b: 500, c: 500 });
     expect(result.state.coinPotMinor).toBe(0);
   });
 
@@ -496,14 +512,274 @@ describe("Risiko", () => {
   });
 });
 
+describe("progressive jackpot", () => {
+  it("grows by half a stake with every paid no-win, and not on a free or shielded one", () => {
+    let state = play(game(["a", "b", "c"], 100_000, 100), "miss", "miss", "lemons");
+    expect(state.jackpotPotMinor).toBe(100);
+    state = play(state, "cherries", "miss");
+    expect(state.jackpotPotMinor).toBe(100);
+  });
+
+  it("is paid by everyone else, split evenly, when someone hits 777", () => {
+    const state = play(game(["a", "b", "c", "d"], 100_000, 100), "miss", "miss", "miss");
+    expect(state.jackpotPotMinor).toBe(150);
+    const result = applySlotOutcome(state, "jackpot", FACES);
+    expect(result.jackpotPayout).toEqual({
+      totalMinor: 150,
+      charges: [
+        { uid: "c", amountMinor: 50 },
+        { uid: "d", amountMinor: 50 },
+        { uid: "a", amountMinor: 50 },
+      ],
+    });
+    expect(result.state.jackpotPotMinor).toBe(0);
+  });
+});
+
+describe("Halten", () => {
+  const pairFaces: SlotFaces = ["bell", "bell", "star"];
+
+  it("is offered after a pair on a regular pull, mid-series", () => {
+    const result = applySlotOutcome(game(["a", "b"], 10_000, 100), "pair", pairFaces);
+    expect(result.state.hold).toEqual({ uid: "a", symbol: "bell", reel: 2 });
+  });
+
+  it("completes the three-of-a-kind on a lucky respin, without using up a pull", () => {
+    const state = applySlotOutcome(game(["a", "b", "c"], 10_000, 100), "pair", pairFaces).state;
+    const result = applySlotHold(state, true, seededRandom(2));
+    expect(result.kind).toBe("bells");
+    expect(result.respin).toEqual({ reel: 2, completed: true });
+    expect(result.state.tallies).toEqual({ b: expect.any(Number) });
+    expect(result.state.turnSpinsLeft).toBe(state.turnSpinsLeft);
+    expect(result.state.holdUsed).toBe(true);
+    expect(result.state.hold).toBeNull();
+  });
+
+  it("can complete a bad pair too", () => {
+    const state = applySlotOutcome(game(["a", "b"], 10_000, 100), "pair", [
+      "bomb",
+      "star",
+      "bomb",
+    ]).state;
+    const result = applySlotHold(state, true, { int: (min) => min + 50, shuffle: (x) => [...x] });
+    expect(result.kind).toBe("bombs");
+    expect(result.state.tallies).toEqual({ a: 500 });
+  });
+
+  it("lands on something else on an unlucky one, and nothing changes", () => {
+    const state = applySlotOutcome(game(["a", "b"], 10_000, 100), "pair", pairFaces).state;
+    const result = applySlotHold(state, false, seededRandom(3));
+    expect(result.kind).toBe("pair");
+    expect(result.faces[2]).not.toBe("bell");
+    expect(result.state.tallies).toEqual({});
+  });
+
+  it("is only there once per series, not on the last pull, and not on a free spin", () => {
+    let state = applySlotOutcome(game(["a", "b"], 10_000, 100), "pair", pairFaces).state;
+    state = applySlotHold(state, false, seededRandom(4)).state;
+    expect(applySlotOutcome(state, "pair", pairFaces).state.hold).toBeNull();
+    const last = play(game(["a", "b"], 10_000, 100), "miss", "miss");
+    expect(applySlotOutcome(last, "pair", pairFaces).state.hold).toBeNull();
+    const free = play(game(["a", "b"], 10_000, 100), "cherries");
+    expect(applySlotOutcome(free, "pair", pairFaces).state.hold).toBeNull();
+  });
+
+  it("goes away with the next pull", () => {
+    const state = applySlotOutcome(game(["a", "b"], 10_000, 100), "pair", pairFaces).state;
+    expect(play(state, "miss").hold).toBeNull();
+  });
+});
+
+describe("free-spin multiplier", () => {
+  const coin = (reel: number, multiplier: number) => ({ reel, row: 0 as const, multiplier });
+
+  it("makes every free spin's coins worth one more time than the last", () => {
+    let state = play(game(["a", "b", "c"], 100_000, 100), "cherries");
+    const values: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const result = applySlotOutcome(state, "pair", FACES, { coins: [coin(0, 1)] });
+      values.push(result.coinsCollectedMinor);
+      state = result.state;
+    }
+    expect(values).toEqual([100, 200, 300]);
+  });
+
+  it("tops out, and starts over with the next free spins", () => {
+    let state = play(game(["a", "b"], 1_000_000, 100), "cherries", "cherries", "cherries");
+    for (let i = 0; i < 6; i++) state = play(state, "pair");
+    expect(state.freeSpinMultiplier).toBeLessThanOrEqual(SLOT_FREE_SPIN_MAX_MULTIPLIER);
+    while (state.freeSpinsLeft > 0) state = play(state, "pair");
+    expect(state.freeSpinMultiplier).toBe(1);
+  });
+});
+
+describe("bonus wheel", () => {
+  const atSegment = (prize: (typeof SLOT_WHEEL_SEGMENTS)[number]) =>
+    SLOT_WHEEL_SEGMENTS.indexOf(prize);
+
+  it("makes everyone else pay two stakes", () => {
+    const result = applySlotOutcome(game(["a", "b", "c"], 10_000, 100), "wheel", FACES, {
+      wheelIndex: atSegment("othersPay2"),
+    });
+    expect(result.wheel?.outcome.prize).toBe("othersPay2");
+    expect(result.state.tallies).toEqual({ b: 200, c: 200 });
+  });
+
+  it("costs the spinner three stakes", () => {
+    const result = applySlotOutcome(game(["a", "b"], 10_000, 100), "wheel", FACES, {
+      wheelIndex: atSegment("pay3"),
+    });
+    expect(result.state.tallies).toEqual({ a: 300 });
+  });
+
+  it("awards free spins", () => {
+    const result = applySlotOutcome(game(["a", "b"], 10_000, 100), "wheel", FACES, {
+      wheelIndex: atSegment("freeSpins"),
+    });
+    expect(result.freeSpinsAwarded).toBe(SLOT_PRIZE_FREE_SPINS);
+    expect(result.state.freeSpinsLeft).toBe(SLOT_PRIZE_FREE_SPINS);
+  });
+
+  it("hands out a shield that strikes off the holder's next loss", () => {
+    let state = applySlotOutcome(game(["a", "b"], 10_000, 100), "wheel", FACES, {
+      wheelIndex: atSegment("shield"),
+    }).state;
+    expect(state.shields).toEqual(["a"]);
+    const shielded = applySlotOutcome(state, "bombs", FACES);
+    expect(shielded.shieldUsed).toBe(true);
+    expect(shielded.state.tallies).toEqual({});
+    expect(shielded.state.shields).toEqual([]);
+    state = play(shielded.state, "miss");
+    expect(state.tallies).toEqual({ a: 100 });
+  });
+
+  it("boosts the holder's next pulls to double", () => {
+    let state = applySlotOutcome(game(["a", "b"], 100_000, 100), "wheel", FACES, {
+      wheelIndex: atSegment("boost"),
+    }).state;
+    expect(state.boost).toEqual({ uid: "a", spinsLeft: SLOT_BOOST_SPINS });
+    const boosted = applySlotOutcome(state, "lemons", FACES);
+    expect(boosted.boosted).toBe(true);
+    expect(boosted.state.tallies).toEqual({ a: 600 });
+    state = play(boosted.state, "miss");
+    expect(state.tallies).toEqual({ a: 800 });
+    // That was a's last pull of the series; b's pulls aren't boosted.
+    state = play(state, "miss");
+    expect(state.tallies).toEqual({ a: 800, b: 100 });
+  });
+
+  it("lands on every segment equally often", () => {
+    const random = seededRandom(12);
+    const state = game(["a", "b"], 10_000, 100);
+    const counts = new Array(SLOT_WHEEL_SEGMENTS.length).fill(0);
+    let wheels = 0;
+    for (let i = 0; i < 60_000; i++) {
+      const draw = drawSlotSpin(state, random);
+      if (draw.kind !== "wheel") continue;
+      wheels++;
+      counts[draw.wheelIndex ?? 0]++;
+    }
+    for (const count of counts) expect(count / wheels).toBeCloseTo(1 / 8, 1);
+  });
+});
+
+describe("gift boxes", () => {
+  it("wait for the spinner to open one, and give what's inside", () => {
+    const after = applySlotOutcome(game(["a", "b", "c"], 10_000, 100), "gift", FACES, {
+      giftBoxes: ["pay3", "othersPay2", "shield"],
+    }).state;
+    expect(after.pending).toEqual({
+      type: "gift",
+      uid: "a",
+      boxes: ["pay3", "othersPay2", "shield"],
+    });
+    expect(() => spinSlot(after, seededRandom(1))).toThrow();
+    const opened = applySlotGiftPick(after, 1);
+    expect(opened.outcome.prize).toBe("othersPay2");
+    expect(opened.state.tallies).toEqual({ b: 200, c: 200 });
+    expect(opened.state.pending).toBeNull();
+  });
+
+  it("keep the machine with the spinner until the box is open, so free spins still go to them", () => {
+    const state = play(game(["a", "b"], 10_000, 100), "miss", "miss");
+    const after = applySlotOutcome(state, "gift", FACES, {
+      giftBoxes: ["freeSpins", "freeSpins", "freeSpins"],
+    }).state;
+    expect(slotSpinner(after)).toBe("a");
+    const opened = applySlotGiftPick(after, 0).state;
+    expect(slotSpinner(opened)).toBe("a");
+    expect(opened.freeSpinsLeft).toBe(SLOT_PRIZE_FREE_SPINS);
+  });
+
+  it("pass the machine on once opened, if the series is over", () => {
+    const state = play(game(["a", "b"], 10_000, 100), "miss", "miss");
+    const after = applySlotOutcome(state, "gift", FACES, {
+      giftBoxes: ["pay3", "pay3", "pay3"],
+    }).state;
+    expect(slotSpinner(applySlotGiftPick(after, 2).state)).toBe("b");
+  });
+});
+
+describe("duel", () => {
+  it("waits for the spinner to pick an opponent; the weaker reel pays three stakes", () => {
+    const after = applySlotOutcome(game(["a", "b", "c"], 10_000, 100), "duel", FACES).state;
+    expect(after.pending).toEqual({ type: "duel", uid: "a", amountMinor: 300 });
+    expect(() => applySlotChoice(after, "b")).toThrow();
+    const won = applySlotChoice(after, "b", ["seven", "lemon"]);
+    expect(won.duel?.loser).toBe("b");
+    expect(won.state.tallies).toEqual({ b: 300 });
+    const lost = applySlotChoice(after, "c", ["bomb", "star"]);
+    expect(lost.duel?.loser).toBe("a");
+    expect(lost.state.tallies).toEqual({ a: 300 });
+  });
+
+  it("always draws two different ranks, each side winning half the time", () => {
+    const random = seededRandom(9);
+    let challengerWins = 0;
+    for (let i = 0; i < 20_000; i++) {
+      const [mine, theirs] = drawSlotDuel(random);
+      expect(mine).not.toBe(theirs);
+      if (SLOT_DUEL_RANK.indexOf(mine) > SLOT_DUEL_RANK.indexOf(theirs)) challengerWins++;
+    }
+    expect(challengerWins / 20_000).toBeCloseTo(0.5, 1);
+  });
+});
+
+describe("streaks", () => {
+  it("count wins up and no-wins down", () => {
+    let state = play(game(["a", "b"], 100_000, 100), "pair", "stars");
+    expect(state.streaks.a).toBe(2);
+    state = play(state, "miss");
+    expect(state.streaks.a).toBe(-1);
+  });
+
+  it("guarantee at least a pair after enough no-wins in a row", () => {
+    const random = seededRandom(13);
+    let state = game(["a", "b"], 1_000_000, 1);
+    state = { ...state, streaks: { a: -SLOT_PITY_AFTER } };
+    for (let i = 0; i < 500; i++) {
+      expect(drawSlotSpin(state, random).kind).not.toBe("miss");
+    }
+    expect(spinSlot(state, random).pity).toBe(true);
+  });
+});
+
 /**
  * Plays one move the way people at the table might: a Glücksklee pick at
  * random, the Risiko button about half the time, otherwise a pull.
  */
 function step(state: SlotGameState, random: SlotRandom): SlotGameState {
-  if (state.pendingChoice) {
-    const candidates = slotChoiceCandidates(state, state.pendingChoice.uid);
-    return applySlotChoice(state, candidates[random.int(0, candidates.length - 1)]).state;
+  const pending = state.pending;
+  if (pending?.type === "gift") {
+    return applySlotGiftPick(state, random.int(0, 2)).state;
+  }
+  if (pending) {
+    const candidates = slotChoiceCandidates(state, pending.uid);
+    const target = candidates[random.int(0, candidates.length - 1)];
+    return applySlotChoice(state, target, drawSlotDuel(random)).state;
+  }
+  if (state.hold && random.int(0, 1) === 1) {
+    return applySlotHold(state, drawSlotHold(random), random).state;
   }
   if (state.gamble && random.int(0, 1) === 1) {
     return applySlotGamble(state, drawSlotGamble(random)).state;

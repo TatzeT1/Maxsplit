@@ -8,9 +8,15 @@
  */
 
 let audioCtx: AudioContext | null = null;
+let muted = false;
+
+/** Mutes every game sound until unmuted. The slot machine's 🔊 switch drives this. */
+export function setGameSoundsMuted(next: boolean): void {
+  muted = next;
+}
 
 function getContext(): AudioContext | null {
-  if (typeof window === "undefined") return null;
+  if (typeof window === "undefined" || muted) return null;
   const Ctor = window.AudioContext;
   if (!Ctor) return null;
   if (!audioCtx) audioCtx = new Ctor();
@@ -705,4 +711,35 @@ export function playGhostSound(delaySeconds = 0): void {
   osc.start(at);
   vibrato.stop(at + 1.2);
   osc.stop(at + 1.2);
+}
+
+/** Mystery symbols turning over: a rising shimmer. */
+export function playMysterySound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.4, 0.05, "highpass", 4000, 0.6);
+  [880, 1174.7, 1568, 2093].forEach((freq, index) => {
+    tone(ctx, freq, now + 0.25 + index * 0.05, 0.25, "sine", 0.05);
+  });
+}
+
+/** A gift box popping open: a paper rustle, a pop and a chime. */
+export function playGiftOpenSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.12, 0.08, "bandpass", 2500, 0.7);
+  tone(ctx, 300, now + 0.1, 0.08, "sine", 0.12);
+  bellTone(ctx, 1318.5, now + 0.18, 0.07);
+}
+
+/** Two blades crossing, for the duel. */
+export function playSwordSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.25, 0.12, "highpass", 5000, 0.8);
+  tone(ctx, 2600, now, 0.35, "triangle", 0.05);
+  tone(ctx, 3900, now + 0.01, 0.3, "sine", 0.03);
 }

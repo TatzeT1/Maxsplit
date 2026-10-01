@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,13 +21,17 @@ import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
 import { randomInt, secureShuffle } from "@/lib/games/random";
 import {
   SLOT_DURATION_ROUNDS,
-  SLOT_PAYTABLE,
+  SLOT_GOOD_KINDS,
   SLOT_SPINS_PER_TURN,
   SLOT_SYMBOLS,
-  SLOT_TOTAL_WEIGHT,
+  SLOT_WHEEL_SEGMENTS,
   applySlotChoice,
   applySlotGamble,
+  applySlotGiftPick,
+  applySlotHold,
+  drawSlotDuel,
   drawSlotGamble,
+  drawSlotHold,
   isSlotGameOver,
   nextSlotPlayer,
   slotAllocated,
@@ -37,9 +41,12 @@ import {
   slotStakeForDuration,
   spinSlot,
   startSlotGame,
+  type SlotCharge,
+  type SlotDuelOutcome,
   type SlotDuration,
   type SlotGameState,
   type SlotOutcomeKind,
+  type SlotPrizeOutcome,
   type SlotRandom,
   type SlotSpinResult,
   type SlotSymbol,
@@ -55,15 +62,20 @@ import {
   playDrumrollSound,
   playFreeSpinsIntroSound,
   playGhostSound,
+  playGiftOpenSound,
   playGiggleSound,
   playJackpotSound,
   playLeverSound,
+  playMysterySound,
   playReelStopSound,
   playRollupSound,
   playSourSound,
   playStampSound,
   playStarSound,
+  playSwordSound,
+  playTickSound,
   playWinLineSound,
+  setGameSoundsMuted,
 } from "@/lib/sound/game-sounds";
 import {
   CATCH_FLASH_HOLD_MS,
@@ -73,16 +85,21 @@ import {
 } from "@/components/groups/split-game/celebration";
 import {
   AmbientBubbles,
+  BONUS_WHEEL_SPIN_MS,
   BombFlash,
+  BonusWheel,
   BulbRow,
   CoinChip,
+  DUEL_REVEAL_MS,
+  DuelReveal,
   EmojiShower,
   FloatingBubbles,
   GambleFlip,
+  GiftPicker,
+  JackpotMarquee,
   LOSS_RED,
   LedPanel,
   RollupMoney,
-  SlotSymbolFace,
   SlotWinBanner,
   WIN_GOLD,
   WinLine,
@@ -90,6 +107,22 @@ import {
   type FloatBubble,
   type WinTier,
 } from "@/components/groups/split-game/slot-fx";
+import {
+  EMPTY_SLOT_STATS,
+  FacesRow,
+  OUTCOME_DETAIL,
+  OUTCOME_SHORT,
+  OUTCOME_TITLE,
+  Paytable,
+  PlayerBadges,
+  ROW_HEIGHT,
+  ReelSymbol,
+  SlotAwards,
+  TallyList,
+  WildBadge,
+  usePrizeFace,
+  type SlotStats,
+} from "@/components/groups/split-game/slot-parts";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { GamePoolChecklist } from "@/components/groups/split-game/game-pool-checklist";
 import type { GroupMember } from "@/lib/types";
@@ -100,8 +133,6 @@ type StakeChoice = SlotDuration | "custom";
 
 const DURATIONS: SlotDuration[] = ["short", "normal", "long"];
 
-/** Row height in px, and how many rows the window shows — the classic 3-symbol payline. */
-const ROW_HEIGHT = 64;
 const VISIBLE_ROWS = 3;
 const STRIP_LENGTH = 22;
 /** The teased third reel travels further, so it can keep spinning fast while the drum rolls. */
@@ -110,6 +141,8 @@ const TEASE_STRIP_LENGTH = 46;
 const REEL_DURATIONS = [1.3, 1.8, 2.3];
 /** When the first two reels match, the third keeps everyone waiting. */
 const TEASE_DURATION = 4;
+/** A held pair's respin: one reel, always teased. */
+const RESPIN_DURATION = 2.6;
 /** How far a reel overshoots its landing spot before snapping back — a real reel doesn't stop dead. */
 const OVERSHOOT = ROW_HEIGHT * 0.22;
 /** A three-of-a-kind shows its lit line and pulsing symbols this long before the takeover. */
@@ -118,6 +151,8 @@ const LINE_SHOW_MS = 750;
 const BUBBLE_HOLD_MS = 2600;
 /** Coins sit on the reels this long before flying into the pot. */
 const COIN_COLLECT_MS = 850;
+/** Mystery symbols sit on the payline this long before turning over. */
+const MYSTERY_REVEAL_MS = 700;
 /** How long each kind of win banner holds, unless tapped away. */
 const BANNER_HOLD_MS: Record<WinTier, number> = {
   win: 2400,
@@ -126,18 +161,27 @@ const BANNER_HOLD_MS: Record<WinTier, number> = {
   mega: 3600,
   jackpot: 5200,
 };
-/** The clover banner only announces the pick, so it gets out of the way sooner. */
-const CLOVER_BANNER_HOLD_MS = 2000;
+/** A banner that only announces a decision (clover, duel, gift) gets out of the way sooner. */
+const ANNOUNCE_HOLD_MS = 1800;
 /** How long the Risiko coin spins, and how long its verdict stays up. */
 const GAMBLE_SPIN_MS = 1450;
 const GAMBLE_HOLD_MS = 2400;
+/** How long an opened gift box stays up before the game goes on. */
+const GIFT_HOLD_MS = 2200;
 /** How long the amount on a win banner takes to roll up. */
 const ROLLUP_S = 1.6;
+/** Turbo: everything runs at this share of its normal time. */
+const TURBO_SPEED = 0.4;
+/** The pause between auto-spin pulls. */
+const AUTO_GAP_MS = 650;
+/** Per-device settings, remembered in this browser only. */
+const TURBO_KEY = "split:slot-turbo";
+const SOUND_KEY = "split:game-sound-off";
 /** What the reels show before the first pull: a row of sevens on the payline, as bait. */
 const IDLE_STRIPS: SlotSymbol[][] = [
-  ["bell", "seven", "cherry"],
-  ["clover", "seven", "star"],
-  ["ghost", "seven", "receipt"],
+  ["bell", "seven", "wheel"],
+  ["gift", "seven", "star"],
+  ["swords", "seven", "clover"],
 ];
 /**
  * The lever's resting and pulled angles. It pivots from the housing like the
@@ -155,17 +199,7 @@ const cryptoRandom: SlotRandom = {
   shuffle: (items) => secureShuffle([...items]),
 };
 
-/** Combinations that are good news for the person at the machine. The ghost depends on the swap. */
-const GOOD_KINDS: ReadonlySet<SlotOutcomeKind> = new Set([
-  "pair",
-  "cherries",
-  "bells",
-  "stars",
-  "clover",
-  "jackpot",
-]);
-
-/** The three-of-a-kinds that get a casino banner, and its tier. */
+/** The three-of-a-kinds that get a casino banner, and its tier. The wheel gets its own wheel. */
 const BANNER_TIER: Partial<Record<SlotOutcomeKind, WinTier>> = {
   cherries: "freeSpins",
   bells: "big",
@@ -173,6 +207,8 @@ const BANNER_TIER: Partial<Record<SlotOutcomeKind, WinTier>> = {
   clover: "big",
   receipt: "big",
   ghost: "big",
+  gift: "big",
+  duel: "big",
   jackpot: "jackpot",
 };
 
@@ -183,50 +219,9 @@ const BANNER_LABEL: Partial<Record<SlotOutcomeKind, TranslationKey>> = {
   clover: "expenses.slotWinClover",
   receipt: "expenses.slotWinReceipt",
   ghost: "expenses.slotWinGhost",
+  gift: "expenses.slotWinGift",
+  duel: "expenses.slotWinDuel",
   jackpot: "expenses.slotWinJackpot",
-};
-
-const OUTCOME_TITLE: Record<SlotOutcomeKind, TranslationKey> = {
-  miss: "expenses.slotOutcomeMiss",
-  pair: "expenses.slotOutcomePair",
-  lemons: "expenses.slotOutcomeLemons",
-  cherries: "expenses.slotOutcomeCherries",
-  bells: "expenses.slotOutcomeBells",
-  stars: "expenses.slotOutcomeStars",
-  clover: "expenses.slotOutcomeClover",
-  receipt: "expenses.slotOutcomeReceipt",
-  ghost: "expenses.slotOutcomeGhost",
-  bombs: "expenses.slotOutcomeBombs",
-  jackpot: "expenses.slotOutcomeJackpot",
-};
-
-const OUTCOME_DETAIL: Record<SlotOutcomeKind, TranslationKey> = {
-  miss: "expenses.slotOutcomeMissDetail",
-  pair: "expenses.slotOutcomePairDetail",
-  lemons: "expenses.slotOutcomeLemonsDetail",
-  cherries: "expenses.slotOutcomeCherriesDetail",
-  bells: "expenses.slotOutcomeBellsDetail",
-  stars: "expenses.slotOutcomeStarsDetail",
-  clover: "expenses.slotOutcomeCloverDetail",
-  receipt: "expenses.slotOutcomeReceiptDetail",
-  ghost: "expenses.slotOutcomeGhostDetail",
-  bombs: "expenses.slotOutcomeBombsDetail",
-  jackpot: "expenses.slotOutcomeJackpotDetail",
-};
-
-/** Short, shouty versions for the stamp and the LED panel. */
-const OUTCOME_SHORT: Record<SlotOutcomeKind, TranslationKey> = {
-  miss: "expenses.slotStampMiss",
-  pair: "expenses.slotStampPair",
-  lemons: "expenses.slotStampLemons",
-  cherries: "expenses.slotStampCherries",
-  bells: "expenses.slotStampBells",
-  stars: "expenses.slotStampStars",
-  clover: "expenses.slotStampClover",
-  receipt: "expenses.slotStampReceipt",
-  ghost: "expenses.slotStampGhost",
-  bombs: "expenses.slotStampBombs",
-  jackpot: "expenses.slotStampJackpot",
 };
 
 /** What flies out of the reels for the three-of-a-kind combinations. */
@@ -237,6 +232,8 @@ const OUTCOME_GLYPHS: Partial<Record<SlotOutcomeKind, string[]>> = {
   stars: ["⭐", "🌟", "🪙", "🪙", "🍻"],
   clover: ["🍀", "🍀", "✨", "🪙"],
   receipt: ["🧾", "💸", "🧾"],
+  gift: ["🎁", "🎀", "✨"],
+  duel: ["⚔️", "🛡️", "✨"],
   ghost: ["👻", "👻", "💨"],
   bombs: ["💥", "🔥", "💨"],
   jackpot: ["🪙", "🪙", "💶", "💎"],
@@ -259,6 +256,7 @@ type Takeover =
       finale: boolean;
     }
   | { id: number; style: "banner"; result: SlotSpinResult; finale: boolean }
+  | { id: number; style: "wheel"; result: SlotSpinResult; finale: boolean }
   | { id: number; style: "pot"; result: SlotSpinResult; finale: boolean };
 
 interface GambleFlipState {
@@ -267,6 +265,18 @@ interface GambleFlipState {
   won: boolean;
   stakeMinor: number;
   deltaMinor: number;
+}
+
+interface DuelShow {
+  id: number;
+  duel: SlotDuelOutcome;
+  charge: SlotCharge | null;
+}
+
+interface GiftShow {
+  picked: number;
+  outcome: SlotPrizeOutcome;
+  boxes: readonly SlotPrizeOutcome["prize"][];
 }
 
 function durationLabelKey(duration: SlotDuration): TranslationKey {
@@ -291,7 +301,7 @@ function isGoodResult(result: SlotSpinResult): boolean {
   if (result.kind === "ghost") {
     return result.swap !== null && result.swap.otherBefore < result.swap.spinnerBefore;
   }
-  return GOOD_KINDS.has(result.kind);
+  return SLOT_GOOD_KINDS.has(result.kind);
 }
 
 /** Which reels make up the combination: all three for a triple, the matching two for a pair. */
@@ -318,168 +328,43 @@ function buildReelStrip(face: SlotSymbol, length: number): SlotSymbol[] {
   );
 }
 
-type SymbolState = "idle" | "win" | "dim";
-
 /**
- * One reel row. A symbol that is part of a combination pulses and glows, the
- * way a slot animates the symbols on the line that paid; the others dim so
- * the combination reads at a glance.
+ * Which payline reels hide behind a ❓ until they turn over. Purely
+ * presentation (the result is already drawn): some three-of-a-kinds hide two
+ * or three of their symbols, and the odd no-win hides one to tease.
  */
-function ReelSymbol({
-  symbol,
-  state,
-  glow,
-}: {
-  symbol: SlotSymbol;
-  state: SymbolState;
-  glow: string;
-}) {
-  const reduceMotion = useReducedMotion();
-  return (
-    <span className="flex shrink-0 items-center justify-center" style={{ height: ROW_HEIGHT }}>
-      <motion.span
-        className="block"
-        style={{ filter: state === "win" ? `drop-shadow(0 0 8px ${glow})` : undefined }}
-        animate={
-          state === "win" && !reduceMotion
-            ? { scale: [1, 1.28, 1.08, 1.22, 1.1], rotate: [0, -6, 4, -2, 0] }
-            : { scale: 1, rotate: 0, opacity: state === "dim" ? 0.3 : 1 }
-        }
-        transition={
-          state === "win" && !reduceMotion
-            ? { duration: 1.1, ease: "easeInOut", repeat: 2, repeatType: "mirror" }
-            : { duration: 0.25 }
-        }
-      >
-        <SlotSymbolFace symbol={symbol} className="text-[40px]" />
-      </motion.span>
-    </span>
-  );
-}
-
-function FacesRow({ faces, className }: { faces: readonly SlotSymbol[]; className?: string }) {
-  return (
-    <span className={cn("flex items-center justify-center gap-1", className)}>
-      {faces.map((face, index) => (
-        <SlotSymbolFace key={index} symbol={face} className="text-xl" />
-      ))}
-    </span>
-  );
-}
-
-function WildBadge() {
-  const t = useT();
-  return (
-    <span className="rounded-full bg-[oklch(0.5_0.22_300)] px-2 py-0.5 text-xs font-black tracking-wide text-white shadow-[0_0_12px_oklch(0.6_0.22_300/0.7)]">
-      {t("expenses.slotWildBadge")}
-    </span>
-  );
-}
-
-/** The combinations and what they do, with their real odds — nothing about this machine is hidden. */
-function Paytable({ className }: { className?: string }) {
-  const t = useT();
-  const rows = [...SLOT_PAYTABLE].reverse();
-  return (
-    <details className={cn("group rounded-xl border", className)}>
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 p-2.5 text-sm font-medium">
-        <span className="flex items-center gap-1.5">
-          <span aria-hidden="true">📜</span>
-          {t("expenses.slotPaytableTitle")}
-        </span>
-        <span
-          aria-hidden="true"
-          className="text-muted-foreground transition-transform duration-(--duration-fast) group-open:rotate-180"
-        >
-          ▾
-        </span>
-      </summary>
-      <ul className="flex flex-col gap-1 px-2.5 pb-2.5">
-        {rows.map((entry) => (
-          <li key={entry.kind} className="flex items-center gap-2.5 text-xs">
-            <span aria-hidden="true" className="flex w-16 shrink-0 justify-center">
-              {entry.symbol ? (
-                <FacesRow faces={[entry.symbol, entry.symbol, entry.symbol]} />
-              ) : entry.kind === "pair" ? (
-                <FacesRow faces={["cherry", "cherry"]} className="opacity-80" />
-              ) : (
-                <span className="text-muted-foreground text-base">—</span>
-              )}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="font-semibold">{t(OUTCOME_TITLE[entry.kind])}</span>{" "}
-              <span className="text-muted-foreground">{t(OUTCOME_DETAIL[entry.kind])}</span>
-            </span>
-            <span className="text-muted-foreground shrink-0 tabular-nums">
-              {Math.round((entry.weight / SLOT_TOTAL_WEIGHT) * 100)} %
-            </span>
-          </li>
-        ))}
-      </ul>
-      <ul className="text-muted-foreground flex flex-col gap-1.5 border-t px-2.5 py-2.5 text-xs">
-        <li>{t("expenses.slotPaytableWild")}</li>
-        <li>{t("expenses.slotPaytableCoins")}</li>
-        <li>{t("expenses.slotPaytableRisk")}</li>
-      </ul>
-    </details>
-  );
-}
-
-/** Running "who owes how much so far" breakdown — both the live mid-game state and the final result use this. */
-function TallyList({
-  game,
-  members,
-  currency,
-}: {
-  game: SlotGameState;
-  members: Record<string, GroupMember>;
-  currency: string;
-}) {
-  const t = useT();
-  const entries = Object.entries(game.tallies)
-    .filter(([, amount]) => amount > 0)
-    .sort((a, b) => b[1] - a[1]);
-
-  if (entries.length === 0 && game.out.length === 0) {
-    return (
-      <p className="text-muted-foreground text-center text-xs">{t("expenses.slotTallyEmpty")}</p>
-    );
+function pickMysteryReels(result: SlotSpinResult): number[] {
+  const roll = Math.random();
+  if (result.kind !== "miss" && result.kind !== "pair" && roll < 0.3) {
+    return roll < 0.12 ? [0, 1, 2] : [0, 2];
   }
+  if (result.kind === "miss" && roll < 0.08) return [Math.floor(Math.random() * 3)];
+  return [];
+}
 
-  return (
-    <ul className="flex flex-col gap-1.5">
-      {entries.map(([uid, amount]) => (
-        <li
-          key={uid}
-          className="animate-rise flex items-center justify-between gap-2 rounded-lg border p-2 text-sm"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <GameAvatar name={members[uid].displayName} className="size-7 shrink-0 text-xs" />
-            <span className="truncate">{members[uid].displayName}</span>
-          </span>
-          <AnimatedMoney
-            amountMinor={amount}
-            currency={currency}
-            className="shrink-0 text-base font-semibold"
-          />
-        </li>
-      ))}
-      {game.out.map((uid) => (
-        <li
-          key={uid}
-          className="animate-rise border-primary/30 bg-primary/5 flex items-center justify-between gap-2 rounded-lg border border-dashed p-2 text-sm"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <GameAvatar name={members[uid].displayName} className="size-7 shrink-0 text-xs" />
-            <span className="truncate">{members[uid].displayName}</span>
-          </span>
-          <span className="text-primary shrink-0 text-xs font-semibold">
-            {t("expenses.slotOutBadge")}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
+function readFlag(key: string): boolean {
+  try {
+    return typeof window !== "undefined" && window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeFlag(key: string, value: boolean) {
+  try {
+    window.localStorage.setItem(key, value ? "1" : "0");
+  } catch {
+    // Private mode or blocked storage: the setting just won't stick.
+  }
+}
+
+/** A short buzz on phones that support it (Android). iOS ignores the Vibration API. */
+function vibrate(pattern: number | number[]) {
+  try {
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
+  } catch {
+    // Not supported: nothing to do.
+  }
 }
 
 /**
@@ -489,14 +374,15 @@ function TallyList({
  * and the rules. Each pull is drawn crypto-randomly by the game module
  * first; the reels only animate toward a result that is already settled.
  *
- * The presentation borrows from real slots: an LED panel on the cabinet,
- * the winning symbols pulsing on a lit line, a 💎 wild that doubles a
- * combination, amounts floating up as bubbles, win banners in tiers on a
- * sunburst with the amount rolling up, coins fountaining out, a free-spins
- * mode where coins land on the reels and fly into a pot, and a Risiko
- * button (double or nothing on a loss) like a German pub machine's. A plain
- * no-win, the most common pull by far, stays small: three pulls in a row
- * with a takeover on each would wear thin fast.
+ * The presentation borrows from real slots: a progressive jackpot marquee
+ * and an LED panel on the cabinet, the winning symbols pulsing on a lit
+ * line, ❓ mystery symbols turning over, a 💎 wild, amounts floating up as
+ * bubbles, win banners in tiers on a sunburst, a bonus wheel, gift boxes, a
+ * duel, free spins whose coins fly into a pot at a rising multiplier, a
+ * Halten button to respin the odd reel of a pair, and a Risiko button
+ * (double or nothing on a loss) like a German pub machine's. Turbo,
+ * auto-spin and a sound switch keep a long game moving, and an award show
+ * closes it. A plain no-win, the most common pull by far, stays small.
  *
  * The game always finishes exactly on the expense's total, so `onResolve`
  * hands back the per-person amounts actually owed, not an equal split.
@@ -519,15 +405,19 @@ export function SplitSlotDialog({
   onResolve: (amountsByUid: Record<string, number>) => void;
 }) {
   const t = useT();
+  const prizeFace = usePrizeFace();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
   const [poolUids, setPoolUids] = useState<string[]>(memberUids);
   const [stakeChoice, setStakeChoice] = useState<StakeChoice>("normal");
   const [customStakeInput, setCustomStakeInput] = useState("1,00");
   const [game, setGame] = useState<SlotGameState | null>(null);
-  const [pullId, setPullId] = useState(0);
+  const [reelKeys, setReelKeys] = useState([0, 0, 0]);
   const [reels, setReels] = useState<SlotSymbol[][]>([[], [], []]);
   const [reelStopped, setReelStopped] = useState([true, true, true]);
+  const [heldReels, setHeldReels] = useState<number[]>([]);
+  const [mysteryReels, setMysteryReels] = useState<number[]>([]);
+  const [mysteryRevealed, setMysteryRevealed] = useState(true);
   const [teasing, setTeasing] = useState(false);
   const [pulling, setPulling] = useState(false);
   const [lastResult, setLastResult] = useState<SlotSpinResult | null>(null);
@@ -535,20 +425,38 @@ export function SplitSlotDialog({
   const [bubbles, setBubbles] = useState<FloatBubble[]>([]);
   const [coinsFlying, setCoinsFlying] = useState(false);
   const [gambleFlip, setGambleFlip] = useState<GambleFlipState | null>(null);
+  const [duelShow, setDuelShow] = useState<DuelShow | null>(null);
+  const [giftShow, setGiftShow] = useState<GiftShow | null>(null);
+  const [announcing, setAnnouncing] = useState(false);
+  const [stats, setStats] = useState<SlotStats>(EMPTY_SLOT_STATS);
+  const [turbo, setTurbo] = useState(() => readFlag(TURBO_KEY));
+  const [soundOff, setSoundOff] = useState(() => readFlag(SOUND_KEY));
+  const [auto, setAuto] = useState<{ uid: string } | null>(null);
   const pendingSpinRef = useRef<SlotSpinResult | null>(null);
+  /**
+   * Which reels are spinning and which have stopped, kept in a ref rather
+   * than state: with reduced motion every reel finishes in the same tick,
+   * and each callback has to see the others' stops straight away.
+   */
+  const spinRef = useRef<{ reels: number[]; stopped: Set<number> }>({
+    reels: [],
+    stopped: new Set(),
+  });
   const queueRef = useRef<Takeover[]>([]);
   const idRef = useRef(0);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const reelsRef = useRef<HTMLDivElement | null>(null);
   const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const speed = turbo ? TURBO_SPEED : 1;
+  const ms = (value: number) => Math.round(value * speed);
 
   function clearTimers() {
     for (const timeout of timeoutsRef.current) clearTimeout(timeout);
     timeoutsRef.current = [];
   }
 
-  function later(ms: number, run: () => void) {
-    timeoutsRef.current.push(setTimeout(run, ms));
+  function later(delay: number, run: () => void) {
+    timeoutsRef.current.push(setTimeout(run, delay));
   }
 
   function nextId() {
@@ -557,6 +465,7 @@ export function SplitSlotDialog({
   }
 
   useEffect(() => clearTimers, []);
+  useEffect(() => setGameSoundsMuted(soundOff), [soundOff]);
 
   function togglePoolMember(uid: string) {
     setPoolUids((current) =>
@@ -579,24 +488,37 @@ export function SplitSlotDialog({
     game && spinner && game.seats.length - game.out.length > 1
       ? nextSlotPlayer(game, spinner)
       : null;
-  const busy = pulling || gambleFlip !== null;
-  const choosing = game?.pendingChoice && !busy && !takeover ? game.pendingChoice : null;
-  const gambleOffer = game?.gamble && !busy && !game.pendingChoice ? game.gamble : null;
+  const busy =
+    pulling || gambleFlip !== null || duelShow !== null || giftShow !== null || announcing;
+  const pending = game?.pending ?? null;
+  const choosing = pending && pending.type !== "gift" && !busy && !takeover ? pending : null;
+  const gifting = pending?.type === "gift" && !takeover && !pulling && !announcing ? pending : null;
+  const gambleOffer = game?.gamble && !busy && !pending ? game.gamble : null;
+  const holdOffer = game?.hold && !busy && !pending ? game.hold : null;
 
   function resetPlay() {
     clearTimers();
     pendingSpinRef.current = null;
+    spinRef.current = { reels: [], stopped: new Set() };
     queueRef.current = [];
     setGame(null);
     setLastResult(null);
     setReels([[], [], []]);
     setReelStopped([true, true, true]);
+    setHeldReels([]);
+    setMysteryReels([]);
+    setMysteryRevealed(true);
     setTeasing(false);
     setPulling(false);
     setTakeover(null);
     setBubbles([]);
     setCoinsFlying(false);
     setGambleFlip(null);
+    setDuelShow(null);
+    setGiftShow(null);
+    setAnnouncing(false);
+    setStats(EMPTY_SLOT_STATS);
+    setAuto(null);
   }
 
   function startGame() {
@@ -618,24 +540,72 @@ export function SplitSlotDialog({
     onOpenChange(nextOpen);
   }
 
+  function toggleTurbo() {
+    writeFlag(TURBO_KEY, !turbo);
+    setTurbo(!turbo);
+  }
+
+  function toggleSound() {
+    writeFlag(SOUND_KEY, !soundOff);
+    setSoundOff(!soundOff);
+  }
+
   const name = (uid: string) => members[uid]?.displayName ?? "?";
   const money = (minor: number) => formatMoney(minor, currency);
 
-  /** Sound and shake for a takeover as it comes up. */
+  function chargeBubbles(charges: SlotCharge[], id: number | string): FloatBubble[] {
+    return charges.map((charge, index) => ({
+      id: `${id}-${index}`,
+      tone: charge.amountMinor < 0 ? "win" : "loss",
+      label: `${charge.amountMinor < 0 ? "−" : "+"}${money(Math.abs(charge.amountMinor))} · ${name(charge.uid)}`,
+    }));
+  }
+
+  function showBubbles(list: FloatBubble[]) {
+    setBubbles(list.slice(0, 5));
+    later(ms(BUBBLE_HOLD_MS) + 600, () => setBubbles([]));
+  }
+
+  /** Keeps the award show's numbers: the hardest single hit, Risiko presses, jackpots. */
+  function track(charges: SlotCharge[], extra?: { risk?: string; jackpot?: string }) {
+    setStats((current) => {
+      let biggestHit = current.biggestHit;
+      for (const charge of charges) {
+        if (charge.amountMinor > (biggestHit?.amountMinor ?? 0)) {
+          biggestHit = { uid: charge.uid, amountMinor: charge.amountMinor };
+        }
+      }
+      const risks = extra?.risk
+        ? { ...current.risks, [extra.risk]: (current.risks[extra.risk] ?? 0) + 1 }
+        : current.risks;
+      const jackpots = extra?.jackpot ? [...current.jackpots, extra.jackpot] : current.jackpots;
+      return { biggestHit, risks, jackpots };
+    });
+  }
+
+  /** Sound, shake and buzz for a takeover as it comes up. */
   function playTakeover(next: Takeover) {
     if (next.style === "pot") {
       playBigWinSound();
-      playRollupSound(ROLLUP_S, 0.7);
+      playRollupSound(ROLLUP_S * speed, 0.7);
       shakeStage(0.8, 0.1);
+      vibrate([40, 40, 80]);
+      return;
+    }
+    if (next.style === "wheel") {
+      playStarSound();
       return;
     }
     if (next.style === "slip") {
       if (next.kind === "bombs") {
         playBombSound();
+        vibrate([120, 60, 200]);
       } else {
         playStampSound(STAMP_IMPACT_S);
         if (next.kind === "lemons") playSourSound(STAMP_IMPACT_S + 0.08);
+        else if (next.kind === "duel") playSwordSound();
         else playGiggleSound(STAMP_IMPACT_S + 0.12);
+        vibrate(60);
       }
       shakeStage(next.kind === "bombs" ? 2.4 : next.finale ? 1.4 : 1);
       return;
@@ -648,16 +618,20 @@ export function SplitSlotDialog({
       case "bells":
         playBellSound();
         playBigWinSound(0.35);
-        playRollupSound(ROLLUP_S, 0.7);
+        playRollupSound(ROLLUP_S * speed, 0.7);
         break;
       case "stars":
         playStarSound();
         playBigWinSound(0.25);
-        playRollupSound(ROLLUP_S, 0.7);
+        playRollupSound(ROLLUP_S * speed, 0.7);
         break;
       case "clover":
+      case "gift":
         playStarSound();
         playBigWinSound(0.2);
+        break;
+      case "duel":
+        playSwordSound();
         break;
       case "receipt":
         playCashRegisterSound();
@@ -668,24 +642,23 @@ export function SplitSlotDialog({
         break;
       case "jackpot":
         playJackpotSound();
-        if (result.charges.some((charge) => charge.amountMinor < 0)) {
-          playRollupSound(ROLLUP_S, 0.9);
-        }
+        if (result.charges.length > 0) playRollupSound(ROLLUP_S * speed, 0.9);
+        vibrate([100, 50, 100, 50, 300]);
         break;
     }
+    if (result.kind !== "duel" && result.kind !== "gift") vibrate([40, 40, 80]);
     shakeStage(result.kind === "jackpot" ? 1.6 : result.kind === "receipt" ? 1.2 : 0.8, 0.1);
   }
 
   function holdFor(next: Takeover): number {
     const finale = next.finale ? 600 : 0;
-    if (next.style === "pot") return BANNER_HOLD_MS.mega + finale;
+    if (next.style === "pot") return ms(BANNER_HOLD_MS.mega) + finale;
+    if (next.style === "wheel") return BONUS_WHEEL_SPIN_MS + ms(2000) + finale;
     if (next.style === "slip") {
-      return CATCH_FLASH_HOLD_MS + (next.kind === "bombs" ? 1200 : 300) + finale;
+      return ms(CATCH_FLASH_HOLD_MS + (next.kind === "bombs" ? 1200 : 300)) + finale;
     }
-    if (next.result.kind === "clover" && next.result.state.pendingChoice) {
-      return CLOVER_BANNER_HOLD_MS;
-    }
-    return BANNER_HOLD_MS[BANNER_TIER[next.result.kind] ?? "win"] + finale;
+    if (next.result.state.pending) return ms(ANNOUNCE_HOLD_MS);
+    return ms(BANNER_HOLD_MS[BANNER_TIER[next.result.kind] ?? "win"]) + finale;
   }
 
   /** Shows the next queued takeover, or clears the stage when there is none. */
@@ -710,51 +683,105 @@ export function SplitSlotDialog({
     advance();
   }
 
-  function pull() {
-    if (!game || busy || done || game.pendingChoice) return;
-    // Pulling again mid-celebration clears it at once, so the new spin is
-    // never hidden behind the previous one's takeover.
+  /**
+   * Sets the reels in `reelIndexes` spinning toward `result`. The others stay
+   * exactly where they are, which is what a held pair's respin needs.
+   */
+  function animateReels(result: SlotSpinResult, reelIndexes: number[], respin = false) {
+    pendingSpinRef.current = result;
+    spinRef.current = { reels: reelIndexes, stopped: new Set() };
+    const tease = !respin && teases(result.faces);
+    setTeasing(respin);
+    setReels((current) =>
+      current.map((strip, index) =>
+        reelIndexes.includes(index)
+          ? buildReelStrip(
+              result.faces[index],
+              index === 2 && tease ? TEASE_STRIP_LENGTH : STRIP_LENGTH,
+            )
+          : strip,
+      ),
+    );
+    setReelKeys((current) =>
+      current.map((key, index) => (reelIndexes.includes(index) ? key + 1 : key)),
+    );
+    setReelStopped((current) =>
+      current.map((stopped, index) => (reelIndexes.includes(index) ? false : stopped)),
+    );
+    const mystery = respin ? [] : pickMysteryReels(result);
+    setMysteryReels(mystery);
+    setMysteryRevealed(mystery.length === 0);
+    setPulling(true);
+    if (respin && !reduceMotion) playDrumrollSound(RESPIN_DURATION * speed - 0.1);
+  }
+
+  function clearStage() {
     clearTimers();
     queueRef.current = [];
     setTakeover(null);
     setBubbles([]);
     setCoinsFlying(false);
-    const result = spinSlot(game, cryptoRandom);
-    pendingSpinRef.current = result;
-    const tease = teases(result.faces);
-    setTeasing(false);
-    setReels(
-      result.faces.map((face, index) =>
-        buildReelStrip(face, index === 2 && tease ? TEASE_STRIP_LENGTH : STRIP_LENGTH),
-      ),
-    );
-    setReelStopped([false, false, false]);
-    setPulling(true);
-    playLeverSound();
-    setPullId((id) => id + 1);
+    setHeldReels([]);
   }
 
-  /** The amounts that float up off the machine after a pull. */
+  function pull() {
+    if (!game || busy || done || game.pending) return;
+    // Pulling again mid-celebration clears it at once, so the new spin is
+    // never hidden behind the previous one's takeover.
+    clearStage();
+    const result = spinSlot(game, cryptoRandom);
+    playLeverSound();
+    animateReels(result, [0, 1, 2]);
+  }
+
+  /** Halten: keep the pair, respin the odd reel once. */
+  function holdAndRespin() {
+    if (!game?.hold || busy) return;
+    clearStage();
+    const hold = game.hold;
+    const result = applySlotHold(game, drawSlotHold(cryptoRandom), cryptoRandom);
+    setHeldReels([0, 1, 2].filter((reel) => reel !== hold.reel));
+    playLeverSound();
+    animateReels(result, [hold.reel], true);
+  }
+
+  /** The bubbles that float up off the machine after a pull. */
   function bubblesFor(result: SlotSpinResult, id: number): FloatBubble[] {
     const list: FloatBubble[] = [];
+    if (result.pity) {
+      list.push({ id: `${id}-pity`, tone: "win", label: t("expenses.slotBubblePity") });
+    }
+    if (result.respin) {
+      list.push({
+        id: `${id}-hold`,
+        tone: result.respin.completed ? "win" : "loss",
+        label: result.respin.completed
+          ? t("expenses.slotBubbleHoldHit")
+          : t("expenses.slotBubbleHoldMiss"),
+      });
+    }
     if (result.wild) {
       list.push({ id: `${id}-wild`, tone: "win", label: t("expenses.slotWildBadge") });
     }
-    result.charges.forEach((charge, index) => {
-      list.push({
-        id: `${id}-${index}`,
-        tone: charge.amountMinor < 0 ? "win" : "loss",
-        label: `${charge.amountMinor < 0 ? "−" : "+"}${money(Math.abs(charge.amountMinor))} · ${name(charge.uid)}`,
-      });
-    });
-    if (result.kind === "pair") {
+    if (result.boosted) {
+      list.push({ id: `${id}-boost`, tone: "win", label: t("expenses.slotBubbleBoost") });
+    }
+    if (result.shieldUsed) {
+      list.push({ id: `${id}-shield`, tone: "win", label: t("expenses.slotBubbleShield") });
+    }
+    list.push(...chargeBubbles(result.charges, id));
+    if (result.kind === "pair" && !result.respin) {
       list.push({
         id: `${id}-pair`,
         tone: "win",
         label: `🪙 ${t("expenses.slotBubbleStakeBack")}`,
       });
     } else if (result.kind === "miss" && result.freeSpin) {
-      list.push({ id: `${id}-free`, tone: "win", label: `🍒 ${t("expenses.slotBubbleFreeMiss")}` });
+      list.push({
+        id: `${id}-free`,
+        tone: "win",
+        label: `🍒 ${t("expenses.slotBubbleFreeMiss")}`,
+      });
     } else if (result.freeSpinsAwarded > 0) {
       list.push({
         id: `${id}-fs`,
@@ -766,20 +793,24 @@ export function SplitSlotDialog({
       list.push({
         id: `${id}-coins`,
         tone: "win",
-        label: t("expenses.slotBubbleCoins", { amount: money(result.coinsCollectedMinor) }),
+        label: t("expenses.slotBubbleCoins", {
+          amount: money(result.coinsCollectedMinor),
+          multiplier: result.coinMultiplier,
+        }),
       });
     }
-    // Keep the column of bubbles short enough to read on a phone.
-    return list.slice(0, 5);
+    return list;
   }
 
   /** The takeovers a pull earns, in the order they play. */
   function takeoversFor(result: SlotSpinResult, finale: boolean): Takeover[] {
     const list: Takeover[] = [];
-    const potFinale = finale && result.potPayout !== null;
-    if (BANNER_TIER[result.kind]) {
-      list.push({ id: nextId(), style: "banner", result, finale: finale && !potFinale });
-    } else if (result.kind === "lemons" || result.kind === "bombs" || (finale && !potFinale)) {
+    const laterFinale = finale && result.potPayout !== null;
+    if (result.wheel) {
+      list.push({ id: nextId(), style: "wheel", result, finale: finale && !laterFinale });
+    } else if (BANNER_TIER[result.kind]) {
+      list.push({ id: nextId(), style: "banner", result, finale: finale && !laterFinale });
+    } else if (result.kind === "lemons" || result.kind === "bombs" || (finale && !laterFinale)) {
       const charged = result.charges.filter((charge) => charge.amountMinor > 0);
       const last = charged[charged.length - 1];
       if (last) {
@@ -807,16 +838,13 @@ export function SplitSlotDialog({
     const finale = isSlotGameOver(result.state);
     const combo = result.kind !== "miss";
 
-    setBubbles(bubblesFor(result, id));
-    later(BUBBLE_HOLD_MS, () => setBubbles([]));
-
+    showBubbles(bubblesFor(result, id));
     if (result.coins.length > 0) {
       later(COIN_COLLECT_MS, () => {
         setCoinsFlying(true);
         playCoinSound();
       });
     }
-
     if (combo && isGoodResult(result)) playWinLineSound();
 
     const list = takeoversFor(result, finale);
@@ -827,71 +855,137 @@ export function SplitSlotDialog({
       else playStampSound();
       return;
     }
-    const wait = combo ? LINE_SHOW_MS : result.coins.length > 0 ? COIN_COLLECT_MS + 400 : 0;
+    const wait = combo ? ms(LINE_SHOW_MS) : result.coins.length > 0 ? COIN_COLLECT_MS + 400 : 0;
+    // A decision (clover, duel, gift) waits for its banner before its panel opens.
+    if (result.state.pending) {
+      setAnnouncing(true);
+      later(wait + ms(ANNOUNCE_HOLD_MS) + 200, () => setAnnouncing(false));
+    }
     later(wait, () => present(list));
   }
 
-  function handleReelStop(index: number) {
-    if (!pulling) return;
-    setReelStopped((current) => {
-      const next = [...current];
-      next[index] = true;
-      return next;
-    });
-    playReelStopSound();
-    const pending = pendingSpinRef.current;
-    if (index === 1 && pending && teases(pending.faces)) {
-      setTeasing(true);
-      if (!reduceMotion) playDrumrollSound(TEASE_DURATION - REEL_DURATIONS[1] - 0.1);
-    }
-    if (index < 2) return;
-
-    // Last reel: settle the pending spin into the game.
+  /** The reels have landed: settle the pull into the game and celebrate it. */
+  function commit(result: SlotSpinResult) {
     setPulling(false);
     setTeasing(false);
-    pendingSpinRef.current = null;
-    if (!pending) return;
-    setGame(pending.state);
-    setLastResult(pending);
-    celebrate(pending);
+    setGame(result.state);
+    setLastResult(result);
+    track(result.charges, { jackpot: result.kind === "jackpot" ? result.spinner : undefined });
+    celebrate(result);
   }
 
-  /** Glücksklee: the chooser points at someone, who gets the slip. */
+  function handleReelStop(index: number) {
+    const spin = spinRef.current;
+    if (!spin.reels.includes(index) || spin.stopped.has(index)) return;
+    spin.stopped.add(index);
+    setReelStopped((current) => current.map((value, i) => (i === index ? true : value)));
+    playReelStopSound();
+    const result = pendingSpinRef.current;
+    if (index === 1 && spin.reels.length === 3 && result && teases(result.faces)) {
+      setTeasing(true);
+      if (!reduceMotion) playDrumrollSound((TEASE_DURATION - REEL_DURATIONS[1]) * speed - 0.1);
+    }
+    if (spin.stopped.size < spin.reels.length) return;
+
+    spinRef.current = { reels: [], stopped: new Set() };
+    pendingSpinRef.current = null;
+    if (!result) return;
+    if (mysteryReels.length > 0) {
+      // The ❓s turn over first; the result only counts once everyone has seen it.
+      later(ms(MYSTERY_REVEAL_MS), () => {
+        playMysterySound();
+        setMysteryRevealed(true);
+        later(ms(450), () => commit(result));
+      });
+      return;
+    }
+    commit(result);
+  }
+
+  /** Clover or duel: the person who pulled it points at someone. */
   function choose(target: string) {
-    if (!game?.pendingChoice) return;
-    const { state, charge } = applySlotChoice(game, target);
-    setGame(state);
-    if (!charge) return;
+    if (!game?.pending || game.pending.type === "gift") return;
+    if (game.pending.type === "clover") {
+      const { state, charge } = applySlotChoice(game, target);
+      setGame(state);
+      if (!charge) return;
+      track([charge]);
+      const id = nextId();
+      showBubbles(chargeBubbles([charge], id));
+      present([
+        {
+          id,
+          style: "slip",
+          uid: charge.uid,
+          amountMinor: charge.amountMinor,
+          kind: "clover",
+          faces: lastResult?.faces ?? ["clover", "clover", "clover"],
+          wild: lastResult?.wild ?? false,
+          finale: isSlotGameOver(state),
+        },
+      ]);
+      return;
+    }
+    const { state, charge, duel } = applySlotChoice(game, target, drawSlotDuel(cryptoRandom));
+    if (!duel) return;
     const id = nextId();
-    setBubbles([
-      {
-        id: `${id}-pick`,
-        tone: "loss",
-        label: `+${money(charge.amountMinor)} · ${name(charge.uid)}`,
-      },
-    ]);
-    later(BUBBLE_HOLD_MS, () => setBubbles([]));
-    present([
-      {
-        id,
-        style: "slip",
-        uid: charge.uid,
-        amountMinor: charge.amountMinor,
-        kind: "clover",
-        faces: lastResult?.faces ?? ["clover", "clover", "clover"],
-        wild: lastResult?.wild ?? false,
-        finale: isSlotGameOver(state),
-      },
-    ]);
+    setDuelShow({ id, duel, charge });
+    playSwordSound();
+    later(DUEL_REVEAL_MS - 600, () => playReelStopSound());
+    later(DUEL_REVEAL_MS - 100, () => {
+      setGame(state);
+      if (charge) {
+        track([charge]);
+        showBubbles(chargeBubbles([charge], id));
+      }
+      playStampSound();
+      vibrate(80);
+    });
+    later(DUEL_REVEAL_MS + ms(1600), () => {
+      setDuelShow(null);
+      if (!charge) return;
+      present([
+        {
+          id: nextId(),
+          style: "slip",
+          uid: charge.uid,
+          amountMinor: charge.amountMinor,
+          kind: "duel",
+          faces: lastResult?.faces ?? ["swords", "swords", "swords"],
+          wild: lastResult?.wild ?? false,
+          finale: isSlotGameOver(state),
+        },
+      ]);
+    });
+  }
+
+  /** Gift: the person who pulled it opens a box. */
+  function openGift(index: number) {
+    if (game?.pending?.type !== "gift" || giftShow) return;
+    const boxes = game.pending.boxes;
+    const { state, outcome } = applySlotGiftPick(game, index);
+    setGiftShow({ picked: index, outcome, boxes });
+    playGiftOpenSound();
+    later(ms(GIFT_HOLD_MS) + 400, () => {
+      setGiftShow(null);
+      setGame(state);
+      track(outcome.charges);
+      const id = nextId();
+      const face = prizeFace(outcome.prize);
+      showBubbles([
+        { id: `${id}-prize`, tone: "win", label: `${face.icon} ${face.label}` },
+        ...chargeBubbles(outcome.charges, id),
+      ]);
+      if (outcome.prize === "freeSpins") playFreeSpinsIntroSound();
+      else if (outcome.prize === "pay3") playStampSound();
+      else playWinLineSound();
+    });
   }
 
   /** Risiko: flip a coin on the loss just taken — struck off, or doubled. */
   function risk() {
     if (!game?.gamble || busy) return;
-    clearTimers();
-    queueRef.current = [];
-    setTakeover(null);
-    setBubbles([]);
+    clearStage();
     const gamble = game.gamble;
     const won = drawSlotGamble(cryptoRandom);
     const { state, charge } = applySlotGamble(game, won);
@@ -906,28 +1000,36 @@ export function SplitSlotDialog({
     if (!reduceMotion) playDrumrollSound(GAMBLE_SPIN_MS / 1000 - 0.1);
     later(reduceMotion ? 0 : GAMBLE_SPIN_MS, () => {
       setGame(state);
+      track(charge && charge.amountMinor > 0 ? [charge] : [], { risk: gamble.uid });
       if (won) {
         playWinLineSound();
         playCoinSound();
       } else {
         playBuzzerSound();
         shakeStage(1.2, 0);
+        vibrate(120);
       }
-      if (charge) {
-        setBubbles([
-          {
-            id: `${id}-risk`,
-            tone: charge.amountMinor < 0 ? "win" : "loss",
-            label: `${charge.amountMinor < 0 ? "−" : "+"}${money(Math.abs(charge.amountMinor))} · ${name(charge.uid)}`,
-          },
-        ]);
-      }
+      if (charge) showBubbles(chargeBubbles([charge], `${id}-risk`));
     });
-    later((reduceMotion ? 0 : GAMBLE_SPIN_MS) + GAMBLE_HOLD_MS, () => {
-      setGambleFlip(null);
-      setBubbles([]);
-    });
+    later((reduceMotion ? 0 : GAMBLE_SPIN_MS) + ms(GAMBLE_HOLD_MS), () => setGambleFlip(null));
   }
+
+  /** Auto-spin: pulls the rest of the series by itself, pausing for anything that needs a person. */
+  const autoStep = useEffectEvent(() => {
+    if (!auto || !game) return;
+    if (done || slotSpinner(game) !== auto.uid) {
+      setAuto(null);
+      return;
+    }
+    pull();
+  });
+  const autoReady = auto !== null && game !== null && !done && !busy && !takeover && !game.pending;
+  const autoGap = ms(AUTO_GAP_MS);
+  useEffect(() => {
+    if (!autoReady) return;
+    const timeout = setTimeout(autoStep, autoGap);
+    return () => clearTimeout(timeout);
+  }, [autoReady, autoGap, game]);
 
   function applyResult() {
     if (!game) return;
@@ -957,6 +1059,10 @@ export function SplitSlotDialog({
       : inFreeSpins
         ? "chase"
         : "idle";
+  const reelDuration = (reelIndex: number, teased: boolean) =>
+    (heldReels.length > 0 ? RESPIN_DURATION : teased ? TEASE_DURATION : REEL_DURATIONS[reelIndex]) *
+    speed;
+  const giftBoxes = gifting?.boxes ?? giftShow?.boxes ?? [];
 
   function slipCaption(slip: Extract<Takeover, { style: "slip" }>): ReactNode {
     return (
@@ -1004,7 +1110,7 @@ export function SplitSlotDialog({
             <RollupMoney
               amountMinor={Math.abs(charge.amountMinor)}
               currency={currency}
-              duration={ROLLUP_S}
+              duration={ROLLUP_S * speed}
               delay={delay + index * 0.15}
               prefix={charge.amountMinor < 0 ? "−" : "+"}
               className="font-bold text-[oklch(0.9_0.14_88)]"
@@ -1018,10 +1124,20 @@ export function SplitSlotDialog({
   function bannerBody(result: SlotSpinResult, finale: boolean): ReactNode {
     const charged = result.charges.filter((charge) => charge.amountMinor > 0);
     const refund = result.charges.find((charge) => charge.amountMinor < 0);
+    const pendingNow = result.state.pending;
     return (
       <>
         {result.wild && <WildBadge />}
         <span className="text-sm font-semibold text-white/85">{t(OUTCOME_TITLE[result.kind])}</span>
+        {pendingNow && (
+          <span className="text-sm text-white/85">
+            {pendingNow.type === "gift"
+              ? t("expenses.slotGiftPending")
+              : pendingNow.type === "duel"
+                ? t("expenses.slotDuelPending", { amount: money(pendingNow.amountMinor) })
+                : t("expenses.slotCloverPick", { amount: money(pendingNow.amountMinor) })}
+          </span>
+        )}
         {result.kind === "cherries" && (
           <>
             <motion.span
@@ -1040,7 +1156,7 @@ export function SplitSlotDialog({
             <RollupMoney
               amountMinor={charged[0].amountMinor}
               currency={currency}
-              duration={ROLLUP_S}
+              duration={ROLLUP_S * speed}
               delay={0.7}
               prefix="+"
               className={bigGold}
@@ -1052,16 +1168,7 @@ export function SplitSlotDialog({
           </>
         )}
         {(result.kind === "stars" || result.kind === "receipt") && chargeRows(charged)}
-        {result.kind === "clover" &&
-          (result.state.pendingChoice ? (
-            <span className="text-sm text-white/85">
-              {t("expenses.slotCloverPick", {
-                amount: money(result.state.pendingChoice.amountMinor),
-              })}
-            </span>
-          ) : (
-            charged[0] && chargeRows(charged)
-          ))}
+        {result.kind === "clover" && !pendingNow && charged[0] && chargeRows(charged)}
         {result.kind === "ghost" && result.swap && (
           <span className="flex w-full items-center justify-center gap-2 text-sm">
             {[
@@ -1115,7 +1222,7 @@ export function SplitSlotDialog({
                 <RollupMoney
                   amountMinor={-refund.amountMinor}
                   currency={currency}
-                  duration={ROLLUP_S}
+                  duration={ROLLUP_S * speed}
                   delay={0.9}
                   prefix="−"
                   className={bigGold}
@@ -1126,6 +1233,16 @@ export function SplitSlotDialog({
               </>
             ) : (
               <span className="text-sm text-white/85">{t("expenses.slotJackpotOut")}</span>
+            )}
+            {result.jackpotPayout && (
+              <>
+                <span className="text-xs text-white/80">
+                  {t("expenses.slotJackpotPotPaid", {
+                    amount: money(result.jackpotPayout.totalMinor),
+                  })}
+                </span>
+                {chargeRows(result.jackpotPayout.charges, 1.4)}
+              </>
             )}
             {result.lastPayer && charged[0] && (
               <span className="text-xs font-medium text-white/90">
@@ -1154,7 +1271,7 @@ export function SplitSlotDialog({
         <RollupMoney
           amountMinor={pot.totalMinor}
           currency={currency}
-          duration={ROLLUP_S}
+          duration={ROLLUP_S * speed}
           delay={0.5}
           className={bigGold}
         />
@@ -1168,6 +1285,9 @@ export function SplitSlotDialog({
       </>
     );
   }
+
+  const toolbarButton =
+    "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors duration-(--duration-fast) active:scale-95 disabled:opacity-50";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -1288,8 +1408,11 @@ export function SplitSlotDialog({
                       <span className="text-muted-foreground text-[10px] font-semibold tracking-[0.12em] uppercase">
                         {t("expenses.slotAtMachine")}
                       </span>
-                      <span className="font-heading truncate text-lg leading-tight font-semibold">
-                        {name(spinner)}
+                      <span className="flex min-w-0 items-center gap-1">
+                        <span className="font-heading truncate text-lg leading-tight font-semibold">
+                          {name(spinner)}
+                        </span>
+                        <PlayerBadges game={game} uid={spinner} />
                       </span>
                     </span>
                   </span>
@@ -1374,10 +1497,10 @@ export function SplitSlotDialog({
             <div className="relative flex items-center justify-center py-1">
               {/*
                 The cabinet: a paper card like every other surface in the app,
-                with marquee bulbs along its top and bottom, an LED panel like
-                a real machine's BET / WIN meters, and the reels in pressed-in
-                wells. During free spins it turns gold and fizzes, and coins
-                land above and below the payline.
+                with a progressive-jackpot marquee and marquee bulbs, an LED
+                panel like a real machine's BET / WIN meters, and the reels in
+                pressed-in wells. During free spins it turns gold and fizzes,
+                and coins land above and below the payline.
               */}
               <motion.div
                 aria-hidden="true"
@@ -1395,6 +1518,10 @@ export function SplitSlotDialog({
                     <AmbientBubbles count={14} className="absolute inset-0 rounded-2xl" />
                   </>
                 )}
+                <JackpotMarquee
+                  label={t("expenses.slotJackpotLabel")}
+                  value={money(game.jackpotPotMinor)}
+                />
                 <BulbRow count={10} mode={bulbMode} />
                 <LedPanel
                   cells={
@@ -1411,9 +1538,9 @@ export function SplitSlotDialog({
                             blink: coinsFlying,
                           },
                           {
-                            label: t("expenses.slotLedLast"),
-                            value: landed ? t(OUTCOME_SHORT[landed.kind]) : "–",
-                            blink: landedGood,
+                            label: t("expenses.slotLedMulti"),
+                            value: `×${game.freeSpinMultiplier}`,
+                            blink: game.freeSpinMultiplier > 1,
                           },
                         ]
                       : [
@@ -1434,8 +1561,8 @@ export function SplitSlotDialog({
                         ]
                   }
                 />
-                <span className="border-l-primary absolute top-[58%] left-1 -translate-y-1/2 border-y-[6px] border-l-[7px] border-y-transparent" />
-                <span className="border-r-primary absolute top-[58%] right-1 -translate-y-1/2 border-y-[6px] border-r-[7px] border-y-transparent" />
+                <span className="border-l-primary absolute top-[63%] left-1 -translate-y-1/2 border-y-[6px] border-l-[7px] border-y-transparent" />
+                <span className="border-r-primary absolute top-[63%] right-1 -translate-y-1/2 border-y-[6px] border-r-[7px] border-y-transparent" />
                 <div ref={reelsRef} className="relative flex gap-1.5">
                   {[0, 1, 2].map((reelIndex) => {
                     const spun = reels[reelIndex].length > 0;
@@ -1444,24 +1571,29 @@ export function SplitSlotDialog({
                     const targetY = -(winnerIndex - 1) * ROW_HEIGHT;
                     const teased = reelIndex === 2 && strip.length > STRIP_LENGTH;
                     const inCombo = winReels.includes(reelIndex);
+                    const held = heldReels.includes(reelIndex);
+                    const mystery = !mysteryRevealed && mysteryReels.includes(reelIndex);
                     const coin =
                       landed && reelStopped[reelIndex]
                         ? landed.coins.find((c) => c.reel === reelIndex)
                         : undefined;
+                    const glowing =
+                      teasing &&
+                      ((heldReels.length === 0 && reelIndex === 2) ||
+                        (heldReels.length > 0 && !held));
                     return (
                       <div
                         key={reelIndex}
                         className={cn(
                           "bg-muted shadow-pressed relative overflow-hidden rounded-lg transition-shadow duration-(--duration-base)",
-                          reelIndex === 2 &&
-                            teasing &&
-                            "ring-primary shadow-[0_0_18px_var(--primary)] ring-2",
+                          glowing && "ring-primary shadow-[0_0_18px_var(--primary)] ring-2",
+                          held && "ring-2 ring-[oklch(0.7_0.15_230)]",
                           inFreeSpins && "bg-[oklch(0.84_0.16_85/0.14)]",
                         )}
                         style={{ width: ROW_HEIGHT, height: ROW_HEIGHT * VISIBLE_ROWS }}
                       >
                         <motion.div
-                          key={`${pullId}-${reelIndex}`}
+                          key={`${reelKeys[reelIndex]}-${reelIndex}`}
                           className={cn(
                             "flex flex-col transition-[filter] duration-150",
                             !reelStopped[reelIndex] && "blur-[2px]",
@@ -1472,7 +1604,7 @@ export function SplitSlotDialog({
                             reduceMotion
                               ? { duration: 0 }
                               : {
-                                  duration: teased ? TEASE_DURATION : REEL_DURATIONS[reelIndex],
+                                  duration: reelDuration(reelIndex, teased),
                                   times: [0, teased ? 0.93 : 0.86, 1],
                                   ease: [
                                     teased ? [0.2, 0.45, 0.25, 1] : [0.12, 0.68, 0.12, 1],
@@ -1487,6 +1619,8 @@ export function SplitSlotDialog({
                               key={rowIndex}
                               symbol={symbol}
                               glow={lineColor}
+                              mystery={mystery && rowIndex === winnerIndex}
+                              flipIn={mysteryReels.includes(reelIndex) && rowIndex === winnerIndex}
                               state={
                                 !landed || winReels.length === 0
                                   ? "idle"
@@ -1514,13 +1648,21 @@ export function SplitSlotDialog({
                               : undefined,
                           }}
                         />
-                        {coin && (
+                        {held && (
+                          <span className="absolute inset-x-0 bottom-1 z-20 text-center text-[9px] font-black tracking-wider text-[oklch(0.55_0.15_230)] uppercase">
+                            {t("expenses.slotHeld")}
+                          </span>
+                        )}
+                        {coin && landed && (
                           <span
-                            key={`coin-${pullId}`}
+                            key={`coin-${reelKeys[reelIndex]}`}
                             className="absolute inset-x-0 z-20 flex items-center justify-center"
                             style={{ top: coin.row * ROW_HEIGHT, height: ROW_HEIGHT }}
                           >
-                            <CoinChip multiplier={coin.multiplier} collect={coinsFlying} />
+                            <CoinChip
+                              multiplier={coin.multiplier * landed.coinMultiplier}
+                              collect={coinsFlying}
+                            />
                           </span>
                         )}
                       </div>
@@ -1528,7 +1670,7 @@ export function SplitSlotDialog({
                   })}
                   {landed && winReels.length > 0 && (
                     <WinLine
-                      key={pullId}
+                      key={reelKeys.join("-")}
                       rowTop={ROW_HEIGHT}
                       rowHeight={ROW_HEIGHT}
                       color={lineColor}
@@ -1563,6 +1705,49 @@ export function SplitSlotDialog({
               <FloatingBubbles bubbles={bubbles} />
             </div>
 
+            {!done && (
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  type="button"
+                  aria-pressed={turbo}
+                  onClick={toggleTurbo}
+                  className={cn(
+                    toolbarButton,
+                    turbo
+                      ? "border-[oklch(0.84_0.16_85)] bg-[oklch(0.84_0.16_85/0.2)]"
+                      : "border-border hover:bg-muted",
+                  )}
+                >
+                  {t("expenses.slotTurbo")}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={auto !== null}
+                  disabled={!spinner}
+                  onClick={() => setAuto(auto || !spinner ? null : { uid: spinner })}
+                  className={cn(
+                    toolbarButton,
+                    auto
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border hover:bg-muted",
+                  )}
+                >
+                  {auto ? t("expenses.slotAutoStop") : t("expenses.slotAuto")}
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!soundOff}
+                  aria-label={t("expenses.slotSoundToggle")}
+                  onClick={toggleSound}
+                  className={cn(toolbarButton, "border-border hover:bg-muted")}
+                >
+                  {soundOff ? "🔇" : "🔊"}
+                </button>
+              </div>
+            )}
+
+            {done && <SlotAwards game={game} stats={stats} members={members} currency={currency} />}
+
             <div className="flex flex-col gap-1.5">
               <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase">
                 {done ? t("expenses.gameResultEyebrow") : t("expenses.slotTallyLabel")}
@@ -1572,7 +1757,7 @@ export function SplitSlotDialog({
 
             <Paytable />
 
-            {/* Glücksklee: the spinner points at whoever pays. */}
+            {/* Clover or duel: the person who pulled it points at someone. */}
             <AnimatePresence>
               {choosing && (
                 <motion.div
@@ -1580,22 +1765,30 @@ export function SplitSlotDialog({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute -inset-x-4 -inset-y-2 z-30 flex flex-col items-center justify-center gap-4 bg-[radial-gradient(circle_at_50%_40%,oklch(0.36_0.1_150/0.95),oklch(0.14_0.03_260/0.95)_70%)] px-6 text-white"
+                  className={cn(
+                    "absolute -inset-x-4 -inset-y-2 z-30 flex flex-col items-center justify-center gap-4 px-6 text-white",
+                    choosing.type === "duel"
+                      ? "bg-[radial-gradient(circle_at_50%_40%,oklch(0.32_0.07_250/0.96),oklch(0.12_0.03_260/0.96)_70%)]"
+                      : "bg-[radial-gradient(circle_at_50%_40%,oklch(0.36_0.1_150/0.95),oklch(0.14_0.03_260/0.95)_70%)]",
+                  )}
                 >
                   <span aria-hidden="true" className="text-5xl">
-                    🍀
+                    {choosing.type === "duel" ? "⚔️" : "🍀"}
                   </span>
                   <span className="font-heading text-center text-2xl font-semibold">
-                    {t("expenses.slotChoiceTitle", {
-                      name: name(choosing.uid),
-                      amount: money(choosing.amountMinor),
-                    })}
+                    {t(
+                      choosing.type === "duel"
+                        ? "expenses.slotDuelPick"
+                        : "expenses.slotChoiceTitle",
+                      { name: name(choosing.uid), amount: money(choosing.amountMinor) },
+                    )}
                   </span>
                   <div className="grid w-full max-w-80 grid-cols-2 gap-2">
                     {slotChoiceCandidates(game, choosing.uid).map((uid, index) => (
                       <motion.button
                         key={uid}
                         type="button"
+                        data-choice=""
                         onClick={() => choose(uid)}
                         initial={reduceMotion ? false : { opacity: 0, y: 14 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1610,6 +1803,47 @@ export function SplitSlotDialog({
                     ))}
                   </div>
                 </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Gift: pick one of three boxes. */}
+            <AnimatePresence>
+              {(gifting || giftShow) && (
+                <GiftPicker
+                  key="gift"
+                  title={t("expenses.slotGiftTitle", {
+                    name: name(gifting?.uid ?? giftShow?.outcome.uid ?? ""),
+                  })}
+                  boxes={giftBoxes.map(prizeFace)}
+                  picked={giftShow?.picked ?? null}
+                  onPick={openGift}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* The duel's reels. */}
+            <AnimatePresence>
+              {duelShow && (
+                <DuelReveal
+                  key={duelShow.id}
+                  title={t("expenses.slotDuelTitle")}
+                  sides={[
+                    {
+                      name: name(duelShow.duel.challenger),
+                      symbol: duelShow.duel.challengerSymbol,
+                      loser: duelShow.duel.loser === duelShow.duel.challenger,
+                    },
+                    {
+                      name: name(duelShow.duel.opponent),
+                      symbol: duelShow.duel.opponentSymbol,
+                      loser: duelShow.duel.loser === duelShow.duel.opponent,
+                    },
+                  ]}
+                  resultLabel={t("expenses.slotDuelResult", {
+                    name: name(duelShow.duel.loser),
+                    amount: money(duelShow.charge?.amountMinor ?? 0),
+                  })}
+                />
               )}
             </AnimatePresence>
 
@@ -1642,6 +1876,16 @@ export function SplitSlotDialog({
                 >
                   {bannerBody(takeover.result, takeover.finale)}
                 </SlotWinBanner>
+              )}
+              {takeover?.style === "wheel" && takeover.result.wheel && (
+                <BonusWheel
+                  key={takeover.id}
+                  title={t("expenses.slotWheelTitle")}
+                  segments={SLOT_WHEEL_SEGMENTS.map(prizeFace)}
+                  index={takeover.result.wheel.index}
+                  resultLabel={prizeFace(takeover.result.wheel.outcome.prize).label}
+                  onTick={playTickSound}
+                />
               )}
               {takeover?.style === "pot" && (
                 <SlotWinBanner
@@ -1748,18 +1992,33 @@ export function SplitSlotDialog({
             </>
           ) : (
             <>
-              {gambleOffer && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  className="flex-1 border-[oklch(0.84_0.16_85)] font-bold"
-                  onClick={risk}
-                >
-                  {gambleOffer.step === 0
-                    ? t("expenses.slotRisk", { amount: money(gambleOffer.amountMinor) })
-                    : t("expenses.slotRiskAgain", { amount: money(gambleOffer.amountMinor) })}
-                </Button>
+              {(gambleOffer || holdOffer) && (
+                <div className="flex flex-1 gap-2">
+                  {holdOffer && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="flex-1 border-[oklch(0.7_0.15_230)] font-bold"
+                      onClick={holdAndRespin}
+                    >
+                      {t("expenses.slotHold")}
+                    </Button>
+                  )}
+                  {gambleOffer && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="lg"
+                      className="flex-1 border-[oklch(0.84_0.16_85)] font-bold"
+                      onClick={risk}
+                    >
+                      {gambleOffer.step === 0
+                        ? t("expenses.slotRisk", { amount: money(gambleOffer.amountMinor) })
+                        : t("expenses.slotRiskAgain", { amount: money(gambleOffer.amountMinor) })}
+                    </Button>
+                  )}
+                </div>
               )}
               <Button
                 type="button"
@@ -1769,11 +2028,17 @@ export function SplitSlotDialog({
                   inFreeSpins &&
                     "bg-[linear-gradient(180deg,oklch(0.9_0.13_90),oklch(0.72_0.16_65))] text-[oklch(0.28_0.07_55)] shadow-[0_0_16px_oklch(0.84_0.16_85/0.6)] hover:brightness-105",
                 )}
-                disabled={busy || game.pendingChoice !== null}
+                disabled={busy || pending !== null}
                 onClick={pull}
               >
-                {game.pendingChoice
-                  ? t("expenses.slotChoiceWaiting")
+                {pending
+                  ? t(
+                      pending.type === "gift"
+                        ? "expenses.slotGiftWaiting"
+                        : pending.type === "duel"
+                          ? "expenses.slotDuelWaiting"
+                          : "expenses.slotChoiceWaiting",
+                    )
                   : inFreeSpins
                     ? `🍒 ${t("expenses.slotPullFree")}`
                     : `${t("expenses.slotPull")} · ${spinNumber}/${SLOT_SPINS_PER_TURN}`}

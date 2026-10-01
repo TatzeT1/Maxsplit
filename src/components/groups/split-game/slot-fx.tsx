@@ -637,14 +637,14 @@ export function FloatingBubbles({ bubbles }: { bubbles: FloatBubble[] }) {
                 ? "bg-[oklch(0.95_0.07_92)] text-[oklch(0.38_0.09_70)] ring-[oklch(0.84_0.16_85)]"
                 : "bg-[oklch(0.97_0.02_25)] text-[oklch(0.45_0.17_25)] ring-[oklch(0.64_0.22_25)]",
             )}
-            style={{ marginLeft: (index - (bubbles.length - 1) / 2) * 24 }}
+            style={{ marginLeft: (index % 2 === 0 ? -1 : 1) * 14 }}
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 30, scale: 0.4 }}
             animate={
               reduceMotion
                 ? { opacity: 1 }
                 : {
                     opacity: [0, 1, 1, 0],
-                    y: [30, -10 - index * 34, -60 - index * 34, -110 - index * 34],
+                    y: [30, -10 - index * 44, -60 - index * 44, -110 - index * 44],
                     scale: [0.4, 1.1, 1, 0.95],
                     x: [0, 6, -6, 0],
                   }
@@ -793,5 +793,351 @@ export function GambleFlip({
         {resultLabel}
       </motion.span>
     </motion.div>
+  );
+}
+
+/** A wheel or gift prize, ready to show: its icon and its line. */
+export interface PrizeFace {
+  icon: string;
+  label: string;
+}
+
+const WHEEL_SPIN_S = 3.4;
+const WHEEL_TURNS = 5;
+
+/**
+ * The bonus wheel: eight wedges in alternating gold and red, a pointer at
+ * the top, spinning several turns before easing onto the segment the game
+ * module already drew. Ticks like a real wheel's flapper as it slows, then
+ * shows the prize.
+ */
+export function BonusWheel({
+  title,
+  segments,
+  index,
+  resultLabel,
+  onTick,
+}: {
+  title: string;
+  segments: PrizeFace[];
+  index: number;
+  resultLabel: string;
+  onTick?: () => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  const count = segments.length;
+  const slice = 360 / count;
+  const target = WHEEL_TURNS * 360 - (index * slice + slice / 2);
+  const size = 260;
+  const radius = size / 2;
+
+  useEffect(() => {
+    if (reduceMotion || !onTick) return;
+    // Ease-out ticks: dense at the start, spreading out as the wheel slows.
+    const ticks = WHEEL_TURNS * count;
+    const timeouts = Array.from({ length: ticks }, (_, i) => {
+      const at = WHEEL_SPIN_S * (1 - Math.sqrt(1 - (i + 1) / ticks));
+      return setTimeout(onTick, at * 1000);
+    });
+    return () => timeouts.forEach(clearTimeout);
+  }, [count, onTick, reduceMotion]);
+
+  const wedgePath = (i: number) => {
+    const a0 = ((i * slice - 90) * Math.PI) / 180;
+    const a1 = (((i + 1) * slice - 90) * Math.PI) / 180;
+    const x0 = radius + radius * Math.cos(a0);
+    const y0 = radius + radius * Math.sin(a0);
+    const x1 = radius + radius * Math.cos(a1);
+    const y1 = radius + radius * Math.sin(a1);
+    return `M ${radius} ${radius} L ${x0} ${y0} A ${radius} ${radius} 0 0 1 ${x1} ${y1} Z`;
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute -inset-x-4 -inset-y-2 z-40 flex flex-col items-center justify-center gap-4 overflow-hidden bg-[radial-gradient(circle_at_50%_45%,oklch(0.32_0.09_70/0.95),oklch(0.14_0.03_260/0.96)_70%)] text-white"
+    >
+      <span className="font-heading text-4xl font-black tracking-tight text-[oklch(0.88_0.15_85)] uppercase drop-shadow-[0_0_14px_oklch(0.85_0.17_85/0.7)]">
+        {title}
+      </span>
+      <span className="relative" style={{ width: size, height: size }}>
+        <span
+          aria-hidden="true"
+          className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 border-x-[12px] border-t-[22px] border-x-transparent border-t-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        />
+        <motion.svg
+          viewBox={`0 0 ${size} ${size}`}
+          width={size}
+          height={size}
+          className="rounded-full shadow-[0_0_30px_oklch(0.85_0.17_85/0.5)] ring-4 ring-[oklch(0.85_0.17_85)]"
+          initial={{ rotate: 0 }}
+          animate={{ rotate: reduceMotion ? target % 360 : target }}
+          transition={
+            reduceMotion ? { duration: 0 } : { duration: WHEEL_SPIN_S, ease: [0.15, 0.6, 0.2, 1] }
+          }
+        >
+          {segments.map((segment, i) => {
+            const mid = ((i * slice + slice / 2 - 90) * Math.PI) / 180;
+            const x = radius + radius * 0.66 * Math.cos(mid);
+            const y = radius + radius * 0.66 * Math.sin(mid);
+            return (
+              <g key={i}>
+                <path
+                  d={wedgePath(i)}
+                  fill={i % 2 === 0 ? "oklch(0.78 0.15 80)" : "oklch(0.55 0.19 28)"}
+                  stroke="oklch(0.95 0.05 90)"
+                  strokeWidth={2}
+                />
+                <text
+                  x={x}
+                  y={y}
+                  fontSize={30}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  transform={`rotate(${i * slice + slice / 2} ${x} ${y})`}
+                >
+                  {segment.icon}
+                </text>
+              </g>
+            );
+          })}
+          <circle cx={radius} cy={radius} r={20} fill="oklch(0.95 0.05 90)" />
+        </motion.svg>
+      </span>
+      <motion.span
+        className="font-heading max-w-80 px-6 text-center text-2xl font-bold"
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: [0.6, 1.15, 1] }}
+        transition={{ delay: reduceMotion ? 0 : WHEEL_SPIN_S + 0.1, duration: 0.45 }}
+      >
+        {segments[index].icon} {resultLabel}
+      </motion.span>
+    </motion.div>
+  );
+}
+
+/** How long the wheel spins, for callers timing what comes after it. */
+export const BONUS_WHEEL_SPIN_MS = WHEEL_SPIN_S * 1000;
+
+/**
+ * Three gift boxes to pick from. Before the pick they wobble, asking to be
+ * tapped; after it the chosen one bursts open on its prize, and a beat later
+ * the other two show what was in them, dimmed.
+ */
+export function GiftPicker({
+  title,
+  boxes,
+  picked,
+  onPick,
+}: {
+  title: string;
+  boxes: PrizeFace[];
+  picked: number | null;
+  onPick: (index: number) => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute -inset-x-4 -inset-y-2 z-40 flex flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_50%_40%,oklch(0.35_0.12_330/0.95),oklch(0.14_0.03_260/0.96)_70%)] px-4 text-white"
+    >
+      <span className="font-heading text-center text-2xl font-semibold">{title}</span>
+      <div className="grid w-full max-w-80 grid-cols-3 gap-3">
+        {boxes.map((box, index) => {
+          const open = picked !== null;
+          const chosen = picked === index;
+          return (
+            <motion.button
+              key={index}
+              type="button"
+              disabled={open}
+              onClick={() => onPick(index)}
+              className={cn(
+                "flex aspect-[3/4] flex-col items-center justify-center gap-1.5 rounded-xl p-2 text-center ring-1 transition-colors",
+                chosen
+                  ? "bg-[oklch(0.85_0.15_85/0.25)] ring-2 ring-[oklch(0.85_0.17_85)]"
+                  : "bg-white/10 ring-white/25",
+              )}
+              animate={
+                open
+                  ? { opacity: chosen ? 1 : 0.5, scale: chosen ? 1.08 : 0.95, rotate: 0 }
+                  : reduceMotion
+                    ? undefined
+                    : { rotate: [0, -6, 6, -3, 0] }
+              }
+              transition={
+                open
+                  ? { delay: chosen ? 0 : 0.7, duration: 0.3 }
+                  : { duration: 0.6, repeat: Infinity, repeatDelay: 0.6 + index * 0.25 }
+              }
+            >
+              {open ? (
+                <motion.span
+                  className="flex flex-col items-center gap-1"
+                  initial={reduceMotion ? false : { scale: 0, rotate: -20 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{
+                    delay: chosen ? 0.05 : 0.7,
+                    type: "spring",
+                    stiffness: 380,
+                    damping: 14,
+                  }}
+                >
+                  <span className="text-4xl">{box.icon}</span>
+                  <span className="text-[11px] leading-tight font-semibold">{box.label}</span>
+                </motion.span>
+              ) : (
+                <span className="text-5xl">🎁</span>
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+/**
+ * The duel: both sides' avatars over a single reel each, spinning and
+ * landing on the symbols the game module drew; the loser shakes and turns
+ * red, the winner glows.
+ */
+export function DuelReveal({
+  title,
+  sides,
+  resultLabel,
+}: {
+  title: string;
+  sides: [
+    { name: string; symbol: SlotSymbol; loser: boolean },
+    { name: string; symbol: SlotSymbol; loser: boolean },
+  ];
+  resultLabel: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const rowHeight = 64;
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    const timeout = setTimeout(() => setRevealed(true), reduceMotion ? 0 : 2300);
+    return () => clearTimeout(timeout);
+  }, [reduceMotion]);
+  // Decorative strips: the landing symbol is last; the filler is cosmetic.
+  const strips = useMemo(
+    () =>
+      sides.map((side, sideIndex) => {
+        const random = seededRandom(sideIndex * 97 + side.name.length);
+        const filler = Array.from(
+          { length: 14 + sideIndex * 4 },
+          () => SLOT_DUEL_FILLER[Math.floor(random() * SLOT_DUEL_FILLER.length)],
+        );
+        return [...filler, side.symbol];
+      }),
+    [sides],
+  );
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute -inset-x-4 -inset-y-2 z-40 flex flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_50%_45%,oklch(0.3_0.06_250/0.95),oklch(0.12_0.03_260/0.97)_70%)] text-white"
+    >
+      <span className="font-heading text-4xl font-black tracking-tight uppercase">{title}</span>
+      <div className="flex items-center gap-5">
+        {sides.map((side, sideIndex) => {
+          const strip = strips[sideIndex];
+          const duration = 1.6 + sideIndex * 0.6;
+          return (
+            <motion.div
+              key={sideIndex}
+              className="flex w-28 flex-col items-center gap-2"
+              animate={side.loser && !reduceMotion ? { x: [0, -8, 8, -6, 6, 0] } : undefined}
+              transition={{ delay: 2.3, duration: 0.5 }}
+            >
+              <GameAvatar name={side.name} className="size-12 text-lg ring-2 ring-white/70" />
+              <span className="max-w-full truncate text-sm font-semibold">{side.name}</span>
+              <span
+                className={cn(
+                  "relative overflow-hidden rounded-lg bg-white/10 ring-2 ring-white/25 transition-shadow duration-300",
+                  revealed &&
+                    (side.loser
+                      ? "ring-[oklch(0.64_0.22_25)]"
+                      : "shadow-[0_0_20px_oklch(0.85_0.17_85/0.8)] ring-[oklch(0.85_0.17_85)]"),
+                )}
+                style={{ width: rowHeight, height: rowHeight }}
+              >
+                <motion.span
+                  className="flex flex-col"
+                  initial={{ y: 0 }}
+                  animate={{ y: -(strip.length - 1) * rowHeight }}
+                  transition={
+                    reduceMotion ? { duration: 0 } : { duration, ease: [0.15, 0.7, 0.2, 1] }
+                  }
+                >
+                  {strip.map((symbol, row) => (
+                    <span
+                      key={row}
+                      className="flex shrink-0 items-center justify-center"
+                      style={{ height: rowHeight }}
+                    >
+                      <SlotSymbolFace symbol={symbol} className="text-4xl" />
+                    </span>
+                  ))}
+                </motion.span>
+              </span>
+            </motion.div>
+          );
+        })}
+      </div>
+      <motion.span
+        className="font-heading max-w-80 px-6 text-center text-xl font-bold"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: reduceMotion ? 0 : 2.3 }}
+      >
+        {resultLabel}
+      </motion.span>
+    </motion.div>
+  );
+}
+
+const SLOT_DUEL_FILLER: SlotSymbol[] = [
+  "cherry",
+  "lemon",
+  "bell",
+  "star",
+  "clover",
+  "seven",
+  "bomb",
+];
+
+/** How long the duel's reels take to land, for callers timing what comes after. */
+export const DUEL_REVEAL_MS = 2900;
+
+/**
+ * The progressive jackpot's marquee across the top of the cabinet: red
+ * digits on black glass, pulsing every time a no-win feeds it.
+ */
+export function JackpotMarquee({ label, value }: { label: string; value: string }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <div className="relative flex w-0 min-w-full items-center justify-between gap-2 overflow-hidden rounded-md bg-[oklch(0.14_0.02_30)] px-2 py-1 ring-1 ring-[oklch(0.55_0.19_28/0.7)]">
+      <span className="text-[9px] font-black tracking-[0.2em] text-[oklch(0.85_0.15_85)] uppercase">
+        {label}
+      </span>
+      <motion.span
+        key={value}
+        className="font-mono text-sm font-black text-[oklch(0.7_0.22_28)] tabular-nums"
+        style={{ textShadow: "0 0 8px currentColor" }}
+        initial={reduceMotion ? false : { scale: 1.35 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 12 }}
+      >
+        {value}
+      </motion.span>
+    </div>
   );
 }
