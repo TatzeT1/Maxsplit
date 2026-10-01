@@ -477,3 +477,142 @@ export function playSkipSound(): void {
   osc.start(now);
   osc.stop(now + 0.24);
 }
+
+/*
+ * The slot machine's paytable sounds: one per combination, so the ear knows
+ * what came up before the eye has read the slip. Ordered from the smallest
+ * moment to the biggest.
+ */
+
+/** A bell-like partial stack: a fundamental plus two inharmonic overtones, decaying at different rates. */
+function bellTone(ctx: AudioContext, freq: number, startTime: number, gainPeak: number): void {
+  tone(ctx, freq, startTime, 1.1, "sine", gainPeak);
+  tone(ctx, freq * 2.76, startTime, 0.5, "sine", gainPeak * 0.35);
+  tone(ctx, freq * 5.4, startTime, 0.22, "sine", gainPeak * 0.15);
+}
+
+/** One coin landing in a tray: a bright, short metallic ping. */
+function coinPing(ctx: AudioContext, startTime: number, gainPeak: number): void {
+  const freq = 2100 + Math.random() * 900;
+  tone(ctx, freq, startTime, 0.16, "triangle", gainPeak);
+  tone(ctx, freq * 1.5, startTime + 0.005, 0.1, "sine", gainPeak * 0.5);
+}
+
+/** A drum roll for the teased third reel: quick snare hits swelling toward the stop. */
+export function playDrumrollSound(seconds: number): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const start = ctx.currentTime;
+  for (let time = 0; time < seconds; time += 0.055) {
+    const swell = 0.03 + (time / seconds) * 0.07;
+    noiseBurst(ctx, start + time, 0.05, swell, "bandpass", 1800 + Math.random() * 300, 0.9);
+  }
+}
+
+/** Two of a kind, stake back: a couple of coins dropping into the tray. */
+export function playCoinSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  coinPing(ctx, now, 0.07);
+  coinPing(ctx, now + 0.09, 0.06);
+}
+
+/** Three lemons: a sour, sagging "wah-wah". */
+export function playSourSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  [0, 0.28].forEach((offset, index) => {
+    const osc = ctx.createOscillator();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    const from = index === 0 ? 330 : 294;
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(from, at + offset);
+    osc.frequency.exponentialRampToValueAtTime(from * 0.86, at + offset + 0.3);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(1600, at + offset);
+    filter.frequency.exponentialRampToValueAtTime(380, at + offset + 0.3);
+    gain.gain.setValueAtTime(0, at + offset);
+    gain.gain.linearRampToValueAtTime(0.09, at + offset + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, at + offset + 0.32);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(at + offset);
+    osc.stop(at + offset + 0.32);
+  });
+}
+
+/** Three cherries, free spin: a quick rising arpeggio. */
+export function playFreeSpinSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  [523.25, 659.25, 783.99, 1046.5].forEach((freq, index) => {
+    tone(ctx, freq, at + index * 0.07, 0.18, "triangle", 0.09);
+  });
+}
+
+/** Three bells, Schwarzer Peter: a doorbell "ding-dong" for whoever's next. */
+export function playBellSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  bellTone(ctx, 784, at, 0.1);
+  bellTone(ctx, 622, at + 0.32, 0.1);
+}
+
+/** Three stars, a round for everyone: a high sparkle running up and down. */
+export function playStarSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  [1318.5, 1568, 1975.5, 2637, 1975.5, 2637, 3136].forEach((freq, index) => {
+    tone(ctx, freq, at + index * 0.05, 0.16, "sine", 0.05);
+  });
+}
+
+/** Three bombs: a crack, a deep boom, and debris rumbling out. */
+export function playBombSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  noiseBurst(ctx, at, 0.08, 0.35, "highpass", 900, 0.5);
+  noiseBurst(ctx, at + 0.02, 0.9, 0.3, "lowpass", 520, 0.7);
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(110, at);
+  osc.frequency.exponentialRampToValueAtTime(32, at + 0.6);
+  gain.gain.setValueAtTime(0, at);
+  gain.gain.linearRampToValueAtTime(0.4, at + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, at + 0.7);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(at);
+  osc.stop(at + 0.7);
+}
+
+/** Three sevens: a brass fanfare, then a long cascade of coins. */
+export function playJackpotSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  const fanfare: [number, number, number][] = [
+    [523.25, 0, 0.14],
+    [523.25, 0.15, 0.14],
+    [523.25, 0.3, 0.14],
+    [659.25, 0.45, 0.22],
+    [783.99, 0.68, 0.5],
+  ];
+  for (const [freq, offset, duration] of fanfare) {
+    tone(ctx, freq, at + offset, duration, "square", 0.045);
+    tone(ctx, freq * 1.5, at + offset, duration, "sawtooth", 0.02);
+    tone(ctx, freq / 2, at + offset, duration, "triangle", 0.05);
+  }
+  for (let i = 0; i < 18; i++) {
+    coinPing(ctx, at + 0.75 + i * 0.07 + Math.random() * 0.04, 0.05);
+  }
+}

@@ -38,7 +38,7 @@ The fifteen games split into two categories, each with its own resolution engine
 | -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 🎲 [[Split Lottery]]       | `split-lottery-dialog.tsx`      | Tap-to-reveal grid, turn-based, up to 32 anonymous faces                                        |
 | 🎡 Glücksrad               | `split-wheel-dialog.tsx`        | Spin a wheel of the remaining pool; the needle picks the loser                                  |
-| 🎰 Spielautomat            | `split-slot-dialog.tsx`         | Pick a stake, pull the lever, repeat until the bill is fully allocated                          |
+| 🎰 Spielautomat            | `split-slot-dialog.tsx`         | Turns at one machine; symbol combos from a paytable decide who pays how much                    |
 | 🎫 Rubbellos               | `split-scratch-dialog.tsx`      | Everyone scratches their own card; whoever gets a blank pays                                    |
 | ⭕ Tic-Tac-Toe             | `split-tic-tac-toe-dialog.tsx`  | 3×3 grid, alternating marks; a draw replays and escalates to a vanishing "sudden death" variant |
 | 🔴 Vier gewinnt            | `split-connect-four-dialog.tsx` | 7×6 drop board, classic Connect Four rules; a draw (rare) just replays                          |
@@ -69,18 +69,60 @@ isn't "done" until everyone has scratched theirs, not just once the losers are f
 `split-scratch-dialog.tsx` tracks that itself (`scratchedUids`) instead of using the hook's own
 `revealedCount`/`gameOver`.
 
-## The slot machine: staked, repeated spins
+## The slot machine: a paytable, played in turns
 
-The slot machine deliberately does **not** sit on `useSequentialDraw` — it isn't "pick N
-distinct losers once", it's a real one-armed bandit: pick a stake (presets or a custom amount,
-`expenses.slotStakeLabel`), pull the lever, and whoever the reels land on (`drawOne` from
-`random.ts`, uniform draw _with_ replacement) owes that stake. The same person can lose several
-spins in a row — that's the point, a fixed distinct-draw guarantee would make it feel rigged
-rather than like gambling. Each spin's stake is capped to whatever's left of the expense's
-`amountMinor` (`effectiveStake = Math.min(stakeValue, remaining)`), so repeated spins always
-land on exactly the bill total with no remainder to reconcile, however many rounds it takes.
+Rules: `src/lib/games/slot-machine.ts` (pure, tested in `slot-machine.test.ts`). Dialog:
+`split-slot-dialog.tsx`. Effects: `split-game/slot-fx.tsx`. Changed 2026-10. Before that it was
+a single "whose face do the reels land on" draw: with two players that was a 50/50 coin flip
+every spin, and the reels showed avatars instead of symbols.
+
+The slot machine does **not** sit on `useSequentialDraw`. It isn't "pick N distinct losers
+once", it's a one-armed bandit. Everyone takes turns at one machine, in an order
+`secureShuffle`d once at the start. Every pull draws a combination (`drawSlotOutcome`,
+crypto-random through the `SlotRandom` the dialog passes in) and the combination decides what
+happens to the bill. The table lists odds per pull; E = the stake:
+
+| Reels                      | Odds | Effect                                                               |
+| -------------------------- | ---- | -------------------------------------------------------------------- |
+| No match (Niete)           | 52 % | Spinner pays E                                                       |
+| Two of a kind              | 26 % | Stake back, nobody pays                                              |
+| 🍋🍋🍋 Sauer!              | 6 %  | Spinner pays 3E                                                      |
+| 🍒🍒🍒 Freispiel           | 5 %  | Nobody pays, the spinner pulls again before passing on               |
+| 🔔🔔🔔 Schwarzer Peter     | 4 %  | The next player in line pays 2E                                      |
+| ⭐⭐⭐ Runde geht auf euch | 4 %  | Everyone else pays E                                                 |
+| 💣💣💣 Bombe!              | 2 %  | Spinner pays 5E                                                      |
+| 777 Jackpot                | 1 %  | Everything the spinner paid goes back into the pot, and they are out |
+
+- **Fairness.** Everyone spins equally often, so the game is fair in expectation. A
+  Monte-Carlo test checks that every seat ends up paying about the same share; a single game
+  can still swing hard either way.
+- **Exact total.** Every charge is capped at what's still open (`applySlotOutcome`), so the
+  tallies always end on exactly `amountMinor`, with no remainder to reconcile.
+- **Jackpot.** A jackpot winner is skipped from then on, also for bells and stars. When only
+  one player is left at the machine, that player pays the rest at once (`lastPayer`). There
+  can be at most n−1 jackpots, so the game always ends.
+- **Stake.** The setup step offers a game length, Kurz / Normal / Lang (2 / 4 / 7 rounds),
+  instead of a raw amount. `slotStakeForDuration` divides the bill by
+  `players × rounds × expectedStakesPerSpin` and rounds to a coin-like amount
+  (`niceStakeMinor`). The "Eigener Einsatz" option still takes a typed stake. The stake is
+  fixed for the whole game.
+- **Decide first, animate after.** The outcome is drawn first, and `slotReelFaces` then builds
+  reel faces that show it. A pair puts its odd symbol on a random reel. When the first two
+  reels match (a third of all pairs, plus every triple), the third reel gets a longer strip,
+  a 4 s spin, a glowing frame and `playDrumrollSound`. That is where the near misses come
+  from. Filler symbols are `Math.random` and purely decorative.
+- **Effects scale with the combination** (`OUTCOME_TIER`):
+  - Pair: only a coin clink and an inline note over the reels, no takeover.
+  - No match: the usual `CatchFlash`.
+  - Three of a kind: `CatchFlash` plus the symbol flying out of the reels (`EmojiShower`),
+    the bulbs blinking (`BulbRow`) and a sound of its own.
+  - Bomb and jackpot: a longer hold and a harder shake. The bomb adds `BombFlash`, the jackpot
+    a fanfare and a rain of coins.
+
+  Each combination has its own synthesized sound in `game-sounds.ts`.
+
 Because different people can end up owing different amounts, `SplitSlotDialog`'s `onResolve`
-takes `Record<uid, amountMinor>` directly rather than the other games' `loserUids: string[]` —
+takes `Record<uid, amountMinor>` directly rather than the other games' `loserUids: string[]`.
 `add-expense-dialog.tsx`'s `handleSplitGameResolveAmounts` writes those amounts straight into
 `exactInputs` instead of running them through `splitEqual`.
 
@@ -399,9 +441,9 @@ dimmed group page felt like a tab inside the app rather than being _in_ the game
 - `GameAvatar` — the deterministic name-colored initial chip used everywhere a member needs a
   small face.
 
-`src/lib/games/member-colors.ts` gives the wheel's wedges and the slot machine's reels solid
+`src/lib/games/member-colors.ts` gives the wheel's wedges solid
 colors keyed off the same name hash `avatarGradient` uses (`nameHash` in `lib/utils.ts`), so a
-member's wheel wedge/reel color and their avatar chip always agree. `duelPalettes(nameA, nameB)`
+member's wheel wedge color and their avatar chip always agree. `duelPalettes(nameA, nameB)`
 extends this for the duel games: each player's own `memberColor`, except when both names
 hash to the same slot (a duel where both marks look identical is unreadable), in which case the
 second player is bumped to the opposite side of the palette wheel.
