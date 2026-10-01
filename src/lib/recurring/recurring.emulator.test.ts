@@ -143,7 +143,11 @@ describe("materializeDueRecurringRules", () => {
     expect(await expensesOf(groupRef)).toHaveLength(1);
   });
 
-  it("books each period once even when two runs overlap", async () => {
+  // Two runs racing on one rule contend for the same transaction, and the
+  // loser backs off and retries once per period it catches up on. Against the
+  // emulator that alone takes 4–6 s, right on vitest's 5 s default, so this
+  // test gets its own budget. The assertions are what guard the behaviour.
+  it("books each period once even when two runs overlap", { timeout: 20_000 }, async () => {
     const groupRef = await seedGroup("g1", { max: realMember("Max"), lea: realMember("Lea") });
     await seedRecurringRule(groupRef, "max", ["max", "lea"], { nextRunDate: "2026-07-01" });
 
