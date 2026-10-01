@@ -78,22 +78,28 @@ every spin, and the reels showed avatars instead of symbols.
 
 The slot machine does **not** sit on `useSequentialDraw`. It isn't "pick N distinct losers
 once", it's a one-armed bandit. Everyone takes turns at one machine, in an order
-`secureShuffle`d once at the start. Every pull draws a combination (`drawSlotOutcome`,
-crypto-random through the `SlotRandom` the dialog passes in) and the combination decides what
-happens to the bill. The table lists odds per pull; E = the stake:
+`secureShuffle`d once at the start, and pulls **three times in a row**
+(`SLOT_SPINS_PER_TURN`) before passing the phone on. Every pull draws a combination
+(`drawSlotOutcome`, crypto-random through the `SlotRandom` the dialog passes in), and the
+combination decides what happens to the bill. The table lists odds per pull; E = the stake:
 
 | Reels                      | Odds | Effect                                                               |
 | -------------------------- | ---- | -------------------------------------------------------------------- |
-| No match (Niete)           | 52 % | Spinner pays E                                                       |
+| No match (Niete)           | 52 % | Spinner pays E (nothing on a free spin)                              |
 | Two of a kind              | 26 % | Stake back, nobody pays                                              |
 | 🍋🍋🍋 Sauer!              | 6 %  | Spinner pays 3E                                                      |
-| 🍒🍒🍒 Freispiel           | 5 %  | Nobody pays, the spinner pulls again before passing on               |
+| 🍒🍒🍒 Freispiele          | 5 %  | 3 free spins, played straight away, on top of the series             |
 | 🔔🔔🔔 Schwarzer Peter     | 4 %  | The next player in line pays 2E                                      |
 | ⭐⭐⭐ Runde geht auf euch | 4 %  | Everyone else pays E                                                 |
 | 💣💣💣 Bombe!              | 2 %  | Spinner pays 5E                                                      |
 | 777 Jackpot                | 1 %  | Everything the spinner paid goes back into the pot, and they are out |
 
-- **Fairness.** Everyone spins equally often, so the game is fair in expectation. A
+- **Series and free spins.** `turnSpinsLeft` counts the regular pulls left in the series and
+  `freeSpinsLeft` the banked free spins. Free spins are played first and don't use up the
+  series. A free spin's no-win costs nothing; lemons and bombs still cost on a free spin, and
+  cherries on a free spin add three more. The machine passes on when both counters are
+  empty, or at once after a jackpot.
+- **Fairness.** Everyone gets the same series, so the game is fair in expectation. A
   Monte-Carlo test checks that every seat ends up paying about the same share; a single game
   can still swing hard either way.
 - **Exact total.** Every charge is capped at what's still open (`applySlotOutcome`), so the
@@ -101,25 +107,41 @@ happens to the bill. The table lists odds per pull; E = the stake:
 - **Jackpot.** A jackpot winner is skipped from then on, also for bells and stars. When only
   one player is left at the machine, that player pays the rest at once (`lastPayer`). There
   can be at most n−1 jackpots, so the game always ends.
-- **Stake.** The setup step offers a game length, Kurz / Normal / Lang (2 / 4 / 7 rounds),
-  instead of a raw amount. `slotStakeForDuration` divides the bill by
-  `players × rounds × expectedStakesPerSpin` and rounds to a coin-like amount
-  (`niceStakeMinor`). The "Eigener Einsatz" option still takes a typed stake. The stake is
-  fixed for the whole game.
+- **Stake.** The setup step offers a game length, Kurz / Normal / Lang (1 / 2 / 3 series of
+  three per person), instead of a raw amount. `slotStakeForDuration` divides the bill by the
+  regular pulls and by `expectedStakesPerTurnSpin` (which accounts for the free spins those
+  pulls set off), then rounds to a coin-like amount (`niceStakeMinor`). The "Eigener Einsatz"
+  option still takes a typed stake. The stake is fixed for the whole game.
 - **Decide first, animate after.** The outcome is drawn first, and `slotReelFaces` then builds
   reel faces that show it. A pair puts its odd symbol on a random reel. When the first two
   reels match (a third of all pairs, plus every triple), the third reel gets a longer strip,
   a 4 s spin, a glowing frame and `playDrumrollSound`. That is where the near misses come
   from. Filler symbols are `Math.random` and purely decorative.
-- **Effects scale with the combination** (`OUTCOME_TIER`):
-  - Pair: only a coin clink and an inline note over the reels, no takeover.
-  - No match: the usual `CatchFlash`.
-  - Three of a kind: `CatchFlash` plus the symbol flying out of the reels (`EmojiShower`),
-    the bulbs blinking (`BulbRow`) and a sound of its own.
-  - Bomb and jackpot: a longer hold and a harder shake. The bomb adds `BombFlash`, the jackpot
-    a fanfare and a rain of coins.
 
-  Each combination has its own synthesized sound in `game-sounds.ts`.
+### Presentation, modelled on online slots
+
+- **On the cabinet:**
+  - An LED panel (`LedPanel`) shows the stake, the spin (1/3) or the free spins left, and
+    the last result.
+  - Marquee bulbs (`BulbRow`) chase while the reels spin and blink after a win.
+  - During free spins the cabinet, the spinner card and the pull button turn gold, and
+    bubbles fizz inside the cabinet (`AmbientBubbles`).
+- **On every combination:** a glowing line is drawn through the payline (`WinLine`, gold
+  for good news, red for lemons and bombs). The symbols in the combination pulse while the
+  rest dim.
+- **After every pull:** the amounts float up off the machine as bubbles
+  (`FloatingBubbles`), e.g. "+1,50 € · Lisa", "Einsatz zurück", "+3 Freispiele".
+- **Takeovers, only for the big moments**, after the line has shown for `LINE_SHOW_MS`:
+  - A costly three-of-a-kind (lemons, bombs), or the pull that finishes the bill, gets the
+    stamped till slip (`CatchFlash`).
+  - The good three-of-a-kinds get a casino banner (`SlotWinBanner`): a gold tier title on a
+    rotating `Sunburst`, the amount rolling up (`RollupMoney`, with `playRollupSound`) and a
+    coin fountain (`EmojiShower` in `fountain` mode). The tiers are FREISPIELE (cherries),
+    BIG WIN (bells), MEGA WIN (stars) and JACKPOT (sevens, plus a rain of coins). Tap to
+    skip.
+- **What stays small:** a plain no-win, the most common pull, is just a bubble and a dry
+  thump. Three pulls in a row with a takeover on each would wear thin fast.
+- **Sound:** every combination has its own synthesized sound in `game-sounds.ts`.
 
 Because different people can end up owing different amounts, `SplitSlotDialog`'s `onResolve`
 takes `Record<uid, amountMinor>` directly rather than the other games' `loserUids: string[]`.

@@ -616,3 +616,55 @@ export function playJackpotSound(delaySeconds = 0): void {
     coinPing(ctx, at + 0.75 + i * 0.07 + Math.random() * 0.04, 0.05);
   }
 }
+
+/**
+ * A slot's win meter rolling up: fast ticks climbing in pitch over
+ * `seconds`, ending on a bright "ding" when the count lands.
+ */
+export function playRollupSound(seconds: number, delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const start = ctx.currentTime + delaySeconds;
+  const step = 0.045;
+  for (let time = 0; time < seconds; time += step) {
+    const progress = time / seconds;
+    tone(ctx, 900 + progress * 900, start + time, 0.03, "square", 0.018);
+  }
+  bellTone(ctx, 1568, start + seconds, 0.07);
+}
+
+/** The winning line lighting up: a quick rising three-note chime. */
+export function playWinLineSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  [1046.5, 1318.5, 1568].forEach((freq, index) => {
+    tone(ctx, freq, now + index * 0.06, 0.2, "triangle", 0.06);
+  });
+}
+
+/** A "BIG WIN" sting: a bright major arpeggio over a low hit, then coins. */
+export function playBigWinSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  tone(ctx, 130.8, at, 0.5, "triangle", 0.12);
+  [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq, index) => {
+    tone(ctx, freq, at + index * 0.07, 0.35, "square", 0.035);
+    tone(ctx, freq * 2, at + index * 0.07, 0.25, "sine", 0.03);
+  });
+  for (let i = 0; i < 8; i++) {
+    coinPing(ctx, at + 0.4 + i * 0.08 + Math.random() * 0.03, 0.05);
+  }
+}
+
+/** Free spins starting: a little circus run up and a held chord. */
+export function playFreeSpinsIntroSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  [392, 440, 493.9, 523.25, 587.3, 659.25, 698.5, 783.99].forEach((freq, index) => {
+    tone(ctx, freq, now + index * 0.05, 0.12, "triangle", 0.07);
+  });
+  [783.99, 987.8, 1174.7].forEach((freq) => tone(ctx, freq, now + 0.45, 0.8, "sine", 0.05));
+}

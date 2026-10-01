@@ -1,17 +1,38 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
-import { type RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  AnimatePresence,
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+} from "motion/react";
+import {
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { GameAvatar } from "@/components/groups/split-game/game-avatar";
+import { formatMoney } from "@/lib/format/money";
 import { createPortal } from "react-dom";
 import { SLOT_SYMBOL_EMOJI, type SlotSymbol } from "@/lib/games/slot-machine";
 import { cn } from "@/lib/utils";
 
 /*
  * The slot machine's own effects, on top of the shared stamp-and-confetti
- * celebration (`celebration.tsx`): the paytable symbols themselves flying out
- * of the reels, a rain of coins for the jackpot, the bomb's flash, and the
- * bulbs around the housing. Everything here is decoration over a result the
- * game module already settled, and renders nothing under reduced motion.
+ * celebration (`celebration.tsx`), modelled on how online slots present a
+ * win: the winning symbols light up and a line is drawn through them, the
+ * win comes in tiers ("Big Win", "Mega Win", "Jackpot") on a rotating
+ * sunburst while the amount rolls up, coins fountain out of the machine,
+ * amounts float up as bubbles, and an LED panel on the cabinet shows the
+ * stake, the spin count and the last result. Everything here is decoration
+ * over a result the game module already settled; the motion all stops under
+ * reduced motion.
  */
 
 const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
@@ -80,7 +101,8 @@ export function EmojiShower({
   anchorRef?: RefObject<HTMLElement | null>;
   seed: number;
   glyphs: string[];
-  mode?: "burst" | "rain";
+  /** `burst`: out of the anchor in every direction. `fountain`: a long upward stream, like a payout tray overflowing. `rain`: down from the top of the screen. */
+  mode?: "burst" | "fountain" | "rain";
   count?: number;
   delay?: number;
 }) {
@@ -99,7 +121,7 @@ export function EmojiShower({
     const origin = originRef.current;
     const anchor = anchorRef?.current;
     if (!origin) return;
-    if (anchor && mode === "burst") {
+    if (anchor && mode !== "rain") {
       const rect = anchor.getBoundingClientRect();
       origin.style.left = `${rect.left + rect.width / 2}px`;
       origin.style.top = `${rect.top + rect.height / 2}px`;
@@ -130,8 +152,9 @@ export function EmojiShower({
           glyph,
         };
       }
-      const angle = -Math.PI / 2 + (random() - 0.5) * 2.6;
-      const speed = 140 + random() * 200;
+      const fountain = mode === "fountain";
+      const angle = -Math.PI / 2 + (random() - 0.5) * (fountain ? 1.3 : 2.6);
+      const speed = fountain ? 280 + random() * 300 : 140 + random() * 200;
       const peakX = Math.cos(angle) * speed;
       const peakY = Math.sin(angle) * speed;
       return {
@@ -143,8 +166,8 @@ export function EmojiShower({
         endY: peakY + 320 + random() * 260,
         spin: (random() - 0.5) * 540,
         size: 24 + random() * 16,
-        duration: 1.1 + random() * 0.4,
-        delay: random() * 0.08,
+        duration: fountain ? 1.3 + random() * 0.5 : 1.1 + random() * 0.4,
+        delay: fountain ? random() * 1.4 : random() * 0.08,
         glyph,
       };
     });
@@ -250,5 +273,402 @@ export function BulbRow({ count, mode }: { count: number; mode: BulbMode }) {
         );
       })}
     </span>
+  );
+}
+
+/** Gold for wins, a hot red for the combinations that cost the spinner. */
+export const WIN_GOLD = "oklch(0.84 0.16 85)";
+export const LOSS_RED = "oklch(0.64 0.22 25)";
+
+/**
+ * The payline lighting up: a glowing line drawn left to right through the
+ * landed row, then pulsing, the way a slot traces the line that paid.
+ * Positioned by the caller over the reels, `rowTop`/`rowHeight` being the
+ * payline row inside that box.
+ */
+export function WinLine({
+  rowTop,
+  rowHeight,
+  color,
+}: {
+  rowTop: number;
+  rowHeight: number;
+  color: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const y = rowTop + rowHeight / 2;
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-10 size-full overflow-visible"
+      preserveAspectRatio="none"
+    >
+      <motion.line
+        x1="2%"
+        x2="98%"
+        y1={y}
+        y2={y}
+        stroke={color}
+        strokeWidth={5}
+        strokeLinecap="round"
+        style={{ filter: `drop-shadow(0 0 6px ${color}) drop-shadow(0 0 14px ${color})` }}
+        initial={{ pathLength: reduceMotion ? 1 : 0, opacity: 0.95 }}
+        animate={
+          reduceMotion
+            ? { pathLength: 1, opacity: 0.9 }
+            : { pathLength: 1, opacity: [0.95, 0.95, 0.45, 0.95, 0.45, 0.95] }
+        }
+        transition={
+          reduceMotion
+            ? { duration: 0 }
+            : {
+                pathLength: { duration: 0.35, ease: "easeOut" },
+                opacity: { duration: 1.8, times: [0, 0.2, 0.4, 0.6, 0.8, 1], ease: "linear" },
+              }
+        }
+      />
+    </svg>
+  );
+}
+
+/**
+ * Rotating light rays behind a big win, the "sunburst" every slot puts
+ * behind its win banner. A repeating conic gradient, masked to fade out
+ * toward the edges, turning slowly.
+ */
+export function Sunburst({
+  color,
+  className,
+  reverse = false,
+}: {
+  color: string;
+  className?: string;
+  /** Turn the other way: a second, counter-rotating layer reads as shimmer. */
+  reverse?: boolean;
+}) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.span
+      aria-hidden="true"
+      className={cn("pointer-events-none absolute block rounded-full", className)}
+      style={{
+        background: `repeating-conic-gradient(from 0deg, ${color} 0deg 9deg, transparent 9deg 22.5deg)`,
+        maskImage: "radial-gradient(circle, black 18%, transparent 68%)",
+        WebkitMaskImage: "radial-gradient(circle, black 18%, transparent 68%)",
+      }}
+      initial={{ rotate: 0, scale: reduceMotion ? 1 : 0.3, opacity: 0 }}
+      animate={
+        reduceMotion ? { opacity: 0.45 } : { rotate: reverse ? -360 : 360, scale: 1, opacity: 0.55 }
+      }
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : {
+              rotate: { duration: 9, repeat: Infinity, ease: "linear" },
+              scale: { type: "spring", stiffness: 160, damping: 14 },
+              opacity: { duration: 0.3 },
+            }
+      }
+    />
+  );
+}
+
+/**
+ * An amount that rolls up from zero like a slot's win meter, over
+ * `duration` seconds. Rendered from a motion value, so the count doesn't
+ * re-render the banner sixty times a second.
+ */
+export function RollupMoney({
+  amountMinor,
+  currency,
+  duration,
+  delay = 0,
+  prefix = "",
+  className,
+}: {
+  amountMinor: number;
+  currency: string;
+  duration: number;
+  delay?: number;
+  prefix?: string;
+  className?: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const value = useMotionValue(reduceMotion ? amountMinor : 0);
+  const text = useTransform(value, (minor) => prefix + formatMoney(Math.round(minor), currency));
+
+  useEffect(() => {
+    if (reduceMotion) {
+      value.set(amountMinor);
+      return;
+    }
+    const controls = animate(value, amountMinor, { duration, delay, ease: [0.2, 0.6, 0.35, 1] });
+    return () => controls.stop();
+  }, [amountMinor, delay, duration, reduceMotion, value]);
+
+  return <motion.span className={cn("tabular-money", className)}>{text}</motion.span>;
+}
+
+export type WinTier = "win" | "big" | "mega" | "freeSpins" | "jackpot";
+
+/**
+ * The win takeover for the combinations that are good news for the person
+ * at the machine: a tier title in gold that punches in over a rotating
+ * sunburst, the person, the combination, and whatever follows from it (an
+ * amount rolling up, a list, a count of free spins). Tap anywhere to skip.
+ *
+ * Mount it inside `AnimatePresence`, in a `relative` container it should
+ * cover, the same way as `CatchFlash`.
+ */
+export function SlotWinBanner({
+  tierLabel,
+  tier,
+  name,
+  faces,
+  children,
+  onDismiss,
+}: {
+  tierLabel: string;
+  tier: WinTier;
+  name: string;
+  faces: readonly SlotSymbol[];
+  children?: ReactNode;
+  onDismiss?: () => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  const huge = tier === "jackpot" || tier === "mega";
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1, transition: { duration: reduceMotion ? 0 : 0.15 } }}
+      exit={{ opacity: 0, transition: { duration: reduceMotion ? 0 : 0.25 } }}
+      onClick={onDismiss}
+      className="absolute -inset-x-4 -inset-y-2 z-30 flex cursor-pointer items-center justify-center overflow-hidden"
+    >
+      <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,oklch(0.32_0.09_70/0.92),oklch(0.14_0.03_260/0.94)_70%)]" />
+      <Sunburst color="oklch(0.88 0.15 88 / 0.55)" className="size-[150vmax]" />
+      {huge && <Sunburst color="oklch(0.75 0.18 40 / 0.35)" className="size-[110vmax]" reverse />}
+      <AmbientBubbles count={huge ? 26 : 16} className="absolute inset-0" />
+
+      <div className="relative flex w-full max-w-80 flex-col items-center gap-3 px-6 text-center">
+        <motion.span
+          className={cn(
+            "font-heading block bg-[linear-gradient(180deg,oklch(0.97_0.08_95),oklch(0.85_0.17_85)_45%,oklch(0.62_0.15_60)_55%,oklch(0.9_0.13_90))] bg-clip-text leading-none font-black tracking-tight text-transparent uppercase [font-variation-settings:'SOFT'_100,'WONK'_1]",
+            "drop-shadow-[0_0_18px_oklch(0.85_0.17_85/0.7)] drop-shadow-[0_3px_0_oklch(0.4_0.1_50)]",
+            huge ? "text-[54px]" : "text-[44px]",
+          )}
+          initial={reduceMotion ? false : { scale: 0.2, rotate: -8, opacity: 0 }}
+          animate={
+            reduceMotion
+              ? { opacity: 1 }
+              : { scale: [0.2, 1.25, 0.95, 1.05, 1], rotate: [-8, 3, -1, 0, 0], opacity: 1 }
+          }
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.75, ease: "easeOut" }}
+        >
+          {tierLabel}
+        </motion.span>
+
+        <motion.span
+          className="flex items-center gap-2 rounded-full bg-black/35 px-3 py-1.5 ring-1 ring-[oklch(0.85_0.17_85/0.6)]"
+          initial={reduceMotion ? false : { y: 16, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: reduceMotion ? 0 : 0.35 }}
+        >
+          {faces.map((face, index) => (
+            <motion.span
+              key={index}
+              className="block"
+              animate={reduceMotion ? undefined : { y: [0, -6, 0] }}
+              transition={{
+                delay: 0.5 + index * 0.12,
+                duration: 0.5,
+                repeat: Infinity,
+                repeatDelay: 0.9,
+              }}
+            >
+              <SlotSymbolFace symbol={face} className="text-2xl" />
+            </motion.span>
+          ))}
+        </motion.span>
+
+        <motion.span
+          className="flex items-center gap-2 text-white"
+          initial={reduceMotion ? false : { y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: reduceMotion ? 0 : 0.45 }}
+        >
+          <GameAvatar name={name} className="size-8 text-sm ring-2 ring-white/80" />
+          <span className="font-heading max-w-48 truncate text-xl font-semibold">{name}</span>
+        </motion.span>
+
+        <motion.div
+          className="flex w-full flex-col items-center gap-1.5 text-white"
+          initial={reduceMotion ? false : { y: 12, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: reduceMotion ? 0 : 0.55 }}
+        >
+          {children}
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
+/**
+ * Bubbles drifting up: champagne in a win banner, and the fizz inside the
+ * cabinet while free spins are running. Positions are seeded so a re-render
+ * doesn't reshuffle them mid-rise.
+ */
+export function AmbientBubbles({
+  count,
+  className,
+  color = "oklch(0.95 0.06 90 / 0.55)",
+}: {
+  count: number;
+  className?: string;
+  color?: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const bubbles = useMemo(() => {
+    const random = seededRandom(count * 7349);
+    return Array.from({ length: count }, () => ({
+      left: random() * 100,
+      size: 4 + random() * 10,
+      duration: 2.2 + random() * 2.4,
+      delay: random() * 2.5,
+      drift: (random() - 0.5) * 30,
+    }));
+  }, [count]);
+  if (reduceMotion) return null;
+  return (
+    <span aria-hidden="true" className={cn("pointer-events-none overflow-hidden", className)}>
+      {bubbles.map((bubble, index) => (
+        <motion.span
+          key={index}
+          className="absolute bottom-0 block rounded-full"
+          style={{
+            left: `${bubble.left}%`,
+            width: bubble.size,
+            height: bubble.size,
+            border: `1.5px solid ${color}`,
+            background: `radial-gradient(circle at 30% 30%, ${color}, transparent 60%)`,
+          }}
+          initial={{ y: 20, x: 0, opacity: 0 }}
+          animate={{ y: "-110%", x: bubble.drift, opacity: [0, 1, 1, 0] }}
+          transition={{
+            duration: bubble.duration,
+            delay: bubble.delay,
+            repeat: Infinity,
+            ease: "easeOut",
+            opacity: {
+              duration: bubble.duration,
+              delay: bubble.delay,
+              repeat: Infinity,
+              times: [0, 0.1, 0.75, 1],
+            },
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+export interface FloatBubble {
+  id: string;
+  label: string;
+  tone: "win" | "loss";
+}
+
+/**
+ * Amounts floating up off the machine as bubbles after a pull: "+2,50 €
+ * Max" for every charge, "Einsatz zurück" for a pair. They rise, wobble and
+ * fade on their own; the caller just swaps the list.
+ */
+export function FloatingBubbles({ bubbles }: { bubbles: FloatBubble[] }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 top-1/3 z-20 flex flex-col items-center"
+    >
+      <AnimatePresence>
+        {bubbles.map((bubble, index) => (
+          <motion.span
+            key={bubble.id}
+            className={cn(
+              "absolute block rounded-full px-3 py-1 text-sm font-bold whitespace-nowrap shadow-lg ring-2",
+              bubble.tone === "win"
+                ? "bg-[oklch(0.95_0.07_92)] text-[oklch(0.38_0.09_70)] ring-[oklch(0.84_0.16_85)]"
+                : "bg-[oklch(0.97_0.02_25)] text-[oklch(0.45_0.17_25)] ring-[oklch(0.64_0.22_25)]",
+            )}
+            style={{ marginLeft: (index - (bubbles.length - 1) / 2) * 24 }}
+            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 30, scale: 0.4 }}
+            animate={
+              reduceMotion
+                ? { opacity: 1 }
+                : {
+                    opacity: [0, 1, 1, 0],
+                    y: [30, -10 - index * 34, -60 - index * 34, -110 - index * 34],
+                    scale: [0.4, 1.1, 1, 0.95],
+                    x: [0, 6, -6, 0],
+                  }
+            }
+            exit={{ opacity: 0 }}
+            transition={
+              reduceMotion
+                ? { duration: 0.2 }
+                : { duration: 2.2, delay: index * 0.18, times: [0, 0.18, 0.7, 1], ease: "easeOut" }
+            }
+          >
+            {bubble.label}
+          </motion.span>
+        ))}
+      </AnimatePresence>
+    </span>
+  );
+}
+
+/**
+ * The cabinet's LED panel: amber digits on a dark glass strip, like the
+ * BET / WIN / CREDIT meters on a real machine. Each cell is a label over a
+ * value; a `blink` cell flashes, for a fresh win.
+ */
+export function LedPanel({
+  cells,
+}: {
+  cells: { label: string; value: ReactNode; blink?: boolean; tone?: "win" | "loss" }[];
+}) {
+  const reduceMotion = useReducedMotion();
+  return (
+    // `w-0 min-w-full`: as wide as the reels below it, never wider. A long
+    // value truncates instead of stretching the cabinet sideways mid-game.
+    <div className="relative grid w-0 min-w-full grid-cols-3 gap-px overflow-hidden rounded-md bg-[oklch(0.3_0.03_60)] ring-1 ring-black/40">
+      {cells.map((cell, index) => (
+        <div
+          key={index}
+          className="flex min-w-0 flex-col items-center bg-[oklch(0.16_0.02_40)] px-1 py-1"
+        >
+          <span className="text-[8px] font-semibold tracking-[0.14em] text-[oklch(0.7_0.08_60)] uppercase">
+            {cell.label}
+          </span>
+          <motion.span
+            key={String(cell.blink)}
+            className={cn(
+              "max-w-full truncate font-mono text-[12px] leading-tight font-bold tracking-tight tabular-nums",
+              cell.tone === "loss" ? "text-[oklch(0.7_0.2_25)]" : "text-[oklch(0.86_0.16_80)]",
+            )}
+            style={{ textShadow: "0 0 6px currentColor" }}
+            animate={cell.blink && !reduceMotion ? { opacity: [1, 0.25, 1] } : { opacity: 1 }}
+            transition={
+              cell.blink && !reduceMotion
+                ? { duration: 0.5, repeat: 5, ease: "easeInOut" }
+                : { duration: 0.2 }
+            }
+          >
+            {cell.value}
+          </motion.span>
+        </div>
+      ))}
+    </div>
   );
 }

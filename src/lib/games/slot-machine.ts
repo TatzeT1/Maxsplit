@@ -1,12 +1,14 @@
 /**
  * Pure Spielautomat rules. Everyone takes turns at one machine, in an order
- * shuffled once at the start, and every pull lands on a combination from the
- * paytable below. The combination decides what happens to the bill: the
- * spinner pays their stake, gets it back, pays a multiple of it, hands it on
- * to the next player, buys a round for everyone else, or hits the jackpot and
- * walks away with everything they paid so far refunded.
+ * shuffled once at the start, pulling `SLOT_SPINS_PER_TURN` times in a row
+ * before passing it on. Every pull lands on a combination from the paytable
+ * below, and the combination decides what happens to the bill: the spinner
+ * pays their stake, gets it back, pays a multiple of it, wins free spins
+ * (whose no-wins cost nothing), hands double the stake on to the next player,
+ * makes everyone else pay, or hits the jackpot and walks away with everything
+ * they paid so far refunded.
  *
- * Everyone spins equally often, so in expectation it's fair, but a single
+ * Everyone gets the same series, so in expectation it's fair, but a single
  * game can swing hard either way, which is the point. Whatever happens, every
  * charge is capped to what's still open, so the tallies always add up to
  * exactly `amountMinor` once the game is over.
@@ -71,6 +73,11 @@ const SPINNER_MULTIPLIER: Partial<Record<SlotOutcomeKind, number>> = {
 /** Schwarzer Peter: the next player in line pays this many stakes. */
 const BELLS_MULTIPLIER = 2;
 
+/** Everyone pulls this many times in a row before the machine passes on. */
+export const SLOT_SPINS_PER_TURN = 3;
+/** Three cherries award this many free spins, played straight away and on top of the series. */
+export const SLOT_FREE_SPINS_AWARDED = 3;
+
 export interface SlotRandom {
   /** A uniform integer in `[min, max]`, both ends included. */
   int(min: number, max: number): number;
@@ -134,13 +141,27 @@ export function expectedStakesPerSpin(playerCount: number): number {
   return total;
 }
 
+/**
+ * The same average per *regular* pull of a series, counting the free spins
+ * that pulls set off along the way: cherries award free spins, and a free
+ * spin's no-win costs nothing.
+ */
+export function expectedStakesPerTurnSpin(playerCount: number): number {
+  const weightOf = (kind: SlotOutcomeKind) =>
+    (SLOT_PAYTABLE.find((entry) => entry.kind === kind)?.weight ?? 0) / SLOT_TOTAL_WEIGHT;
+  // Free spins per pull, as a share of all pulls. Bounded well below 1 by the paytable.
+  const freeShare = weightOf("cherries") * SLOT_FREE_SPINS_AWARDED;
+  const perPull = expectedStakesPerSpin(playerCount) - freeShare * weightOf("miss");
+  return perPull / (1 - freeShare);
+}
+
 export type SlotDuration = "short" | "normal" | "long";
 
-/** Roughly how many times around the table a game lasts, per duration. */
+/** Roughly how many times around the table a game lasts, per duration: each round is a full series per person. */
 export const SLOT_DURATION_ROUNDS: Record<SlotDuration, number> = {
-  short: 2,
-  normal: 4,
-  long: 7,
+  short: 1,
+  normal: 2,
+  long: 3,
 };
 
 /** Round, coin-like stakes, per power of ten: 1, 1.50, 2, 2.50, 3, 4, 5, 6, 8. */
@@ -176,8 +197,8 @@ export function slotStakeForDuration(
   duration: SlotDuration,
 ): number {
   if (amountMinor <= 0 || playerCount <= 0) return 0;
-  const spins = playerCount * SLOT_DURATION_ROUNDS[duration];
-  const raw = amountMinor / (spins * expectedStakesPerSpin(playerCount));
+  const spins = playerCount * SLOT_DURATION_ROUNDS[duration] * SLOT_SPINS_PER_TURN;
+  const raw = amountMinor / (spins * expectedStakesPerTurnSpin(playerCount));
   return Math.min(niceStakeMinor(raw), amountMinor);
 }
 
@@ -192,8 +213,10 @@ export interface SlotGameState {
   turn: number;
   /** What each person owes so far. Never negative; a jackpot winner's entry is removed. */
   tallies: Readonly<Record<string, number>>;
-  /** The person at the machine won a free spin and pulls again before passing on. */
-  freeSpin: boolean;
+  /** Regular pulls the person at the machine has left in their series. */
+  turnSpinsLeft: number;
+  /** Free spins the person at the machine has banked; they are played before the rest of the series. */
+  freeSpinsLeft: number;
   spins: number;
 }
 
@@ -211,6 +234,10 @@ export interface SlotSpinResult {
   charges: SlotCharge[];
   /** After a jackpot left a single player at the machine: they took the rest of the bill. */
   lastPayer: string | null;
+  /** This pull was one of the spinner's free spins: a no-win cost nothing. */
+  freeSpin: boolean;
+  /** Free spins this pull awarded (three cherries). */
+  freeSpinsAwarded: number;
   state: SlotGameState;
 }
 
@@ -230,7 +257,8 @@ export function startSlotGame(
     out: [],
     turn: 0,
     tallies: {},
-    freeSpin: false,
+    turnSpinsLeft: SLOT_SPINS_PER_TURN,
+    freeSpinsLeft: 0,
     spins: 0,
   };
 }
@@ -274,6 +302,7 @@ export function applySlotOutcome(
   if (isSlotGameOver(state)) throw new Error("The bill is already fully allocated");
 
   const spinner = slotSpinner(state);
+  const freeSpin = state.freeSpinsLeft > 0;
   const tallies: Record<string, number> = { ...state.tallies };
   let out = state.out;
   let remaining = slotRemaining(state);
@@ -290,7 +319,9 @@ export function applySlotOutcome(
 
   const stake = state.stakeMinor;
   const multiplier = SPINNER_MULTIPLIER[kind];
-  if (multiplier !== undefined) {
+  if (kind === "miss" && freeSpin) {
+    // A free spin's stake is on the house.
+  } else if (multiplier !== undefined) {
     charge(spinner, stake * multiplier);
   } else if (kind === "bells") {
     charge(nextSlotPlayer(state, spinner), stake * BELLS_MULTIPLIER);
@@ -313,12 +344,22 @@ export function applySlotOutcome(
     }
   }
 
-  const freeSpin = kind === "cherries" && remaining > 0;
-  const next: SlotGameState = { ...state, tallies, out, freeSpin, spins: state.spins + 1 };
-  if (!freeSpin && remaining > 0) {
+  const freeSpinsAwarded = kind === "cherries" ? SLOT_FREE_SPINS_AWARDED : 0;
+  const next: SlotGameState = {
+    ...state,
+    tallies,
+    out,
+    turnSpinsLeft: freeSpin ? state.turnSpinsLeft : state.turnSpinsLeft - 1,
+    freeSpinsLeft: (freeSpin ? state.freeSpinsLeft - 1 : state.freeSpinsLeft) + freeSpinsAwarded,
+    spins: state.spins + 1,
+  };
+  const turnOver = out.includes(spinner) || (next.turnSpinsLeft <= 0 && next.freeSpinsLeft <= 0);
+  if (turnOver && remaining > 0) {
     next.turn = state.seats.indexOf(nextSlotPlayer(next, spinner));
+    next.turnSpinsLeft = SLOT_SPINS_PER_TURN;
+    next.freeSpinsLeft = 0;
   }
-  return { spinner, kind, faces, charges, lastPayer, state: next };
+  return { spinner, kind, faces, charges, lastPayer, freeSpin, freeSpinsAwarded, state: next };
 }
 
 /** One pull of the lever: draws a combination and applies it. */
