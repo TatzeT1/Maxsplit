@@ -668,3 +668,41 @@ export function playFreeSpinsIntroSound(): void {
   });
   [783.99, 987.8, 1174.7].forEach((freq) => tone(ctx, freq, now + 0.45, 0.8, "sine", 0.05));
 }
+
+/** Die Rechnung: a till drawer's "ka-ching". */
+export function playCashRegisterSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  noiseBurst(ctx, at, 0.08, 0.12, "bandpass", 900, 1.2);
+  tone(ctx, 220, at, 0.08, "square", 0.04);
+  bellTone(ctx, 2093, at + 0.12, 0.09);
+  bellTone(ctx, 2637, at + 0.12, 0.06);
+}
+
+/** Geistertausch: a wobbly, falling "woo-ooo". */
+export function playGhostSound(delaySeconds = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const at = ctx.currentTime + delaySeconds;
+  const osc = ctx.createOscillator();
+  const vibrato = ctx.createOscillator();
+  const vibratoGain = ctx.createGain();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(620, at);
+  osc.frequency.exponentialRampToValueAtTime(260, at + 1.1);
+  vibrato.frequency.value = 6;
+  vibratoGain.gain.value = 22;
+  vibrato.connect(vibratoGain);
+  vibratoGain.connect(osc.frequency);
+  gain.gain.setValueAtTime(0, at);
+  gain.gain.linearRampToValueAtTime(0.09, at + 0.15);
+  gain.gain.exponentialRampToValueAtTime(0.001, at + 1.2);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  vibrato.start(at);
+  osc.start(at);
+  vibrato.stop(at + 1.2);
+  osc.stop(at + 1.2);
+}

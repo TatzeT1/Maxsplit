@@ -338,7 +338,7 @@ export const en: Dictionary = {
     gameHowWheel:
       "Every person gets a slice of the wheel. You spin it as many times as people should pay — wherever the needle lands, that person pays and drops out of the wheel.",
     gameHowSlot:
-      "Everyone spins three times in a row, then passes the phone on. The reels decide: no win costs the stake, two of a kind gives it back, three lemons cost triple and three bombs five times. Three cherries award 3 free spins in which no-wins cost nothing. Three bells pass double the stake to the next player, three stars make everyone else pay. Three sevens are the jackpot: everything you paid comes back, and you're out. You play until the bill is allocated.",
+      "Everyone spins three times in a row, then passes the phone on. No win costs the stake, two of a kind gives it back. Three-of-a-kinds pack a punch: lemons cost triple, bombs five times, and the bill makes everyone pay. Bells pass double the stake to the next player, stars make everyone else pay, the clover lets you pick who pays, and the ghost swaps your running total with someone's. Three cherries award free spins in which no-wins cost nothing and coins fill a pot everyone else pays. A 💎 wild doubles any three-of-a-kind, and after a loss you can play Risiko. Three sevens are the jackpot: everything you paid comes back, and you're out.",
     gameHowScratch:
       "Everyone scratches their own card. A few of them are blanks — whoever gets one pays.",
     gameHowBalloon:
@@ -737,6 +737,38 @@ export const en: Dictionary = {
     slotFreeSpinsAwarded: "🍒 +{{count}} free spins",
     slotFreeSpinsDetail: "No-wins cost nothing in free spins.",
     slotBellsPays: "{{name}} pays double the stake",
+    slotOutcomeClover: "Lucky clover",
+    slotOutcomeCloverDetail: "You pick who pays double the stake.",
+    slotOutcomeReceipt: "Here's the bill",
+    slotOutcomeReceiptDetail: "Everyone pays one stake — you too.",
+    slotOutcomeGhost: "Ghost swap",
+    slotOutcomeGhostDetail: "Your running total is swapped with a random person's.",
+    slotStampClover: "Picked!",
+    slotStampReceipt: "Bill!",
+    slotStampGhost: "Boo!",
+    slotWinClover: "Lucky clover",
+    slotWinReceipt: "The bill",
+    slotWinGhost: "Ghost swap",
+    slotWinPot: "Coin pot",
+    slotWildBadge: "💎 Wild ×2",
+    slotPaytableWild:
+      "💎 Wild: Turns up in a three-of-a-kind and doubles what it does — good or bad.",
+    slotPaytableCoins:
+      "🪙 Coins: Land only in free spins (1×, 2× or 5× the stake) and go into the pot. When the free spins end, everyone else pays the pot.",
+    slotPaytableRisk:
+      "🎲 Risiko: After a loss, flip a coin to double it or strike it off — up to twice in a row.",
+    slotLedPot: "Pot",
+    slotChoiceTitle: "{{name}}, who pays {{amount}}?",
+    slotChoiceWaiting: "🍀 Pick who pays first",
+    slotCloverPick: "You're about to point at someone — they pay {{amount}}.",
+    slotRisk: "🎲 Risiko · {{amount}}",
+    slotRiskAgain: "🎲 Again · {{amount}}",
+    slotRiskTitle: "Risiko!",
+    slotRiskStake: "{{name}} stakes {{amount}}: strike it off or double it?",
+    slotRiskWon: "Struck off!",
+    slotRiskLost: "Doubled to {{amount}}!",
+    slotBubbleCoins: "🪙 +{{amount}} into the pot",
+    slotPotPaid: "Everyone else pays the pot:",
     scratchTitle: "Scratch cards",
     scratchIntro: "Everyone scratches their own card. Whoever gets a blank pays.",
     scratchCountHint: "That's how many cards are blanks.",

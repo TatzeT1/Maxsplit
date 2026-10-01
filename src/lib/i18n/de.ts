@@ -342,7 +342,7 @@ export const de = {
     gameHowWheel:
       "Jede Person bekommt ein Feld auf dem Rad. Ihr dreht so oft, wie Leute zahlen sollen — wo die Nadel stehen bleibt, der zahlt und fliegt aus dem Rad.",
     gameHowSlot:
-      "Jede Person dreht dreimal am Stück, dann geht das Handy weiter. Die Walzen entscheiden: Eine Niete kostet den Einsatz, zwei gleiche geben ihn zurück, drei Zitronen kosten dreifach und drei Bomben fünffach. Drei Kirschen bringen 3 Freispiele, in denen Nieten nichts kosten. Drei Glocken schieben dem Nächsten den doppelten Einsatz zu, drei Sterne lassen alle anderen zahlen. Drei Siebenen sind der Jackpot: Alles Gezahlte kommt zurück, und du bist raus. Gespielt wird, bis die Rechnung verteilt ist.",
+      "Jede Person dreht dreimal am Stück, dann geht das Handy weiter. Eine Niete kostet den Einsatz, zwei gleiche geben ihn zurück. Drillinge haben es in sich: Zitronen kosten dreifach, Bomben fünffach, bei der Rechnung zahlen alle. Glocken schieben dem Nächsten den doppelten Einsatz zu, Sterne lassen alle anderen zahlen, beim Glücksklee bestimmst du, wer zahlt, und der Geist tauscht deine Zwischensumme mit jemandem. Drei Kirschen bringen Freispiele, in denen Nieten nichts kosten und Münzen in einen Topf wandern, den die anderen zahlen. Ein 💎 Wild verdoppelt jeden Drilling, und nach einem Verlust kannst du Risiko spielen. Drei Siebenen sind der Jackpot: Alles Gezahlte kommt zurück, und du bist raus.",
     gameHowScratch:
       "Jede Person rubbelt ihr eigenes Los frei. Ein paar davon sind Nieten — wer eine erwischt, zahlt.",
     gameHowBalloon:
@@ -748,6 +748,38 @@ export const de = {
     slotFreeSpinsAwarded: "🍒 +{{count}} Freispiele",
     slotFreeSpinsDetail: "Nieten kosten in Freispielen nichts.",
     slotBellsPays: "{{name}} zahlt den doppelten Einsatz",
+    slotOutcomeClover: "Glücksklee",
+    slotOutcomeCloverDetail: "Du bestimmst, wer den doppelten Einsatz zahlt.",
+    slotOutcomeReceipt: "Die Rechnung kommt",
+    slotOutcomeReceiptDetail: "Alle zahlen je einen Einsatz — du auch.",
+    slotOutcomeGhost: "Geistertausch",
+    slotOutcomeGhostDetail: "Deine Zwischensumme wird mit einer zufälligen Person getauscht.",
+    slotStampClover: "Gepickt!",
+    slotStampReceipt: "Rechnung!",
+    slotStampGhost: "Buh!",
+    slotWinClover: "Glücksklee",
+    slotWinReceipt: "Die Rechnung",
+    slotWinGhost: "Geistertausch",
+    slotWinPot: "Münztopf",
+    slotWildBadge: "💎 Wild ×2",
+    slotPaytableWild:
+      "💎 Wild: Taucht in einem Drilling auf und verdoppelt seine Wirkung — im Guten wie im Schlechten.",
+    slotPaytableCoins:
+      "🪙 Münzen: Landen nur in Freispielen (1×, 2× oder 5× Einsatz) und wandern in den Topf. Enden die Freispiele, zahlen die anderen den Topf.",
+    slotPaytableRisk:
+      "🎲 Risiko: Nach einem Verlust per Münzwurf verdoppeln oder streichen — bis zu zweimal hintereinander.",
+    slotLedPot: "Topf",
+    slotChoiceTitle: "{{name}}, wer zahlt {{amount}}?",
+    slotChoiceWaiting: "🍀 Erst wählen, wer zahlt",
+    slotCloverPick: "Du zeigst gleich auf jemanden — der zahlt {{amount}}.",
+    slotRisk: "🎲 Risiko · {{amount}}",
+    slotRiskAgain: "🎲 Nochmal · {{amount}}",
+    slotRiskTitle: "Risiko!",
+    slotRiskStake: "{{name}} setzt {{amount}}: streichen oder verdoppeln?",
+    slotRiskWon: "Gestrichen!",
+    slotRiskLost: "Verdoppelt auf {{amount}}!",
+    slotBubbleCoins: "🪙 +{{amount}} in den Topf",
+    slotPotPaid: "Die anderen zahlen den Topf:",
     scratchTitle: "Rubbellos",
     scratchIntro: "Jede Person rubbelt ihr eigenes Los frei. Wer eine Niete zieht, zahlt.",
     scratchCountHint: "So viele Rubbellose sind Nieten.",

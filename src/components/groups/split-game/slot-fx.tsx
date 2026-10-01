@@ -55,6 +55,18 @@ function seededRandom(seed: number): () => number {
  * machine seven.
  */
 export function SlotSymbolFace({ symbol, className }: { symbol: SlotSymbol; className?: string }) {
+  if (symbol === "wild") {
+    // The wild carries its name, the way every slot labels its wild: a gem
+    // alone could pass for just another fruit.
+    return (
+      <span className={cn("relative inline-flex justify-center leading-none", className)}>
+        💎
+        <span className="absolute -bottom-[0.15em] rounded-[3px] bg-[oklch(0.5_0.22_300)] px-[0.15em] py-[0.02em] text-[0.24em] leading-none font-black tracking-wider text-white shadow-sm">
+          WILD
+        </span>
+      </span>
+    );
+  }
   if (symbol === "seven") {
     return (
       <span
@@ -425,6 +437,7 @@ export function SlotWinBanner({
   tier,
   name,
   faces,
+  tone = "gold",
   children,
   onDismiss,
 }: {
@@ -432,11 +445,14 @@ export function SlotWinBanner({
   tier: WinTier;
   name: string;
   faces: readonly SlotSymbol[];
+  /** Gold for good news for the person at the machine, red for an event that costs the table. */
+  tone?: "gold" | "red";
   children?: ReactNode;
   onDismiss?: () => void;
 }) {
   const reduceMotion = useReducedMotion();
   const huge = tier === "jackpot" || tier === "mega";
+  const red = tone === "red";
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -445,17 +461,37 @@ export function SlotWinBanner({
       onClick={onDismiss}
       className="absolute -inset-x-4 -inset-y-2 z-30 flex cursor-pointer items-center justify-center overflow-hidden"
     >
-      <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,oklch(0.32_0.09_70/0.92),oklch(0.14_0.03_260/0.94)_70%)]" />
-      <Sunburst color="oklch(0.88 0.15 88 / 0.55)" className="size-[150vmax]" />
+      <span
+        className={cn(
+          "absolute inset-0",
+          red
+            ? "bg-[radial-gradient(circle_at_50%_45%,oklch(0.34_0.12_25/0.93),oklch(0.14_0.03_260/0.95)_70%)]"
+            : "bg-[radial-gradient(circle_at_50%_45%,oklch(0.32_0.09_70/0.92),oklch(0.14_0.03_260/0.94)_70%)]",
+        )}
+      />
+      <Sunburst
+        color={red ? "oklch(0.7 0.2 30 / 0.45)" : "oklch(0.88 0.15 88 / 0.55)"}
+        className="size-[150vmax]"
+      />
       {huge && <Sunburst color="oklch(0.75 0.18 40 / 0.35)" className="size-[110vmax]" reverse />}
       <AmbientBubbles count={huge ? 26 : 16} className="absolute inset-0" />
 
       <div className="relative flex w-full max-w-80 flex-col items-center gap-3 px-6 text-center">
         <motion.span
           className={cn(
-            "font-heading block bg-[linear-gradient(180deg,oklch(0.97_0.08_95),oklch(0.85_0.17_85)_45%,oklch(0.62_0.15_60)_55%,oklch(0.9_0.13_90))] bg-clip-text leading-none font-black tracking-tight text-transparent uppercase [font-variation-settings:'SOFT'_100,'WONK'_1]",
+            "font-heading block bg-clip-text leading-none font-black tracking-tight text-transparent uppercase [font-variation-settings:'SOFT'_100,'WONK'_1]",
+            red
+              ? "bg-[linear-gradient(180deg,oklch(0.96_0.06_60),oklch(0.75_0.19_40)_45%,oklch(0.5_0.2_25)_55%,oklch(0.85_0.15_45))]"
+              : "bg-[linear-gradient(180deg,oklch(0.97_0.08_95),oklch(0.85_0.17_85)_45%,oklch(0.62_0.15_60)_55%,oklch(0.9_0.13_90))]",
             "drop-shadow-[0_0_18px_oklch(0.85_0.17_85/0.7)] drop-shadow-[0_3px_0_oklch(0.4_0.1_50)]",
-            huge ? "text-[54px]" : "text-[44px]",
+            // Long titles ("Geistertausch") step down so they still fit a phone.
+            tierLabel.length > 11
+              ? "text-[34px]"
+              : tierLabel.length > 8
+                ? "text-[40px]"
+                : huge
+                  ? "text-[54px]"
+                  : "text-[44px]",
           )}
           initial={reduceMotion ? false : { scale: 0.2, rotate: -8, opacity: 0 }}
           animate={
@@ -670,5 +706,92 @@ export function LedPanel({
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * A coin on the reels during free spins, with its value printed on it. It
+ * pops in as its reel stops, then flies up into the pot on the LED panel.
+ */
+export function CoinChip({ multiplier, collect }: { multiplier: number; collect: boolean }) {
+  const reduceMotion = useReducedMotion();
+  return (
+    <motion.span
+      aria-hidden="true"
+      className="flex size-12 items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,oklch(0.97_0.08_95),oklch(0.82_0.16_80)_55%,oklch(0.62_0.14_65))] text-sm font-black text-[oklch(0.35_0.08_60)] shadow-[0_0_14px_oklch(0.84_0.16_85/0.8)] ring-2 ring-[oklch(0.6_0.13_65)]"
+      initial={reduceMotion ? false : { scale: 0, rotate: -90 }}
+      animate={
+        collect && !reduceMotion
+          ? { scale: [1, 1.25, 0.4], y: [0, -10, -140], opacity: [1, 1, 0], rotate: 0 }
+          : { scale: 1, rotate: 0 }
+      }
+      transition={
+        collect && !reduceMotion
+          ? { duration: 0.75, times: [0, 0.25, 1], ease: "easeIn" }
+          : { type: "spring", stiffness: 420, damping: 14 }
+      }
+    >
+      {multiplier}×
+    </motion.span>
+  );
+}
+
+/**
+ * The Risiko coin flip: a big coin spinning on a dark scrim, landing on a
+ * tick (the loss is struck off) or ×2 (it doubles). `won` is decided before
+ * this mounts; the spin only reveals it.
+ */
+export function GambleFlip({
+  won,
+  title,
+  stakeLabel,
+  resultLabel,
+}: {
+  won: boolean;
+  title: string;
+  stakeLabel: string;
+  resultLabel: string;
+}) {
+  const reduceMotion = useReducedMotion();
+  const spinTurns = 6;
+  const finalRotation = spinTurns * 360 + (won ? 0 : 180);
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute -inset-x-4 -inset-y-2 z-40 flex flex-col items-center justify-center gap-4 overflow-hidden bg-[oklch(0.14_0.03_260/0.92)] text-white"
+    >
+      <span className="font-heading text-4xl font-black tracking-tight text-[oklch(0.88_0.15_85)] uppercase drop-shadow-[0_0_14px_oklch(0.85_0.17_85/0.7)]">
+        {title}
+      </span>
+      <span className="text-sm text-white/80">{stakeLabel}</span>
+      <span className="[perspective:600px]">
+        <motion.span
+          className="relative block size-32 [transform-style:preserve-3d]"
+          initial={{ rotateY: 0 }}
+          animate={{ rotateY: reduceMotion ? (won ? 0 : 180) : finalRotation }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 1.4, ease: [0.2, 0.7, 0.3, 1] }}
+        >
+          <span className="absolute inset-0 flex items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,oklch(0.9_0.15_150),oklch(0.6_0.17_150))] text-6xl font-black text-white shadow-[0_0_30px_oklch(0.7_0.17_150/0.7)] ring-4 ring-white/70 [backface-visibility:hidden]">
+            ✓
+          </span>
+          <span className="absolute inset-0 flex [transform:rotateY(180deg)] items-center justify-center rounded-full bg-[radial-gradient(circle_at_35%_30%,oklch(0.8_0.18_30),oklch(0.5_0.2_25))] text-5xl font-black text-white shadow-[0_0_30px_oklch(0.64_0.22_25/0.7)] ring-4 ring-white/70 [backface-visibility:hidden]">
+            ×2
+          </span>
+        </motion.span>
+      </span>
+      <motion.span
+        className={cn(
+          "font-heading text-3xl font-black",
+          won ? "text-[oklch(0.85_0.17_150)]" : "text-[oklch(0.72_0.2_28)]",
+        )}
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: [0.5, 1.2, 1] }}
+        transition={{ delay: reduceMotion ? 0 : 1.45, duration: 0.4 }}
+      >
+        {resultLabel}
+      </motion.span>
+    </motion.div>
   );
 }

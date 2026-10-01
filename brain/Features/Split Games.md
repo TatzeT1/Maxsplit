@@ -83,16 +83,34 @@ once", it's a one-armed bandit. Everyone takes turns at one machine, in an order
 (`drawSlotOutcome`, crypto-random through the `SlotRandom` the dialog passes in), and the
 combination decides what happens to the bill. The table lists odds per pull; E = the stake:
 
-| Reels                      | Odds | Effect                                                               |
-| -------------------------- | ---- | -------------------------------------------------------------------- |
-| No match (Niete)           | 52 % | Spinner pays E (nothing on a free spin)                              |
-| Two of a kind              | 26 % | Stake back, nobody pays                                              |
-| 🍋🍋🍋 Sauer!              | 6 %  | Spinner pays 3E                                                      |
-| 🍒🍒🍒 Freispiele          | 5 %  | 3 free spins, played straight away, on top of the series             |
-| 🔔🔔🔔 Schwarzer Peter     | 4 %  | The next player in line pays 2E                                      |
-| ⭐⭐⭐ Runde geht auf euch | 4 %  | Everyone else pays E                                                 |
-| 💣💣💣 Bombe!              | 2 %  | Spinner pays 5E                                                      |
-| 777 Jackpot                | 1 %  | Everything the spinner paid goes back into the pot, and they are out |
+| Reels                      | Odds | Effect                                                                |
+| -------------------------- | ---- | --------------------------------------------------------------------- |
+| No match (Niete)           | 46 % | Spinner pays E (nothing on a free spin)                               |
+| Two of a kind              | 24 % | Stake back, nobody pays                                               |
+| 🍋🍋🍋 Sauer!              | 6 %  | Spinner pays 3E                                                       |
+| 🍒🍒🍒 Freispiele          | 5 %  | 3 free spins, played straight away, on top of the series              |
+| 🔔🔔🔔 Schwarzer Peter     | 4 %  | The next player in line pays 2E                                       |
+| ⭐⭐⭐ Runde geht auf euch | 4 %  | Everyone else pays E                                                  |
+| 🍀🍀🍀 Glücksklee          | 3 %  | The spinner picks who pays 2E (`pendingChoice`, `applySlotChoice`)    |
+| 🧾🧾🧾 Die Rechnung kommt  | 3 %  | Everyone still in, the spinner included, pays E                       |
+| 👻👻👻 Geistertausch       | 2 %  | The spinner's tally swaps with a random other player's (`swapTarget`) |
+| 💣💣💣 Bombe!              | 2 %  | Spinner pays 5E                                                       |
+| 777 Jackpot                | 1 %  | Everything the spinner paid goes back into the pot, and they are out  |
+
+On top of the table:
+
+- **💎 Wild.** One in five of the three-of-a-kinds in `SLOT_WILD_KINDS` (all but the ghost and
+  the jackpot) shows a wild on one reel and doubles what the combination does, good or bad.
+  For cherries that means 6 free spins.
+- **🪙 Coins.** On a free spin, each reel has a 25 % chance of a coin above or below the
+  payline, worth 1×, 2× or 5× the stake. Coins go into `coinPotMinor`. When the free spins
+  run out, everyone else pays the pot, split evenly (`splitEvenly`, the odd cent going to
+  whoever is first in line).
+- **🎲 Risiko.** After a paid loss on a regular pull (no-win, lemons, bombs), `state.gamble`
+  offers double or nothing on that charge: a crypto coin flip (`drawSlotGamble`) either
+  strikes it off or doubles it, up to `SLOT_GAMBLE_MAX_STEPS` times. It is fair in
+  expectation. The offer goes away with the next pull, and it isn't made when the pull
+  finished the bill.
 
 - **Series and free spins.** `turnSpinsLeft` counts the regular pulls left in the series and
   `freeSpinsLeft` the banked free spins. Free spins are played first and don't use up the
@@ -100,8 +118,9 @@ combination decides what happens to the bill. The table lists odds per pull; E =
   cherries on a free spin add three more. The machine passes on when both counters are
   empty, or at once after a jackpot.
 - **Fairness.** Everyone gets the same series, so the game is fair in expectation. A
-  Monte-Carlo test checks that every seat ends up paying about the same share; a single game
-  can still swing hard either way.
+  Monte-Carlo test plays whole games with random clover picks and random Risiko presses and
+  checks that every seat ends up paying about the same share. A single game can still swing
+  hard either way.
 - **Exact total.** Every charge is capped at what's still open (`applySlotOutcome`), so the
   tallies always end on exactly `amountMinor`, with no remainder to reconcile.
 - **Jackpot.** A jackpot winner is skipped from then on, also for bells and stars. When only
@@ -109,8 +128,9 @@ combination decides what happens to the bill. The table lists odds per pull; E =
   can be at most n−1 jackpots, so the game always ends.
 - **Stake.** The setup step offers a game length, Kurz / Normal / Lang (1 / 2 / 3 series of
   three per person), instead of a raw amount. `slotStakeForDuration` divides the bill by the
-  regular pulls and by `expectedStakesPerTurnSpin` (which accounts for the free spins those
-  pulls set off), then rounds to a coin-like amount (`niceStakeMinor`). The "Eigener Einsatz"
+  regular pulls and by `expectedStakesPerTurnSpin`, then rounds to a coin-like amount
+  (`niceStakeMinor`). `expectedStakesPerTurnSpin` accounts for wilds, for the free spins the
+  pulls set off and for the coins those free spins collect. The "Eigener Einsatz"
   option still takes a typed stake. The stake is fixed for the whole game.
 - **Decide first, animate after.** The outcome is drawn first, and `slotReelFaces` then builds
   reel faces that show it. A pair puts its odd symbol on a random reel. When the first two
@@ -131,14 +151,26 @@ combination decides what happens to the bill. The table lists odds per pull; E =
   rest dim.
 - **After every pull:** the amounts float up off the machine as bubbles
   (`FloatingBubbles`), e.g. "+1,50 € · Lisa", "Einsatz zurück", "+3 Freispiele".
-- **Takeovers, only for the big moments**, after the line has shown for `LINE_SHOW_MS`:
-  - A costly three-of-a-kind (lemons, bombs), or the pull that finishes the bill, gets the
-    stamped till slip (`CatchFlash`).
-  - The good three-of-a-kinds get a casino banner (`SlotWinBanner`): a gold tier title on a
+- **Takeovers, only for the big moments.** They come after the line has shown for
+  `LINE_SHOW_MS`, and they queue (`present`/`advance`), so a three-of-a-kind and a coin-pot
+  payout on the same pull play one after the other.
+  - A costly three-of-a-kind (lemons, bombs), the pull that finishes the bill, or the person
+    picked by the clover gets the stamped till slip (`CatchFlash`).
+  - The other three-of-a-kinds get a casino banner (`SlotWinBanner`): a gold tier title on a
     rotating `Sunburst`, the amount rolling up (`RollupMoney`, with `playRollupSound`) and a
-    coin fountain (`EmojiShower` in `fountain` mode). The tiers are FREISPIELE (cherries),
-    BIG WIN (bells), MEGA WIN (stars) and JACKPOT (sevens, plus a rain of coins). Tap to
-    skip.
+    coin fountain (`EmojiShower` in `fountain` mode). The tiers are FREISPIELE, BIG WIN
+    (bells), MEGA WIN (stars), GLÜCKSKLEE, DIE RECHNUNG and GEISTERTAUSCH, plus JACKPOT
+    with a rain of coins.
+  - The banner is red (`tone="red"`) for the bill, and for a ghost swap that left the
+    spinner worse off.
+  - The coin pot gets its own MÜNZTOPF banner when it pays out. Tap any banner to skip it.
+- **Choice and Risiko overlays:**
+  - The clover's pick is a full-screen panel of avatar buttons. The lever stays locked until
+    someone is picked.
+  - Risiko is a footer button next to the lever. It plays a 3D coin flip (`GambleFlip`):
+    green ✓ strikes the loss off, red ×2 doubles it.
+- **Coins on the reels:** during free spins coins land above or below the payline
+  (`CoinChip`), then fly up into the pot shown on the LED panel.
 - **What stays small:** a plain no-win, the most common pull, is just a bubble and a dry
   thump. Three pulls in a row with a takeover on each would wear thin fast.
 - **Sound:** every combination has its own synthesized sound in `game-sounds.ts`.

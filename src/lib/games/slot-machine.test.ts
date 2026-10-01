@@ -5,14 +5,20 @@ import {
   SLOT_PAYTABLE,
   SLOT_SPINS_PER_TURN,
   SLOT_TOTAL_WEIGHT,
+  SLOT_GAMBLE_MAX_STEPS,
+  applySlotChoice,
+  applySlotGamble,
   applySlotOutcome,
+  drawSlotGamble,
   drawSlotOutcome,
+  drawSlotSpin,
   expectedStakesPerSpin,
   isSlotGameOver,
   nextSlotPlayer,
   niceStakeMinor,
   slotActiveSeats,
   slotAllocated,
+  slotChoiceCandidates,
   slotOutcomeForFaces,
   slotReelFaces,
   slotRemaining,
@@ -111,8 +117,8 @@ describe("stake for a game length", () => {
     expect(niceStakeMinor(0.3)).toBe(1);
   });
 
-  it("charges about one stake per pull at a table of four", () => {
-    expect(expectedStakesPerSpin(4)).toBeCloseTo(1, 5);
+  it("charges about a stake and a quarter per pull at a table of four, wilds included", () => {
+    expect(expectedStakesPerSpin(4)).toBeCloseTo(1.252, 5);
   });
 
   it("asks for a smaller stake the longer the game should run", () => {
@@ -284,6 +290,227 @@ describe("jackpot", () => {
   });
 });
 
+describe("wild", () => {
+  it("shows up on one reel of a three-of-a-kind and still reads as that combination", () => {
+    const random = seededRandom(21);
+    for (let i = 0; i < 100; i++) {
+      const faces = slotReelFaces("bells", random, true);
+      expect(faces.filter((face) => face === "wild")).toHaveLength(1);
+      expect(slotOutcomeForFaces(faces)).toBe("bells");
+    }
+  });
+
+  it("doubles what the combination does, good or bad", () => {
+    const fresh = () => game(["a", "b", "c"], 10_000, 100);
+    expect(applySlotOutcome(fresh(), "lemons", FACES, { wild: true }).state.tallies).toEqual({
+      a: 600,
+    });
+    expect(applySlotOutcome(fresh(), "bells", FACES, { wild: true }).state.tallies).toEqual({
+      b: 400,
+    });
+    expect(applySlotOutcome(fresh(), "cherries", FACES, { wild: true }).freeSpinsAwarded).toBe(
+      2 * SLOT_FREE_SPINS_AWARDED,
+    );
+  });
+
+  it("never comes with a ghost or the jackpot", () => {
+    const result = applySlotOutcome(game(["a", "b"], 10_000, 100), "jackpot", FACES, {
+      wild: true,
+    });
+    expect(result.wild).toBe(false);
+  });
+
+  it("turns up in about one in five of the three-of-a-kinds it can", () => {
+    const random = seededRandom(8);
+    const state = game(["a", "b", "c"], 10_000, 100);
+    let triples = 0;
+    let wilds = 0;
+    for (let i = 0; i < 40_000; i++) {
+      const draw = drawSlotSpin(state, random);
+      if (draw.kind === "lemons" || draw.kind === "stars") {
+        triples++;
+        if (draw.wild) wilds++;
+      }
+    }
+    expect(wilds / triples).toBeCloseTo(0.2, 1);
+  });
+});
+
+describe("die Rechnung", () => {
+  it("charges everyone a stake, the spinner first", () => {
+    const result = applySlotOutcome(game(["a", "b", "c"], 10_000, 100), "receipt", FACES);
+    expect(result.charges.map((charge) => charge.uid)).toEqual(["a", "b", "c"]);
+    expect(result.state.tallies).toEqual({ a: 100, b: 100, c: 100 });
+  });
+});
+
+describe("Glücksklee", () => {
+  it("waits for the spinner to point at someone, who then pays two stakes", () => {
+    const after = applySlotOutcome(game(["a", "b", "c"], 10_000, 100), "clover", FACES).state;
+    expect(after.pendingChoice).toEqual({ uid: "a", amountMinor: 200 });
+    expect(slotChoiceCandidates(after, "a")).toEqual(["b", "c"]);
+    expect(() => spinSlot(after, seededRandom(1))).toThrow();
+    expect(() => applySlotChoice(after, "a")).toThrow();
+    const chosen = applySlotChoice(after, "c");
+    expect(chosen.charge).toEqual({ uid: "c", amountMinor: 200 });
+    expect(chosen.state.tallies).toEqual({ c: 200 });
+    expect(chosen.state.pendingChoice).toBeNull();
+  });
+
+  it("charges the only other player straight away", () => {
+    const after = applySlotOutcome(game(["a", "b"], 10_000, 100), "clover", FACES).state;
+    expect(after.pendingChoice).toBeNull();
+    expect(after.tallies).toEqual({ b: 200 });
+  });
+});
+
+describe("Geistertausch", () => {
+  it("swaps the spinner's tally with someone else's, leaving the total alone", () => {
+    const state = play(game(["a", "b", "c"], 10_000, 100), "pair", "pair", "pair", "bombs");
+    expect(state.tallies).toEqual({ b: 500 });
+    const result = applySlotOutcome(state, "ghost", FACES, { swapTarget: "a" });
+    expect(result.swap).toEqual({ uid: "a", spinnerBefore: 500, otherBefore: 0 });
+    expect(result.state.tallies).toEqual({ a: 500 });
+    expect(result.charges).toEqual([
+      { uid: "b", amountMinor: -500 },
+      { uid: "a", amountMinor: 500 },
+    ]);
+    expect(slotAllocated(result.state)).toBe(500);
+  });
+
+  it("only ever picks someone still in the game, never the spinner", () => {
+    const random = seededRandom(4);
+    // b hits the jackpot and is out; c is at the machine.
+    const state = play(game(["a", "b", "c", "d"], 10_000, 100), "pair", "pair", "pair", "jackpot");
+    for (let i = 0; i < 2000; i++) {
+      const draw = drawSlotSpin(state, random);
+      if (draw.kind !== "ghost") continue;
+      expect(["a", "d"]).toContain(draw.swapTarget);
+    }
+  });
+});
+
+describe("coins in free spins", () => {
+  const coin = (reel: number, multiplier: number) => ({ reel, row: 0 as const, multiplier });
+
+  it("go into a pot that the others pay, split evenly, when the free spins run out", () => {
+    let state = play(game(["a", "b", "c"], 10_000, 100), "cherries");
+    let result = applySlotOutcome(state, "pair", FACES, { coins: [coin(0, 2), coin(2, 5)] });
+    expect(result.coinsCollectedMinor).toBe(700);
+    expect(result.state.coinPotMinor).toBe(700);
+    expect(result.potPayout).toBeNull();
+    state = play(result.state, "pair");
+    result = applySlotOutcome(state, "pair", FACES, { coins: [coin(1, 1)] });
+    expect(result.potPayout).toEqual({
+      totalMinor: 800,
+      charges: [
+        { uid: "b", amountMinor: 400 },
+        { uid: "c", amountMinor: 400 },
+      ],
+    });
+    expect(result.state.tallies).toEqual({ b: 400, c: 400 });
+    expect(result.state.coinPotMinor).toBe(0);
+  });
+
+  it("give the odd cent to whoever is first in line", () => {
+    let state = play(game(["a", "b", "c"], 10_000, 1), "cherries");
+    state = applySlotOutcome(state, "pair", FACES, { coins: [coin(0, 5)] }).state;
+    state = play(state, "pair", "pair");
+    expect(state.tallies).toEqual({ b: 3, c: 2 });
+  });
+
+  it("are worth nothing outside free spins", () => {
+    const result = applySlotOutcome(game(["a", "b"], 10_000, 100), "pair", FACES, {
+      coins: [coin(0, 5)],
+    });
+    expect(result.coins).toEqual([]);
+    expect(result.state.coinPotMinor).toBe(0);
+  });
+
+  it("only land on free spins, above or below the payline", () => {
+    const random = seededRandom(17);
+    const regular = game(["a", "b"], 10_000, 100);
+    const free = play(regular, "cherries");
+    let landed = 0;
+    for (let i = 0; i < 500; i++) {
+      expect(drawSlotSpin(regular, random).coins).toEqual([]);
+      for (const c of drawSlotSpin(free, random).coins) {
+        landed++;
+        expect([0, 2]).toContain(c.row);
+        expect([1, 2, 5]).toContain(c.multiplier);
+      }
+    }
+    expect(landed).toBeGreaterThan(200);
+  });
+});
+
+describe("Risiko", () => {
+  it("is offered after a paid loss, on the spinner's charge", () => {
+    const result = applySlotOutcome(game(["a", "b"], 10_000, 100), "lemons", FACES);
+    expect(result.state.gamble).toEqual({ uid: "a", amountMinor: 300, step: 0 });
+  });
+
+  it("strikes the loss off when the flip comes up", () => {
+    const state = play(game(["a", "b"], 10_000, 100), "pair", "lemons");
+    const result = applySlotGamble(state, true);
+    expect(result.charge).toEqual({ uid: "a", amountMinor: -300 });
+    expect(result.state.tallies).toEqual({});
+    expect(result.state.gamble).toBeNull();
+  });
+
+  it("doubles it when it doesn't, and can be risked again up to the limit", () => {
+    let state = play(game(["a", "b"], 10_000, 100), "miss");
+    for (let step = 1; step <= SLOT_GAMBLE_MAX_STEPS; step++) {
+      state = applySlotGamble(state, false).state;
+      expect(state.tallies).toEqual({ a: 100 * 2 ** step });
+    }
+    expect(state.gamble).toBeNull();
+  });
+
+  it("isn't offered on a free spin, for a win, or once the bill is done", () => {
+    const free = play(game(["a", "b"], 10_000, 100), "cherries", "lemons");
+    expect(free.gamble).toBeNull();
+    expect(play(game(["a", "b"], 10_000, 100), "stars").gamble).toBeNull();
+    expect(play(game(["a", "b"], 300, 100), "lemons").gamble).toBeNull();
+  });
+
+  it("goes away with the next pull", () => {
+    const state = play(game(["a", "b"], 10_000, 100), "miss", "pair");
+    expect(state.gamble).toBeNull();
+  });
+
+  it("is fair: risking every loss doesn't change what anyone pays on average", () => {
+    const random = seededRandom(31);
+    let flips = 0;
+    let delta = 0;
+    for (let i = 0; i < 20_000; i++) {
+      let state = play(game(["a", "b"], 1_000_000, 100), "miss");
+      while (state.gamble) {
+        const result = applySlotGamble(state, drawSlotGamble(random));
+        delta += result.charge?.amountMinor ?? 0;
+        state = result.state;
+        flips++;
+      }
+    }
+    expect(Math.abs(delta / flips)).toBeLessThan(5);
+  });
+});
+
+/**
+ * Plays one move the way people at the table might: a Glücksklee pick at
+ * random, the Risiko button about half the time, otherwise a pull.
+ */
+function step(state: SlotGameState, random: SlotRandom): SlotGameState {
+  if (state.pendingChoice) {
+    const candidates = slotChoiceCandidates(state, state.pendingChoice.uid);
+    return applySlotChoice(state, candidates[random.int(0, candidates.length - 1)]).state;
+  }
+  if (state.gamble && random.int(0, 1) === 1) {
+    return applySlotGamble(state, drawSlotGamble(random)).state;
+  }
+  return spinSlot(state, random).state;
+}
+
 describe("whole games", () => {
   it("always end on exactly the bill, with nobody owing a negative amount", () => {
     for (let seed = 1; seed <= 400; seed++) {
@@ -295,7 +522,7 @@ describe("whole games", () => {
       let state = startSlotGame(pool, amountMinor, stake, random);
       let spins = 0;
       while (!isSlotGameOver(state)) {
-        state = spinSlot(state, random).state;
+        state = step(state, random);
         spins++;
         expect(spins).toBeLessThan(5_000);
       }
@@ -314,7 +541,7 @@ describe("whole games", () => {
     const games = 400;
     for (let i = 0; i < games; i++) {
       let state = startSlotGame(pool, amountMinor, stake, random);
-      while (!isSlotGameOver(state)) state = spinSlot(state, random).state;
+      while (!isSlotGameOver(state)) state = step(state, random);
       totalSpins += state.spins;
     }
     // Free spins come on top of the series, so count pulls per person, not series.
@@ -331,7 +558,7 @@ describe("whole games", () => {
     const games = 3000;
     for (let i = 0; i < games; i++) {
       let state = startSlotGame(pool, 3000, 100, random);
-      while (!isSlotGameOver(state)) state = spinSlot(state, random).state;
+      while (!isSlotGameOver(state)) state = step(state, random);
       for (const [uid, amount] of Object.entries(state.tallies)) totals[uid] += amount;
     }
     for (const uid of pool) {
