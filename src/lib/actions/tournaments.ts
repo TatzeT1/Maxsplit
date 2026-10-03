@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isDuelGameId } from "@/lib/games/duel-game-ids";
 import { buildMemoryDeck } from "@/lib/games/memory-duel";
+import { canRematch, rematchSeedOrder } from "@/lib/games/rematch";
 import {
   applyOnlineMove,
   initialLiveState,
@@ -21,7 +22,7 @@ import { randomInt, secureShuffle } from "@/lib/games/random";
 import { REACTION_MAX_DELAY_MS, REACTION_MIN_DELAY_MS } from "@/lib/games/reaction-duel";
 import { isRpsHand } from "@/lib/games/rock-paper-scissors";
 import { getServerT } from "@/lib/i18n/server";
-import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
+import { MAX_DESCRIPTION_LENGTH, isIsoDate } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { buildGameExpense, validateGameExpenseDraft } from "@/lib/money/game-expense";
 import { challengePushes, expensePushes, newlyReadyMatches, turnPush } from "@/lib/push/messages";
@@ -347,46 +348,18 @@ export async function createTournament(input: {
   const runningSnap = await tournamentsRef.where("status", "==", "running").limit(1).get();
   if (!runningSnap.empty) return { ok: false, error: "tournament-running" };
 
-  const seedOrder = secureShuffle(poolUids);
-  const bracket = createBracket(seedOrder, input.targetLoserCount);
   const now = new Date().toISOString();
-  const entrants = Object.fromEntries(
-    poolUids.map((uid) => [
-      uid,
-      {
-        displayName: group.members[uid].displayName,
-        isPlaceholder: group.members[uid].isPlaceholder === true,
-      },
-    ]),
-  );
-
-  const tournament: Omit<Tournament, "id"> = {
-    gameId: input.gameId,
-    status: "running",
+  const tournament = newTournamentDoc({
+    group,
     createdBy: session.uid,
-    createdAt: now,
-    updatedAt: now,
-    finishedAt: null,
-    cancelledAt: null,
-    cancelledBy: null,
-    entrants,
-    seedOrder,
+    gameId: input.gameId,
+    seedOrder: secureShuffle(poolUids),
     targetLoserCount: input.targetLoserCount,
-    advance: bracket.advance,
-    trees: bracket.trees,
-    matches: bracket.matches,
-    loserUids: null,
-    stake: autoBook
-      ? {
-          description: autoBook.description.trim(),
-          amountMinor: autoBook.amountMinor,
-          currency: autoBook.currency,
-        }
-      : input.stake,
+    stake: input.stake,
     playMode,
-    autoBook: autoBook ? { ...autoBook, description: autoBook.description.trim() } : null,
-    expenseId: null,
-  };
+    autoBook,
+    now,
+  });
 
   const docRef = tournamentsRef.doc();
   const batch = adminDb.batch();
@@ -397,23 +370,17 @@ export async function createTournament(input: {
   // where it lands for everyone else. The text is the fallback; the chat
   // renders `gameInvite` as a join card.
   if (playMode === "online") {
-    const t = await getServerT();
-    const challenger = group.members[session.uid]?.displayName ?? "";
-    const game = t(GAME_TITLE_KEY[input.gameId]);
-    const stake = tournament.stake;
-    const message: Omit<ChatMessage, "id"> = {
-      senderUid: session.uid,
-      text: stake
-        ? t("chat.gameInviteTextStake", {
-            name: challenger,
-            game,
-            stake: `${stake.description} · ${formatMoney(stake.amountMinor, stake.currency)}`,
-          })
-        : t("chat.gameInviteText", { name: challenger, game }),
-      createdAt: now,
-      gameInvite: { tournamentId: docRef.id, gameId: input.gameId },
-    };
-    batch.set(groupRef.collection("messages").doc(), message);
+    batch.set(
+      groupRef.collection("messages").doc(),
+      inviteMessage({
+        t: await getServerT(),
+        group,
+        challengerUid: session.uid,
+        tournament,
+        tournamentId: docRef.id,
+        rematch: false,
+      }),
+    );
   }
 
   await batch.commit();
@@ -431,6 +398,189 @@ export async function createTournament(input: {
     );
   }
   return { ok: true, data: { tournamentId: docRef.id } };
+}
+
+/**
+ * A new tournament document, built the same way for a fresh game and a
+ * rematch: the bracket from a server-drawn seed order, a name snapshot of
+ * the entrants, and the stake shown on the game (the auto-book draft's, when
+ * there is one).
+ */
+function newTournamentDoc(input: {
+  group: Omit<Group, "id">;
+  createdBy: string;
+  gameId: DuelGameId;
+  seedOrder: string[];
+  targetLoserCount: number;
+  stake: TournamentDoc["stake"];
+  playMode: TournamentPlayMode;
+  autoBook: GameExpenseDraft | null;
+  now: string;
+}): TournamentDoc {
+  const { group, autoBook, now } = input;
+  const bracket = createBracket(input.seedOrder, input.targetLoserCount);
+  return {
+    gameId: input.gameId,
+    status: "running",
+    createdBy: input.createdBy,
+    createdAt: now,
+    updatedAt: now,
+    finishedAt: null,
+    cancelledAt: null,
+    cancelledBy: null,
+    entrants: Object.fromEntries(
+      input.seedOrder.map((uid) => [
+        uid,
+        {
+          displayName: group.members[uid].displayName,
+          isPlaceholder: group.members[uid].isPlaceholder === true,
+        },
+      ]),
+    ),
+    seedOrder: input.seedOrder,
+    targetLoserCount: input.targetLoserCount,
+    advance: bracket.advance,
+    trees: bracket.trees,
+    matches: bracket.matches,
+    loserUids: null,
+    stake: autoBook
+      ? {
+          description: autoBook.description.trim(),
+          amountMinor: autoBook.amountMinor,
+          currency: autoBook.currency,
+        }
+      : input.stake,
+    playMode: input.playMode,
+    autoBook: autoBook ? { ...autoBook, description: autoBook.description.trim() } : null,
+    expenseId: null,
+  };
+}
+
+/** The chat's join card for an online game — "X fordert euch heraus", or for a rematch "X will Revanche". */
+function inviteMessage(input: {
+  t: ServerT;
+  group: Omit<Group, "id">;
+  challengerUid: string;
+  tournament: TournamentDoc;
+  tournamentId: string;
+  rematch: boolean;
+}): Omit<ChatMessage, "id"> {
+  const { t, group, challengerUid, tournament, tournamentId, rematch } = input;
+  const name = group.members[challengerUid]?.displayName ?? "";
+  const game = t(GAME_TITLE_KEY[tournament.gameId]);
+  const stake = tournament.stake;
+  const stakeText = stake
+    ? `${stake.description} · ${formatMoney(stake.amountMinor, stake.currency)}`
+    : "";
+  return {
+    senderUid: challengerUid,
+    text: rematch
+      ? stake
+        ? t("chat.gameRematchTextStake", { name, game, stake: stakeText })
+        : t("chat.gameRematchText", { name, game })
+      : stake
+        ? t("chat.gameInviteTextStake", { name, game, stake: stakeText })
+        : t("chat.gameInviteText", { name, game }),
+    createdAt: tournament.createdAt,
+    gameInvite: { tournamentId, gameId: tournament.gameId },
+  };
+}
+
+/**
+ * "Revanche": the same game, the same people, the same stake, started from a
+ * finished online game by one of its players. In a duel the loser opens the
+ * rematch; a bigger bracket is drawn afresh. Idempotent — the new game's id
+ * is stored on the old one (`rematchId`), so when both players tap
+ * "Revanche" the second simply joins the first one's game.
+ */
+export async function createRematch(input: {
+  groupId: string;
+  tournamentId: string;
+  /** Today, from the player's phone — the day a stake game is booked on. */
+  date: string;
+}): Promise<ActionResult<{ tournamentId: string }>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+  if (!isIsoDate(input.date)) return { ok: false, error: "invalid-date" };
+
+  const membership = await requireGroupMembership(input.groupId, session.uid);
+  if ("error" in membership) return { ok: false, error: membership.error };
+  const { group, groupRef } = membership;
+
+  const tournamentsRef = groupRef.collection("tournaments");
+  const oldRef = tournamentsRef.doc(input.tournamentId);
+  const newRef = tournamentsRef.doc();
+  const t = await getServerT();
+  const now = new Date().toISOString();
+
+  const result = await adminDb.runTransaction<
+    | { ok: true; tournamentId: string; created: TournamentDoc | null; poolUids: string[] }
+    | { ok: false; error: string }
+  >(async (tx) => {
+    const oldSnap = await tx.get(oldRef);
+    if (!oldSnap.exists) return { ok: false, error: "not-found" };
+    const old = oldSnap.data() as TournamentDoc;
+    if (!(session.uid in old.entrants)) return { ok: false, error: "not-a-player" };
+    if (old.rematchId) {
+      return { ok: true, tournamentId: old.rematchId, created: null, poolUids: [] };
+    }
+    if (!canRematch(old)) return { ok: false, error: "rematch-unavailable" };
+
+    const runningSnap = await tx.get(tournamentsRef.where("status", "==", "running").limit(1));
+    if (!runningSnap.empty) return { ok: false, error: "tournament-running" };
+
+    // Everyone again — as long as they're still here with an account.
+    const poolUids = Object.keys(old.entrants).filter(
+      (uid) => group.memberUids.includes(uid) && group.members[uid]?.isPlaceholder !== true,
+    );
+    if (poolUids.length !== Object.keys(old.entrants).length || poolUids.length < 2) {
+      return { ok: false, error: "member-left" };
+    }
+
+    const seedOrder = rematchSeedOrder(poolUids, old.loserUids ?? []) ?? secureShuffle(poolUids);
+    const autoBook = old.autoBook ? { ...old.autoBook, date: input.date } : null;
+    const created = newTournamentDoc({
+      group,
+      createdBy: session.uid,
+      gameId: old.gameId,
+      seedOrder,
+      targetLoserCount: old.targetLoserCount,
+      stake: old.stake,
+      playMode: "online",
+      autoBook,
+      now,
+    });
+    tx.set(newRef, created);
+    tx.update(oldRef, { rematchId: newRef.id, updatedAt: now });
+    tx.set(
+      groupRef.collection("messages").doc(),
+      inviteMessage({
+        t,
+        group,
+        challengerUid: session.uid,
+        tournament: created,
+        tournamentId: newRef.id,
+        rematch: true,
+      }),
+    );
+    return { ok: true, tournamentId: newRef.id, created, poolUids };
+  });
+
+  if (!result.ok) return { ok: false, error: result.error };
+  if (result.created) {
+    notifyAfterResponse(
+      challengePushes({
+        groupId: input.groupId,
+        group,
+        tournamentId: result.tournamentId,
+        gameId: result.created.gameId,
+        stake: result.created.stake,
+        poolUids: result.poolUids,
+        actorUid: session.uid,
+      }),
+    );
+  }
+  return { ok: true, data: { tournamentId: result.tournamentId } };
 }
 
 const GAME_TITLE_KEY = {

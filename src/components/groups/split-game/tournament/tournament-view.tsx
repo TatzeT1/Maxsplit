@@ -39,6 +39,7 @@ import {
 import { TournamentMatchRunner } from "@/components/groups/split-game/tournament/tournament-match-runner";
 import { OnlineMatchRunner } from "@/components/groups/split-game/online/online-match-runner";
 import { OnlineInviteCard } from "@/components/groups/split-game/online/online-invite-card";
+import { RematchButton } from "@/components/groups/split-game/online/rematch-button";
 import { isOnlineMatch } from "@/lib/games/online-match";
 import { cancelTournament, claimTournamentMatch } from "@/lib/actions/tournaments";
 import { bracketLoserUids } from "@/lib/games/tournament-bracket";
@@ -748,6 +749,12 @@ function TournamentViewBody({
                 : t("expenses.tournamentApplyHintOther", { name: nameOf(tournament.createdBy) })}
             </p>
           )}
+          <RematchButton
+            groupId={groupId}
+            tournament={tournament}
+            members={members}
+            currentUid={currentUid}
+          />
         </div>
       ) : (
         <>

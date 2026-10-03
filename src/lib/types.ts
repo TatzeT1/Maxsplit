@@ -294,6 +294,11 @@ export interface Tournament {
   expenseId?: string | null;
   /** Why `autoBook` couldn't be booked at finish (e.g. a loser left the group meanwhile); absent on success. */
   autoBookError?: string | null;
+  /**
+   * Set once a player asked for a rematch ("Revanche"): the new game's id, so
+   * the other player's "Revanche" joins it instead of starting another.
+   */
+  rematchId?: string | null;
 }
 
 export type TournamentPlayMode = "local" | "online";
