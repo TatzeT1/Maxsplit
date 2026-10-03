@@ -102,18 +102,21 @@ export function SplitDiceDialog({
   onOpenChange,
   members,
   memberUids,
+  groupId,
   onResolve,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  /** Keys the setup remembered on this device (`game-memory.ts`). */
+  groupId?: string;
   onResolve: (loserUids: string[]) => void;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
-  const setup = useGamePoolSetup(memberUids, maxDiceLoserCount);
+  const setup = useGamePoolSetup(memberUids, maxDiceLoserCount, groupId);
   const [game, setGame] = useState<DiceGame | null>(null);
   // Mirrors `game` so a quick double tap can't roll twice for the same person.
   const gameRef = useRef<DiceGame | null>(null);
@@ -156,6 +159,7 @@ export function SplitDiceDialog({
   }
 
   function startGame() {
+    setup.remember();
     resetStage();
     update(startDiceGame(setup.poolUids, setup.loserCount));
     setStep("playing");

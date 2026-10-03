@@ -87,18 +87,21 @@ export function SplitDuckRaceDialog({
   onOpenChange,
   members,
   memberUids,
+  groupId,
   onResolve,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  /** Keys the setup remembered on this device (`game-memory.ts`). */
+  groupId?: string;
   onResolve: (loserUids: string[]) => void;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
-  const setup = useGamePoolSetup(memberUids, maxDuckLoserCount);
+  const setup = useGamePoolSetup(memberUids, maxDuckLoserCount, groupId);
   const [staged, setStaged] = useState<Staged | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
   const [finished, setFinished] = useState<string[]>([]);
@@ -141,6 +144,7 @@ export function SplitDuckRaceDialog({
   }
 
   function startGame() {
+    setup.remember();
     // Decide first, animate after: the order is fixed before anything moves.
     const order = secureShuffle(setup.poolUids);
     const losers = duckRaceLosers(order, setup.loserCount);

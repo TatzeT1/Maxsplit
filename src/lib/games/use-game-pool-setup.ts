@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
 
 /**
  * The "who's playing, how many pay" state every luck game's setup step needs:
@@ -12,13 +13,18 @@ import { useState } from "react";
  * `maxLoserCountFor` is per game because the rules differ: the wheel lets
  * everybody pay, while the balloon, dice, ducks and pegboard always keep one
  * person dry.
+ *
+ * With a `groupId`, the setup starts from the last one started in that group
+ * on this device (`game-memory.ts`); call `remember()` when the game starts.
  */
 export function useGamePoolSetup(
   memberUids: string[],
   maxLoserCountFor: (poolSize: number) => number,
+  groupId?: string,
 ) {
-  const [poolUids, setPoolUids] = useState<string[]>(memberUids);
-  const [requestedCount, setRequestedCount] = useState(1);
+  const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
+  const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
+  const [requestedCount, setRequestedCount] = useState(remembered?.loserCount ?? 1);
   const [stepperDirection, setStepperDirection] = useState<1 | -1>(1);
 
   function togglePoolMember(uid: string) {
@@ -35,6 +41,10 @@ export function useGamePoolSetup(
     setRequestedCount(Math.min(Math.max(loserCount + delta, 1), maxLoserCount));
   }
 
+  function remember() {
+    rememberSetup(groupId, { poolUids, loserCount });
+  }
+
   return {
     poolUids,
     togglePoolMember,
@@ -42,5 +52,6 @@ export function useGamePoolSetup(
     maxLoserCount,
     stepLoserCount,
     stepperDirection,
+    remember,
   };
 }

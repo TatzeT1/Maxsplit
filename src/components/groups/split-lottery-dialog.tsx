@@ -15,6 +15,7 @@ import {
 import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
+import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
 import { springs } from "@/lib/motion";
 import { avatarGradient, cn } from "@/lib/utils";
 import { playAppliedSound, playLaughSound, playMissSound } from "@/lib/sound/game-sounds";
@@ -320,20 +321,24 @@ export function SplitLotteryDialog({
   onOpenChange,
   members,
   memberUids,
+  groupId,
   onResolve,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  /** Keys the setup remembered on this device (`game-memory.ts`). */
+  groupId?: string;
   onResolve: (loserUids: string[]) => void;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [poolUids, setPoolUids] = useState<string[]>(memberUids);
-  const [loserCountInput, setLoserCountInput] = useState("1");
+  const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
+  const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
+  const [loserCountInput, setLoserCountInput] = useState(String(remembered?.loserCount ?? 1));
   const [targetLoserCount, setTargetLoserCount] = useState(1);
   const [cells, setCells] = useState<LotteryCell[]>([]);
   const [turnIndex, setTurnIndex] = useState(0);
@@ -367,6 +372,7 @@ export function SplitLotteryDialog({
   function startGame() {
     const requested = Number.parseInt(loserCountInput, 10) || 1;
     const target = Math.min(Math.max(requested, 1), poolUids.length);
+    rememberSetup(groupId, { poolUids, loserCount: target });
     const size = randomGridSize();
     const outcomes = shuffledOutcomes(size, target);
     // Each cell gets its own random cast member — a colourful mix, not one

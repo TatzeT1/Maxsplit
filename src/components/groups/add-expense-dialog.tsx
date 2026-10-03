@@ -36,6 +36,7 @@ import {
   SplitTicTacToeDialog,
   SplitWheelDialog,
 } from "@/components/groups/split-game/lazy-dialogs";
+import { recordRecentGame } from "@/lib/games/game-memory";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -259,6 +260,7 @@ export function AddExpenseDialog({
   }
 
   function handleSelectGame(game: SplitGameId) {
+    recordRecentGame(groupId, game);
     setGamePickerOpen(false);
     setMountedGames((mounted) => (mounted.has(game) ? mounted : new Set(mounted).add(game)));
     setActiveGame(game);
@@ -738,6 +740,7 @@ export function AddExpenseDialog({
           open={gamePickerOpen}
           onOpenChange={setGamePickerOpen}
           onSelectGame={handleSelectGame}
+          groupId={groupId}
         />
       )}
       {mountedGames.has("lottery") && (
@@ -746,6 +749,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "lottery" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           onResolve={handleSplitGameResolve}
         />
       )}
@@ -755,6 +759,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "wheel" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           onResolve={handleSplitGameResolve}
         />
       )}
@@ -764,6 +769,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "slot" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           amountMinor={amountMinor}
           currency={currency}
           onResolve={handleSplitGameResolveAmounts}
@@ -775,6 +781,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "scratch" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           onResolve={handleSplitGameResolve}
         />
       )}
@@ -784,6 +791,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "balloon" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           onResolve={handleSplitGameResolve}
         />
       )}
@@ -793,6 +801,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "duckrace" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           onResolve={handleSplitGameResolve}
         />
       )}
@@ -802,6 +811,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "dicecup" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           onResolve={handleSplitGameResolve}
         />
       )}
@@ -811,6 +821,7 @@ export function AddExpenseDialog({
           onOpenChange={(next) => setActiveGame(next ? "pegboard" : null)}
           members={members}
           memberUids={memberUids}
+          groupId={groupId}
           onResolve={handleSplitGameResolve}
         />
       )}

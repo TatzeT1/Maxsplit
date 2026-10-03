@@ -1,6 +1,6 @@
 "use client";
 
-import { Swords } from "lucide-react";
+import { Dices, Swords } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useT } from "@/components/locale-provider";
 import { springs } from "@/lib/motion";
@@ -14,7 +14,16 @@ import { GameTileImage } from "@/components/groups/split-game/game-tile-image";
  * 2×2 grid used to cause. One shared component for all 8 games, driven
  * entirely by `game-catalog.ts`, so no per-game preview copy lives here.
  */
-export function SplitGamePreview({ game }: { game: SplitGameInfo }) {
+export function SplitGamePreview({
+  game,
+  surprised = false,
+  onReroll,
+}: {
+  game: SplitGameInfo;
+  /** Opened by "Überrasch mich": says so, and offers another throw. */
+  surprised?: boolean;
+  onReroll?: () => void;
+}) {
   const t = useT();
   const reduceMotion = useReducedMotion();
 
@@ -33,6 +42,19 @@ export function SplitGamePreview({ game }: { game: SplitGameInfo }) {
         >
           <GameTileImage src={game.imageSrc} emoji={game.emoji} size="lg" />
         </motion.div>
+        {surprised && onReroll && (
+          <div className="relative flex items-center gap-2 text-xs">
+            <span className="text-muted-foreground">{t("expenses.gamePreviewSurprised")}</span>
+            <button
+              type="button"
+              onClick={onReroll}
+              className="text-primary hover:bg-primary/10 focus-visible:ring-ring/50 flex min-h-9 items-center gap-1 rounded-full px-2.5 font-medium outline-none focus-visible:ring-3"
+            >
+              <Dices aria-hidden="true" className="size-3.5" />
+              {t("expenses.gamePreviewReroll")}
+            </button>
+          </div>
+        )}
       </div>
       <div className="flex flex-col gap-1.5">
         <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase">

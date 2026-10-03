@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
+import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { useKnockoutLadder } from "@/lib/games/use-knockout-ladder";
 import { maxDuelLoserCount } from "@/lib/games/knockout-ladder";
@@ -130,8 +131,9 @@ export function DuelGameDialog({
 }: SplitGameDialogProps & { config: DuelGameConfig }) {
   const t = useT();
   const [step, setStep] = useState<Step>("setup");
-  const [poolUids, setPoolUids] = useState<string[]>(memberUids);
-  const [loserCountInput, setLoserCountInput] = useState("1");
+  const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
+  const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
+  const [loserCountInput, setLoserCountInput] = useState(String(remembered?.loserCount ?? 1));
   const [stepperDirection, setStepperDirection] = useState<1 | -1>(1);
   const [matchPhase, setMatchPhase] = useState<MatchPhase>("handoff");
   const [decided, setDecided] = useState<DecidedMatch | null>(null);
@@ -219,6 +221,7 @@ export function DuelGameDialog({
   }
 
   async function startGame() {
+    rememberSetup(groupId, { poolUids, loserCount });
     if (setupMode === "tournament" && groupId) {
       // A server-backed game books the expense itself at the end, so the
       // form has to be complete *now* — nobody's looking at it afterwards.

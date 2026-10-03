@@ -74,17 +74,20 @@ export function SplitBalloonDialog({
   onOpenChange,
   members,
   memberUids,
+  groupId,
   onResolve,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  /** Keys the setup remembered on this device (`game-memory.ts`). */
+  groupId?: string;
   onResolve: (loserUids: string[]) => void;
 }) {
   const t = useT();
   const [step, setStep] = useState<Step>("setup");
-  const setup = useGamePoolSetup(memberUids, maxBalloonLoserCount);
+  const setup = useGamePoolSetup(memberUids, maxBalloonLoserCount, groupId);
   const [game, setGame] = useState<BalloonState | null>(null);
   // Mirrors `game` so two quick taps in one frame both see the newest state.
   const gameRef = useRef<BalloonState | null>(null);
@@ -117,6 +120,7 @@ export function SplitBalloonDialog({
   }
 
   function startGame() {
+    setup.remember();
     update(startBalloonGame(setup.poolUids, setup.loserCount, BALLOON_RANDOM));
     setStep("playing");
   }

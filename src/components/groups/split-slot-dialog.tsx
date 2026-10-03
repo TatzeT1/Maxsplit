@@ -15,6 +15,7 @@ import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
+import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
 import { springs } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
@@ -461,6 +462,7 @@ export function SplitSlotDialog({
   onOpenChange,
   members,
   memberUids,
+  groupId,
   amountMinor,
   currency,
   onResolve,
@@ -469,6 +471,8 @@ export function SplitSlotDialog({
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  /** Keys the setup remembered on this device (`game-memory.ts`). */
+  groupId?: string;
   amountMinor: number;
   currency: string;
   onResolve: (amountsByUid: Record<string, number>) => void;
@@ -477,7 +481,9 @@ export function SplitSlotDialog({
   const prizeFace = usePrizeFace();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
-  const [poolUids, setPoolUids] = useState<string[]>(memberUids);
+  const [poolUids, setPoolUids] = useState<string[]>(
+    () => readRememberedSetup(groupId, memberUids)?.poolUids ?? memberUids,
+  );
   const [stakeChoice, setStakeChoice] = useState<StakeChoice>("normal");
   const [customStakeInput, setCustomStakeInput] = useState("1,00");
   const [game, setGame] = useState<SlotGameState | null>(null);
@@ -599,6 +605,7 @@ export function SplitSlotDialog({
   }
 
   function startGame() {
+    rememberSetup(groupId, { poolUids });
     resetPlay();
     setGame(startSlotGame(poolUids, amountMinor, setupStake, cryptoRandom));
     setStep("playing");

@@ -83,18 +83,21 @@ export function SplitPegboardDialog({
   onOpenChange,
   members,
   memberUids,
+  groupId,
   onResolve,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  /** Keys the setup remembered on this device (`game-memory.ts`). */
+  groupId?: string;
   onResolve: (loserUids: string[]) => void;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
-  const setup = useGamePoolSetup(memberUids, maxPegboardLoserCount);
+  const setup = useGamePoolSetup(memberUids, maxPegboardLoserCount, groupId);
   const draw = useSequentialDraw();
   const [slotOrder, setSlotOrder] = useState<string[]>([]);
   const [ball, setBall] = useState<Ball | null>(null);
@@ -121,6 +124,7 @@ export function SplitPegboardDialog({
   }
 
   function startGame() {
+    setup.remember();
     clearTimers();
     // Who sits in which slot is shuffled, and independent of who gets caught.
     setSlotOrder(secureShuffle(setup.poolUids));

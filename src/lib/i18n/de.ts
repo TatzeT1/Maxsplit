@@ -304,6 +304,10 @@ export const de = {
     gamePreviewHowTitle: "So funktioniert's",
     gamePreviewStart: "Los geht's",
     gamePreviewBack: "Zurück",
+    gamePickerRecent: "Zuletzt gespielt",
+    gamePickerSurprise: "Überrasch mich",
+    gamePreviewSurprised: "Zufällig gewählt",
+    gamePreviewReroll: "Anderes Spiel",
     gameLadderTitle: "Mehr als zwei dabei?",
     gameLadderExplainer:
       "Dann läuft's im K.-o.-Modus: Wer ein Duell verliert, zahlt und ist raus. Wer gewinnt, bleibt drin und tritt gegen die nächste ausgeloste Person an — bis genug Zahler feststehen. Ab drei Leuten gibt's beim Start auch einen Turniermodus mit echtem Turnierbaum, den alle live auf ihrem Handy mitverfolgen können.",

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import { GameDialogContent, StageScale } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
+import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
 import { memberColor, memberInk } from "@/lib/games/member-colors";
 import { useSequentialDraw } from "@/lib/games/use-sequential-draw";
 import {
@@ -90,19 +91,23 @@ export function SplitWheelDialog({
   onOpenChange,
   members,
   memberUids,
+  groupId,
   onResolve,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
+  /** Keys the setup remembered on this device (`game-memory.ts`). */
+  groupId?: string;
   onResolve: (loserUids: string[]) => void;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
-  const [poolUids, setPoolUids] = useState<string[]>(memberUids);
-  const [loserCountInput, setLoserCountInput] = useState("1");
+  const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
+  const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
+  const [loserCountInput, setLoserCountInput] = useState(String(remembered?.loserCount ?? 1));
   const [stepperDirection, setStepperDirection] = useState<1 | -1>(1);
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
@@ -147,6 +152,7 @@ export function SplitWheelDialog({
   }
 
   function startGame() {
+    rememberSetup(groupId, { poolUids, loserCount });
     draw.start(poolUids, loserCount);
     setRotation(0);
     setStep("playing");
