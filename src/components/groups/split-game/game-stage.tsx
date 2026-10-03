@@ -3,9 +3,10 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { XIcon } from "lucide-react";
+import { Volume2, VolumeX, XIcon } from "lucide-react";
 import Link from "next/link";
 import { useT } from "@/components/locale-provider";
+import { useGameSoundsMuted } from "@/lib/sound/use-game-sounds-muted";
 import { cn } from "@/lib/utils";
 
 /**
@@ -49,8 +50,8 @@ const STAGE_FRAME =
 const STAGE_COLUMN = cn(
   // Children never shrink: the column grows and the frame scrolls instead.
   "mx-auto flex min-h-full w-full max-w-2xl min-w-0 flex-col gap-4 px-4 text-sm [&>*]:shrink-0",
-  // Header: sticky under the notch, room on the right for the ✕.
-  "[&>[data-slot=dialog-header]]:bg-background/85 [&>[data-slot=dialog-header]]:sticky [&>[data-slot=dialog-header]]:top-0 [&>[data-slot=dialog-header]]:z-10 [&>[data-slot=dialog-header]]:-mx-4 [&>[data-slot=dialog-header]]:px-4 [&>[data-slot=dialog-header]]:pt-[calc(env(safe-area-inset-top)_+_0.875rem)] [&>[data-slot=dialog-header]]:pr-14 [&>[data-slot=dialog-header]]:pb-3 [&>[data-slot=dialog-header]]:backdrop-blur-md",
+  // Header: sticky under the notch, room on the right for 🔊 and ✕.
+  "[&>[data-slot=dialog-header]]:bg-background/85 [&>[data-slot=dialog-header]]:sticky [&>[data-slot=dialog-header]]:top-0 [&>[data-slot=dialog-header]]:z-10 [&>[data-slot=dialog-header]]:-mx-4 [&>[data-slot=dialog-header]]:px-4 [&>[data-slot=dialog-header]]:pt-[calc(env(safe-area-inset-top)_+_0.875rem)] [&>[data-slot=dialog-header]]:pr-26 [&>[data-slot=dialog-header]]:pb-3 [&>[data-slot=dialog-header]]:backdrop-blur-md",
   // With a footer, auto margins on both center the body between them; without
   // one (the page stage) the body simply follows the header.
   "[&:has(>[data-slot=dialog-footer])>[data-slot=dialog-header]]:mb-auto",
@@ -65,22 +66,49 @@ const STAGE_COLUMN = cn(
   "pb-[env(safe-area-inset-bottom)] has-[>[data-slot=dialog-footer]]:pb-0",
 );
 
-const CLOSE_BUTTON =
-  "hover:bg-accent focus-visible:ring-ring/50 absolute top-[calc(env(safe-area-inset-top)_+_0.5rem)] right-2 z-20 flex size-11 items-center justify-center rounded-full transition-[background-color,transform] duration-(--duration-fast) outline-none focus-visible:ring-3 active:scale-95";
+const CORNER_BUTTON =
+  "hover:bg-accent focus-visible:ring-ring/50 absolute top-[calc(env(safe-area-inset-top)_+_0.5rem)] z-20 flex size-11 items-center justify-center rounded-full transition-[background-color,transform] duration-(--duration-fast) outline-none focus-visible:ring-3 active:scale-95";
+
+const CLOSE_BUTTON = cn(CORNER_BUTTON, "right-2");
+
+/**
+ * Sound on/off for every game, next to the ✕. One setting for all games on
+ * this device — at a restaurant table you switch it off once, not per game.
+ */
+function GameSoundToggle() {
+  const t = useT();
+  const [muted, setMuted] = useGameSoundsMuted();
+  return (
+    <button
+      type="button"
+      aria-pressed={!muted}
+      aria-label={t("expenses.gameSoundToggle")}
+      onClick={() => setMuted(!muted)}
+      className={cn(CORNER_BUTTON, "right-13", muted && "text-muted-foreground")}
+    >
+      {muted ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+    </button>
+  );
+}
 
 /**
  * Drop-in replacement for `DialogContent` in a game dialog: same Radix
  * dialog (focus trap, Escape, `onOpenChange`), rendered as a full-screen
  * stage. Children are the usual `DialogHeader` / body / `DialogFooter`.
  * `frameClassName` dresses the whole frame, e.g. the slot machine's dark
- * casino backdrop while the reels are in play.
+ * casino backdrop while the reels are in play. `soundToggle={false}` drops
+ * the 🔊 corner switch for a game that has its own (the slot machine's deck).
  */
 export function GameDialogContent({
   className,
   frameClassName,
+  soundToggle = true,
   children,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & { frameClassName?: string }) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+  frameClassName?: string;
+  soundToggle?: boolean;
+}) {
   const t = useT();
   return (
     <DialogPrimitive.Portal>
@@ -99,6 +127,7 @@ export function GameDialogContent({
         >
           <div className={cn(STAGE_COLUMN, className)}>{children}</div>
         </div>
+        {soundToggle && <GameSoundToggle />}
         <DialogPrimitive.Close className={CLOSE_BUTTON}>
           <XIcon className="size-5" />
           <span className="sr-only">{t("common.close")}</span>
@@ -137,6 +166,7 @@ export function GamePageStage({
           {children}
         </div>
       </div>
+      <GameSoundToggle />
       <Link href={closeHref} aria-label={t("common.close")} className={CLOSE_BUTTON}>
         <XIcon className="size-5" />
       </Link>

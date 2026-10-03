@@ -75,8 +75,8 @@ import {
   playSwordSound,
   playTickSound,
   playWinLineSound,
-  setGameSoundsMuted,
 } from "@/lib/sound/game-sounds";
+import { useGameSoundsMuted } from "@/lib/sound/use-game-sounds-muted";
 import {
   CATCH_FLASH_HOLD_MS,
   CatchFlash,
@@ -175,7 +175,6 @@ const TURBO_SPEED = 0.4;
 const AUTO_GAP_MS = 650;
 /** Per-device settings, remembered in this browser only. */
 const TURBO_KEY = "split:slot-turbo";
-const SOUND_KEY = "split:game-sound-off";
 /** What the reels show before the first pull: a row of sevens on the payline, as bait. */
 const IDLE_STRIPS: SlotSymbol[][] = [
   ["bell", "seven", "wheel"],
@@ -500,7 +499,8 @@ export function SplitSlotDialog({
   const [announcing, setAnnouncing] = useState(false);
   const [stats, setStats] = useState<SlotStats>(EMPTY_SLOT_STATS);
   const [turbo, setTurbo] = useState(() => readFlag(TURBO_KEY));
-  const [soundOff, setSoundOff] = useState(() => readFlag(SOUND_KEY));
+  // Shared with every other game's 🔊 switch; the slot keeps its own on the deck.
+  const [soundOff, setSoundOff] = useGameSoundsMuted();
   const [auto, setAuto] = useState<{ uid: string } | null>(null);
   const pendingSpinRef = useRef<SlotSpinResult | null>(null);
   /**
@@ -539,7 +539,6 @@ export function SplitSlotDialog({
   }
 
   useEffect(() => clearTimers, []);
-  useEffect(() => setGameSoundsMuted(soundOff), [soundOff]);
 
   function togglePoolMember(uid: string) {
     setPoolUids((current) =>
@@ -624,7 +623,6 @@ export function SplitSlotDialog({
   }
 
   function toggleSound() {
-    writeFlag(SOUND_KEY, !soundOff);
     setSoundOff(!soundOff);
   }
 
@@ -1395,7 +1393,11 @@ export function SplitSlotDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <GameDialogContent frameClassName={step === "playing" && game ? CASINO_FRAME : undefined}>
+      <GameDialogContent
+        frameClassName={step === "playing" && game ? CASINO_FRAME : undefined}
+        // While the reels run, 🔊 sits on the deck with the other switches.
+        soundToggle={!(step === "playing" && game)}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span aria-hidden="true">🎰</span>
@@ -2180,7 +2182,7 @@ export function SplitSlotDialog({
                 <button
                   type="button"
                   aria-pressed={!soundOff}
-                  aria-label={t("expenses.slotSoundToggle")}
+                  aria-label={t("expenses.gameSoundToggle")}
                   onClick={toggleSound}
                   className={cn(deckToggle, "bg-white/10 text-white ring-white/20")}
                 >

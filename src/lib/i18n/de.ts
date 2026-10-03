@@ -821,7 +821,7 @@ export const de = {
     slotMoreInfoDone: "🏆 Zur Preisverleihung",
     slotAuto: "🔁 Auto-Serie",
     slotAutoStop: "⏹ Auto stopp",
-    slotSoundToggle: "Ton an oder aus",
+    gameSoundToggle: "Ton an oder aus",
     slotAwardsTitle: "🏆 Preisverleihung",
     slotAwardLucky: "Glückspilz",
     slotAwardLuckyDetail: "zahlt nur {{amount}}",

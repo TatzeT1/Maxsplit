@@ -8,15 +8,49 @@
  */
 
 let audioCtx: AudioContext | null = null;
-let muted = false;
 
-/** Mutes every game sound until unmuted. The slot machine's 🔊 switch drives this. */
+/**
+ * "Ton aus" for every game, remembered per browser. Read from storage on
+ * first use rather than when some game's switch mounts — it used to be
+ * applied only once the slot machine opened, so after a reload every other
+ * game played sound again although it had been switched off.
+ */
+const SOUND_OFF_KEY = "split:game-sound-off";
+let muted: boolean | null = null;
+const mutedListeners = new Set<() => void>();
+
+export function isGameSoundsMuted(): boolean {
+  if (muted === null) {
+    try {
+      muted = typeof window !== "undefined" && window.localStorage.getItem(SOUND_OFF_KEY) === "1";
+    } catch {
+      muted = false;
+    }
+  }
+  return muted;
+}
+
+/** Mutes or unmutes every game sound and remembers it on this device. The stage's 🔊 switch drives this. */
 export function setGameSoundsMuted(next: boolean): void {
   muted = next;
+  try {
+    window.localStorage.setItem(SOUND_OFF_KEY, next ? "1" : "0");
+  } catch {
+    // Private mode or blocked storage: the switch still works until a reload.
+  }
+  for (const listener of mutedListeners) listener();
+}
+
+/** For `useSyncExternalStore`: every switch on screen follows the same setting. */
+export function subscribeGameSoundsMuted(listener: () => void): () => void {
+  mutedListeners.add(listener);
+  return () => {
+    mutedListeners.delete(listener);
+  };
 }
 
 function getContext(): AudioContext | null {
-  if (typeof window === "undefined" || muted) return null;
+  if (typeof window === "undefined" || isGameSoundsMuted()) return null;
   const Ctor = window.AudioContext;
   if (!Ctor) return null;
   if (!audioCtx) audioCtx = new Ctor();

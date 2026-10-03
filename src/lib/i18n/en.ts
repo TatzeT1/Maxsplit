@@ -810,7 +810,7 @@ export const en: Dictionary = {
     slotMoreInfoDone: "🏆 To the award show",
     slotAuto: "🔁 Auto series",
     slotAutoStop: "⏹ Stop auto",
-    slotSoundToggle: "Sound on or off",
+    gameSoundToggle: "Sound on or off",
     slotAwardsTitle: "🏆 Award show",
     slotAwardLucky: "Lucky one",
     slotAwardLuckyDetail: "pays just {{amount}}",
