@@ -30,17 +30,6 @@ import { signInAs } from "@/test/session-mock";
 
 const webPush = vi.hoisted(() => ({ sendNotification: vi.fn() }));
 vi.mock("web-push", () => ({ default: webPush }));
-// createTournament writes the chat invite in the request's language, read
-// from a cookie — which a plain node run doesn't have.
-vi.mock("@/lib/i18n/server", async () => {
-  const { translate } = await import("@/lib/i18n/translate");
-  return {
-    getLocale: async () => "de",
-    getServerT:
-      async () => (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) =>
-        translate("de", key, vars),
-  };
-});
 
 /** A fresh P-256 key as base64url, the shape of both a VAPID key and a subscription's p256dh. */
 function p256Key(): { publicKey: string; privateKey: string } {

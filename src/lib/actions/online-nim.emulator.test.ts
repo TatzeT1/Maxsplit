@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createTournament, openOnlineMatch, playOnlineMove } from "@/lib/actions/tournaments";
 import { adminDb } from "@/lib/firebase/admin";
 import type { OnlineMove } from "@/lib/games/online-match";
@@ -9,18 +9,6 @@ import { signInAs } from "@/test/session-mock";
 // that arrive over the wire beyond a plain take — the joker (skip a move,
 // once per player) and the late take the fuse plays for a slow player — and
 // that a joker really does decide who is stuck with the last match.
-
-// createTournament writes the chat invite in the request's language, read
-// from a cookie — which a plain node run doesn't have.
-vi.mock("@/lib/i18n/server", async () => {
-  const { translate } = await import("@/lib/i18n/translate");
-  return {
-    getLocale: async () => "de",
-    getServerT:
-      async () => (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) =>
-        translate("de", key, vars),
-  };
-});
 
 let tournamentId: string;
 let matchId: string;

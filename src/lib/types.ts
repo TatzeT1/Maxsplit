@@ -163,6 +163,23 @@ export interface ChatMessage {
   createdAt: string;
   /** Set on the automatic "X fordert euch heraus" message a game start posts — renders as a join card. Absent on normal messages. */
   gameInvite?: { tournamentId: string; gameId: DuelGameId };
+  /** Set on the automatic message a decided game posts — renders as a result card. Absent on normal messages. */
+  gameResult?: ChatGameResult;
+}
+
+/** What a decided game tells the group chat — see `ChatMessage.gameResult`. */
+export interface ChatGameResult {
+  gameId: SplitGameId;
+  /** Who pays — or, in a game played just for fun, who lost. */
+  loserUids: string[];
+  /** The one player left standing, when there is exactly one; otherwise `null`. */
+  winnerUid: string | null;
+  /** The bill or stake the game decided; `null` for a game played just for fun. */
+  amount: { description: string; amountMinor: number; currency: string } | null;
+  /** As on `ExpenseGame`: 1 = the first round, more = reshuffled. */
+  attempt: number;
+  /** A server-run game's page; `null` for a game played in the expense form. */
+  tournamentId: string | null;
 }
 
 /**

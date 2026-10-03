@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { createTournament, openOnlineMatch, playOnlineMove } from "@/lib/actions/tournaments";
 import { adminDb } from "@/lib/firebase/admin";
 import type { OnlineMove } from "@/lib/games/online-match";
@@ -10,18 +10,6 @@ import { signInAs } from "@/test/session-mock";
 // game whose hidden state changes during play. A locked-in hand has to live in
 // `liveSecrets` (which no client can read) until both hands are in, and only
 // then show up in the public `liveMatches` doc as a finished round.
-
-// createTournament writes the chat invite in the request's language, read
-// from a cookie — which a plain node run doesn't have.
-vi.mock("@/lib/i18n/server", async () => {
-  const { translate } = await import("@/lib/i18n/translate");
-  return {
-    getLocale: async () => "de",
-    getServerT:
-      async () => (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) =>
-        translate("de", key, vars),
-  };
-});
 
 let tournamentId: string;
 let matchId: string;
@@ -121,6 +109,22 @@ describe("online Schnick-Schnack-Schnuck", () => {
     const tournament = (await tournamentRef().get()).data()!;
     expect(tournament.status).toBe("finished");
     expect(tournament.loserUids).toEqual([players[1]]);
+
+    // The chat hears how it ended, next to the challenge that started it.
+    const messages = (await adminDb.collection("groups/g1/messages").get()).docs.map((doc) =>
+      doc.data(),
+    );
+    const result = messages.find((message) => message.gameResult);
+    expect(result?.gameResult).toEqual({
+      gameId: "rps",
+      loserUids: [players[1]],
+      winnerUid: players[0],
+      amount: null,
+      attempt: 1,
+      tournamentId,
+    });
+    const names: Record<string, string> = { max: "Max", lea: "Lea" };
+    expect(result?.text).toBe(`✊ ${names[players[0]]} gewinnt gegen ${names[players[1]]}`);
 
     // The match is over — nobody can pick any more.
     expect(await pick(players[1], "rock")).toEqual({ ok: false, error: "tournament-not-running" });

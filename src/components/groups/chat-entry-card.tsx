@@ -10,6 +10,9 @@ import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { cn } from "@/lib/utils";
 import type { ChatMessage, ChatRead, GroupMember } from "@/lib/types";
 
+/** How many of the newest messages decide the unread dot. */
+const RECENT_FOR_UNREAD = 5;
+
 export function ChatEntryCard({
   groupId,
   members,
@@ -19,24 +22,25 @@ export function ChatEntryCard({
   members: Record<string, GroupMember>;
   currentUid: string;
 }) {
-  const [latest, setLatest] = useState<ChatMessage | null>(null);
+  const [recent, setRecent] = useState<ChatMessage[] | null>(null);
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const t = useT();
 
   useEffect(() => {
+    // A few rather than one: your own messages never count as unread — a
+    // game result your expense just posted mustn't light the badge for you —
+    // so whatever someone else wrote just before it still has to be seen.
     const latestQuery = query(
       collection(db, "groups", groupId, "messages"),
       orderBy("createdAt", "desc"),
-      limit(1),
+      limit(RECENT_FOR_UNREAD),
     );
     return onSnapshot(
       latestQuery,
       (snapshot) => {
-        setLatest(
-          snapshot.empty
-            ? null
-            : ({ id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as ChatMessage),
+        setRecent(
+          snapshot.docs.map((message) => ({ id: message.id, ...message.data() }) as ChatMessage),
         );
       },
       (error) => {
@@ -57,7 +61,11 @@ export function ChatEntryCard({
     );
   }, [groupId, currentUid]);
 
-  const unread = latest !== null && (!lastReadAt || latest.createdAt > lastReadAt);
+  const latest = recent?.[0] ?? null;
+  const unread = (recent ?? []).some(
+    (message) =>
+      message.senderUid !== currentUid && (!lastReadAt || message.createdAt > lastReadAt),
+  );
   const senderName = latest ? (members[latest.senderUid]?.displayName ?? "?") : null;
 
   return (

@@ -3,6 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
+import { gameResultMessage } from "@/lib/chat/game-result";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isDuelGameId } from "@/lib/games/duel-game-ids";
@@ -63,6 +64,7 @@ async function requireGroupMembership(groupId: string, uid: string): Promise<Mem
 
 type TournamentDoc = Omit<Tournament, "id">;
 type BracketUpdate = Pick<TournamentDoc, "matches">;
+type ServerT = Awaited<ReturnType<typeof getServerT>>;
 
 /**
  * Everything that has to happen in the *same* transaction as the result that
@@ -71,6 +73,7 @@ type BracketUpdate = Pick<TournamentDoc, "matches">;
  * finished game can never exist without its expense (or get booked twice by
  * two racing reports; the transaction serializes them). Returns whether an
  * expense was written, so the caller can refresh the balance cache after.
+ * A finished game also tells the group chat how it ended (`gameResult`).
  */
 function applyBracketUpdate(input: {
   tx: FirebaseFirestore.Transaction;
@@ -80,12 +83,13 @@ function applyBracketUpdate(input: {
   tournament: TournamentDoc;
   next: BracketUpdate;
   at: string;
+  t: ServerT;
 }): {
   finished: boolean;
   booked: boolean;
   bookedExpense: { id: string; expense: Omit<Expense, "id"> } | null;
 } {
-  const { tx, tournamentRef, groupRef, group, tournament, next, at } = input;
+  const { tx, tournamentRef, groupRef, group, tournament, next, at, t } = input;
   const merged = { ...tournament, ...next };
   const finished = isBracketFinished(merged);
   const update: Record<string, unknown> = { matches: next.matches, updatedAt: at };
@@ -127,6 +131,35 @@ function applyBracketUpdate(input: {
         bookedExpense = { id: expenseRef.id, expense };
       }
     }
+
+    // The result card for the group chat. It names the amount only when it
+    // really is owed: not after a failed auto-booking, not for a free game.
+    const winnerUids = Object.keys(merged.entrants).filter((uid) => !loserUids.includes(uid));
+    const stake = tournament.stake;
+    const amountOwed = stake && stake.amountMinor > 0 && !update.autoBookError ? stake : null;
+    tx.set(
+      groupRef.collection("messages").doc(),
+      gameResultMessage({
+        t,
+        senderUid: tournament.createdBy,
+        nameOf: (uid) => entrantName(group, merged, uid) || "?",
+        now: at,
+        result: {
+          gameId: tournament.gameId,
+          loserUids,
+          winnerUid: winnerUids.length === 1 ? winnerUids[0] : null,
+          amount: amountOwed
+            ? {
+                description: amountOwed.description,
+                amountMinor: amountOwed.amountMinor,
+                currency: amountOwed.currency,
+              }
+            : null,
+          attempt: 1,
+          tournamentId: tournamentRef.id,
+        },
+      }),
+    );
   }
 
   tx.update(tournamentRef, update);
@@ -518,6 +551,7 @@ export async function reportTournamentMatchResult(input: {
 
   const tournamentRef = membership.groupRef.collection("tournaments").doc(input.tournamentId);
   const at = new Date().toISOString();
+  const t = await getServerT();
 
   const result = await adminDb.runTransaction<
     | { ok: true; finished: boolean; booked: boolean; pushes: PendingPush[] }
@@ -549,6 +583,7 @@ export async function reportTournamentMatchResult(input: {
       tournament,
       next,
       at,
+      t,
     });
     const pushes = bracketPushes({
       groupId: input.groupId,
@@ -703,6 +738,8 @@ export async function playOnlineMove(input: {
   const tournamentRef = membership.groupRef.collection("tournaments").doc(input.tournamentId);
   const liveRef = tournamentRef.collection("liveMatches").doc(input.matchId);
   const secretRef = tournamentRef.collection("liveSecrets").doc(input.matchId);
+  // The move that decides the game also posts its result to the chat.
+  const t = await getServerT();
 
   const result = await adminDb.runTransaction<
     | { ok: true; version: number; booked: boolean; pushes: PendingPush[] }
@@ -811,6 +848,7 @@ export async function playOnlineMove(input: {
       tournament,
       next,
       at,
+      t,
     });
     const pushes = bracketPushes({
       groupId: input.groupId,

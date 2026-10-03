@@ -3,8 +3,10 @@
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { isCategoryId } from "@/lib/categories";
+import { gameResultMessage } from "@/lib/chat/game-result";
 import { normalizeExpenseGame } from "@/lib/games/expense-game";
 import { isGroupManager } from "@/lib/groups/permissions";
+import { getServerT } from "@/lib/i18n/server";
 import { isIsoDate, isValidDescription, isValidEmoji } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { expensePushes } from "@/lib/push/messages";
@@ -199,19 +201,47 @@ export async function addExpense(
     ...(game ? { game } : {}),
   };
 
-  const docRef = await groupRef.collection("expenses").add(expense);
+  const expenseRef = groupRef.collection("expenses").doc();
+  const batch = adminDb.batch();
+  batch.set(expenseRef, expense);
+  if (game) {
+    // A game decided it: the group chat hears who pays, in the same write.
+    // No chat push on top — the expense push already reaches everyone in it.
+    batch.set(
+      groupRef.collection("messages").doc(),
+      gameResultMessage({
+        t: await getServerT(),
+        senderUid: session.uid,
+        nameOf: (uid) => group.members[uid]?.displayName ?? "?",
+        now,
+        result: {
+          gameId: game.gameId,
+          loserUids: Object.keys(splits).filter((uid) => splits[uid].amountMinor > 0),
+          winnerUid: null,
+          amount: {
+            description: expense.description,
+            amountMinor: expense.amountMinor,
+            currency: expense.currency,
+          },
+          attempt: game.attempt,
+          tournamentId: null,
+        },
+      }),
+    );
+  }
+  await batch.commit();
   await recomputeGroupBalances(groupRef);
   notifyAfterResponse(
     expensePushes({
       groupId: input.groupId,
       group,
-      expenseId: docRef.id,
+      expenseId: expenseRef.id,
       expense,
       origin: "added",
       actorUid: session.uid,
     }),
   );
-  return { ok: true, data: { expenseId: docRef.id } };
+  return { ok: true, data: { expenseId: expenseRef.id } };
 }
 
 export async function editExpense(

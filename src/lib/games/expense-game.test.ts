@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { SPLIT_GAMES } from "@/components/groups/split-game/game-catalog";
 import { MAX_GAME_ATTEMPT, normalizeExpenseGame } from "@/lib/games/expense-game";
-import { SPLIT_GAME_IDS } from "@/lib/games/split-game-ids";
+import { SPLIT_GAME_IDS, SPLIT_GAME_META } from "@/lib/games/split-game-ids";
 
 const context = { memberUids: ["a", "b", "c", "d"], payerUids: ["b"] };
 
@@ -35,5 +35,11 @@ describe("normalizeExpenseGame", () => {
 describe("split game ids", () => {
   it("are exactly the games the picker offers", () => {
     expect([...SPLIT_GAME_IDS].sort()).toEqual(SPLIT_GAMES.map((game) => game.id).sort());
+  });
+
+  it("carry the picker's emoji and name everywhere else", () => {
+    for (const game of SPLIT_GAMES) {
+      expect(SPLIT_GAME_META[game.id]).toEqual({ emoji: game.emoji, nameKey: game.nameKey });
+    }
   });
 });

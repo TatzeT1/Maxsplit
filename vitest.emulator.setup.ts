@@ -25,6 +25,17 @@ process.env.FIRESTORE_EMULATOR_HOST ??= "127.0.0.1:8080";
 
 vi.mock("@/lib/auth/session", () => import("@/test/session-mock"));
 vi.mock("@/lib/push/notify", () => import("@/test/push-mock"));
+// Actions write chat messages (game invites and results) in the request's
+// language, read from a cookie — which a plain node run doesn't have.
+vi.mock("@/lib/i18n/server", async () => {
+  const { translate } = await import("@/lib/i18n/translate");
+  return {
+    getLocale: async () => "de",
+    getServerT:
+      async () => (key: Parameters<typeof translate>[1], vars?: Record<string, string | number>) =>
+        translate("de", key, vars),
+  };
+});
 
 beforeEach(async () => {
   clearSentPushes();

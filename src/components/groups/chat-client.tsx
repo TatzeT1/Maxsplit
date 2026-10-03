@@ -1,7 +1,7 @@
 "use client";
 
 import { collection, doc, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
-import { ArrowLeft, ChevronRight, MessageCircle, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, MessageCircle, RotateCcw, Send, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import {
@@ -26,14 +26,16 @@ import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { formatDate, formatTime } from "@/lib/format/date";
+import { gameResultSentence } from "@/lib/chat/game-result";
 import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
+import { SPLIT_GAME_META } from "@/lib/games/split-game-ids";
 import { useVisibleHeight } from "@/lib/use-visible-height";
 import { avatarGradient, cn } from "@/lib/utils";
 import { callAction } from "@/lib/call-action";
 import { useScreenSync } from "@/lib/offline/sync-marks";
 import { useLiveSources } from "@/lib/offline/use-live-sources";
 import { useOnline } from "@/lib/use-online";
-import type { ChatMessage, Group } from "@/lib/types";
+import type { ChatMessage, Group, GroupMember } from "@/lib/types";
 
 const MAX_LOADED_MESSAGES = 300;
 
@@ -50,6 +52,7 @@ function MessageBubble({
   isOwn,
   showSender,
   groupId,
+  members,
   onDeleteError,
 }: {
   message: ChatMessage;
@@ -57,6 +60,7 @@ function MessageBubble({
   isOwn: boolean;
   showSender: boolean;
   groupId: string;
+  members: Record<string, GroupMember>;
   onDeleteError: (message: string) => void;
 }) {
   const [deleting, setDeleting] = useState(false);
@@ -119,6 +123,13 @@ function MessageBubble({
             text={message.text}
             invite={message.gameInvite}
             groupId={groupId}
+            isOwn={isOwn}
+          />
+        ) : message.gameResult ? (
+          <GameResultBubble
+            result={message.gameResult}
+            groupId={groupId}
+            members={members}
             isOwn={isOwn}
           />
         ) : (
@@ -186,6 +197,72 @@ function GameInviteBubble({
       <Button asChild size="sm" variant={isOwn ? "outline" : "default"} className="h-10 w-full">
         <Link href={`/groups/${groupId}/tournaments/${invite.tournamentId}`}>
           {isOwn ? t("chat.gameInviteOpen") : t("chat.gameInviteJoin")}
+          <ChevronRight aria-hidden="true" />
+        </Link>
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * How a decided game ended — posted by the server with the result (see
+ * `lib/chat/game-result.ts`). Names come from the group as it is now; the
+ * sentence is the same one the stored text carries for previews. A
+ * reshuffled result says so in the sentence and with a badge.
+ */
+function GameResultBubble({
+  result,
+  groupId,
+  members,
+  isOwn,
+}: {
+  result: NonNullable<ChatMessage["gameResult"]>;
+  groupId: string;
+  members: Record<string, GroupMember>;
+  isOwn: boolean;
+}) {
+  const t = useT();
+  const meta = SPLIT_GAME_META[result.gameId];
+  const sentence = gameResultSentence(t, result, (uid) => members[uid]?.displayName ?? "?");
+  return (
+    <div
+      className={cn(
+        "bg-card ring-foreground/10 shadow-e1 flex w-[min(75vw,18rem)] flex-col gap-2.5 rounded-2xl p-3 ring-1",
+        isOwn ? "rounded-br-md" : "rounded-bl-md",
+      )}
+    >
+      <div className="flex items-center gap-2.5">
+        <span
+          aria-hidden="true"
+          className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-xl text-xl"
+        >
+          {meta?.emoji ?? "🎮"}
+        </span>
+        <div className="flex min-w-0 flex-col">
+          <span className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase">
+            {t("chat.gameResultEyebrow")}
+          </span>
+          <span className="font-heading truncate text-base leading-tight font-medium">
+            {meta ? t(meta.nameKey) : ""}
+          </span>
+        </div>
+        {result.attempt > 1 && (
+          <span className="bg-muted text-foreground ml-auto flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold">
+            <RotateCcw aria-hidden="true" className="size-3" />
+            {result.attempt}.
+          </span>
+        )}
+      </div>
+      <p className="text-sm font-medium break-words">{sentence}</p>
+      <Button asChild size="sm" variant="outline" className="h-10 w-full">
+        <Link
+          href={
+            result.tournamentId
+              ? `/groups/${groupId}/tournaments/${result.tournamentId}`
+              : `/groups/${groupId}?tab=games`
+          }
+        >
+          {result.tournamentId ? t("chat.gameResultOpenGame") : t("chat.gameResultOpenStats")}
           <ChevronRight aria-hidden="true" />
         </Link>
       </Button>
@@ -453,6 +530,7 @@ export function ChatClient({ groupId }: { groupId: string }) {
                       isOwn={message.senderUid === user.uid}
                       showSender={showSender}
                       groupId={groupId}
+                      members={group.members}
                       onDeleteError={setActionError}
                     />
                   </div>
