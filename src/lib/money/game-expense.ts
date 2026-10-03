@@ -1,7 +1,7 @@
 import { isCategoryId } from "@/lib/categories";
 import { isIsoDate, isValidDescription, isValidEmoji } from "@/lib/ledger-input";
 import { splitEqual, validatePaidBy } from "@/lib/money/split";
-import type { Expense, GameExpenseDraft, GroupMember } from "@/lib/types";
+import type { Expense, ExpenseGame, GameExpenseDraft, GroupMember } from "@/lib/types";
 
 /**
  * Checks an auto-book draft at game start, so a bad amount or a stranger as
@@ -46,10 +46,12 @@ export function buildGameExpense(input: {
   loserUids: string[];
   /** Required when the draft is `payerIsWinner`: the one player who didn't lose. */
   winnerUid?: string;
+  /** Which game decided it and who played, as a hand-applied result records it. */
+  game?: ExpenseGame;
   createdBy: string;
   now: string;
 }): Omit<Expense, "id"> {
-  const { draft, loserUids, winnerUid, createdBy, now } = input;
+  const { draft, loserUids, winnerUid, game, createdBy, now } = input;
   if (loserUids.length === 0) throw new Error("A game expense needs at least one loser");
   if (draft.payerIsWinner && !winnerUid) throw new Error("A stake game needs a winner to pay");
   const amounts = splitEqual(draft.amountMinor, loserUids);
@@ -71,5 +73,6 @@ export function buildGameExpense(input: {
     updatedAt: now,
     deletedAt: null,
     viaLottery: true,
+    ...(game ? { game } : {}),
   };
 }

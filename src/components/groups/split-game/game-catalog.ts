@@ -1,21 +1,7 @@
 import type { TranslationKey } from "@/lib/i18n/translate";
+import type { SplitGameId } from "@/lib/types";
 
-export type SplitGameId =
-  | "lottery"
-  | "wheel"
-  | "slot"
-  | "scratch"
-  | "balloon"
-  | "duckrace"
-  | "dicecup"
-  | "pegboard"
-  | "tictactoe"
-  | "connectfour"
-  | "memory"
-  | "reaction"
-  | "rps"
-  | "nim"
-  | "dots";
+export type { SplitGameId };
 
 export type SplitGameCategory = "luck" | "skill";
 

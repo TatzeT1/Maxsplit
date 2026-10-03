@@ -3,6 +3,7 @@
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { isCategoryId } from "@/lib/categories";
+import { normalizeExpenseGame } from "@/lib/games/expense-game";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isIsoDate, isValidDescription, isValidEmoji } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
@@ -19,6 +20,7 @@ import type {
   ActivityLogEntry,
   CategoryId,
   Expense,
+  ExpenseGame,
   ExpenseSplit,
   Group,
   SplitMode,
@@ -39,8 +41,10 @@ export interface ExpenseInput {
   participantUids: string[];
   /** Raw per-uid input for "shares" (share count), "percent" (0-100), or "exact" (minor units). */
   splitInputs: Record<string, number>;
-  /** True when `splitInputs` came from the 🎲 Split Lottery game rather than a manual entry — see Expense.viaLottery. */
+  /** True when `splitInputs` came from a split game rather than a manual entry — see Expense.viaLottery. */
   viaLottery: boolean;
+  /** Which game that was, who played, which attempt — read only with `viaLottery`. See Expense.game. */
+  game?: ExpenseGame | null;
 }
 
 type MembershipResult =
@@ -125,6 +129,7 @@ async function resolveExpense(
       group: Omit<Group, "id">;
       groupRef: FirebaseFirestore.DocumentReference;
       splits: Record<string, ExpenseSplit>;
+      game: ExpenseGame | null;
     }
 > {
   const membership = await requireGroupMembership(input.groupId, session.uid);
@@ -145,13 +150,24 @@ async function resolveExpense(
     return { ok: false, error: "forbidden" };
   }
 
+  let splits: Record<string, ExpenseSplit>;
   try {
     validatePaidBy(input.amountMinor, input.paidBy);
-    const splits = buildSplits(input);
-    return { ok: true, group, groupRef, splits };
+    splits = buildSplits(input);
   } catch {
     return { ok: false, error: "invalid-split" };
   }
+
+  const gameCheck =
+    input.viaLottery === true
+      ? normalizeExpenseGame(input.game, {
+          memberUids: Object.keys(group.members),
+          payerUids: Object.keys(splits).filter((uid) => splits[uid].amountMinor > 0),
+        })
+      : ({ ok: true, game: null } as const);
+  if (!gameCheck.ok) return { ok: false, error: gameCheck.error };
+
+  return { ok: true, group, groupRef, splits, game: gameCheck.game };
 }
 
 export async function addExpense(
@@ -162,7 +178,7 @@ export async function addExpense(
 
   const resolved = await resolveExpense(input, session);
   if (!resolved.ok) return { ok: false, error: resolved.error };
-  const { group, groupRef, splits } = resolved;
+  const { group, groupRef, splits, game } = resolved;
 
   const now = new Date().toISOString();
   const expense: Omit<Expense, "id"> = {
@@ -180,6 +196,7 @@ export async function addExpense(
     updatedAt: now,
     deletedAt: null,
     viaLottery: input.viaLottery === true,
+    ...(game ? { game } : {}),
   };
 
   const docRef = await groupRef.collection("expenses").add(expense);
@@ -205,7 +222,7 @@ export async function editExpense(
 
   const resolved = await resolveExpense(input, session);
   if (!resolved.ok) return { ok: false, error: resolved.error };
-  const { group, groupRef, splits } = resolved;
+  const { group, groupRef, splits, game } = resolved;
 
   const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
   const expenseSnap = await expenseRef.get();
@@ -228,6 +245,7 @@ export async function editExpense(
     splits,
     updatedAt: now,
     viaLottery: input.viaLottery === true,
+    game,
   });
 
   const logEntry: Omit<ActivityLogEntry, "id"> = {

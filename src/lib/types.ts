@@ -98,13 +98,33 @@ export interface Expense {
   updatedAt: string;
   deletedAt: string | null;
   /**
-   * True when this expense's split was decided by the 🎲 Split Lottery game
-   * (split-lottery-dialog.tsx) rather than chosen manually. Only set going
-   * forward — expenses split via the lottery before this field existed have
-   * no such marker, so the "vergambelt" leaderboard starts counting from
-   * here, not retroactively. Absent (not false) on older expenses.
+   * True when this expense's split was decided by one of the split games
+   * (the name predates all but the 🎲 lottery) rather than chosen manually.
+   * Only set going forward — expenses split via a game before this field
+   * existed have no such marker, so the "vergambelt" leaderboard starts
+   * counting from here, not retroactively. Absent (not false) on older
+   * expenses.
    */
   viaLottery?: boolean;
+  /**
+   * Which game decided the split, who played and in which attempt — only
+   * alongside `viaLottery`. Absent on expenses from before 2026-10, `null`
+   * once an edit replaced the game's split by hand.
+   */
+  game?: ExpenseGame | null;
+}
+
+/** The game behind a game-decided expense — see `Expense.game`. */
+export interface ExpenseGame {
+  gameId: SplitGameId;
+  /** Everyone in the game's pool: whoever pays plus whoever got away. */
+  playerUids: string[];
+  /**
+   * How many rounds this expense form had started when this result was
+   * taken: 1 = the first one counted, 3 = it was reshuffled twice. Visible,
+   * so "play until someone else pays" can't happen unnoticed.
+   */
+  attempt: number;
 }
 
 export interface Settlement {
@@ -158,6 +178,13 @@ export interface ChatRead {
 /** The 1-vs-1 duel split mini-games that can run as a tournament bracket — see [[Split Games]]. */
 export type DuelGameId =
   "tictactoe" | "connectfour" | "memory" | "reaction" | "rps" | "nim" | "dots";
+
+/** The luck-based split mini-games — see [[Split Games]]. */
+export type LuckGameId =
+  "lottery" | "wheel" | "slot" | "scratch" | "balloon" | "duckrace" | "dicecup" | "pegboard";
+
+/** Every split mini-game, luck and duel. */
+export type SplitGameId = LuckGameId | DuelGameId;
 
 export type TournamentStatus = "running" | "finished" | "cancelled";
 

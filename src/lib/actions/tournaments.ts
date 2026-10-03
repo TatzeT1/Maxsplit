@@ -116,6 +116,8 @@ function applyBracketUpdate(input: {
           draft,
           loserUids,
           winnerUid,
+          // A server-run game can't be reshuffled: always the first attempt.
+          game: { gameId: tournament.gameId, playerUids: Object.keys(merged.entrants), attempt: 1 },
           createdBy: tournament.createdBy,
           now: at,
         });

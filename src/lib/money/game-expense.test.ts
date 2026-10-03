@@ -65,6 +65,15 @@ describe("buildGameExpense", () => {
     const expense = buildGameExpense({ draft, loserUids: ["b"], createdBy: "a", now: "x" });
     expect(expense.splits).toEqual({ b: { rawValue: 1000, amountMinor: 1000 } });
   });
+
+  it("records which game decided it, like a hand-applied result", () => {
+    const game = { gameId: "memory" as const, playerUids: ["a", "b", "c"], attempt: 1 };
+    const expense = buildGameExpense({ draft, loserUids: ["b"], game, createdBy: "a", now: "x" });
+    expect(expense.game).toEqual(game);
+    expect(
+      buildGameExpense({ draft, loserUids: ["b"], createdBy: "a", now: "x" }),
+    ).not.toHaveProperty("game");
+  });
 });
 
 describe("stake games (payerIsWinner)", () => {

@@ -58,6 +58,47 @@ describe("addExpense rejects malformed input before it reaches the ledger", () =
   });
 });
 
+describe("addExpense with a split game's record", () => {
+  // Lea pays the whole bill, as a game result applied in the form would have it.
+  const gameExpense: ExpenseInput = {
+    ...expense,
+    splitMode: "exact",
+    participantUids: [],
+    splitInputs: { lea: 3000 },
+    viaLottery: true,
+    game: { gameId: "wheel", playerUids: ["max", "lea"], attempt: 2 },
+  };
+
+  it("stores which game decided it, who played and the attempt", async () => {
+    const groupRef = await seedMaxAndLea();
+    const result = await addExpense(gameExpense);
+    expect(result.ok).toBe(true);
+    const [doc] = (await groupRef.collection("expenses").get()).docs;
+    expect(doc.data().game).toEqual({ gameId: "wheel", playerUids: ["max", "lea"], attempt: 2 });
+  });
+
+  it("ignores the record on a split chosen by hand", async () => {
+    const groupRef = await seedMaxAndLea();
+    expect((await addExpense({ ...gameExpense, viaLottery: false })).ok).toBe(true);
+    const [doc] = (await groupRef.collection("expenses").get()).docs;
+    expect(doc.data()).not.toHaveProperty("game");
+  });
+
+  it.each([
+    [{ gameId: "poker", playerUids: ["max", "lea"], attempt: 1 }],
+    [{ gameId: "wheel", playerUids: ["max", "stranger"], attempt: 1 }],
+    // Lea pays but isn't listed as a player.
+    [{ gameId: "wheel", playerUids: ["max", "max"], attempt: 1 }],
+    [{ gameId: "wheel", playerUids: ["max", "lea"], attempt: 0 }],
+  ])("rejects a malformed record %o", async (game) => {
+    const groupRef = await seedMaxAndLea();
+    expect(
+      await addExpense({ ...gameExpense, game: game as unknown as ExpenseInput["game"] }),
+    ).toEqual({ ok: false, error: "invalid-game" });
+    expect((await groupRef.collection("expenses").get()).empty).toBe(true);
+  });
+});
+
 describe("recordSettlement", () => {
   const settlement: SettlementInput = {
     groupId: "g1",
