@@ -8,6 +8,7 @@ import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isDuelGameId } from "@/lib/games/duel-game-ids";
 import { buildMemoryDeck } from "@/lib/games/memory-duel";
+import { nudgeAllowedFrom, waitingOn } from "@/lib/games/nudge";
 import { canRematch, rematchSeedOrder } from "@/lib/games/rematch";
 import {
   applyOnlineMove,
@@ -25,7 +26,14 @@ import { getServerT } from "@/lib/i18n/server";
 import { MAX_DESCRIPTION_LENGTH, isIsoDate } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import { buildGameExpense, validateGameExpenseDraft } from "@/lib/money/game-expense";
-import { challengePushes, expensePushes, newlyReadyMatches, turnPush } from "@/lib/push/messages";
+import { pushReach } from "@/lib/push/deliver";
+import {
+  challengePushes,
+  expensePushes,
+  newlyReadyMatches,
+  nudgePush,
+  turnPush,
+} from "@/lib/push/messages";
 import { notifyAfterResponse } from "@/lib/push/notify";
 import { presenceRef } from "@/lib/push/store";
 import type { PendingPush } from "@/lib/push/types";
@@ -1015,6 +1023,78 @@ export async function playOnlineMove(input: {
   if (result.booked) await recomputeGroupBalances(membership.groupRef);
   notifyAfterResponse(result.pushes);
   return { ok: true, data: { version: result.version } };
+}
+
+/**
+ * "Anstupsen": the player an online match has been waiting on for a while
+ * gets a fresh "Du bist dran" from the one waiting. Allowed once the board
+ * has stood still for `NUDGE_AFTER_MS`, then once per `NUDGE_COOLDOWN_MS`
+ * (`nudges/{matchId}`, server-only like `presence`). Returns whether the
+ * push can reach them, so the waiting player knows to try WhatsApp instead:
+ * `"watching"` (they're looking at the game already) or `"off"`.
+ */
+export async function nudgeOpponent(input: {
+  groupId: string;
+  tournamentId: string;
+  matchId: string;
+}): Promise<ActionResult<{ reach: "push" | "watching" | "off" }>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+
+  const membership = await requireGroupMembership(input.groupId, session.uid);
+  if ("error" in membership) return { ok: false, error: membership.error };
+  const { group, groupRef } = membership;
+
+  const tournamentRef = groupRef.collection("tournaments").doc(input.tournamentId);
+  const liveRef = tournamentRef.collection("liveMatches").doc(input.matchId);
+  const nudgeRef = tournamentRef.collection("nudges").doc(input.matchId);
+
+  const result = await adminDb.runTransaction<
+    { ok: true; targetUid: string; gameId: DuelGameId; at: string } | { ok: false; error: string }
+  >(async (tx) => {
+    const [tournamentSnap, liveSnap, nudgeSnap] = await Promise.all([
+      tx.get(tournamentRef),
+      tx.get(liveRef),
+      tx.get(nudgeRef),
+    ]);
+    if (!tournamentSnap.exists || !liveSnap.exists) return { ok: false, error: "not-found" };
+    const tournament = tournamentSnap.data() as TournamentDoc;
+    if (tournament.status !== "running") return { ok: false, error: "tournament-not-running" };
+    const live = liveSnap.data() as Omit<LiveMatch, "id">;
+    if (live.winnerUid !== null) return { ok: false, error: "match-finished" };
+    const me = live.players.indexOf(session.uid);
+    if (me !== 0 && me !== 1) return { ok: false, error: "not-a-player" };
+    const waited = waitingOn(live.state, me);
+    if (waited === null) return { ok: false, error: "not-waiting" };
+
+    const now = Date.now();
+    const lastNudgeAt = nudgeSnap.exists ? (nudgeSnap.get("at") as string) : null;
+    if (now < nudgeAllowedFrom(live.updatedAt, lastNudgeAt)) {
+      return { ok: false, error: "too-early" };
+    }
+    const at = new Date(now).toISOString();
+    tx.set(nudgeRef, { at, byUid: session.uid });
+    return { ok: true, targetUid: live.players[waited], gameId: tournament.gameId, at };
+  });
+  if (!result.ok) return { ok: false, error: result.error };
+
+  const where = { groupId: input.groupId, tournamentId: input.tournamentId };
+  const reach = await pushReach(result.targetUid, "turn", where);
+  if (reach === "push") {
+    notifyAfterResponse([
+      nudgePush({
+        uid: result.targetUid,
+        byName: group.members[session.uid]?.displayName ?? "",
+        groupId: input.groupId,
+        group,
+        tournamentId: input.tournamentId,
+        matchId: input.matchId,
+        gameId: result.gameId,
+        at: result.at,
+      }),
+    ]);
+  }
+  return { ok: true, data: { reach } };
 }
 
 /**

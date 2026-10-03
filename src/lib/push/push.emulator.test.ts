@@ -11,6 +11,7 @@ import { recordSettlement } from "@/lib/actions/settlements";
 import {
   createTournament,
   markTournamentPresence,
+  nudgeOpponent,
   openOnlineMatch,
   playOnlineMove,
 } from "@/lib/actions/tournaments";
@@ -341,6 +342,110 @@ describe("delivery", () => {
         publicKey: process.env.VAPID_PUBLIC_KEY,
         privateKey: process.env.VAPID_PRIVATE_KEY,
       },
+    });
+  });
+});
+
+describe("nudgeOpponent", () => {
+  let tournamentId: string;
+  let matchId: string;
+  /** players[0] moved first, so they're the one waiting; players[1] is to move. */
+  let waiter: string;
+  let mover: string;
+
+  const liveRef = () => adminDb.doc(`groups/g1/tournaments/${tournamentId}/liveMatches/${matchId}`);
+  const nudgeRef = () => adminDb.doc(`groups/g1/tournaments/${tournamentId}/nudges/${matchId}`);
+  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
+  const nudge = () => {
+    signInAs({ uid: waiter });
+    return nudgeOpponent({ groupId: "g1", tournamentId, matchId });
+  };
+
+  beforeEach(async () => {
+    await seedWg();
+    signInAs({ uid: "max" });
+    const created = await createTournament({
+      groupId: "g1",
+      gameId: "tictactoe",
+      poolUids: ["max", "lea"],
+      targetLoserCount: 1,
+      stake: null,
+      playMode: "online",
+    });
+    if (!created.ok) throw new Error(created.error);
+    tournamentId = created.data.tournamentId;
+    matchId = Object.keys(
+      (await adminDb.doc(`groups/g1/tournaments/${tournamentId}`).get()).get("matches"),
+    )[0];
+    const opened = await openOnlineMatch({ groupId: "g1", tournamentId, matchId });
+    if (!opened.ok) throw new Error(opened.error);
+    [waiter, mover] = (await liveRef().get()).get("players") as [string, string];
+    signInAs({ uid: waiter });
+    const moved = await playOnlineMove({
+      groupId: "g1",
+      tournamentId,
+      matchId,
+      move: { kind: "cell", index: 4 },
+    });
+    if (!moved.ok) throw new Error(moved.error);
+    sentPushes.length = 0;
+  });
+
+  it("waits until the board has stood still for a while", async () => {
+    expect(await nudge()).toEqual({ ok: false, error: "too-early" });
+  });
+
+  it("buzzes the player on the move, then lets it sink in", async () => {
+    await liveRef().update({ updatedAt: minutesAgo(3) });
+    signInAs({ uid: mover });
+    expect((await savePushSubscription({ ...deviceSubscription(), locale: "de" })).ok).toBe(true);
+
+    expect(await nudge()).toEqual({ ok: true, data: { reach: "push" } });
+    expect(pushesFor(mover)).toHaveLength(1);
+    expect(pushesFor(mover)[0]).toMatchObject({
+      event: "turn",
+      body: [
+        {
+          key: "push.turnNudge",
+          vars: { game: { key: "expenses.ticTacToeTitle" }, group: "WG Küche" },
+        },
+      ],
+    });
+    expect(pushesFor(mover)[0].tag).toMatch(new RegExp(`^nudge-${tournamentId}-${matchId}-`));
+
+    expect(await nudge()).toEqual({ ok: false, error: "too-early" });
+    await nudgeRef().update({ at: minutesAgo(11) });
+    expect((await nudge()).ok).toBe(true);
+  });
+
+  it("says when the push can't reach them", async () => {
+    await liveRef().update({ updatedAt: minutesAgo(3) });
+    expect(await nudge()).toEqual({ ok: true, data: { reach: "off" } });
+    expect(pushesFor(mover)).toEqual([]);
+  });
+
+  it("says when they're looking at the game already", async () => {
+    await liveRef().update({ updatedAt: minutesAgo(3) });
+    signInAs({ uid: mover });
+    expect((await savePushSubscription({ ...deviceSubscription(), locale: "de" })).ok).toBe(true);
+    expect((await markTournamentPresence({ groupId: "g1", tournamentId, watching: true })).ok).toBe(
+      true,
+    );
+    expect(await nudge()).toEqual({ ok: true, data: { reach: "watching" } });
+    expect(pushesFor(mover)).toEqual([]);
+  });
+
+  it("refuses the player on the move and a bystander", async () => {
+    await liveRef().update({ updatedAt: minutesAgo(3) });
+    signInAs({ uid: mover });
+    expect(await nudgeOpponent({ groupId: "g1", tournamentId, matchId })).toEqual({
+      ok: false,
+      error: "not-waiting",
+    });
+    signInAs({ uid: "ben" });
+    expect(await nudgeOpponent({ groupId: "g1", tournamentId, matchId })).toEqual({
+      ok: false,
+      error: "not-a-player",
     });
   });
 });

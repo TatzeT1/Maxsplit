@@ -61,6 +61,29 @@ async function isWatching(uid: string, where: NonNullable<PendingPush["unlessWat
 }
 
 /**
+ * Whether a push of this kind would reach `uid` right now — asked before
+ * sending one that the sender wants feedback on ("Anstupsen"): `"watching"`
+ * while they look at the game (a turn push is skipped then), `"off"` when no
+ * device of theirs takes it (push not configured, no subscription, or this
+ * kind switched off).
+ */
+export async function pushReach(
+  uid: string,
+  event: PendingPush["event"],
+  watching?: NonNullable<PendingPush["unlessWatching"]>,
+): Promise<"push" | "watching" | "off"> {
+  if (!getVapidConfig()) return "off";
+  if (watching && (await isWatching(uid, watching))) return "watching";
+  const [userSnap, subscriptionsSnap] = await Promise.all([
+    adminDb.doc(`users/${uid}`).get(),
+    subscriptionsOf(uid).limit(1).get(),
+  ]);
+  if (subscriptionsSnap.empty) return "off";
+  if (event === "test") return "push";
+  return readNotificationPrefs(userSnap.get("notificationPrefs"))[event] ? "push" : "off";
+}
+
+/**
  * Sends each push to every device its recipient turned notifications on for,
  * in that device's language — honoring the per-event switches, skipping "Du
  * bist dran" for a player who is watching the game, and deleting

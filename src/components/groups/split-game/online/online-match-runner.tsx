@@ -18,6 +18,7 @@ import { useT } from "@/components/locale-provider";
 import { DuelDrawNotice } from "@/components/groups/split-game/duel-ladder";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { MatchChat } from "@/components/groups/split-game/online/match-chat";
+import { NudgeButton } from "@/components/groups/split-game/online/nudge-button";
 import { ONLINE_BOARDS } from "@/components/groups/split-game/online/online-boards";
 import {
   FATE_ICON,
@@ -403,6 +404,17 @@ export function OnlineMatchRunner({
             )
           )}
         </div>
+      )}
+
+      {me !== null && !decided && opponentUid && (
+        <NudgeButton
+          key={live.version}
+          groupId={groupId}
+          tournament={tournament}
+          live={live}
+          me={me}
+          opponentName={nameOf(opponentUid)}
+        />
       )}
 
       {live.lastDrawAt && live.attempt > 0 && freshAttempt(live.state) && !decided && (

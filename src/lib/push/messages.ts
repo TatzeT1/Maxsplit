@@ -232,6 +232,40 @@ export function turnPush(input: {
   };
 }
 
+/**
+ * "Anstupsen": the player an online match has been waiting on gets a fresh
+ * "Du bist dran". Its own tag (with the time), so it buzzes even while an
+ * earlier "Du bist dran" for the same match is still on screen — a same-tag
+ * notification would replace that one silently. Skipped like any turn push
+ * while they are watching the game.
+ */
+export function nudgePush(input: {
+  uid: string;
+  byName: string;
+  groupId: string;
+  group: GroupInfo;
+  tournamentId: string;
+  matchId: string;
+  gameId: DuelGameId;
+  at: string;
+}): PendingPush {
+  return {
+    uid: input.uid,
+    event: "turn",
+    title: { key: "push.turnTitle" },
+    body: [
+      {
+        key: "push.turnNudge",
+        vars: { name: input.byName, game: gameName(input.gameId), group: input.group.name },
+      },
+    ],
+    url: tournamentUrl(input.groupId, input.tournamentId),
+    tag: `nudge-${input.tournamentId}-${input.matchId}-${input.at}`,
+    ttlSeconds: 10 * 60,
+    unlessWatching: { groupId: input.groupId, tournamentId: input.tournamentId },
+  };
+}
+
 /** Matches a bracket update just made playable — both players known, not started. */
 export function newlyReadyMatches(
   before: Record<string, TournamentMatch>,
