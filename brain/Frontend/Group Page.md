@@ -21,7 +21,7 @@ often each thing is needed:
 ```
 header        ← back · icon · name · member stack ("5 Mitglieder · EUR" → Gruppe tab)
 BalanceHero   where *you* stand, printed as a till receipt, with settle-up actions
-banner        only while a tournament runs (time-critical, so above the tabs)
+banner        only while a tournament or an online luck round runs (time-critical, above the tabs)
 ChatEntryCard stays visible with the last message — the group uses chat regularly
 tabs          Ausgaben (default) · Salden · Spiele · Gruppe   (sticky, pinned band)
 action bar    "Ausgabe hinzufügen" + "Zahlung", sticky under the thumb
@@ -37,7 +37,7 @@ were not picked, so they live in the Gruppe tab.
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Ausgaben** | Search (from 6 expenses on) · category chips with totals (filter _and_ spending breakdown, replaced the stats card and a `<select>`) · ledger grouped by month, each month one card with its total                                       |
 | **Salden**   | "Wer steht wo" diverging bars (everyone's net balance around a zero line) · "So werdet ihr quitt" (`simplifyDebts`, your transfers tinted) · "Bezahlt vs. Anteil" as a real `<table>` · export: PDF, CSV, "Link zurücksetzen" (managers) |
-| **Spiele**   | "Wer hat wie viel vergambelt?" podium (top 3) + list · "Bisher verschont" · last 5 game rounds with who lost                                                                                                                             |
+| **Spiele**   | Period (Monat/Jahr/Gesamt) · "Wer hat wie viel vergambelt?" podium (top 3, "Pechvogel des Monats") + list · "Bisher verschont" · duel record + head-to-head · favourite games · last 5 rounds (game, reshuffles, free duels)             |
 | **Gruppe**   | Invite (native share sheet, copy fallback) · members (one card, rows) · recurring rules (actions in the ⋯ menu) · edit group · leave/delete, last and set apart                                                                          |
 
 The active tab lives in `?tab=` (`expenses` is the default and drops the param). It's written

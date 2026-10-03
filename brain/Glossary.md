@@ -26,6 +26,10 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Mäxchen                           | pub dice game                        | the Würfelbecher ranks two-dice rolls like it: 21 beats everything, then the doubles, then the rest — [[Split Games]] |
 | Lunte                             | "fuse"                               | the matchstick duel's move clock, shorter as matches run out; a burnt one plays a late move — [[Split Games]]         |
 | Joker                             | one skipped move                     | the matchstick duel's once-per-player skip: pass the move on without taking — [[Split Games]]                         |
+| Revanche                          | "Rematch"                            | the same online game, people and stake once more; the loser of a duel moves first — [[Split Games]]                   |
+| Anstupsen                         | "Nudge"                              | a fresh "Du bist dran" for the player an online match has been waiting on — [[Split Games]]                           |
+| n. Versuch                        | "attempt n"                          | how many rounds an expense form started before its result was taken ("Neu mischen" counted) — [[Split Games]]         |
+| Lose verschicken                  | "Send out the cards"                 | starts an online scratch-card round, everyone on their own phone (ADR-005) — [[Split Games]]                          |
 
 ## Domain vocabulary
 

@@ -279,3 +279,56 @@ chose "only view" over offline writes.
 - A real need to enter expenses offline: idempotent action ids plus an outbox (or
   Next's offline retries), in a new ADR.
 - Native apps: then APNs/FCM through their SDKs instead of Web Push.
+
+## ADR-005: Online luck rounds — drawn when scratched, in their own collection
+
+**Status:** Accepted
+**Date:** 2026-10-03
+
+### Context
+
+The eight luck games only ran inside the expense form, on one phone passed around the
+table; whoever wasn't there couldn't take part. The owner asked for luck games "online,
+everyone on their own phone", starting with the scratch cards, where each player
+scratching their own card is the whole game anyway.
+
+Two questions had to be answered: where an online round's state lives, and how a card's
+face stays unknown until its owner scratches it, given that every member reads game state
+straight from Firestore (ADR-001).
+
+### Decision
+
+- **A new subcollection, `groups/{groupId}/luckRounds/{roundId}`**, one document per round,
+  written only by `lib/actions/luck-rounds.ts` and read live by members — the shape of
+  `tournaments` (ADR-002), with a rule of the same shape. It is not folded into
+  `tournaments`: a luck round has no bracket, and every reader and action of a tournament
+  would have had to learn to skip it.
+- **No face is dealt in advance.** A card is drawn by the server in the transaction that
+  scratches it: "zahlt" with probability (payer cards left) / (cards left)
+  (`lib/games/luck-round.ts`). That is exactly the distribution of a deck shuffled up
+  front — every card pays with the same chance whoever scratches first, pinned by a
+  Monte-Carlo test — but there is no secret anywhere (not even a server-only document) that
+  a modified client or anyone with database access could read in the meantime.
+- **Always for a bill.** A round is started from a new expense and books it when the last
+  card is scratched (the duels' `autoBook`), so a round can't be replayed: it books once.
+  It can be called off only before the first card; after that, "Restliche Lose aufdecken"
+  (the creator or a manager) ends a stuck round with the same draws.
+- **The group page learns about a running round from the group document**
+  (`activeLuckRound`, set and cleared with the round). A group without one costs no extra
+  listener; one luck round per group at a time.
+
+### Consequences
+
+- `firestore.rules` gained a `luckRounds` block; it has to be deployed
+  (`pnpm exec firebase deploy --only firestore:rules`) before the feature can be used —
+  without it the round page shows a permission error. The group page itself only reads the
+  pointer on the group document, so it keeps working either way.
+- Placeholders have no phone: the round's creator scratches their cards.
+- A second luck game online (dice, ducks) adds a `gameId` and its own drawing rule to the
+  same collection and actions.
+
+### What would make us reverse this
+
+- A luck game whose outcome must be fixed before anyone acts (a race everyone watches start
+  together, say) would need a dealt secret after all — then a server-only secrets document
+  next to the round, like `liveSecrets`.

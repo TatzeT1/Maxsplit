@@ -22,6 +22,7 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
   /groups/[groupId]/chat             per-group chat — see Chat, Mobile iOS Quirks
   /groups/[groupId]/tournaments/[tournamentId]
                                       live tournament bracket / online duel board — watch/play from any device, see Split Games
+  /groups/[groupId]/rounds/[roundId] online luck round (scratch cards on everyone's own phone) — see Split Games, ADR-005
   /profile                           profile + payment details — see Onboarding and Payment Details
   /admin                             requireAdminSession() → notFound() if not admin
   /admin/groups/[groupId]            admin group moderation

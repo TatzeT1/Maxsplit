@@ -43,6 +43,9 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
     liveMatches/{id} → read: isGroupMember(groupId). write: false. (online play)
     liveSecrets/{id} → read, write: false — the hidden memory deck; nobody may peek.
     presence/{uid}   → read, write: false — only the push sender reads it.
+    nudges/{matchId} → read, write: false — "Anstupsen"'s server-side rate limit.
+  luckRounds/{id}    → read: isGroupMember(groupId). write: false. Online scratch cards (ADR-005);
+                       no hidden state — a card is drawn when it's scratched. Needs deploying.
 
 pushSubscriptions/{id} → read, write: false — devices' push endpoints and keys, server-only.
 

@@ -13,7 +13,8 @@ Shared "skill" engine (the seven duel games — see below): `src/lib/games/knock
 `duel-ladder.tsx`, `duel-turn-banner.tsx`. Picker data: `split-game/game-catalog.ts` +
 `game-preview.tsx`. Sound: `src/lib/sound/game-sounds.ts`. The seven games of the second batch
 (ballon, ducks, dice cup, pegboard, rock-paper-scissors, Nim, dots and boxes) are described in
-[[#The second batch: seven more games (2026-10)]].
+[[#The second batch: seven more games (2026-10)]]; fairness, statistics, rematch, nudges and
+the online scratch cards in [[#Round three: fairness, record, rematch, online luck (2026-10)]].
 
 ## What it is
 
@@ -198,8 +199,10 @@ On top of the table:
   - ⚡ Turbo runs every timing at 40 %.
   - 🔁 Auto-Serie pulls the rest of the series and stops at decisions, at a turn change and at
     the end. It is driven by an effect plus `useEffectEvent`.
-  - 🔊/🔇 is a global mute (`setGameSoundsMuted` in `game-sounds.ts`).
-  - Turbo and sound are remembered per browser in `localStorage`.
+  - 🔊/🔇 is the games' global mute (`setGameSoundsMuted` in `game-sounds.ts`).
+  - Turbo is remembered per browser in `localStorage`; sound is the games' shared setting
+    (see [[#Round three: fairness, record, rematch, online luck (2026-10)]]) — while the reels
+    run the slot shows it on its deck, so the stage's corner switch is hidden there.
   - Big moments buzz on Android via `navigator.vibrate`. iOS ignores it.
 - **Badges** (`PlayerBadges`): 🔥 after three wins in a row, 🌧️ after three no-wins, 🛡️ for a
   shield, ⚡×2 for a boost.
@@ -481,7 +484,13 @@ unclear. It's now a two-step flow, driven entirely by one table
    before; "Zurück" (or Escape) returns to the grid.
 
 Adding another game later means adding one row to `SPLIT_GAMES` plus its translation keys (and, for the dialog, a `gameLoaders` entry and a mount in `add-expense-dialog.tsx`) — the
-picker itself doesn't change.
+picker itself doesn't change. The id also goes into `SplitGameId` (`lib/types.ts`),
+`SPLIT_GAME_IDS` and `SPLIT_GAME_META` (`lib/games/split-game-ids.ts`, emoji + name for
+places that only name a game); a test pins catalog and meta to each other.
+
+Above the grid sit "🎲 Überrasch mich" (a random game's preview, "Anderes Spiel" throws again)
+and "Zuletzt gespielt" — the three games this group picked last on this device, which start
+straight away without the preview (`readRecentGames`, `game-memory.ts`).
 
 ## The full-screen stage (2026-10)
 
@@ -538,7 +547,9 @@ second player is bumped to the opposite side of the palette wheel.
 
 ## The `viaLottery` flag, now shared
 
-All fifteen games set `Expense.viaLottery = true` when their result is applied — the field name is
+All fifteen games set `Expense.viaLottery = true` when their result is applied (and since
+2026-10 `Expense.game` — which game, who played, which attempt; see
+[[#Round three: fairness, record, rematch, online luck (2026-10)]]) — the field name is
 a holdover from when the lottery was the only game (see [[Data Model]]), but its actual meaning
 has always been closer to "resolved via a split mini-game", so the existing
 `computeLotteryTotals` leaderboard (now the group page's Spiele tab, `games-tab.tsx` — see
@@ -546,7 +557,8 @@ has always been closer to "resolved via a split mini-game", so the existing
 with zero code changes needed. Renaming the field would mean migrating live Firestore data for
 a purely cosmetic win, so it stays `viaLottery`. One side effect worth knowing: the leaderboard's
 title ("Wer hat wie viel vergambelt?") now also counts skill-game losses, which reads slightly
-oddly for a game of pure competence — a wording nuance, not a bug, and out of scope to fix here.
+oddly for a game of pure competence — a wording nuance, not a bug. Wins and losses of the duels
+themselves have their own section in the Spiele tab since 2026-10 (the duel record).
 
 ## The second batch: seven more games (2026-10)
 
@@ -644,6 +656,116 @@ grids of the first four duels (`NimGrid` owns only its current pick and the fuse
 online runner predicts the viewer's own move for them (open information), but not for the
 hidden-hand game. `online-nim.emulator.test.ts` covers the joker and the late take against the
 Firestore emulator.
+
+## Round three: fairness, record, rematch, online luck (2026-10)
+
+Seven improvements the owner picked from a list of ten (the other two — parallel games per
+group with an inactivity timeout, and a "guess the bill" game — were not taken up).
+
+### One sound switch for every game
+
+`game-sounds.ts` owns "Ton aus": `isGameSoundsMuted()` reads `split:game-sound-off` from
+storage on first use, `setGameSoundsMuted` writes it and notifies `subscribeGameSoundsMuted`
+listeners; `useGameSoundsMuted` (`lib/sound/use-game-sounds-muted.ts`) is the
+`useSyncExternalStore` hook. Every stage (`GameDialogContent`, `GamePageStage`) has a 🔊 corner
+button next to the ✕ (`soundToggle={false}` drops it — the slot does while its deck shows its
+own). Before, the stored setting was applied only once the slot machine had mounted, so after a
+reload every other game played sound again.
+
+### Games remember the last setup
+
+`game-memory.ts`: per group and device (`localStorage`, try/catch), the pool and payer count
+last *started* (`rememberSetup` in every `startGame`) seed the next game's setup
+(`readRememberedSetup`, trimmed to the current members, `null` below two). Shared across games:
+four people at dinner are four people for the wheel and the dice alike.
+
+### Fairness: "Neu mischen" is counted
+
+Every luck game still ends with "Neu mischen" next to "Übernehmen" — what changed is that a
+reshuffle shows. `AddExpenseDialog` provides a `GameRoundProvider`
+(`split-game/game-round.tsx`); every game calls `startRound()` in its `startGame` (Neu mischen
+included), and the stage shows "2. Versuch — steht später an der Ausgabe" from the second
+round on (`GameRoundNotice`, ordered under the header with CSS `order`). The count resets with
+the form (`resetForm`); an edit continues from the expense's own attempt, so replaying a game
+while editing can't make it look like a first try. Only an online game started from the form
+isn't counted — it books itself and can't be reshuffled.
+
+### The game record on the expense
+
+`Expense.game = { gameId, playerUids, attempt }`, sent by the form with `viaLottery` and
+validated in `resolveExpense` (`normalizeExpenseGame`, `lib/games/expense-game.ts`: a known
+game, members only, every payer among the players, attempt 1–999); auto-booked tournaments and
+luck rounds write it via `buildGameExpense({ game })`. Forward-only like `viaLottery`; an edit
+that replaces the split by hand stores `game: null`. Every game's `onResolve` therefore hands
+back the pool too: `(loserUids, playerUids)` (the slot: `(amounts, playerUids)`). Shown as
+`GameRecordSummary` ("Per Spiel entschieden: Glücksrad · im 2. Versuch") in the form and the
+expense details.
+
+### A result card in the group chat
+
+`ChatMessage.gameResult` (`ChatGameResult`), built by `gameResultMessage`
+(`lib/chat/game-result.ts`, one sentence shared by the stored text and the card): "Lea zahlt
+„Pizza" (36,00 €) — im 2. Versuch", "Ben gewinnt gegen Lea", "Ben und Mia verlieren". Posted in
+the same write as the result — by `addExpense` for a game-decided expense, by
+`applyBracketUpdate` for every finished tournament or online duel, by the luck rounds' last
+card. No chat push on top: the expense push already reaches everyone involved. The card links
+to the game's page, or to `?tab=games`. `ChatEntryCard` reads the last five messages and never
+counts your own as unread — a card your expense just posted mustn't light the dot for you.
+
+### The Spiele tab's record
+
+`games-tab.tsx` + `lib/games/game-stats.ts`. A period picker (Dieser Monat / Dieses Jahr /
+Gesamt) for the whole tab; in the month view first place on the money podium is titled
+"Pechvogel des Monats". New: the duel record (wins and losses over every decided match of every
+finished tournament — online duels and brackets, the ones for fun included — plus head-to-head
+pairs), the favourite games, and "Letzte Runden" mixing game expenses with free tournaments.
+Finished tournaments come from `useFinishedTournaments` (a `finishedAt` range query, newest
+first, so no composite index), subscribed only once the tab has been opened; an empty cache
+offline says "Für die Duell-Bilanz brauchst du Internet" instead of "keine Duelle". A tournament
+that booked an expense counts as that expense, never twice. One-phone ladder duels aren't
+recorded match by match, so they count only in the rounds — the footnote says so.
+
+### Revanche
+
+`createRematch` (`tournaments.ts`) + `RematchButton` (`online/rematch-button.tsx`) under a
+finished online game, for its players: the same game, people and stake; in a duel the loser
+moves first (`rematchSeedOrder`), a bigger bracket is drawn afresh. Idempotent through
+`Tournament.rematchId` — the second player's tap joins the first one's game. Only for games
+played for fun or for a bare stake (`canRematch`, `lib/games/rematch.ts`): a game that booked a
+real bill would book it twice. The others get the challenge push and a "X will Revanche" join
+card. `createTournament` and `createRematch` share `newTournamentDoc` and `inviteMessage`.
+
+### Anstupsen
+
+`nudgeOpponent` + `NudgeButton` (`online/nudge-button.tsx`): once an online board has stood
+still for `NUDGE_AFTER_MS` (2 min) the waiting player can send "{{name}} wartet auf dich",
+then once per `NUDGE_COOLDOWN_MS` (10 min) per match — `waitingOn` (`lib/games/nudge.ts`)
+knows whose move, missing hand or "ready" it is. The rate limit lives server-only in
+`tournaments/{id}/nudges/{matchId}`. The nudge push has its own tag (with the time), so it
+buzzes even over an earlier "Du bist dran" for the match. `pushReach` (`push/deliver.ts`) tells
+the waiting player whether it reached anyone — "schaut gerade aufs Spiel", "hat keine
+Benachrichtigungen an" (then a prefilled WhatsApp reminder is one tap away).
+
+### Rubbellos online
+
+ADR-005. The scratch dialog offers "Wo spielt ihr? Online" for a new bill (`DuelPlacePicker`
+with its own hint). `createLuckRound` (`lib/actions/luck-rounds.ts`) writes
+`groups/{id}/luckRounds/{roundId}`, sets `Group.activeLuckRound`, posts a `luckInvite` join
+card and sends the challenge push (`luckChallengePushes`). Everyone scratches their own card
+on `/groups/[groupId]/rounds/[roundId]` (`LuckRoundPageClient`), watching the others' foil drop
+live; `ScratchCard` takes `isLoser: null` (a "?" under the foil, a spinner while the server
+draws), `disabled` for someone else's card, and `payLabel` ("Zahlt!" on others' cards).
+
+- **Drawn when scratched.** `revealScratchCard` draws the card's face in its transaction:
+  "zahlt" with probability (payer cards left) / (cards left) (`drawScratchCard`,
+  `lib/games/luck-round.ts`) — a shuffled deck's distribution, pinned by a Monte-Carlo test,
+  with no dealt secret to read. Scratching an already scratched card just repeats its answer.
+- **Who scratches what.** Your own card; a placeholder's is scratched by the round's creator
+  (`canScratchFor`). "Restliche Lose aufdecken" (creator or manager) draws whatever is left, so
+  nobody holds the bill up. Calling a round off is possible only before the first card.
+- **The end.** The last card books the bill (`buildGameExpense` with the game record), clears
+  `activeLuckRound`, posts the result card. `LuckRoundBanner` on the group page reads the
+  pointer from the group document and only then the round ("Rubbel dein Los!").
 
 ## Related
 

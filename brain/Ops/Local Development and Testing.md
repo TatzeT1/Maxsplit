@@ -52,7 +52,8 @@ Google anmelden") — no real Google account needed.
   `src/lib/payment/{validate,paypal-me}.test.ts`, `src/lib/groups/invite-code.test.ts`,
   `src/lib/recurring/schedule.test.ts`, `src/lib/i18n/translate.test.ts`,
   `src/lib/firebase/config.test.ts`, `src/lib/use-visible-height.test.ts`,
-  `src/lib/games/{knockout-ladder,use-knockout-ladder,tic-tac-toe,connect-four,memory-duel,reaction-duel,rock-paper-scissors,nim,use-turn-fuse,dots-and-boxes,balloon,dice-cup,duck-race,pegboard,pegboard-layout,online-match}.test.ts`
+  `src/lib/games/{knockout-ladder,use-knockout-ladder,tic-tac-toe,connect-four,memory-duel,reaction-duel,rock-paper-scissors,nim,use-turn-fuse,dots-and-boxes,balloon,dice-cup,duck-race,pegboard,pegboard-layout,online-match,game-memory,expense-game,game-stats,rematch,nudge,luck-round}.test.ts`,
+  `src/lib/chat/game-result.test.ts`, `src/lib/sound/game-sounds.test.ts`
   (see [[Split Games]] for what each pure module encodes). This is where [[Money Invariants]]'
   guarantees (rounding remainders, multi-payer attribution, zero-sum) are actually pinned down —
   read these before changing split/balance logic, they encode the invariants as concrete cases,
@@ -77,7 +78,9 @@ see [[Deployment and Production Debugging]].
 Push delivery (`src/lib/push/notify.ts`, built on `after()`, which throws outside a
 request) is swapped for `src/test/push-mock.ts` in every emulator test — read what an
 action would have sent from `sentPushes`. An action that needs the request's language
-(`getServerT`, a cookie) must be mocked per test file, as `push.emulator.test.ts` does.
+(`getServerT`, a cookie) gets a German translator from `vitest.emulator.setup.ts`, mocked
+for every emulator test file since 2026-10 (game invites and results write chat text from
+several actions).
 
 **Service worker, offline and push by hand.** The worker only registers in production
 builds (`pnpm build && pnpm start`), never in `pnpm dev`. Offline: Playwright's

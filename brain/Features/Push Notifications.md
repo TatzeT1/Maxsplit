@@ -14,6 +14,10 @@ Five events, each switchable in the profile (ADR-004 in `docs/DECISIONS.md`):
 | `turn` — Du bist dran            | the player to move / whose match is waiting                       | "Lea hat gezogen – Tic-Tac-Toe in WG Küche"                            |
 | `chat` — Chat-Nachricht          | every other member with an account; one `tag` per group chat      | "Max: Wer bringt Getränke mit?"                                        |
 
+A challenge also goes out for an online luck round ("Max lädt dich zum Rubbellos ein") and
+for a "Revanche". "Anstupsen" sends an extra `turn` push — its own tag, so it buzzes over an
+earlier one — and asks `pushReach` (`deliver.ts`) first whether it can reach anyone at all.
+
 Placeholders never get one (no account, no device). Recurring bookings (cron) and a
 game's auto-booked stake also produce `expense` pushes — the stake one skips the game's
 players, who watched it happen.

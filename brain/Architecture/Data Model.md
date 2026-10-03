@@ -24,6 +24,8 @@ groups/{groupId}
   groups/{groupId}/tournaments/{tournamentId}/liveMatches/{matchId}   (online play, doc id == bracket match id)
   groups/{groupId}/tournaments/{tournamentId}/liveSecrets/{matchId}   (hidden memory deck — no client reads)
   groups/{groupId}/tournaments/{tournamentId}/presence/{uid}          (server-only "watching" heartbeat)
+  groups/{groupId}/tournaments/{tournamentId}/nudges/{matchId}        (server-only "Anstupsen" rate limit)
+  groups/{groupId}/luckRounds/{roundId}                               (online luck round — ADR-005)
 ```
 
 All money is **integer minor units** (cents) plus an ISO-4217 `currency` string. Never a
@@ -79,6 +81,11 @@ ExpenseSplit>` where `ExpenseSplit = { rawValue, amountMinor }` — `rawValue` i
   mini-games (see [[Split Games]]) rather than manual entry. The name predates every game but
   the original lottery and is kept as-is rather than migrated. Forward-only marker; rounds
   played before a given game shipped aren't retroactively flagged.
+- `game?: { gameId, playerUids, attempt } | null` — since 2026-10, next to `viaLottery`: which
+  game decided it, who was in the pool, and in which attempt (rounds the form started, "Neu
+  mischen" included). Validated server-side (`normalizeExpenseGame`); absent on older
+  expenses, `null` after an edit replaced the game's split by hand. Feeds the Spiele tab and
+  the chat's result card — see [[Split Games]].
 
 ## `Settlement`
 
@@ -127,7 +134,23 @@ deck lives in `liveSecrets/{matchId}`, which rules make unreadable — faces onl
 public `state` once flipped.
 
 `ChatMessage.gameInvite` (`{ tournamentId, gameId }`, absent on normal messages) marks the
-automatic challenge an online game posts; the chat renders it as a join card.
+automatic challenge an online game posts; the chat renders it as a join card. Since 2026-10
+also `luckInvite` (`{ roundId, gameId }`, an online luck round) and `gameResult`
+(`ChatGameResult`: game, losers, a sole winner, the amount, the attempt, and the
+tournament's or round's id) — see [[Chat]].
+
+`Tournament.rematchId` (absent until someone asks for a "Revanche") points at the rematch,
+so a second player's tap joins it instead of starting another.
+
+## `LuckRound`
+
+One online luck round (`groups/{groupId}/luckRounds/{roundId}`, ADR-005), for now the scratch
+cards: `entrants` (name snapshot), `order` (card order, server-shuffled), `targetLoserCount`,
+`revealed: Record<uid, boolean>` (filled card by card — a face is drawn only when scratched,
+so there is no secret anywhere), `revealedBy`, `loserUids` once done, and the bill
+(`stake`, `autoBook`, `expenseId`, `autoBookError`). `Group.activeLuckRound`
+(`{ id, gameId } | null`, absent on groups that never had one) points at the running round
+so the group page's banner needs no extra listener.
 
 ## `ChatMessage` / `ChatRead`
 

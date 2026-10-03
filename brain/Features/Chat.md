@@ -23,6 +23,14 @@ component (client-side limit) — the standard "define once, use in both places 
 agree" pattern in this codebase (compare `src/lib/i18n/de.ts` as the single source for UI
 strings).
 
+## Game messages
+
+Three kinds of automatic message carry structure next to their fallback `text` (which is
+what previews show): `gameInvite` (an online duel's challenge or a "Revanche"), `luckInvite`
+(an online luck round) and `gameResult` (how a decided game ended — see [[Split Games]]).
+`chat-client.tsx` renders them as cards with a way in. They're written by the server in the
+same write as the game event and never trigger a chat push of their own.
+
 ## Ownership
 
 `deleteMessage` requires `message.senderUid === session.uid` — **no manager override** here,
@@ -34,8 +42,9 @@ group admin cannot delete someone else's chat message.
 `markChatRead` upserts `groups/{groupId}/chatReads/{session.uid}` = `{ lastReadAt }`. Because
 the doc id **is** the uid (see [[Data Model]] and [[Firestore Rules]]), there's no id to pass
 in — the action always targets exactly the caller's own receipt. The unread badge is driven by
-comparing this against the newest message's `createdAt`; absent entirely counts as "never
-read."
+comparing this against the newest messages' `createdAt` — the last five, of which your own
+never count (a game result your expense just posted mustn't light the dot for you); absent
+entirely counts as "never read."
 
 ## Mobile layout dependency
 
