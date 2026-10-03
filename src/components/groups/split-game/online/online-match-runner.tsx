@@ -408,7 +408,7 @@ export function OnlineMatchRunner({
 
       {me !== null && !decided && opponentUid && (
         <NudgeButton
-          key={live.version}
+          key={`nudge-${live.version}`}
           groupId={groupId}
           tournament={tournament}
           live={live}
