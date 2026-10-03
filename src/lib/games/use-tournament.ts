@@ -1,6 +1,15 @@
 "use client";
 
-import { collection, doc, getDocFromServer, onSnapshot, query, where } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  getDocFromServer,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
@@ -79,6 +88,52 @@ export function useRunningTournaments(groupId: string): {
   }, [groupId, user]);
 
   return { tournaments, errorCode };
+}
+
+/** How many finished tournaments the Spiele tab reads — years of play for a group of friends. */
+const FINISHED_TOURNAMENTS_LIMIT = 200;
+
+/**
+ * A group's finished tournaments, newest first — the Spiele tab's duel
+ * statistics (`game-stats.ts`). Subscribes only once `enabled` (the tab has
+ * been opened): the group page mounts every tab, and most visits never look
+ * at this. A range on `finishedAt` (set only once a bracket is decided)
+ * rather than `status ==`, so the newest-first order needs no composite index.
+ *
+ * `cachedEmpty` means offline with no copy on this device — per AGENTS.md
+ * that must render as "needs a connection", never as "no duels yet".
+ */
+export function useFinishedTournaments(
+  groupId: string,
+  enabled: boolean,
+): { tournaments: Tournament[] | null; errorCode: string | null; cachedEmpty: boolean } {
+  const user = useCurrentUser();
+  const [tournaments, setTournaments] = useState<Tournament[] | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
+  const [cachedEmpty, setCachedEmpty] = useState(false);
+
+  useEffect(() => {
+    if (!user || !enabled) return;
+    const finishedQuery = query(
+      collection(db, "groups", groupId, "tournaments"),
+      where("finishedAt", ">", ""),
+      orderBy("finishedAt", "desc"),
+      limit(FINISHED_TOURNAMENTS_LIMIT),
+    );
+    return onSnapshot(
+      finishedQuery,
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        setCachedEmpty(snapshot.metadata.fromCache && snapshot.empty);
+        setTournaments(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Tournament));
+      },
+      (error) => {
+        setErrorCode(reportSnapshotError("finished-tournaments", error));
+      },
+    );
+  }, [groupId, user, enabled]);
+
+  return { tournaments, errorCode, cachedEmpty };
 }
 
 /** How often an undecided online match double-checks the server, beyond its listener. */

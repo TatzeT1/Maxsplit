@@ -383,7 +383,12 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
             forceMount
             className="animate-rise pt-2 data-[state=inactive]:hidden"
           >
-            <GamesTab expenses={expenses} group={group} currentUid={user.uid} />
+            <GamesTab
+              expenses={expenses}
+              group={group}
+              currentUid={user.uid}
+              active={tab === "games"}
+            />
           </TabsContent>
           <TabsContent
             value="group"
