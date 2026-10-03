@@ -6,6 +6,7 @@ import { DialogDescription } from "@/components/ui/dialog";
 import { useT } from "@/components/locale-provider";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { ConfettiBurst, celebrationColors } from "@/components/groups/split-game/celebration";
+import { useGameHasStake } from "@/components/groups/split-game/tournament/tournament-fate";
 import { memberColor } from "@/lib/games/member-colors";
 import { STAGGER_STEP } from "@/lib/motion";
 import { nameHash } from "@/lib/utils";
@@ -35,11 +36,17 @@ export function GameResultBanner({
   const ResultText = inDialog ? DialogDescription : "p";
   const reduceMotion = useReducedMotion();
   const avatarsRef = useRef<HTMLDivElement | null>(null);
+  // A game played just for fun has nobody paying — its losers just lose.
+  const withStake = useGameHasStake();
   const loserNames = loserUids.map((uid) => members[uid].displayName);
   const resultText =
     loserNames.length === 1
-      ? t("expenses.gameResultOne", { name: loserNames[0] })
-      : t("expenses.gameResultMultiple", { names: loserNames.join(", ") });
+      ? t(withStake ? "expenses.gameResultOne" : "expenses.gameResultOneFree", {
+          name: loserNames[0],
+        })
+      : t(withStake ? "expenses.gameResultMultiple" : "expenses.gameResultMultipleFree", {
+          names: loserNames.join(", "),
+        });
 
   return (
     <div className="border-primary/30 bg-primary/5 animate-rise relative flex flex-col items-center gap-2 overflow-hidden rounded-xl border p-4 text-center">

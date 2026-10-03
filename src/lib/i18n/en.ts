@@ -475,6 +475,8 @@ export const en: Dictionary = {
     gameResultEyebrow: "Result",
     gameResultOne: "{{name}} pays.",
     gameResultMultiple: "{{names}} pay.",
+    gameResultOneFree: "{{name}} loses.",
+    gameResultMultipleFree: "{{names}} lose.",
     gameApply: "Apply",
     gamePlayAgain: "Reshuffle",
     tournamentModeLabel: "Format",

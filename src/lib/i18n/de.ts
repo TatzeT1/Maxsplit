@@ -481,6 +481,8 @@ export const de = {
     gameResultEyebrow: "Ergebnis",
     gameResultOne: "{{name}} zahlt.",
     gameResultMultiple: "{{names}} zahlen.",
+    gameResultOneFree: "{{name}} verliert.",
+    gameResultMultipleFree: "{{names}} verlieren.",
     gameApply: "Übernehmen",
     gamePlayAgain: "Neu mischen",
     tournamentModeLabel: "Format",

@@ -48,6 +48,11 @@ export const FATE_LABEL_KEY: Record<MatchFate, TranslationKey> = {
 const StakeContext = createContext(true);
 export const TournamentStakeProvider = StakeContext.Provider;
 
+/** Whether the surrounding game is played for money (true outside a tournament view). */
+export function useGameHasStake(): boolean {
+  return useContext(StakeContext);
+}
+
 /** The label table for the surrounding game: "zahlt" with a stake, "verliert" without. */
 export function useFateLabelKeys(): Record<MatchFate, TranslationKey> {
   const withStake = useContext(StakeContext);
