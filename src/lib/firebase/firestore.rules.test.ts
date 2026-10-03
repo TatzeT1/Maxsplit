@@ -277,6 +277,38 @@ describe("firestore.rules", () => {
     );
   });
 
+  it("allows a member to watch an online luck round, and nobody else", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/luckRounds/r1")
+        .set({ gameId: "scratch", status: "running", revealed: {} });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    await assertSucceeds(getDoc(doc(alice, "groups/group1/luckRounds/r1")));
+    await assertFails(getDoc(doc(bob, "groups/group1/luckRounds/r1")));
+  });
+
+  it("denies a member scratching a card by writing to the round", async () => {
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/luckRounds/r1"), { revealed: { alice: false } }),
+    );
+  });
+
+  it("denies a member reading or resetting the nudge rate limit", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/tournaments/t1/nudges/m1")
+        .set({ at: "2026-10-03T12:00:00.000Z", byUid: "alice" });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1/tournaments/t1/nudges/m1")));
+    await assertFails(setDoc(doc(alice, "groups/group1/tournaments/t1/nudges/m1"), { at: "x" }));
+  });
+
   it("denies a member from reading or faking game presence", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await context

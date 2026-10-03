@@ -31,7 +31,14 @@ import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setu
 import { GameResultBanner } from "@/components/groups/split-game/game-result-banner";
 import { GameProgressPips } from "@/components/groups/split-game/game-progress-pips";
 import { ScratchCard } from "@/components/groups/split-game/scratch-card";
-import type { GroupMember } from "@/lib/types";
+import {
+  DuelPlacePicker,
+  type DuelPlace,
+} from "@/components/groups/split-game/tournament/tournament-mode-picker";
+import { createLuckRound } from "@/lib/actions/luck-rounds";
+import { callAction } from "@/lib/call-action";
+import { useOnline } from "@/lib/use-online";
+import type { GameExpenseDraft, GroupMember } from "@/lib/types";
 
 type Step = "setup" | "playing";
 
@@ -58,6 +65,8 @@ export function SplitScratchDialog({
   memberUids,
   groupId,
   onResolve,
+  expenseDraft,
+  onRoundStarted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -67,6 +76,14 @@ export function SplitScratchDialog({
   groupId?: string;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
+  /**
+   * The bill an online round books by itself once every card is scratched.
+   * `undefined` = this form can't (editing an expense): online isn't offered.
+   * `null` = it could, but the form isn't complete yet.
+   */
+  expenseDraft?: GameExpenseDraft | null;
+  /** An online round started — the caller closes the form and opens its page. */
+  onRoundStarted?: (roundId: string) => void;
 }) {
   const t = useT();
   const { startRound } = useGameRound();
@@ -81,6 +98,12 @@ export function SplitScratchDialog({
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
   const draw = useSequentialDraw();
+  const online = useOnline();
+  // Online: everyone scratches their own card on their own phone (ADR-005).
+  const [place, setPlace] = useState<DuelPlace>("device");
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
+  const canOfferOnline = !!groupId && expenseDraft !== undefined && !!onRoundStarted;
 
   useEffect(() => {
     return () => {
@@ -110,7 +133,53 @@ export function SplitScratchDialog({
     setLoserCountInput(String(Math.min(Math.max(loserCount + delta, 1), maxLoserCount)));
   }
 
+  // Two people with an account are needed to scratch anywhere but here.
+  const playersWithPhone = poolUids.filter((uid) => members[uid]?.isPlaceholder !== true);
+  const onlineUnavailableHint =
+    expenseDraft === undefined
+      ? t("expenses.duelPlaceOnlineEditHint")
+      : playersWithPhone.length < 2
+        ? t("expenses.duelPlaceOnlineMinHint")
+        : null;
+  const setupPlace: DuelPlace = canOfferOnline && onlineUnavailableHint === null ? place : "device";
+
+  async function startOnline() {
+    // The round books the bill by itself at the end — it has to be complete now.
+    if (!expenseDraft || !groupId || !onRoundStarted) {
+      setStartError(t("expenses.duelNeedsExpense"));
+      return;
+    }
+    setStarting(true);
+    setStartError(null);
+    const result = await callAction(() =>
+      createLuckRound({
+        groupId,
+        gameId: "scratch",
+        poolUids,
+        targetLoserCount: loserCount,
+        autoBook: expenseDraft,
+      }),
+    );
+    setStarting(false);
+    if (!result.ok) {
+      setStartError(
+        result.error === "round-running"
+          ? t("expenses.luckRoundRunning")
+          : result.error === "network"
+            ? t("errors.notSaved")
+            : t("expenses.luckStartError"),
+      );
+      return;
+    }
+    rememberSetup(groupId, { poolUids, loserCount });
+    onRoundStarted(result.data.roundId);
+  }
+
   function startGame() {
+    if (setupPlace === "online") {
+      void startOnline();
+      return;
+    }
     startRound();
     rememberSetup(groupId, { poolUids, loserCount });
     draw.start(poolUids, loserCount);
@@ -203,18 +272,38 @@ export function SplitScratchDialog({
         </DialogHeader>
 
         {step === "setup" ? (
-          <GamePoolSetupStep
-            memberUids={memberUids}
-            members={members}
-            poolUids={poolUids}
-            onTogglePoolMember={togglePoolMember}
-            loserCount={loserCount}
-            maxLoserCount={maxLoserCount}
-            onStepLoserCount={stepLoserCount}
-            stepperDirection={stepperDirection}
-            countHint={t("expenses.scratchCountHint")}
-            countIcon="🎫"
-          />
+          <div className="flex flex-col gap-4">
+            {canOfferOnline && (
+              <DuelPlacePicker
+                place={setupPlace}
+                onPlaceChange={setPlace}
+                onlineUnavailableHint={onlineUnavailableHint}
+                onlineHint={t("expenses.luckPlaceOnlineHint")}
+              />
+            )}
+            <GamePoolSetupStep
+              memberUids={memberUids}
+              members={members}
+              poolUids={poolUids}
+              onTogglePoolMember={togglePoolMember}
+              loserCount={loserCount}
+              maxLoserCount={maxLoserCount}
+              onStepLoserCount={stepLoserCount}
+              stepperDirection={stepperDirection}
+              countHint={t("expenses.scratchCountHint")}
+              countIcon="🎫"
+            />
+            {setupPlace === "online" && !online && (
+              <p role="alert" className="text-destructive text-sm">
+                {t("offline.gameNeedsConnection")}
+              </p>
+            )}
+            {startError && (
+              <p role="alert" className="text-destructive text-sm">
+                {startError}
+              </p>
+            )}
+          </div>
         ) : (
           <div ref={stageRef} className="flex flex-col gap-3">
             {showVerdict ? (
@@ -254,10 +343,14 @@ export function SplitScratchDialog({
               type="button"
               size="lg"
               className="flex-1"
-              disabled={poolUids.length < 2}
+              disabled={poolUids.length < 2 || starting || (setupPlace === "online" && !online)}
               onClick={startGame}
             >
-              {t("expenses.gameStart")}
+              {starting
+                ? t("common.loading")
+                : setupPlace === "online"
+                  ? t("expenses.luckOnlineStart")
+                  : t("expenses.gameStart")}
             </Button>
           ) : allScratched ? (
             <>

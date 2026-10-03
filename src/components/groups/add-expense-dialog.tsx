@@ -419,10 +419,19 @@ export function AddExpenseDialog({
 
   /** A self-booking game started: this bill is now the game's — clear the form so it can't be saved twice, and go watch it. */
   function handleServerGameStarted(tournamentId: string) {
+    openSelfBookingGame(`/groups/${groupId}/tournaments/${tournamentId}`);
+  }
+
+  /** The same for an online luck round, which lives on its own page. */
+  function handleLuckRoundStarted(roundId: string) {
+    openSelfBookingGame(`/groups/${groupId}/rounds/${roundId}`);
+  }
+
+  function openSelfBookingGame(path: string) {
     setActiveGame(null);
     setOpen(false);
     resetForm();
-    router.push(`/groups/${groupId}/tournaments/${tournamentId}`);
+    router.push(path);
   }
 
   const expenseDraft = buildExpenseDraft();
@@ -819,6 +828,8 @@ export function AddExpenseDialog({
             memberUids={memberUids}
             groupId={groupId}
             onResolve={handleSplitGameResolve}
+            expenseDraft={expenseDraft}
+            onRoundStarted={handleLuckRoundStarted}
           />
         )}
         {mountedGames.has("balloon") && (

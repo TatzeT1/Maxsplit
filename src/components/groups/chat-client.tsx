@@ -121,8 +121,27 @@ function MessageBubble({
         {message.gameInvite ? (
           <GameInviteBubble
             text={message.text}
-            invite={message.gameInvite}
-            groupId={groupId}
+            emoji={DUEL_GAME_META[message.gameInvite.gameId]?.emoji}
+            title={
+              DUEL_GAME_META[message.gameInvite.gameId]
+                ? t(DUEL_GAME_META[message.gameInvite.gameId].titleKey)
+                : ""
+            }
+            eyebrow={t("chat.gameInviteEyebrow")}
+            href={`/groups/${groupId}/tournaments/${message.gameInvite.tournamentId}`}
+            isOwn={isOwn}
+          />
+        ) : message.luckInvite ? (
+          <GameInviteBubble
+            text={message.text}
+            emoji={SPLIT_GAME_META[message.luckInvite.gameId]?.emoji}
+            title={
+              SPLIT_GAME_META[message.luckInvite.gameId]
+                ? t(SPLIT_GAME_META[message.luckInvite.gameId].nameKey)
+                : ""
+            }
+            eyebrow={t("chat.luckInviteEyebrow")}
+            href={`/groups/${groupId}/rounds/${message.luckInvite.roundId}`}
             isOwn={isOwn}
           />
         ) : message.gameResult ? (
@@ -153,23 +172,27 @@ function MessageBubble({
 }
 
 /**
- * The challenge an online game posts when it starts — a card with a way in,
- * not just a sentence, since joining is the whole point of the message.
- * Same neutral card for both sides; only the button label changes.
+ * The invitation an online game posts when it starts — a duel's challenge or
+ * a luck round — as a card with a way in, not just a sentence, since joining
+ * is the whole point of the message. Same neutral card for both sides; only
+ * the button label changes.
  */
 function GameInviteBubble({
   text,
-  invite,
-  groupId,
+  emoji,
+  title,
+  eyebrow,
+  href,
   isOwn,
 }: {
   text: string;
-  invite: NonNullable<ChatMessage["gameInvite"]>;
-  groupId: string;
+  emoji: string | undefined;
+  title: string;
+  eyebrow: string;
+  href: string;
   isOwn: boolean;
 }) {
   const t = useT();
-  const meta = DUEL_GAME_META[invite.gameId];
   return (
     <div
       className={cn(
@@ -182,20 +205,18 @@ function GameInviteBubble({
           aria-hidden="true"
           className="bg-primary/10 flex size-10 shrink-0 items-center justify-center rounded-xl text-xl"
         >
-          {meta?.emoji ?? "🎮"}
+          {emoji ?? "🎮"}
         </span>
         <div className="flex min-w-0 flex-col">
           <span className="text-primary text-[11px] font-semibold tracking-[0.12em] uppercase">
-            {t("chat.gameInviteEyebrow")}
+            {eyebrow}
           </span>
-          <span className="font-heading truncate text-base leading-tight font-medium">
-            {meta ? t(meta.titleKey) : ""}
-          </span>
+          <span className="font-heading truncate text-base leading-tight font-medium">{title}</span>
         </div>
       </div>
       <p className="text-muted-foreground text-sm break-words whitespace-pre-wrap">{text}</p>
       <Button asChild size="sm" variant={isOwn ? "outline" : "default"} className="h-10 w-full">
-        <Link href={`/groups/${groupId}/tournaments/${invite.tournamentId}`}>
+        <Link href={href}>
           {isOwn ? t("chat.gameInviteOpen") : t("chat.gameInviteJoin")}
           <ChevronRight aria-hidden="true" />
         </Link>
@@ -257,12 +278,16 @@ function GameResultBubble({
       <Button asChild size="sm" variant="outline" className="h-10 w-full">
         <Link
           href={
-            result.tournamentId
-              ? `/groups/${groupId}/tournaments/${result.tournamentId}`
-              : `/groups/${groupId}?tab=games`
+            result.roundId
+              ? `/groups/${groupId}/rounds/${result.roundId}`
+              : result.tournamentId
+                ? `/groups/${groupId}/tournaments/${result.tournamentId}`
+                : `/groups/${groupId}?tab=games`
           }
         >
-          {result.tournamentId ? t("chat.gameResultOpenGame") : t("chat.gameResultOpenStats")}
+          {result.roundId || result.tournamentId
+            ? t("chat.gameResultOpenGame")
+            : t("chat.gameResultOpenStats")}
           <ChevronRight aria-hidden="true" />
         </Link>
       </Button>

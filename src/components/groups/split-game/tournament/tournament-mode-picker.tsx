@@ -92,11 +92,14 @@ export function DuelPlacePicker({
   place,
   onPlaceChange,
   onlineUnavailableHint,
+  onlineHint,
 }: {
   place: DuelPlace;
   onPlaceChange: (place: DuelPlace) => void;
   /** Why online can't be picked right now, or `null` when it can. */
   onlineUnavailableHint: string | null;
+  /** What "Online" means for this game; a duel's "Zug für Zug live" by default. */
+  onlineHint?: string;
 }) {
   const t = useT();
   return (
@@ -115,7 +118,7 @@ export function DuelPlacePicker({
         {
           value: "online",
           title: t("expenses.duelPlaceOnline"),
-          hint: onlineUnavailableHint ?? t("expenses.duelPlaceOnlineHint"),
+          hint: onlineUnavailableHint ?? onlineHint ?? t("expenses.duelPlaceOnlineHint"),
           icon: Wifi,
           disabled: onlineUnavailableHint !== null,
         },

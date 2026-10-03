@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { type PointerEvent as ReactPointerEvent, useEffect, useRef } from "react";
 import { useT } from "@/components/locale-provider";
@@ -44,17 +44,29 @@ function paintFoil(ctx: CanvasRenderingContext2D, width: number, height: number)
  * off the card and a puff of foil flakes (plus the card owner's colors) goes
  * up from it. A losing card then gets a rubber stamp in the owner's ink; the
  * dialog layers the full takeover on top of that.
+ *
+ * Online (`isLoser: null`) the face isn't known yet — the server draws it
+ * when the card is scratched — so a neutral "?" waits under the foil, and a
+ * spinner while the answer is on its way (`pending`). Someone else's card
+ * is `disabled`: watched, not scratched, its foil dropping when they reveal.
  */
 export function ScratchCard({
   name,
   isLoser,
   scratched,
   onReveal,
+  disabled = false,
+  pending = false,
+  payLabel,
 }: {
   name: string;
-  isLoser: boolean;
+  isLoser: boolean | null;
   scratched: boolean;
   onReveal: () => void;
+  disabled?: boolean;
+  pending?: boolean;
+  /** The stamp on a paying card — "Du zahlst!" by default, for the card's owner. */
+  payLabel?: string;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
@@ -116,7 +128,7 @@ export function ScratchCard({
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (scratched) return;
+    if (scratched || disabled) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     drawingRef.current = true;
     const point = pointerToLocal(event);
@@ -124,7 +136,7 @@ export function ScratchCard({
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!drawingRef.current || scratched) return;
+    if (!drawingRef.current || scratched || disabled) return;
     const point = pointerToLocal(event);
     scratchAt(point.x, point.y);
   }
@@ -155,10 +167,18 @@ export function ScratchCard({
           <GameAvatar name={name} className="size-8 text-sm" />
         </span>
         <span className="w-full truncate text-xs font-medium">{name}</span>
-        {isLoser ? (
+        {isLoser === null ? (
+          pending ? (
+            <Loader2 aria-hidden="true" className="text-muted-foreground size-5 animate-spin" />
+          ) : (
+            <span aria-hidden="true" className="font-heading text-muted-foreground text-lg">
+              ?
+            </span>
+          )
+        ) : isLoser ? (
           scratched ? (
             <InkStamp
-              label={t("expenses.scratchResultPay")}
+              label={payLabel ?? t("expenses.scratchResultPay")}
               name={name}
               size="sm"
               className="mt-0.5"
@@ -191,7 +211,7 @@ export function ScratchCard({
           <motion.canvas
             key="foil"
             ref={canvasRef}
-            className="absolute inset-0 size-full touch-none"
+            className={cn("absolute inset-0 size-full", !disabled && "touch-none")}
             aria-hidden="true"
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
@@ -220,7 +240,7 @@ export function ScratchCard({
           className="animate-shimmer pointer-events-none absolute inset-0 bg-linear-to-r from-transparent via-white/30 to-transparent"
         />
       )}
-      {!scratched && (
+      {!scratched && !disabled && (
         <button
           type="button"
           onClick={onReveal}

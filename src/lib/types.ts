@@ -60,6 +60,13 @@ export interface Group {
    * groups created before this field existed, until their next mutation.
    */
   balancesMinor?: Record<string, number>;
+  /**
+   * The online luck round running in this group, if any — lets the group
+   * page show its banner without another listener. Set and cleared by
+   * `lib/actions/luck-rounds.ts` with the round itself. Absent on groups that
+   * never played one.
+   */
+  activeLuckRound?: { id: string; gameId: OnlineLuckGameId } | null;
 }
 
 export interface ExpenseSplit {
@@ -165,6 +172,8 @@ export interface ChatMessage {
   gameInvite?: { tournamentId: string; gameId: DuelGameId };
   /** Set on the automatic message a decided game posts — renders as a result card. Absent on normal messages. */
   gameResult?: ChatGameResult;
+  /** Set on the automatic message an online luck round posts when it starts — a join card. */
+  luckInvite?: { roundId: string; gameId: OnlineLuckGameId };
 }
 
 /** What a decided game tells the group chat — see `ChatMessage.gameResult`. */
@@ -178,8 +187,10 @@ export interface ChatGameResult {
   amount: { description: string; amountMinor: number; currency: string } | null;
   /** As on `ExpenseGame`: 1 = the first round, more = reshuffled. */
   attempt: number;
-  /** A server-run game's page; `null` for a game played in the expense form. */
+  /** A server-run duel's page; `null` for a game played in the expense form. */
   tournamentId: string | null;
+  /** An online luck round's page (absent on older cards). */
+  roundId?: string | null;
 }
 
 /**
@@ -202,6 +213,49 @@ export type LuckGameId =
 
 /** Every split mini-game, luck and duel. */
 export type SplitGameId = LuckGameId | DuelGameId;
+
+/** The luck games that can be played online, everyone on their own phone. */
+export type OnlineLuckGameId = "scratch";
+
+export type LuckRoundStatus = "running" | "finished" | "cancelled";
+
+/**
+ * One online round of a luck game (`groups/{groupId}/luckRounds/{roundId}`),
+ * everyone on their own phone — for now the scratch cards: each player
+ * scratches their own. Written only by `lib/actions/luck-rounds.ts`, read
+ * live by every device. No face is dealt in advance; each card is drawn the
+ * moment it's scratched (`lib/games/luck-round.ts`), so there's no secret
+ * to keep. Always for a bill: it books the expense when the last card is
+ * scratched (`autoBook`), like a self-booking duel.
+ */
+export interface LuckRound {
+  id: string;
+  gameId: OnlineLuckGameId;
+  status: LuckRoundStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+  cancelledAt: string | null;
+  cancelledBy: string | null;
+  /** Name snapshot at creation, like a tournament's. A placeholder's card is scratched by the creator. */
+  entrants: Record<string, { displayName: string; isPlaceholder: boolean }>;
+  /** The cards' order on screen, drawn by the server; the payers are listed in it too. */
+  order: string[];
+  targetLoserCount: number;
+  /** Per scratched card: `true` = "zahlt". Absent while under foil. */
+  revealed: Record<string, boolean>;
+  /** Who scratched each card — the player, or the creator for a placeholder or "Rest aufdecken". */
+  revealedBy: Record<string, string>;
+  /** Set once every card is scratched. */
+  loserUids: string[] | null;
+  /** The bill behind the round, shown on it. */
+  stake: { description: string; amountMinor: number; currency: string };
+  autoBook: GameExpenseDraft;
+  expenseId: string | null;
+  /** Why the bill couldn't be booked at the end (e.g. a payer left the group meanwhile). */
+  autoBookError: string | null;
+}
 
 export type TournamentStatus = "running" | "finished" | "cancelled";
 

@@ -1,10 +1,13 @@
 import { formatMoney } from "@/lib/format/money";
 import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
+import { SPLIT_GAME_META } from "@/lib/games/split-game-ids";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import type {
   DuelGameId,
   Expense,
   Group,
+  LuckRound,
+  OnlineLuckGameId,
   Settlement,
   Tournament,
   TournamentMatch,
@@ -195,6 +198,47 @@ export function challengePushes(input: {
       url: tournamentUrl(input.groupId, input.tournamentId),
       tag: `challenge-${input.tournamentId}`,
       // A challenge nobody sees within hours has usually been played without them.
+      ttlSeconds: 6 * HOUR,
+    }));
+}
+
+/** Where an online luck round is played. */
+export function luckRoundUrl(groupId: string, roundId: string): string {
+  return `/groups/${groupId}/rounds/${roundId}`;
+}
+
+/**
+ * "Herausforderung" for an online luck round: everyone with a card waiting,
+ * except whoever started it. Same switch as a duel's challenge.
+ */
+export function luckChallengePushes(input: {
+  groupId: string;
+  group: GroupInfo;
+  roundId: string;
+  gameId: OnlineLuckGameId;
+  stake: LuckRound["stake"];
+  poolUids: readonly string[];
+  actorUid: string;
+}): PendingPush[] {
+  const { group, stake } = input;
+  const name = group.members[input.actorUid]?.displayName ?? "";
+  const body: PushText = {
+    key: "push.luckChallenge",
+    vars: {
+      name,
+      game: { key: SPLIT_GAME_META[input.gameId].nameKey },
+      stake: `${stake.description} · ${formatMoney(stake.amountMinor, stake.currency)}`,
+    },
+  };
+  return input.poolUids
+    .filter((uid) => uid !== input.actorUid && hasAccount(group, uid))
+    .map((uid) => ({
+      uid,
+      event: "challenge",
+      title: { key: "push.challengeTitle", vars: { group: group.name } },
+      body: [body],
+      url: luckRoundUrl(input.groupId, input.roundId),
+      tag: `challenge-${input.roundId}`,
       ttlSeconds: 6 * HOUR,
     }));
 }

@@ -82,6 +82,21 @@ service cloud.firestore {
         match /presence/{uid} {
           allow read, write: if false;
         }
+
+        // When a match's waiting player last nudged the other (nudgeOpponent)
+        // — the server's rate limit, nothing a client needs.
+        match /nudges/{matchId} {
+          allow read, write: if false;
+        }
+      }
+
+      // An online luck round (ADR-005) — the scratch cards everyone
+      // scratches on their own phone. Every member watches it live; only
+      // lib/actions/luck-rounds.ts writes. No hidden state lives anywhere:
+      // a card's face is drawn by the server the moment it's scratched.
+      match /luckRounds/{roundId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if false;
       }
 
       // Doc id == uid, so a member can only ever read their own read
