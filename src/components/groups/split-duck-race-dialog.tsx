@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -96,12 +97,14 @@ export function SplitDuckRaceDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
-  onResolve: (loserUids: string[]) => void;
+  /** Who pays, and everyone who played (stored on the expense). */
+  onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
   const setup = useGamePoolSetup(memberUids, maxDuckLoserCount, groupId);
+  const { startRound } = useGameRound();
   const [staged, setStaged] = useState<Staged | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
   const [finished, setFinished] = useState<string[]>([]);
@@ -144,6 +147,7 @@ export function SplitDuckRaceDialog({
   }
 
   function startGame() {
+    startRound();
     setup.remember();
     // Decide first, animate after: the order is fixed before anything moves.
     const order = secureShuffle(setup.poolUids);
@@ -214,7 +218,7 @@ export function SplitDuckRaceDialog({
   function applyResult() {
     if (!staged) return;
     playAppliedSound();
-    onResolve(staged.losers);
+    onResolve(staged.losers, setup.poolUids);
     handleOpenChange(false);
   }
 

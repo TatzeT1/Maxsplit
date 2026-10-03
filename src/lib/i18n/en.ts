@@ -304,6 +304,11 @@ export const en: Dictionary = {
     gamePickerSurprise: "Surprise me",
     gamePreviewSurprised: "Picked at random",
     gamePreviewReroll: "Another game",
+    gameRoundNotice: "Attempt {{count}} — noted on the expense",
+    gameDecidedTitle: "Decided by a game",
+    gamePlayersCount: "{{count}} played",
+    gameAttemptFirst: "first try",
+    gameAttemptNth: "attempt {{count}}",
     gameLadderTitle: "More than two playing?",
     gameLadderExplainer:
       "Then it runs as a knockout ladder: whoever loses a duel pays and is out. Whoever wins stays on and faces the next drawn challenger — until enough payers are decided. From three people on, starting the game also offers a tournament mode with a real bracket everyone can follow live on their own phone.",

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -111,12 +112,14 @@ export function SplitDiceDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
-  onResolve: (loserUids: string[]) => void;
+  /** Who pays, and everyone who played (stored on the expense). */
+  onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
   const setup = useGamePoolSetup(memberUids, maxDiceLoserCount, groupId);
+  const { startRound } = useGameRound();
   const [game, setGame] = useState<DiceGame | null>(null);
   // Mirrors `game` so a quick double tap can't roll twice for the same person.
   const gameRef = useRef<DiceGame | null>(null);
@@ -159,6 +162,7 @@ export function SplitDiceDialog({
   }
 
   function startGame() {
+    startRound();
     setup.remember();
     resetStage();
     update(startDiceGame(setup.poolUids, setup.loserCount));
@@ -228,7 +232,7 @@ export function SplitDiceDialog({
   function applyResult() {
     if (!game) return;
     playAppliedSound();
-    onResolve(game.losers);
+    onResolve(game.losers, setup.poolUids);
     handleOpenChange(false);
   }
 

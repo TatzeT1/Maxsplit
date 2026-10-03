@@ -2,6 +2,7 @@
 
 import { AnimatePresence } from "motion/react";
 import { type ComponentType, useEffect, useRef, useState } from "react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,7 +54,8 @@ export interface SplitGameDialogProps {
   onOpenChange: (open: boolean) => void;
   members: Record<string, GroupMember>;
   memberUids: string[];
-  onResolve: (loserUids: string[]) => void;
+  /** Who pays, and everyone who played (stored on the expense). */
+  onResolve: (loserUids: string[], playerUids: string[]) => void;
   /** Needed only for tournament mode (live cross-device sync) — absent, the toggle never shows. */
   groupId?: string;
   currentUid?: string;
@@ -130,6 +132,7 @@ export function DuelGameDialog({
   config,
 }: SplitGameDialogProps & { config: DuelGameConfig }) {
   const t = useT();
+  const { startRound } = useGameRound();
   const [step, setStep] = useState<Step>("setup");
   const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
   const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
@@ -221,6 +224,7 @@ export function DuelGameDialog({
   }
 
   async function startGame() {
+    startRound();
     rememberSetup(groupId, { poolUids, loserCount });
     if (setupMode === "tournament" && groupId) {
       // A server-backed game books the expense itself at the end, so the
@@ -281,7 +285,7 @@ export function DuelGameDialog({
   /** A finished tournament's result, applied to the expense form exactly like the ladder's. */
   function applyTournamentResult(loserUids: string[]) {
     playAppliedSound();
-    onResolve(loserUids);
+    onResolve(loserUids, tournament ? Object.keys(tournament.entrants) : poolUids);
     setTournamentId(null);
     setMode("ladder");
     resetAll();
@@ -337,7 +341,7 @@ export function DuelGameDialog({
 
   function applyResult() {
     playAppliedSound();
-    onResolve(ladder.losers);
+    onResolve(ladder.losers, poolUids);
     handleOpenChange(false);
   }
 

@@ -3,8 +3,9 @@
 import * as React from "react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { Volume2, VolumeX, XIcon } from "lucide-react";
+import { RotateCcw, Volume2, VolumeX, XIcon } from "lucide-react";
 import Link from "next/link";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { useT } from "@/components/locale-provider";
 import { useGameSoundsMuted } from "@/lib/sound/use-game-sounds-muted";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,8 @@ const STAGE_FRAME =
 const STAGE_COLUMN = cn(
   // Children never shrink: the column grows and the frame scrolls instead.
   "mx-auto flex min-h-full w-full max-w-2xl min-w-0 flex-col gap-4 px-4 text-sm [&>*]:shrink-0",
+  // Header first, then the stage's own "n. Versuch" line, then the game's body.
+  "[&>[data-slot=dialog-header]]:-order-2",
   // Header: sticky under the notch, room on the right for 🔊 and ✕.
   "[&>[data-slot=dialog-header]]:bg-background/85 [&>[data-slot=dialog-header]]:sticky [&>[data-slot=dialog-header]]:top-0 [&>[data-slot=dialog-header]]:z-10 [&>[data-slot=dialog-header]]:-mx-4 [&>[data-slot=dialog-header]]:px-4 [&>[data-slot=dialog-header]]:pt-[calc(env(safe-area-inset-top)_+_0.875rem)] [&>[data-slot=dialog-header]]:pr-26 [&>[data-slot=dialog-header]]:pb-3 [&>[data-slot=dialog-header]]:backdrop-blur-md",
   // With a footer, auto margins on both center the body between them; without
@@ -92,6 +95,26 @@ function GameSoundToggle() {
 }
 
 /**
+ * "3. Versuch" under the title once the expense form has started more than
+ * one round — so everyone at the table sees that this is a reshuffle, and
+ * knows the expense will say so too (see `game-round.tsx`).
+ */
+function GameRoundNotice() {
+  const t = useT();
+  const { round } = useGameRound();
+  if (round < 2) return null;
+  return (
+    <p
+      data-slot="game-round"
+      className="bg-muted text-muted-foreground -order-1 flex items-center justify-center gap-1.5 self-center rounded-full px-3 py-1 text-xs"
+    >
+      <RotateCcw aria-hidden="true" className="size-3.5" />
+      {t("expenses.gameRoundNotice", { count: round })}
+    </p>
+  );
+}
+
+/**
  * Drop-in replacement for `DialogContent` in a game dialog: same Radix
  * dialog (focus trap, Escape, `onOpenChange`), rendered as a full-screen
  * stage. Children are the usual `DialogHeader` / body / `DialogFooter`.
@@ -125,7 +148,10 @@ export function GameDialogContent({
           data-slot="stage-scroller"
           className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
         >
-          <div className={cn(STAGE_COLUMN, className)}>{children}</div>
+          <div className={cn(STAGE_COLUMN, className)}>
+            {children}
+            <GameRoundNotice />
+          </div>
         </div>
         {soundToggle && <GameSoundToggle />}
         <DialogPrimitive.Close className={CLOSE_BUTTON}>

@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Minus, Plus } from "lucide-react";
 import Image from "next/image";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -330,9 +331,11 @@ export function SplitLotteryDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
-  onResolve: (loserUids: string[]) => void;
+  /** Who pays, and everyone who played (stored on the expense). */
+  onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
   const t = useT();
+  const { startRound } = useGameRound();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -370,6 +373,7 @@ export function SplitLotteryDialog({
   }
 
   function startGame() {
+    startRound();
     const requested = Number.parseInt(loserCountInput, 10) || 1;
     const target = Math.min(Math.max(requested, 1), poolUids.length);
     rememberSetup(groupId, { poolUids, loserCount: target });
@@ -480,7 +484,7 @@ export function SplitLotteryDialog({
 
   function applyResult() {
     playAppliedSound();
-    onResolve(loserUids);
+    onResolve(loserUids, poolUids);
     handleOpenChange(false);
   }
 

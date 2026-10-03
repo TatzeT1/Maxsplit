@@ -9,6 +9,7 @@ import {
   useMotionValue,
   useReducedMotion,
 } from "motion/react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -100,9 +101,11 @@ export function SplitWheelDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
-  onResolve: (loserUids: string[]) => void;
+  /** Who pays, and everyone who played (stored on the expense). */
+  onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
   const t = useT();
+  const { startRound } = useGameRound();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
   const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
@@ -152,6 +155,7 @@ export function SplitWheelDialog({
   }
 
   function startGame() {
+    startRound();
     rememberSetup(groupId, { poolUids, loserCount });
     draw.start(poolUids, loserCount);
     setRotation(0);
@@ -244,7 +248,7 @@ export function SplitWheelDialog({
 
   function applyResult() {
     playAppliedSound();
-    onResolve(draw.losers);
+    onResolve(draw.losers, poolUids);
     handleOpenChange(false);
   }
 

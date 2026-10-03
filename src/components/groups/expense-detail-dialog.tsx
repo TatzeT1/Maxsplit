@@ -1,6 +1,7 @@
 "use client";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { GameRecordSummary } from "@/components/groups/split-game/game-record";
 import { useT } from "@/components/locale-provider";
 import { categoryColorClasses, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
@@ -75,6 +76,8 @@ export function ExpenseDetailDialog({
               </span>
             </div>
           </div>
+
+          {expense.viaLottery && <GameRecordSummary game={expense.game} showPlayers />}
 
           <div className="flex flex-col gap-2">
             <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">

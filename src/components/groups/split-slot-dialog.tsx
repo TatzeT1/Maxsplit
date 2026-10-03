@@ -2,6 +2,7 @@
 
 import { type ReactNode, type RefObject, useEffect, useEffectEvent, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -475,9 +476,11 @@ export function SplitSlotDialog({
   groupId?: string;
   amountMinor: number;
   currency: string;
-  onResolve: (amountsByUid: Record<string, number>) => void;
+  /** What each person owes, and everyone who played (stored on the expense). */
+  onResolve: (amountsByUid: Record<string, number>, playerUids: string[]) => void;
 }) {
   const t = useT();
+  const { startRound } = useGameRound();
   const prizeFace = usePrizeFace();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
@@ -605,6 +608,7 @@ export function SplitSlotDialog({
   }
 
   function startGame() {
+    startRound();
     rememberSetup(groupId, { poolUids });
     resetPlay();
     setGame(startSlotGame(poolUids, amountMinor, setupStake, cryptoRandom));
@@ -1142,7 +1146,7 @@ export function SplitSlotDialog({
   function applyResult() {
     if (!game) return;
     playAppliedSound();
-    onResolve({ ...game.tallies });
+    onResolve({ ...game.tallies }, poolUids);
     handleOpenChange(false);
   }
 

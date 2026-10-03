@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -83,11 +84,13 @@ export function SplitBalloonDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
-  onResolve: (loserUids: string[]) => void;
+  /** Who pays, and everyone who played (stored on the expense). */
+  onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
   const t = useT();
   const [step, setStep] = useState<Step>("setup");
   const setup = useGamePoolSetup(memberUids, maxBalloonLoserCount, groupId);
+  const { startRound } = useGameRound();
   const [game, setGame] = useState<BalloonState | null>(null);
   // Mirrors `game` so two quick taps in one frame both see the newest state.
   const gameRef = useRef<BalloonState | null>(null);
@@ -120,6 +123,7 @@ export function SplitBalloonDialog({
   }
 
   function startGame() {
+    startRound();
     setup.remember();
     update(startBalloonGame(setup.poolUids, setup.loserCount, BALLOON_RANDOM));
     setStep("playing");
@@ -179,7 +183,7 @@ export function SplitBalloonDialog({
   function applyResult() {
     if (!game) return;
     playAppliedSound();
-    onResolve([...game.losers]);
+    onResolve([...game.losers], setup.poolUids);
     handleOpenChange(false);
   }
 

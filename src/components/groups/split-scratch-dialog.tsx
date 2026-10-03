@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
+import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -64,9 +65,11 @@ export function SplitScratchDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
-  onResolve: (loserUids: string[]) => void;
+  /** Who pays, and everyone who played (stored on the expense). */
+  onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
   const t = useT();
+  const { startRound } = useGameRound();
   const [step, setStep] = useState<Step>("setup");
   const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
   const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
@@ -108,6 +111,7 @@ export function SplitScratchDialog({
   }
 
   function startGame() {
+    startRound();
     rememberSetup(groupId, { poolUids, loserCount });
     draw.start(poolUids, loserCount);
     setScratchedUids([]);
@@ -151,7 +155,7 @@ export function SplitScratchDialog({
 
   function applyResult() {
     playAppliedSound();
-    onResolve(draw.losers);
+    onResolve(draw.losers, poolUids);
     handleOpenChange(false);
   }
 
