@@ -1,64 +1,22 @@
 "use client";
 
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { ChevronRight, Users } from "lucide-react";
-import Link from "next/link";
-import { type CSSProperties, useEffect, useState } from "react";
+import { Users } from "lucide-react";
+import { useEffect, useState } from "react";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { JoinGroupDialog } from "@/components/groups/join-group-dialog";
-import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
+import { GroupsOverview } from "@/components/groups/groups-overview";
 import { useT } from "@/components/locale-provider";
 import { NeedsConnection } from "@/components/needs-connection";
 import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/firebase/client";
-import { formatDate } from "@/lib/format/date";
-import { formatMoney } from "@/lib/format/money";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { useScreenSync } from "@/lib/offline/sync-marks";
 import { useLiveSources } from "@/lib/offline/use-live-sources";
 import { useOnline } from "@/lib/use-online";
-import { avatarGradient, cn } from "@/lib/utils";
 import type { Group } from "@/lib/types";
-
-/**
- * Reads the cached `balancesMinor` (see types.ts) written by
- * recomputeGroupBalances — never recomputed here from the ledger, since that
- * would mean subscribing to every group's full expense subcollection just to
- * render a list. Renders nothing for a group created before that field
- * existed; it fills in on that group's next expense/settlement mutation.
- */
-function GroupBalanceBadge({ group, uid }: { group: Group; uid: string }) {
-  const t = useT();
-  const amountMinor = group.balancesMinor?.[uid];
-  if (amountMinor === undefined) return null;
-
-  if (amountMinor === 0) {
-    return (
-      <span className="text-success shrink-0 text-xs font-medium">
-        {t("groups.balanceSettled")}
-      </span>
-    );
-  }
-
-  const isOwedToYou = amountMinor > 0;
-  return (
-    <div
-      className={cn(
-        "flex shrink-0 flex-col items-end gap-0.5",
-        isOwedToYou ? "text-success" : "text-destructive",
-      )}
-    >
-      <span className="font-heading tabular-money text-sm font-semibold">
-        {formatMoney(Math.abs(amountMinor), group.currency)}
-      </span>
-      <span className="text-[10px] font-medium tracking-wide uppercase opacity-80">
-        {isOwedToYou ? t("groups.balanceOwedToYouLabel") : t("groups.balanceYouOweLabel")}
-      </span>
-    </div>
-  );
-}
 
 const LIVE_SOURCES = ["groups"] as const;
 
@@ -82,11 +40,8 @@ export default function GroupsPage() {
       { includeMetadataChanges: true },
       (snapshot) => {
         setErrorCode(null);
-        setGroups(
-          snapshot.docs
-            .map((doc) => ({ id: doc.id, ...doc.data() }) as Group)
-            .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-        );
+        // Order is GroupsOverview's business: open balances first, archived last.
+        setGroups(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Group));
         report("groups", snapshot);
       },
       (error) => {
@@ -130,50 +85,7 @@ export default function GroupsPage() {
             <p className="text-muted-foreground text-sm">{t("groups.empty")}</p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {groups.map((group, index) => (
-              <li
-                key={group.id}
-                className="animate-rise"
-                style={{ "--stagger": Math.min(index, 8) } as CSSProperties}
-              >
-                <Link
-                  href={`/groups/${group.id}`}
-                  className="group bg-card ring-foreground/10 hover:ring-primary/40 shadow-e1 hover:shadow-e2 active:shadow-e1 ease-spring relative flex items-center gap-4 overflow-hidden rounded-2xl p-4 ring-1 transition-[transform,box-shadow,--tw-ring-color] duration-(--duration-fast) hover:-translate-y-0.5 active:scale-[0.995]"
-                >
-                  <div
-                    className={`absolute inset-0 bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.06] transition-opacity duration-200 group-hover:opacity-[0.12]`}
-                  />
-                  <div
-                    className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card shadow-e1 relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold text-white ring-2`}
-                  >
-                    {group.icon || group.name.charAt(0).toUpperCase() || "?"}
-                  </div>
-                  <div className="relative flex min-w-0 flex-1 flex-col gap-1.5">
-                    <span className="truncate font-medium">{group.name}</span>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <MemberAvatarStack members={group.members} />
-                      <span className="text-muted-foreground text-xs">
-                        {group.memberUids.length === 1
-                          ? t("groups.memberCountSingular")
-                          : t("groups.membersCount", { count: group.memberUids.length })}
-                      </span>
-                    </div>
-                    <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-                      <span className="bg-accent text-accent-foreground rounded-full px-1.5 py-0.5 font-medium">
-                        {group.currency}
-                      </span>
-                      <span>
-                        {t("groups.createdOn", { date: formatDate(new Date(group.createdAt)) })}
-                      </span>
-                    </div>
-                  </div>
-                  {user && <GroupBalanceBadge group={group} uid={user.uid} />}
-                  <ChevronRight className="text-muted-foreground group-hover:text-primary relative h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
-                </Link>
-              </li>
-            ))}
-          </ul>
+          user && <GroupsOverview groups={groups} uid={user.uid} />
         )}
       </div>
     </div>

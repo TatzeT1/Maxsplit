@@ -44,7 +44,9 @@ check a third way if you add a new admin surface.
 ## What admin can do
 
 - `adminDeleteGroup` / `adminSetGroupArchived` — moderate any group, bypassing the
-  owner-only checks normal group deletion/editing requires.
+  owner-only checks normal group deletion/editing requires. `archived` is the same flag
+  owners/admins set with `setGroupArchived` (see [[Groups and Members]]), so a manager can
+  bring an admin-archived group back.
 - `adminSetUserBanned` — see below.
 - `adminResetOnboarding` — clears `onboardingCompletedAt` so the setup guide auto-shows again
   on next sign-in (support / testing the first-run flow against a real account).

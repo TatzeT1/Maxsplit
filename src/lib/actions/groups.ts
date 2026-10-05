@@ -209,6 +209,47 @@ export async function updateGroup(input: {
   return { ok: true, data: null };
 }
 
+/**
+ * Moves a group out of everyone's main list into "Archiviert" — or back. It
+ * only changes where the group is shown: nothing is locked, no balance or
+ * expense is touched, and the group stays reachable by its link. It's the
+ * same flag the admin panel sets (`adminSetGroupArchived`), so an unarchive
+ * here also undoes that.
+ *
+ * Archiving is refused while a recurring rule is still running. The cron
+ * books into the group whether it's shown or not, and a rent booked
+ * every month into a group nobody looks at any more is a debt nobody sees
+ * grow. (Un-archiving is always allowed.)
+ */
+export async function setGroupArchived(input: {
+  groupId: string;
+  archived: boolean;
+}): Promise<ActionResult<null>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+  if (typeof input.archived !== "boolean") return { ok: false, error: "invalid-archived" };
+
+  const groupRef = adminDb.collection("groups").doc(input.groupId);
+  const groupSnap = await groupRef.get();
+  if (!groupSnap.exists) return { ok: false, error: "not-found" };
+  const group = groupSnap.data() as Omit<Group, "id">;
+
+  if (!isGroupManager(group.members[session.uid]?.role)) return { ok: false, error: "forbidden" };
+
+  if (input.archived) {
+    const running = await groupRef
+      .collection("recurring")
+      .where("active", "==", true)
+      .limit(1)
+      .get();
+    if (!running.empty) return { ok: false, error: "has-active-recurring" };
+  }
+
+  await groupRef.update({ archived: input.archived });
+
+  return { ok: true, data: null };
+}
+
 export async function addPlaceholderMember(input: {
   groupId: string;
   displayName: string;

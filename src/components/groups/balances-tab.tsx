@@ -1,7 +1,16 @@
 "use client";
 
-import { ArrowRight, Check, Copy, Download, FileSpreadsheet, RotateCcw } from "lucide-react";
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Check,
+  Copy,
+  Download,
+  FileSpreadsheet,
+  RotateCcw,
+} from "lucide-react";
 import { type CSSProperties, useMemo, useState } from "react";
+import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { SectionHeading } from "@/components/groups/section-heading";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { useT } from "@/components/locale-provider";
@@ -146,6 +155,14 @@ export function BalancesTab({
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
   const [resetState, setResetState] = useState<"idle" | "pending" | "done" | "error">("idle");
+  // The suggested transfer being booked. The dialog is mounted only while one
+  // is set (as on the balance receipt), so every opening starts from that
+  // transfer's own from/to/amount rather than a form left over from the last.
+  const [settleTarget, setSettleTarget] = useState<{
+    fromUid: string;
+    toUid: string;
+    amountMinor: number;
+  } | null>(null);
 
   const transfers = useMemo(() => simplifyDebts(balances), [balances]);
   // "Before" count: every outstanding debtor->creditor pair in the whole
@@ -260,7 +277,7 @@ export function BalancesTab({
                 <li
                   key={`${transfer.fromUid}-${transfer.toUid}`}
                   className={cn(
-                    "flex items-center gap-2 px-4 py-3 text-sm",
+                    "flex flex-col gap-2 px-4 py-3 text-sm",
                     involvesYou && "bg-primary/[0.06] first:rounded-t-xl last:rounded-b-xl",
                   )}
                 >
@@ -271,7 +288,7 @@ export function BalancesTab({
                       amount: formatMoney(transfer.amountMinor, currency),
                     })}
                   </span>
-                  <span aria-hidden="true" className="contents">
+                  <span aria-hidden="true" className="flex items-center gap-2">
                     <GameAvatar name={fromName} className="size-6 text-[11px]" />
                     <span className="min-w-0 truncate">{fromName}</span>
                     <ArrowRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
@@ -281,6 +298,32 @@ export function BalancesTab({
                       {formatMoney(transfer.amountMinor, currency)}
                     </span>
                   </span>
+                  {/* Anyone in the group can book a payment, so every suggested
+                      transfer carries it — not just yours. A second line, not
+                      a fifth item on the first: two names, an amount and a
+                      labelled button don't fit a 390px row. */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="self-end"
+                    disabled={!online}
+                    aria-label={t("balances.transferRecordAria", {
+                      from: fromName,
+                      to: toName,
+                      amount: formatMoney(transfer.amountMinor, currency),
+                    })}
+                    onClick={() =>
+                      setSettleTarget({
+                        fromUid: transfer.fromUid,
+                        toUid: transfer.toUid,
+                        amountMinor: transfer.amountMinor,
+                      })
+                    }
+                  >
+                    <ArrowLeftRight />
+                    {t("balances.transferRecord")}
+                  </Button>
                 </li>
               );
             })}
@@ -403,6 +446,23 @@ export function BalancesTab({
           )}
         </div>
       </section>
+
+      {settleTarget && (
+        <RecordSettlementDialog
+          key={`${settleTarget.fromUid}-${settleTarget.toUid}`}
+          groupId={groupId}
+          members={members}
+          currency={currency}
+          currentUid={currentUid}
+          prefillFromUid={settleTarget.fromUid}
+          prefillToUid={settleTarget.toUid}
+          prefillAmountMinor={settleTarget.amountMinor}
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setSettleTarget(null);
+          }}
+        />
+      )}
     </div>
   );
 }

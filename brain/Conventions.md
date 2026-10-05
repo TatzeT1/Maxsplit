@@ -68,8 +68,11 @@ could drift:
 `Expense.deletedAt` — expenses are never actually removed; every aggregation
 (`computeBalances`, `recomputeGroupBalances`, the PDF export, activity displays) filters
 `!expense.deletedAt`. Settlements, by contrast, **are** hard-deleted (`deleteSettlement` calls
-`.delete()`) — the asymmetry is real, not an inconsistency to "fix." Groups are also
-hard-deleted (`recursiveDelete`) when the owner deletes the whole group.
+`.delete()`) — the asymmetry is real, not an inconsistency to "fix": a soft-deleted settlement
+would have meant touching every reader (balance cache, PDF, CSV, admin, the client listener).
+The undo toast copes with it by booking the payment again under its old id
+(`restoreSettlement`), not by un-deleting. Groups are also hard-deleted (`recursiveDelete`)
+when the owner deletes the whole group.
 
 ## Money is always `amountMinor: number` (integer cents) + `currency: string`
 

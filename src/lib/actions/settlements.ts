@@ -173,3 +173,73 @@ export async function deleteSettlement(input: {
 
   return { ok: true, data: null };
 }
+
+/** Firestore's auto-generated ids: 20 letters and digits — all `settlements.add()` ever produces. */
+const SETTLEMENT_ID = /^[A-Za-z0-9]{20}$/;
+
+/** gRPC `ALREADY_EXISTS`, what `DocumentReference.create` rejects with when the document is there. */
+const ALREADY_EXISTS = 6;
+
+/**
+ * Undoes `deleteSettlement` — the group page's "Rückgängig" toast. Unlike
+ * expenses a deleted payment is really gone, so the client hands back what it
+ * had on screen and this books it again under its old id.
+ *
+ * That makes it `recordSettlement` without the push (the receiver already
+ * heard about this payment once) and with the same checks, so it can't book
+ * anything a member couldn't have booked directly: every member may record a
+ * payment. The restored entry belongs to whoever restores it — `createdBy`
+ * decides who may later edit or delete it, and taking it from the request
+ * would let a member hand someone else's name to it.
+ *
+ * `create` (not `set`) refuses an id that exists, so a double tap books the
+ * payment once; that second call reports success, as `restoreExpense` does.
+ */
+export async function restoreSettlement(
+  input: SettlementInput & { settlementId: string },
+): Promise<ActionResult<{ settlementId: string }>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+
+  const membership = await requireGroupMembership(input.groupId, session.uid);
+  if ("error" in membership) return { ok: false, error: membership.error };
+  const { group, groupRef } = membership;
+
+  if (typeof input.settlementId !== "string" || !SETTLEMENT_ID.test(input.settlementId)) {
+    return { ok: false, error: "not-found" };
+  }
+  const validationError = validateSettlementInput(input, group);
+  if (validationError) return { ok: false, error: validationError };
+
+  const now = new Date().toISOString();
+  const settlement: Omit<Settlement, "id"> = {
+    fromUid: input.fromUid,
+    toUid: input.toUid,
+    amountMinor: input.amountMinor,
+    currency: input.currency,
+    date: input.date,
+    note: input.note.trim(),
+    createdBy: session.uid,
+    createdAt: now,
+  };
+
+  try {
+    await groupRef.collection("settlements").doc(input.settlementId).create(settlement);
+  } catch (error) {
+    if ((error as { code?: number }).code === ALREADY_EXISTS) {
+      return { ok: true, data: { settlementId: input.settlementId } };
+    }
+    throw error;
+  }
+
+  const logEntry: Omit<ActivityLogEntry, "id"> = {
+    type: "settlement_restored",
+    actorUid: session.uid,
+    description: describeSettlement(settlement, group.members),
+    createdAt: now,
+  };
+  await groupRef.collection("activityLog").add(logEntry);
+  await recomputeGroupBalances(groupRef);
+
+  return { ok: true, data: { settlementId: input.settlementId } };
+}

@@ -324,3 +324,60 @@ export async function deleteExpense(input: {
 
   return { ok: true, data: null };
 }
+
+/**
+ * Undoes `deleteExpense` — the group page's "Rückgängig" toast. Same ownership
+ * rule as deleting it: whoever may delete an expense may bring it back.
+ *
+ * A deletion is only a `deletedAt` stamp, so there is nothing to rebuild; but
+ * the group can change in the seconds between the two, and a restored row
+ * must still satisfy what addExpense enforces. Both guards are about the
+ * ledger's invariants rather than about who's asking:
+ *   - the currency: it's only locked while something is booked, and deleting
+ *     the last expense unlocks it;
+ *   - the people: removing a member needs a zero balance, which deleting their
+ *     only expense can produce — and balances name debts only for people who
+ *     are still in `members`.
+ *
+ * Restoring an expense that isn't deleted is a no-op success, so a double tap
+ * (or a second member undoing the same deletion) isn't an error.
+ */
+export async function restoreExpense(input: {
+  groupId: string;
+  expenseId: string;
+}): Promise<ActionResult<null>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+
+  const membership = await requireGroupMembership(input.groupId, session.uid);
+  if ("error" in membership) return { ok: false, error: membership.error };
+  const { group, groupRef } = membership;
+
+  const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
+  const expenseSnap = await expenseRef.get();
+  if (!expenseSnap.exists) return { ok: false, error: "not-found" };
+  const expense = expenseSnap.data() as Expense;
+
+  const canManage = isGroupManager(group.members[session.uid]?.role);
+  if (expense.createdBy !== session.uid && !canManage) {
+    return { ok: false, error: "not-owner" };
+  }
+  if (!expense.deletedAt) return { ok: true, data: null };
+
+  if (expense.currency !== group.currency) return { ok: false, error: "invalid-currency" };
+  const involved = [...Object.keys(expense.paidBy), ...Object.keys(expense.splits)];
+  if (involved.some((uid) => !(uid in group.members))) return { ok: false, error: "member-gone" };
+
+  await expenseRef.update({ deletedAt: null });
+
+  const logEntry: Omit<ActivityLogEntry, "id"> = {
+    type: "expense_restored",
+    actorUid: session.uid,
+    description: expense.description,
+    createdAt: new Date().toISOString(),
+  };
+  await groupRef.collection("activityLog").add(logEntry);
+  await recomputeGroupBalances(groupRef);
+
+  return { ok: true, data: null };
+}

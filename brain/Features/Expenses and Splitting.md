@@ -62,6 +62,30 @@ creation (`editExpense`, `deleteExpense`) writes an `ActivityLogEntry` — but *
 is not logged** (see [[Data Model]] for why: the new row is its own signal). Every mutation
 also calls `recomputeGroupBalances(groupRef)` afterward (see [[Money Invariants]]).
 
+## Undo: the "Rückgängig" toast
+
+Deleting an expense or a payment from the ledger offers a way back for eight seconds
+(`components/groups/undo-toasts.tsx`; the state lives in `ActivityFeed`, not in a row, because the
+row is gone from the list the moment the server confirms — and deleting the _last_ entry swaps
+the whole list for the empty state). The toast pauses while hovered or focused, stacks up to
+three, and its button is disabled offline like every saving control.
+
+- `restoreExpense` clears `deletedAt`, logs `expense_restored`, recomputes balances. Same
+  ownership rule as deleting; restoring a live expense is a no-op success (a double tap is not
+  an error). It refuses when the group changed in the seconds between delete and tap, because a
+  restored row has to satisfy what `addExpense` enforces: `invalid-currency` (the currency is
+  only locked while something is booked, and deleting the last expense unlocks it) and
+  `member-gone` (leaving needs a zero balance, which deleting someone's only expense can
+  produce, and balances only name debts for people still in `members`).
+- `restoreSettlement` (`lib/actions/settlements.ts`) books the payment the client still has on
+  screen again, **under its old id** via `create()`, so a double tap books it once. It is
+  `recordSettlement` without the push (the receiver already heard about it) and with the same
+  checks; the restoring member becomes `createdBy`, never a value from the request. The id must
+  look like a Firestore auto id, so a request can't pick a path.
+
+The delete confirmation used to say "Das kann nicht rückgängig gemacht werden" — it now says
+the opposite; keep the two in step if either changes.
+
 ## Categories
 
 `src/lib/categories.ts` — `CategoryId` is a fixed union (`groceries`, `restaurant`,

@@ -150,9 +150,16 @@ export interface Settlement {
  * Records edit/delete history for expenses and settlements. "Added" isn't
  * logged — the row itself already signals that, so a log entry would just
  * duplicate it right next to the row that shows the same thing in full.
+ * Undoing a deletion is logged, though: otherwise the earlier "deleted"
+ * entry would stand alone and claim a row that's back is gone.
  */
 export type ActivityLogType =
-  "expense_edited" | "expense_deleted" | "settlement_edited" | "settlement_deleted";
+  | "expense_edited"
+  | "expense_deleted"
+  | "expense_restored"
+  | "settlement_edited"
+  | "settlement_deleted"
+  | "settlement_restored";
 
 export interface ActivityLogEntry {
   id: string;

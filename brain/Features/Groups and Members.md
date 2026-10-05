@@ -88,6 +88,23 @@ When a real person's invite-code join matches an existing placeholder
 The whole point is that the real person "becomes" the placeholder rather than starting a
 second, disconnected identity in the ledger.
 
+## Archiving a group
+
+`setGroupArchived` (owner/admin) flips `Group.archived`: the group moves from the main list to a
+folded "Archiviert (n)" section — **for everyone in it**, so the settings row asks first. It is
+display only: nothing is locked, no balance or expense is touched, the group stays reachable by
+its link, and it can be brought back from the banner every tab of an archived group shows (also
+manager-only). Un-archiving is always allowed; archiving is refused with `has-active-recurring`
+while a rule is running, since the cron books into a group whether it's shown or not and a
+rent booked monthly into a group nobody looks at is a debt nobody sees grow.
+
+It is the same flag the admin panel's `adminSetGroupArchived` sets — an admin-archived group
+shows up in "Archiviert" and a manager can bring it back. The groups list (`GroupsOverview`,
+`lib/groups/overview.ts`) also sorts groups with an open balance first and shows "Insgesamt":
+what you're owed and what you owe, per currency, over **all** groups including archived ones
+(hiding a group doesn't pay its debts), credits and debts kept apart rather than netted. Groups
+without cached `balancesMinor` are left out and the card says so — a missing figure isn't a zero.
+
 ## Deleting a group
 
 `deleteGroup` requires `role === "owner"` and uses `adminDb.recursiveDelete(groupRef)` —

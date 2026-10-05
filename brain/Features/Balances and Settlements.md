@@ -72,6 +72,11 @@ reverted (commits `026624c`/`4bfa331`). Before 2026-09 creditor lines had no act
 over in person, is valid), and the amount is a positive integer. Same ownership rule as
 expenses applies to edit/delete: `createdBy === session.uid` OR `isGroupManager(role)`.
 
+Every line of the Salden tab's **"So werdet ihr quitt"** carries "Zahlung eintragen", for _any_
+transfer, not just yours — every member may record a payment. It opens `RecordSettlementDialog`
+pre-filled with that transfer's from/to/amount; the dialog is mounted only while a transfer is
+selected (as on the balance receipt), so each opening starts from its own numbers.
+
 Settlements, like expenses, get an `ActivityLogEntry` on edit/delete (not on creation) via
 `describeSettlement`, which renders as `"Anna → Ben (12,50 €)"` using `formatMoney` — and
 every mutation triggers `recomputeGroupBalances`.

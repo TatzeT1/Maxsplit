@@ -73,6 +73,15 @@ reds drop to ~2:1 on cream, and its control surfaces would put dark buttons on l
 Each line carries its own actions — pay/GiroCode/record on "you owe", remind/show your
 GiroCode on "owes you"; see [[Balances and Settlements]].
 
+## Banner and toasts
+
+An archived group shows `ArchivedBanner` above the balance receipt on every tab — why it left
+the list, and (for managers) "Zurückholen". "Gruppe archivieren" lives in the Gruppe tab's
+manage section, hidden once archived. `UndoToasts` (see [[Expenses and Splitting]]) are
+`fixed` just above the pinned action bar — the bottom offset is that bar's height — and let
+taps through everywhere but on a toast; their live region is always mounted so the first
+message is announced.
+
 ## Sticky gotchas (both learned the hard way)
 
 - **No `overflow-hidden` on the page root.** It makes that box the scroll container and

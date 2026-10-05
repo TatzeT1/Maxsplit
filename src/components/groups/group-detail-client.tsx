@@ -7,6 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ActivityFeed } from "@/components/groups/activity-feed";
 import { AddExpenseDialog } from "@/components/groups/add-expense-dialog";
+import { ArchivedBanner } from "@/components/groups/archive-group";
 import { BalanceHero } from "@/components/groups/balance-hero";
 import { BalancesTab } from "@/components/groups/balances-tab";
 import { ChatEntryCard } from "@/components/groups/chat-entry-card";
@@ -312,6 +313,10 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
             </button>
           </div>
         </header>
+
+        {group.archived && (
+          <ArchivedBanner group={group} canManage={isGroupManager(group.members[user.uid]?.role)} />
+        )}
 
         <BalanceHero
           groupId={groupId}

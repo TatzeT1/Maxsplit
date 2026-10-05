@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Pencil, Receipt, Search, Trash2 } from "lucide-react";
+import { Copy, Pencil, Receipt, Search, Trash2, Undo2 } from "lucide-react";
 import { type CSSProperties, useMemo, useState } from "react";
 import {
   AlertDialog,
@@ -19,9 +19,11 @@ import { ExpenseDetailDialog } from "@/components/groups/expense-detail-dialog";
 import { InviteShareButton } from "@/components/groups/invite-share-button";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { RowActions } from "@/components/groups/row-actions";
+import { type UndoOffer, UndoToasts, useUndoOffers } from "@/components/groups/undo-toasts";
 import { useT } from "@/components/locale-provider";
-import { deleteExpense } from "@/lib/actions/expenses";
-import { deleteSettlement } from "@/lib/actions/settlements";
+import { deleteExpense, restoreExpense } from "@/lib/actions/expenses";
+import { deleteSettlement, restoreSettlement } from "@/lib/actions/settlements";
+import { callAction } from "@/lib/call-action";
 import { categoryColorClasses, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDayMonth, formatMonthKey } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
@@ -106,12 +108,15 @@ function ExpenseRow({
   members,
   groupId,
   currentUid,
+  onDeleted,
   style,
 }: {
   expense: Expense;
   members: Record<string, GroupMember>;
   groupId: string;
   currentUid: string;
+  /** Called once the expense is deleted, with what it takes to bring it back. */
+  onDeleted: (offer: Omit<UndoOffer, "id">) => void;
   style?: CSSProperties;
 }) {
   const [editOpen, setEditOpen] = useState(false);
@@ -140,8 +145,15 @@ function ExpenseRow({
   async function handleDelete() {
     setDeleting(true);
     setDeleteError(null);
-    const result = await deleteExpense({ groupId, expenseId: expense.id });
-    if (!result.ok) setDeleteError(expenseDeleteErrorMessage(result.error, t));
+    const result = await callAction(() => deleteExpense({ groupId, expenseId: expense.id }));
+    if (result.ok) {
+      onDeleted({
+        message: t("undo.expenseDeleted", { description: expense.description }),
+        undo: () => restoreExpense({ groupId, expenseId: expense.id }),
+      });
+    } else {
+      setDeleteError(expenseDeleteErrorMessage(result.error, t));
+    }
     setDeleting(false);
   }
 
@@ -275,12 +287,15 @@ function SettlementRow({
   members,
   groupId,
   currentUid,
+  onDeleted,
   style,
 }: {
   settlement: Settlement;
   members: Record<string, GroupMember>;
   groupId: string;
   currentUid: string;
+  /** Called once the payment is deleted, with what it takes to book it again. */
+  onDeleted: (offer: Omit<UndoOffer, "id">) => void;
   style?: CSSProperties;
 }) {
   const [editOpen, setEditOpen] = useState(false);
@@ -296,8 +311,29 @@ function SettlementRow({
   async function handleDelete() {
     setDeleting(true);
     setDeleteError(null);
-    const result = await deleteSettlement({ groupId, settlementId: settlement.id });
-    if (!result.ok) setDeleteError(settlementDeleteErrorMessage(result.error, t));
+    const result = await callAction(() =>
+      deleteSettlement({ groupId, settlementId: settlement.id }),
+    );
+    if (result.ok) {
+      // A deleted payment is gone for good, so the undo books the one that was
+      // on screen again — under its old id, so a double tap can't book it twice.
+      onDeleted({
+        message: t("undo.settlementDeleted"),
+        undo: () =>
+          restoreSettlement({
+            groupId,
+            settlementId: settlement.id,
+            fromUid: settlement.fromUid,
+            toUid: settlement.toUid,
+            amountMinor: settlement.amountMinor,
+            currency: settlement.currency,
+            date: settlement.date,
+            note: settlement.note,
+          }),
+      });
+    } else {
+      setDeleteError(settlementDeleteErrorMessage(result.error, t));
+    }
     setDeleting(false);
   }
 
@@ -379,12 +415,15 @@ function LogRow({
   const logKeys: Record<ActivityLogType, TranslationKey> = {
     expense_edited: "activity.expenseEdited",
     expense_deleted: "activity.expenseDeleted",
+    expense_restored: "activity.expenseRestored",
     settlement_edited: "activity.settlementEdited",
     settlement_deleted: "activity.settlementDeleted",
+    settlement_restored: "activity.settlementRestored",
   };
   const text = t(logKeys[entry.type], { name, description: entry.description });
   const isEdit = entry.type === "expense_edited" || entry.type === "settlement_edited";
-  const Icon = isEdit ? Pencil : Trash2;
+  const isRestore = entry.type === "expense_restored" || entry.type === "settlement_restored";
+  const Icon = isEdit ? Pencil : isRestore ? Undo2 : Trash2;
 
   return (
     <li
@@ -477,25 +516,28 @@ function monthKeyOf(iso: string): string {
   return iso.slice(0, 7);
 }
 
+interface ActivityFeedProps {
+  expenses: Expense[];
+  settlements: Settlement[];
+  activityLog: ActivityLogEntry[];
+  group: Group;
+  currentUid: string;
+}
+
 /**
  * The group's ledger: expenses, payments and edit history, newest first and
  * grouped by month, each month one card with its spending total. Every
  * expense row answers "what does this mean for me" on the right — the
  * number people actually open a group to find.
  */
-export function ActivityFeed({
+function Ledger({
   expenses,
   settlements,
   activityLog,
   group,
   currentUid,
-}: {
-  expenses: Expense[];
-  settlements: Settlement[];
-  activityLog: ActivityLogEntry[];
-  group: Group;
-  currentUid: string;
-}) {
+  onDeleted,
+}: ActivityFeedProps & { onDeleted: (offer: Omit<UndoOffer, "id">) => void }) {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<CategoryId | "all">("all");
   const t = useT();
@@ -621,6 +663,7 @@ export function ActivityFeed({
                     members={members}
                     groupId={group.id}
                     currentUid={currentUid}
+                    onDeleted={onDeleted}
                     style={style}
                   />
                 ) : item.kind === "settlement" ? (
@@ -630,6 +673,7 @@ export function ActivityFeed({
                     members={members}
                     groupId={group.id}
                     currentUid={currentUid}
+                    onDeleted={onDeleted}
                     style={style}
                   />
                 ) : (
@@ -646,5 +690,23 @@ export function ActivityFeed({
         ))
       )}
     </div>
+  );
+}
+
+/**
+ * The ledger plus the "Rückgängig" toasts for what was just deleted. The
+ * toasts live out here, not in a row or in the ledger: a deleted row vanishes
+ * from the list the moment the server confirms, and deleting the last entry
+ * swaps the whole list for the empty state — exactly when someone reaches for
+ * "Rückgängig".
+ */
+export function ActivityFeed(props: ActivityFeedProps) {
+  const { offers, offer, dismiss } = useUndoOffers();
+
+  return (
+    <>
+      <Ledger {...props} onDeleted={offer} />
+      <UndoToasts offers={offers} onDismiss={dismiss} />
+    </>
   );
 }

@@ -216,6 +216,23 @@ export const de = {
     balanceSettled: "Ausgeglichen",
     balanceOwedToYouLabel: "Du bekommst",
     balanceYouOweLabel: "Du schuldest",
+    totalsTitle: "Insgesamt",
+    totalsUnknown:
+      "Gruppen ohne Saldo-Stand zählen noch nicht mit – sie füllen sich bei der nächsten Buchung.",
+    allArchived: "Alle deine Gruppen sind archiviert.",
+    archivedSection: "Archiviert ({{count}})",
+    archiveGroupConfirm: "Gruppe archivieren?",
+    archiveGroupConfirmBody:
+      "Für alle in der Gruppe wandert sie aus der Liste nach „Archiviert“. Ausgaben, Zahlungen und Salden bleiben, wie sie sind – du kannst sie jederzeit zurückholen.",
+    archiveGroupError: "Gruppe konnte nicht archiviert werden.",
+    archiveRecurringError:
+      "Pausiere erst die wiederkehrenden Ausgaben – sonst würden sie in der archivierten Gruppe weiter gebucht.",
+    unarchiveGroup: "Zurückholen",
+    unarchiveGroupError: "Gruppe konnte nicht zurückgeholt werden.",
+    archivedBannerTitle: "Diese Gruppe ist archiviert",
+    archivedBannerBody: "Sie steht in der Gruppenliste unter „Archiviert“.",
+    archivedBannerBodyMember:
+      "Sie steht in der Gruppenliste unter „Archiviert“. Ein Admin kann sie zurückholen.",
     moreMembers: "+{{count}}",
     roleOwner: "Ersteller",
     roleAdmin: "Admin",
@@ -282,7 +299,8 @@ export const de = {
     editTitle: "Ausgabe bearbeiten",
     duplicate: "Duplizieren",
     deleteConfirm: "Ausgabe wirklich löschen?",
-    deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",
+    deleteConfirmBody:
+      "Sie verschwindet aus der Liste und den Salden. Gleich danach kannst du das noch rückgängig machen.",
     descriptionLabel: "Beschreibung",
     descriptionPlaceholder: "z. B. Wocheneinkauf",
     amountLabel: "Betrag",
@@ -1103,6 +1121,8 @@ export const de = {
     transfersTitle: "So werdet ihr quitt",
     transfersSimplified: "Zusammengefasst: {{after}} statt {{before}} Überweisungen.",
     transfersNone: "Niemand muss etwas überweisen.",
+    transferRecord: "Zahlung eintragen",
+    transferRecordAria: "Zahlung eintragen: {{from}} an {{to}}, {{amount}}",
     exportTitle: "Abrechnung",
   },
   csvExport: {
@@ -1137,7 +1157,8 @@ export const de = {
     celebrateTitle: "Zahlung eingetragen!",
     saveError: "Zahlung konnte nicht gespeichert werden.",
     deleteConfirm: "Zahlung wirklich löschen?",
-    deleteConfirmBody: "Das kann nicht rückgängig gemacht werden.",
+    deleteConfirmBody:
+      "Sie verschwindet aus der Liste und den Salden. Gleich danach kannst du das noch rückgängig machen.",
     errorInvalidParties: "„Von“ und „An“ dürfen nicht dieselbe Person sein.",
     errorInvalidAmount: "Bitte einen gültigen Betrag eingeben.",
     errorNotOwner: "Du kannst nur eigene Zahlungen bearbeiten oder löschen.",
@@ -1172,6 +1193,20 @@ export const de = {
     settlementRecorded: "{{from}} hat {{to}} {{amount}} bezahlt",
     settlementEdited: "{{name}} hat eine Zahlung bearbeitet: {{description}}",
     settlementDeleted: "{{name}} hat eine Zahlung gelöscht: {{description}}",
+    expenseRestored: "{{name}} hat „{{description}}“ wiederhergestellt",
+    settlementRestored: "{{name}} hat eine Zahlung wiederhergestellt: {{description}}",
+  },
+  undo: {
+    action: "Rückgängig",
+    dismiss: "Schließen",
+    expenseDeleted: "„{{description}}“ gelöscht",
+    settlementDeleted: "Zahlung gelöscht",
+    notRestored: "Das ließ sich nicht wiederherstellen.",
+    notOwner: "Das darfst du nicht wiederherstellen.",
+    memberGone:
+      "Jemand daraus ist nicht mehr in der Gruppe – so lässt es sich nicht wiederherstellen.",
+    currencyChanged:
+      "Die Währung der Gruppe hat sich geändert – so lässt es sich nicht wiederherstellen.",
   },
   chat: {
     title: "Chat",

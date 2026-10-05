@@ -213,6 +213,23 @@ export const en: Dictionary = {
     balanceSettled: "Settled up",
     balanceOwedToYouLabel: "You're owed",
     balanceYouOweLabel: "You owe",
+    totalsTitle: "In total",
+    totalsUnknown:
+      "Groups without a balance yet aren't counted — they fill in with the next booking.",
+    allArchived: "All your groups are archived.",
+    archivedSection: "Archived ({{count}})",
+    archiveGroupConfirm: "Archive group?",
+    archiveGroupConfirmBody:
+      "For everyone in the group it moves from the list to “Archived”. Expenses, payments and balances stay as they are — you can bring it back any time.",
+    archiveGroupError: "Couldn't archive the group.",
+    archiveRecurringError:
+      "Pause the recurring expenses first — otherwise they'd keep booking into the archived group.",
+    unarchiveGroup: "Bring back",
+    unarchiveGroupError: "Couldn't bring the group back.",
+    archivedBannerTitle: "This group is archived",
+    archivedBannerBody: "It's listed under “Archived” in your groups.",
+    archivedBannerBodyMember:
+      "It's listed under “Archived” in your groups. An admin can bring it back.",
     moreMembers: "+{{count}}",
     roleOwner: "Creator",
     roleAdmin: "Admin",
@@ -278,7 +295,8 @@ export const en: Dictionary = {
     editTitle: "Edit expense",
     duplicate: "Duplicate",
     deleteConfirm: "Really delete this expense?",
-    deleteConfirmBody: "This can't be undone.",
+    deleteConfirmBody:
+      "It disappears from the list and the balances. Right afterwards you can still undo it.",
     descriptionLabel: "Description",
     descriptionPlaceholder: "e.g. Weekly groceries",
     amountLabel: "Amount",
@@ -1089,6 +1107,8 @@ export const en: Dictionary = {
     transfersTitle: "How you get square",
     transfersSimplified: "Combined: {{after}} instead of {{before}} transfers.",
     transfersNone: "Nobody needs to transfer anything.",
+    transferRecord: "Record payment",
+    transferRecordAria: "Record payment: {{from}} to {{to}}, {{amount}}",
     exportTitle: "Statement",
   },
   csvExport: {
@@ -1123,7 +1143,8 @@ export const en: Dictionary = {
     celebrateTitle: "Payment recorded!",
     saveError: "Couldn't save the payment.",
     deleteConfirm: "Really delete this payment?",
-    deleteConfirmBody: "This can't be undone.",
+    deleteConfirmBody:
+      "It disappears from the list and the balances. Right afterwards you can still undo it.",
     errorInvalidParties: "“From” and “To” can't be the same person.",
     errorInvalidAmount: "Please enter a valid amount.",
     errorNotOwner: "You can only edit or delete your own payments.",
@@ -1158,6 +1179,18 @@ export const en: Dictionary = {
     settlementRecorded: "{{from}} paid {{to}} {{amount}}",
     settlementEdited: "{{name}} edited a payment: {{description}}",
     settlementDeleted: "{{name}} deleted a payment: {{description}}",
+    expenseRestored: "{{name}} restored “{{description}}”",
+    settlementRestored: "{{name}} restored a payment: {{description}}",
+  },
+  undo: {
+    action: "Undo",
+    dismiss: "Dismiss",
+    expenseDeleted: "“{{description}}” deleted",
+    settlementDeleted: "Payment deleted",
+    notRestored: "That couldn't be restored.",
+    notOwner: "You can't restore that.",
+    memberGone: "Someone in it has left the group, so it can't be restored.",
+    currencyChanged: "The group's currency has changed, so it can't be restored.",
   },
   chat: {
     title: "Chat",

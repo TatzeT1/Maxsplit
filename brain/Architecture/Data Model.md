@@ -100,9 +100,11 @@ scheduling fields (`frequency`, `startDate`, `nextRunDate`, `active`). See
 
 ## `ActivityLogEntry`
 
-Only `expense_edited | expense_deleted | settlement_edited | settlement_deleted` are logged
-— **"added" is deliberately not logged**, because the new row itself already signals that;
-duplicating it in the log would be noise right next to the thing it describes.
+`expense_edited | expense_deleted | expense_restored | settlement_edited | settlement_deleted |
+settlement_restored` are logged — **"added" is deliberately not logged**, because the new row
+itself already signals that; duplicating it in the log would be noise right next to the thing
+it describes. "Restored" _is_ logged: it's the undo toast (see [[Expenses and Splitting]]), and
+without it the earlier "deleted" line would stand alone and claim a row that's back is gone.
 
 ## `Tournament`
 

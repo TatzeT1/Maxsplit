@@ -3,6 +3,7 @@
 import { ChevronRight, LogOut, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ArchiveGroupRow } from "@/components/groups/archive-group";
 import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
 import { InviteShareButton } from "@/components/groups/invite-share-button";
 import { MembersPanel } from "@/components/groups/members-panel";
@@ -166,6 +167,7 @@ export function GroupSettingsTab({
             }
           />
         )}
+        {canManage && !group.archived && <ArchiveGroupRow group={group} />}
         <LeaveOrDeleteGroup group={group} currentUid={currentUid} />
       </section>
     </div>
