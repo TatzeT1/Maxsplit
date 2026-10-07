@@ -50,6 +50,13 @@ const STAMP_DURATION_S = 0.36;
 export const STAMP_IMPACT_S = STAMP_DROP_S + STAMP_DURATION_S * 0.5;
 /** How long a `CatchFlash` holds before its caller clears it. Long enough for the confetti to land. */
 export const CATCH_FLASH_HOLD_MS = 1650;
+/**
+ * How long each slip but the last holds when several payers are caught in one
+ * go (`useCatchFlashes().catchEach`). Long enough to read a name and an amount
+ * after the stamp lands; the full hold is kept for the finale, so three payers
+ * take about four seconds instead of five.
+ */
+export const CATCH_FLASH_STEP_MS = 1100;
 
 /**
  * `useLayoutEffect` on the client, `useEffect` on the server, as in
@@ -395,14 +402,17 @@ export function InkStamp({
 }
 
 /**
- * The full "caught!" takeover shared by the wheel, slot machine and scratch
- * cards: a warm paper scrim (the lottery's `bg-popover` takeover, not a dark
- * one), a till slip with the person on it dropping in, the stamp slamming
- * onto the slip, a bloom and two rings in their colors, and a confetti burst.
+ * The full "caught!" takeover shared by every luck game and the duel shell: a
+ * warm paper scrim, a till slip with the person on it dropping in, the stamp
+ * slamming onto the slip, a bloom and two rings in their colors, and a
+ * confetti burst.
  *
  * Mount it inside `AnimatePresence` keyed by a fresh id per catch, in a
- * `relative` container it should cover, and clear it after
- * `CATCH_FLASH_HOLD_MS`. Pair it with `useImpactShake` on the play area and
+ * `relative` container it should cover. The luck games leave the rest to
+ * `useCatchFlashes` — the hold, the shake on the play area, the stamp sound
+ * and the buzz on the impact frame, for one catch or every payer in turn. The
+ * slot machine and the duel shell still drive it by hand: clear it after
+ * `CATCH_FLASH_HOLD_MS`, with `useImpactShake` and
  * `playStampSound(STAMP_IMPACT_S)` so sound, shake and stamp land together.
  */
 export function CatchFlash({
@@ -410,6 +420,7 @@ export function CatchFlash({
   name,
   stampLabel,
   caption,
+  hero,
   finale = false,
   className,
 }: {
@@ -419,6 +430,12 @@ export function CatchFlash({
   stampLabel: string;
   /** What's printed below the tear line: an amount, a verdict, a count. */
   caption?: ReactNode;
+  /**
+   * Whoever "did it", peeking over the slip's top-left corner from behind it
+   * and popping up on the impact frame — the lottery's laughing face. Sized
+   * by the slot (`size-24`); fill it.
+   */
+  hero?: ReactNode;
   /** The round's last catch: more confetti, thrown harder. */
   finale?: boolean;
   className?: string;
@@ -472,12 +489,29 @@ export function CatchFlash({
         }
         className="paper-tokens relative"
       >
+        {hero && (
+          // Behind the slip (z-0 under its z-10), so the slip's top edge cuts
+          // the figure off like a counter it's leaning over.
+          <motion.span
+            aria-hidden="true"
+            className="absolute -top-16 -left-9 z-0 block size-24"
+            initial={reduceMotion ? false : { opacity: 0, y: 44, rotate: -4 }}
+            animate={{ opacity: 1, y: 0, rotate: -12 }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { type: "spring", stiffness: 420, damping: 14, delay: STAMP_IMPACT_S }
+            }
+          >
+            {hero}
+          </motion.span>
+        )}
         <motion.div
           animate={reduceMotion ? undefined : { y: [0, 7, 0], scaleY: [1, 0.96, 1] }}
           transition={{ delay: STAMP_IMPACT_S, duration: 0.34, ease: "easeOut" }}
           // Fixed ink-colored shadow, not `--foreground`: in the dark theme that
           // token is cream, and the slip would glow instead of casting a shadow.
-          className="drop-shadow-[0_12px_18px_oklch(0.2_0.05_250/0.35)]"
+          className="relative z-10 drop-shadow-[0_12px_18px_oklch(0.2_0.05_250/0.35)]"
         >
           <div className="receipt-edges bg-card flex w-60 max-w-[70vw] flex-col items-center gap-1.5 px-5 pt-6 pb-7 text-center">
             <span className="text-muted-foreground font-mono text-[10px] tracking-[0.3em]">
@@ -504,7 +538,7 @@ export function CatchFlash({
         <InkStamp
           label={stampLabel}
           name={name}
-          className="absolute -top-5 -right-7 z-10 dark:mix-blend-multiply"
+          className="absolute -top-5 -right-7 z-20 dark:mix-blend-multiply"
         />
       </motion.div>
 

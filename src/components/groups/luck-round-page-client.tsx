@@ -207,7 +207,13 @@ function LuckRoundBody({
 
       {round.status === "finished" && round.loserUids ? (
         <div className="flex flex-col gap-3">
-          <GameResultBanner loserUids={round.loserUids} members={members} inDialog={false} />
+          {/* Shares from the same loser order the round booked with (`buildGameExpense`). */}
+          <GameResultBanner
+            loserUids={round.loserUids}
+            members={members}
+            stake={round.stake}
+            inDialog={false}
+          />
           {round.expenseId ? (
             <p className="text-success flex items-center justify-center gap-1.5 text-sm font-medium">
               <ReceiptText aria-hidden="true" className="size-4" />

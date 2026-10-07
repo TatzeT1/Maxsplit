@@ -26,23 +26,15 @@ import {
   slotTop,
   type BallFlight,
 } from "@/lib/games/pegboard-layout";
+import { stakeShares, type GameStake } from "@/lib/games/payers";
 import { secureShuffle } from "@/lib/games/random";
 import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
 import { useSequentialDraw } from "@/lib/games/use-sequential-draw";
-import {
-  playAppliedSound,
-  playLaughSound,
-  playReelStopSound,
-  playStampSound,
-  playTickSound,
-} from "@/lib/sound/game-sounds";
+import { playAppliedSound, playReelStopSound, playTickSound } from "@/lib/sound/game-sounds";
 import { cn } from "@/lib/utils";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
 import { GameProgressPips } from "@/components/groups/split-game/game-progress-pips";
@@ -85,6 +77,7 @@ export function SplitPegboardDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -93,6 +86,8 @@ export function SplitPegboardDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's share goes on their slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -104,12 +99,9 @@ export function SplitPegboardDialog({
   const draw = useSequentialDraw();
   const [slotOrder, setSlotOrder] = useState<string[]>([]);
   const [ball, setBall] = useState<Ball | null>(null);
-  const [flash, setFlash] = useState<{ id: number; uid: string } | null>(null);
-  // Set once the last catch's takeover has come and gone — the verdict's cue.
-  const [celebrated, setCelebrated] = useState(false);
   const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const [stageRef, catches] = useCatchFlashes();
 
   useEffect(() => {
     // The same array for the component's whole lifetime — only ever pushed to.
@@ -134,8 +126,7 @@ export function SplitPegboardDialog({
     setSlotOrder(secureShuffle(setup.poolUids));
     draw.start(setup.poolUids, setup.loserCount);
     setBall(null);
-    setFlash(null);
-    setCelebrated(false);
+    catches.cancel();
     setStep("playing");
   }
 
@@ -144,8 +135,7 @@ export function SplitPegboardDialog({
     draw.reset();
     setSlotOrder([]);
     setBall(null);
-    setFlash(null);
-    setCelebrated(false);
+    catches.cancel();
     setStep("setup");
   }
 
@@ -158,22 +148,16 @@ export function SplitPegboardDialog({
     setBall({ ...droppedBall, landed: true });
     playReelStopSound();
     draw.revealNext();
-    later(180, () => {
-      playStampSound(STAMP_IMPACT_S);
-      playLaughSound(STAMP_IMPACT_S + 0.1);
-      shakeStage();
-      idRef.current += 1;
-      setFlash({ id: idRef.current, uid: caughtUid });
-      later(CATCH_FLASH_HOLD_MS, () => {
-        setFlash(null);
-        setCelebrated(true);
-      });
+    // A beat for the wood-block knock before the stamp.
+    catches.catchOne(caughtUid, {
+      delayMs: 180,
+      finale: draw.revealedCount + 1 >= draw.losers.length,
     });
   }
 
   function dropBall() {
     const caughtUid = draw.currentUid;
-    if (!caughtUid || draw.gameOver || flash || (ball && !ball.landed)) return;
+    if (!caughtUid || draw.gameOver || catches.isActive() || (ball && !ball.landed)) return;
     const target = slotOrder.indexOf(caughtUid);
     if (target < 0) return;
     const path = planBallPath({ slots: slotOrder.length, target, random: Math.random });
@@ -197,7 +181,10 @@ export function SplitPegboardDialog({
 
   const slots = slotOrder.length;
   const dropping = ball !== null && !ball.landed;
-  const showVerdict = draw.gameOver && celebrated;
+  const showVerdict = draw.gameOver && !catches.active;
+  const flash = catches.flash;
+  // The whole draw is fixed at the start, so every slip's share is final.
+  const shares = stakeShares(stake, draw.losers);
   const lastCaughtUid = draw.revealedLosers[draw.revealedLosers.length - 1];
   const tooMany = setup.poolUids.length > PEGBOARD_MAX_SLOTS;
   const height = slots > 0 ? boardHeight(slots) : 0;
@@ -246,7 +233,9 @@ export function SplitPegboardDialog({
                   : ""}
             </p>
 
-            {showVerdict && <GameResultBanner loserUids={draw.losers} members={members} />}
+            {showVerdict && (
+              <GameResultBanner loserUids={draw.losers} members={members} stake={stake} />
+            )}
 
             <GameProgressPips
               revealedCount={draw.revealedCount}
@@ -375,14 +364,16 @@ export function SplitPegboardDialog({
                   seed={flash.id}
                   name={members[flash.uid].displayName}
                   stampLabel={t("expenses.gameCaughtStamp")}
-                  finale={draw.gameOver}
+                  finale={flash.finale}
                   caption={
-                    <span className="text-muted-foreground text-sm font-medium">
-                      {t("expenses.pegboardProgress", {
+                    <CatchCaption
+                      share={shares?.[flash.uid]}
+                      stake={stake}
+                      detail={t("expenses.pegboardProgress", {
                         found: draw.revealedCount,
                         target: draw.losers.length,
                       })}
-                    </span>
+                    />
                   }
                 />
               )}
@@ -427,7 +418,7 @@ export function SplitPegboardDialog({
               type="button"
               size="lg"
               className="flex-1"
-              disabled={dropping || flash !== null}
+              disabled={dropping || catches.active}
               onClick={dropBall}
             >
               {draw.revealedCount > 0

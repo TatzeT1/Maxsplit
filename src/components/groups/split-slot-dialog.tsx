@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useT } from "@/components/locale-provider";
 import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
+import { vibrate } from "@/lib/games/haptics";
 import { springs } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
@@ -426,15 +427,6 @@ function writeFlag(key: string, value: boolean) {
     window.localStorage.setItem(key, value ? "1" : "0");
   } catch {
     // Private mode or blocked storage: the setting just won't stick.
-  }
-}
-
-/** A short buzz on phones that support it (Android). iOS ignores the Vibration API. */
-function vibrate(pattern: number | number[]) {
-  try {
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate(pattern);
-  } catch {
-    // Not supported: nothing to do.
   }
 }
 

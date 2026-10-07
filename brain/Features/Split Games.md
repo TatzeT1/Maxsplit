@@ -14,7 +14,9 @@ Shared "skill" engine (the seven duel games — see below): `src/lib/games/knock
 `game-preview.tsx`. Sound: `src/lib/sound/game-sounds.ts`. The seven games of the second batch
 (ballon, ducks, dice cup, pegboard, rock-paper-scissors, Nim, dots and boxes) are described in
 [[#The second batch: seven more games (2026-10)]]; fairness, statistics, rematch, nudges and
-the online scratch cards in [[#Round three: fairness, record, rematch, online luck (2026-10)]].
+the online scratch cards in [[#Round three: fairness, record, rematch, online luck (2026-10)]];
+the per-payer catch moment with the amount on the slip in
+[[#Round four: polish for the luck games, a luck index, a new game (2026-10)]].
 
 ## What it is
 
@@ -158,15 +160,15 @@ On top of the table:
   - The reels size off the window (`useReelGeometry`): a third of the column wide, as tall as
     the leftover height allows, at most 1.2× their width. Cream paper, so the symbols pop on
     the dark cabinet.
-  - Tallies, paytable and, at the end, the award show sit *below* the first screen. A scroll
+  - Tallies, paytable and, at the end, the award show sit _below_ the first screen. A scroll
     or the "Mehr Infos" / "Zur Preisverleihung" button gets there. Any pull scrolls back up
     (`showMachine`).
   - Scroll with `scroller.scrollTo`, never `scrollIntoView`. That also scrolls the
-    `overflow-x-hidden` scroller *sideways*, shoving the whole stage left.
+    `overflow-x-hidden` scroller _sideways_, shoving the whole stage left.
   - The light rays behind the cabinet sit in a clipping span the size of the first screen. An
     unclipped `180vmax` sunburst made the scroller far taller than its content.
   - Every overlay (takeovers, decisions, reveals) lives in one `fixed` layer above the title
-    bar and the deck, below the ✕. It sits *outside* the stage, because the impact shake
+    bar and the deck, below the ✕. It sits _outside_ the stage, because the impact shake
     transforms the stage, and a transformed ancestor would trap a fixed child. The layer is
     `pointer-events-none` unless an overlay is up.
   - The lever is gone. The deck is the LED panel, Halten/Risiko when offered, and round
@@ -523,14 +525,16 @@ dimmed group page felt like a tab inside the app rather than being _in_ the game
 
 - `GamePoolChecklist` — just the "who's playing" member checklist, used directly by the slot
   machine (no "how many pay" concept applies to it) and wrapped by `GamePoolSetupStep` for the
-  three games that also need a count.
-- `GamePoolSetupStep` — `GamePoolChecklist` plus a 1..poolSize stepper, for the wheel, scratch
-  cards and lottery-style setup. Callers pass their own count-hint copy and stepper icon;
-  everything else, including the `expenses.game*` translation keys, is shared.
+  games that also need a count.
+- `GamePoolSetupStep` — `GamePoolChecklist` plus a 1..`maxLoserCount` stepper, for every luck
+  game with a payer count (since round four the lottery too). Callers pass their own count-hint
+  copy and stepper icon; everything else, including the `expenses.game*` translation keys, is
+  shared.
 - `GameResultBanner` — the final "X zahlt." verdict banner (`expenses.gameResultOne` /
-  `gameResultMultiple`) used by the wheel and scratch cards, including the `aria-live`
-  announcement — visible text alone isn't announced on arrival, that's the state change screen
-  readers actually hear. The slot machine has its own result view (a per-person amount
+  `gameResultMultiple`) used by every luck game but the slot (the lottery since round four),
+  including the `aria-live` announcement — visible text alone isn't announced on arrival,
+  that's the state change screen readers actually hear. With a `stake` it prints each payer's
+  share under their face. The slot machine has its own result view (a per-person amount
   breakdown, not a single "X zahlt." sentence) since its losers can owe different amounts.
 - `GameProgressPips` — the "N of target decided" dot row used by the wheel and scratch cards;
   callers choose what the target means. The slot machine shows a running allocated/remaining
@@ -570,7 +574,8 @@ online modes — so the picker, the money pipeline and the leaderboard needed no
 game keeps its rules in a pure, unit-tested module in `src/lib/games/` and the dialog only
 stages them. Shared bits: `use-game-pool-setup.ts` (the pool + payer-count state every luck
 dialog used to repeat) and the new synthesized sounds in `game-sounds.ts`. The luck games keep
-one person dry: at most `poolSize - 1` payers.
+one person dry: at most `poolSize - 1` payers (since round four the wheel, lottery and scratch
+cards too — see [[#Everyone but one]]).
 
 Tile art is `public/game-tiles/<name>.jpg`. Everything _inside_ the games is SVG/CSS — the
 pegboard, the dice pips, the balloon, the ducks, the dot grid — with emoji for the three
@@ -675,7 +680,7 @@ reload every other game played sound again.
 ### Games remember the last setup
 
 `game-memory.ts`: per group and device (`localStorage`, try/catch), the pool and payer count
-last *started* (`rememberSetup` in every `startGame`) seed the next game's setup
+last _started_ (`rememberSetup` in every `startGame`) seed the next game's setup
 (`readRememberedSetup`, trimmed to the current members, `null` below two). Shared across games:
 four people at dinner are four people for the wheel and the dice alike.
 
@@ -766,6 +771,109 @@ draws), `disabled` for someone else's card, and `payLabel` ("Zahlt!" on others' 
 - **The end.** The last card books the bill (`buildGameExpense` with the game record), clears
   `activeLuckRound`, posts the result card. `LuckRoundBanner` on the group page reads the
   pointer from the group document and only then the round ("Rubbel dein Los!").
+
+## Round four: polish for the luck games, a luck index, a new game (2026-10)
+
+Six improvements the owner approved together, one subsection each.
+
+### The catch moment, for every payer, with the amount
+
+Before, the "caught" moment depended on the game: the wheel, scratch cards, balloon and
+pegboard gave every payer the shared `CatchFlash`; the dice cup and the duck race gave it only
+to `losers[0]` (everybody else got a red pill in a list); and the lottery had its own 620 ms
+full-board image of the laughing face that never said _who_ had been caught — the payer was a
+16 px initial on the card. And no luck game but the slot knew what the bill was, so the slip
+said "Erwischt!" but never "23,90 €", which is what the table actually reacts to.
+
+**One hook for every catch.** `split-game/use-catch-flashes.ts` (`useCatchFlashes`) is the only
+place that knows how a catch lands: it owns the slip state, the hold timers, and — on the
+stamp's impact frame (`STAMP_IMPACT_S`) — the stamp sound, the laugh, the impact shake of the
+play area and a buzz in the hand. It returns `[stageRef, catches]` (a tuple like
+`useImpactShake`'s, so the React Compiler lint doesn't take reading `catches.flash` for reading
+a ref):
+
+- `catchOne(uid, { finale, delayMs })` — a catch the players just caused (a spin landing, a card
+  scratched, a pop, a face tapped). Replaces any slip still up, holds `CATCH_FLASH_HOLD_MS`.
+  With no delay it fires synchronously, inside the tap, which keeps iOS audio unlocked.
+- `catchEach(uids, { delayMs })` — every payer of a round decided all at once, one slip after
+  the other. Non-final slips hold `CATCH_FLASH_STEP_MS` (1.1 s), only the last gets the finale
+  and the full hold, so three payers take about four seconds rather than five. The dice cup
+  plays it lowest roll last ("Kleinster!" on that one, "Erwischt!" and "Gewürfelt: 42" on the
+  others); the duck race in crossing order, so the last duck — the one everybody watched — is
+  the finale ("Letzter!", the others "Platz 4 von 5").
+- `active` (state) and `isActive()` (a ref, for a tap guard two fingers in one frame can't slip
+  past) are true from the call until the last slip has cleared; every verdict and
+  "Übernehmen" waits on it, which replaced the per-dialog `celebrated` flags. `cancel()` —
+  "Neu mischen", closing, a new spin — drops the slip, every pending timer and a queued buzz;
+  unmounting does the same.
+
+The dialogs still render `CatchFlash` themselves, with their own stamp label and caption. The
+later round-four features (dice zone, photo finish, wheel flick) stage their own build-up and
+then hand the payers to `catchEach`/`catchOne`.
+
+**The stake on the slip.** `AddExpenseDialog` passes `stake={{ description, amountMinor,
+currency }}` to the seven one-phone luck dialogs, as it already did for the duels. The amount
+is display only and never shown _during_ play — on each payer's slip (`CatchCaption`: "zahlt
+23,90 € · Pizza" over the game's own line) and under each face in `GameResultBanner`, which
+takes the `stake` and works the shares out from the very `loserUids` it shows. Hidden whenever
+there is no amount yet (`hasStakeAmount`: the form can open a game before one is typed).
+
+The cents must be the booked cents, rounding cent included. `handleSplitGameResolve` books
+`splitEqual(amountMinor, loserUids)` in the order a game hands to `onResolve`, and
+`lib/games/payers.ts` uses that same call in that same order (`stakeShares`), pinned by tests.
+`splitEqual` with equal weights gives the leftover minor units to the first payers in list
+order, so `payerShare(amountMinor, payerCount, index)` (`lib/money/split.ts`, tested against
+`splitEqual` for every position) knows a payer's share before the rest are found — the balloon
+uses it (`stakeShareAt`), since it books in pop order and the payer count is set. The wheel,
+scratch cards and pegboard draw every payer at the start, the duck order is fixed before the
+gun, the dice settle at the end — all of them show the final share on every slip. The lottery
+is the exception: one person can catch two faces, so who pays is only certain once the last
+laughing face is found, and only the last slip and the verdict carry an amount. The online
+scratch round's banner gets `round.stake` too — same `splitEqual`, same order as
+`buildGameExpense`.
+
+**The lottery's catch.** Its own takeover is gone; a laughing face is now a `CatchFlash` over the
+whole dialog naming whoever tapped it, with the face itself peeking over the slip's corner
+(`CatchFlash`'s new `hero` slot, behind the slip, popping up on the impact frame). Its laugh
+images are preloaded at the hero's size (`HERO_SIZES`), the same `/_next/image` URL, so the
+face never arrives after the stamp. A repeat catch says "Schon wieder erwischt!". The slip is
+`pointer-events-none` — the old overlay doubled as the board lock — so `tapCell` checks
+`catches.isActive()` instead; "Neu mischen" now works mid-slip and cancels it. The lottery's
+hand-copied setup and verdict block became `GamePoolSetupStep` and `GameResultBanner`. An
+`aria-live` line announces who was caught ("Lea hat ein lachendes Gesicht erwischt."), which
+nothing did before.
+
+**Herzklopfen.** The lottery's twentieth tap used to feel like its first, although the odds had
+long since changed. `lotteryHeartbeat(payLeft, facesLeft)` (`lib/games/lottery-heartbeat.ts`)
+turns the odds of the next tap — laughing faces left over faces left, both public — into a
+tempo between 60 and 160 bpm (on the square root of the odds, so a big board's early taps
+already differ audibly) and an intensity. The dialog plays `playHeartbeatSound(intensity)` — a
+"lub-dub" from 150 Hz down, because a phone speaker reproduces next to nothing below ~120 Hz —
+from an effect-owned interval: it starts with the first tap (audio is unlocked by then),
+restarts with every tap, rests while a slip is up, stops after eight beats if nobody taps, and
+a new turn, "Neu mischen", closing or unmounting each end it without extra bookkeeping. On
+screen: "Noch 2 von 5 Gesichtern lachen" under the found slots, with a heart beating at the same
+tempo (it holds still under reduced motion). The tempo follows only how many faces are left,
+never which, so it can't point at a face.
+
+**Haptics.** `lib/games/haptics.ts`: `vibrate(pattern, delayMs)` and `cancelVibration()`, a
+guarded `navigator.vibrate` that is a no-op where the API doesn't exist — iOS Safari, standalone
+PWA included — so a buzz only ever doubles what the screen and the speaker already say. The
+delay is written into the pattern (`[0, delay, …]`) rather than a timer, so the stamp's buzz
+lands on its impact frame with nothing to clean up; `cancelVibration` stops a queued one. The
+slot machine's private `vibrate()` moved onto it unchanged.
+
+#### Everyone but one
+
+The wheel, lottery and scratch cards used to allow `poolSize` payers. "Everyone pays" isn't a
+game — the wheel's last spin had one wedge, the last scratch card nothing to hide — and the
+four games of the second batch already capped at `poolSize - 1`. Now all of them do:
+`maxPayerCount` (`lib/games/payers.ts`) through `useGamePoolSetup`, which the three games now
+use instead of their own copies of that state, so a remembered count above the cap is clamped
+like any other and a pool of two always means one payer. The online scratch setup shares the
+stepper, and `createLuckRound` rejects `targetLoserCount === poolUids.length` as
+`invalid-count` (`isValidLuckRoundCount` in `luck-round.ts`, unit-tested, plus a case in
+`luck-rounds.emulator.test.ts`).
 
 ## Related
 

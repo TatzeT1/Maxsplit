@@ -63,6 +63,29 @@ export function splitEqual(amountMinor: number, uids: string[]): Record<string, 
   return distributeByWeights(amountMinor, weights);
 }
 
+/**
+ * What the `index`-th of `payerCount` people pays in an equal split of
+ * `amountMinor` — exactly `splitEqual(amountMinor, payers)[payers[index]]`
+ * for any list of `payerCount` distinct uids, without needing the list.
+ *
+ * With equal weights every remainder is the same, so the stable sort in
+ * `distributeByWeights` hands the leftover minor units to the first payers in
+ * input order. A game that reveals its payers in the order it later books them
+ * (the balloon's pops) can therefore print a payer's share the moment they are
+ * caught, before the rest are known.
+ */
+export function payerShare(amountMinor: number, payerCount: number, index: number): number {
+  assertIntegerMinorUnits(amountMinor);
+  if (!Number.isInteger(payerCount) || payerCount < 1) {
+    throw new Error(`payerCount must be a positive integer, got ${payerCount}`);
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= payerCount) {
+    throw new Error(`index must be within 0..${payerCount - 1}, got ${index}`);
+  }
+  const base = Math.floor(amountMinor / payerCount);
+  return base + (index < amountMinor - base * payerCount ? 1 : 0);
+}
+
 /** Splits an amount proportionally to each participant's share count (e.g. 2 shares vs. 1). */
 export function splitByShares(
   amountMinor: number,

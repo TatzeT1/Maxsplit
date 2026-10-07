@@ -10,9 +10,10 @@ import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
  * whatever the game allows for the *current* pool, so shrinking the pool can
  * never leave a count that no longer fits.
  *
- * `maxLoserCountFor` is per game because the rules differ: the wheel lets
- * everybody pay, while the balloon, dice, ducks and pegboard always keep one
- * person dry.
+ * `maxLoserCountFor` is per game, but every luck game passes "everyone but
+ * one" today (`maxPayerCount` in `payers.ts`, or its own copy in the game's
+ * rules module): somebody always stays dry. A remembered count larger than
+ * that is clamped like any other, never rejected.
  *
  * With a `groupId`, the setup starts from the last one started in that group
  * on this device (`game-memory.ts`); call `remember()` when the game starts.

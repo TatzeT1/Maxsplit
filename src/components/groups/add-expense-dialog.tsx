@@ -273,6 +273,9 @@ export function AddExpenseDialog({
   const online = useOnline();
 
   const amountMinor = parseMoneyInput(amountInput) ?? 0;
+  // What the luck games print on each payer's slip — display only, the
+  // booking below goes through handleSplitGameResolve as before.
+  const gameStake = { description, amountMinor, currency };
   const router = useRouter();
 
   function openGamePicker() {
@@ -795,6 +798,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
           />
         )}
@@ -805,6 +809,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
           />
         )}
@@ -827,6 +832,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
             expenseDraft={expenseDraft}
             onRoundStarted={handleLuckRoundStarted}
@@ -839,6 +845,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
           />
         )}
@@ -849,6 +856,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
           />
         )}
@@ -859,6 +867,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
           />
         )}
@@ -869,6 +878,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
           />
         )}

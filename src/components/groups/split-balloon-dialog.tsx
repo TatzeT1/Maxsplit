@@ -27,22 +27,14 @@ import {
   type BalloonState,
 } from "@/lib/games/balloon";
 import { memberColor } from "@/lib/games/member-colors";
+import { stakeShareAt, type GameStake } from "@/lib/games/payers";
 import { randomInt, secureShuffle } from "@/lib/games/random";
 import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
-import {
-  playAppliedSound,
-  playLaughSound,
-  playPopSound,
-  playPumpSound,
-  playStampSound,
-} from "@/lib/sound/game-sounds";
+import { playAppliedSound, playPopSound, playPumpSound } from "@/lib/sound/game-sounds";
 import { cn } from "@/lib/utils";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { BalloonFigure, PopBurst } from "@/components/groups/split-game/balloon-figure";
 import { DuelTurnBanner } from "@/components/groups/split-game/duel-turn-banner";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
@@ -58,12 +50,6 @@ const POP_BEAT_MS = 700;
 /** The burst point and the seating are drawn from crypto randomness, like every other "who pays" decision. */
 const BALLOON_RANDOM: BalloonRandom = { int: randomInt, shuffle: secureShuffle };
 
-interface FlashState {
-  id: number;
-  uid: string;
-  finale: boolean;
-}
-
 /**
  * Ballon ("pump until it bursts"): the phone goes round the table and each
  * person pumps the balloon once to three times. Nobody knows how much air it
@@ -76,6 +62,7 @@ export function SplitBalloonDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -84,6 +71,8 @@ export function SplitBalloonDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's share goes on their slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -95,10 +84,9 @@ export function SplitBalloonDialog({
   // Mirrors `game` so two quick taps in one frame both see the newest state.
   const gameRef = useRef<BalloonState | null>(null);
   const [popping, setPopping] = useState<{ id: number; color: string } | null>(null);
-  const [flash, setFlash] = useState<FlashState | null>(null);
   const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const [stageRef, catches] = useCatchFlashes();
 
   useEffect(() => {
     // The same array for the component's whole lifetime — only ever pushed to.
@@ -119,7 +107,7 @@ export function SplitBalloonDialog({
   function resetStage() {
     clearTimers();
     setPopping(null);
-    setFlash(null);
+    catches.cancel();
   }
 
   function startGame() {
@@ -146,7 +134,7 @@ export function SplitBalloonDialog({
 
   function pump() {
     const current = gameRef.current;
-    if (!current || popping || flash) return;
+    if (!current || popping || catches.isActive()) return;
     const result = pumpBalloon(current, BALLOON_RANDOM);
     if (!result) return;
     update(result.state);
@@ -158,24 +146,18 @@ export function SplitBalloonDialog({
     const popperUid = result.popped;
     const popId = ++idRef.current;
     playPopSound();
-    shakeStage(1.2, 0);
+    catches.shake(1.2, 0);
     setPopping({ id: popId, color: memberColor(members[popperUid].displayName) });
     const beat = setTimeout(() => {
       setPopping(null);
-      playStampSound(STAMP_IMPACT_S);
-      playLaughSound(STAMP_IMPACT_S + 0.1);
-      shakeStage();
-      const flashId = ++idRef.current;
-      setFlash({ id: flashId, uid: popperUid, finale: isBalloonGameOver(result.state) });
-      const hold = setTimeout(() => setFlash(null), CATCH_FLASH_HOLD_MS);
-      timersRef.current.push(hold);
+      catches.catchOne(popperUid, { finale: isBalloonGameOver(result.state) });
     }, POP_BEAT_MS);
     timersRef.current.push(beat);
   }
 
   function pass() {
     const current = gameRef.current;
-    if (!current || popping || flash) return;
+    if (!current || popping || catches.isActive()) return;
     const next = passBalloon(current);
     if (next) update(next);
   }
@@ -188,7 +170,8 @@ export function SplitBalloonDialog({
   }
 
   const over = game !== null && isBalloonGameOver(game);
-  const busy = popping !== null || flash !== null;
+  const busy = popping !== null || catches.active;
+  const flash = catches.flash;
   // The verdict waits for the last catch's takeover to clear, as the wheel's does.
   const showVerdict = over && !busy;
   const holderUid = game && !over ? balloonHolder(game) : null;
@@ -232,7 +215,7 @@ export function SplitBalloonDialog({
             </p>
 
             {showVerdict ? (
-              <GameResultBanner loserUids={[...game.losers]} members={members} />
+              <GameResultBanner loserUids={[...game.losers]} members={members} stake={stake} />
             ) : (
               holderUid && (
                 <DuelTurnBanner
@@ -278,12 +261,20 @@ export function SplitBalloonDialog({
                   stampLabel={t("expenses.balloonPoppedStamp")}
                   finale={flash.finale}
                   caption={
-                    <span className="text-muted-foreground text-sm font-medium">
-                      {t("expenses.balloonProgress", {
+                    <CatchCaption
+                      // Booked in pop order and the payer count is set, so a
+                      // popper's share is known the moment it bangs.
+                      share={stakeShareAt(
+                        stake,
+                        game.targetLoserCount,
+                        game.losers.indexOf(flash.uid),
+                      )}
+                      stake={stake}
+                      detail={t("expenses.balloonProgress", {
                         found: game.losers.length,
                         target: game.targetLoserCount,
                       })}
-                    </span>
+                    />
                   }
                 />
               )}

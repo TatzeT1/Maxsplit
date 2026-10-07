@@ -11,9 +11,9 @@ import { GamePoolChecklist } from "@/components/groups/split-game/game-pool-chec
 import type { GroupMember } from "@/lib/types";
 
 /**
- * Shared "who's playing, how many pay" setup step for the sequential-draw
- * split mini-games (wheel, scratch cards, the lottery) — the member
- * checklist (`GamePoolChecklist`) plus a 1..poolSize stepper. Callers pass
+ * Shared "who's playing, how many pay" setup step for every luck game with a
+ * payer count (all but the slot machine) — the member checklist
+ * (`GamePoolChecklist`) plus a 1..`maxLoserCount` stepper. Callers pass
  * their own count hint copy and stepper icon so it still reads as *that*
  * game's stepper rather than a borrowed widget. A game with no fixed
  * "how many pay" concept — the slot machine's staked spins — uses

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   AnimatePresence,
   animate,
@@ -20,21 +20,14 @@ import {
 } from "@/components/ui/dialog";
 import { GameDialogContent, StageScale } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
-import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
 import { memberColor, memberInk } from "@/lib/games/member-colors";
+import { maxPayerCount, stakeShares, type GameStake } from "@/lib/games/payers";
+import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
 import { useSequentialDraw } from "@/lib/games/use-sequential-draw";
-import {
-  playAppliedSound,
-  playLaughSound,
-  playStampSound,
-  playTickSound,
-} from "@/lib/sound/game-sounds";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { playAppliedSound, playTickSound } from "@/lib/sound/game-sounds";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
 import { GameResultBanner } from "@/components/groups/split-game/game-result-banner";
@@ -54,11 +47,6 @@ const MAX_EXTRA_SPINS = 11;
 const FLAPPER_KICK_DEG = -24;
 /** Closest two peg clicks may sound, so a fast spin reads as a ratchet rather than a buzz. */
 const MIN_TICK_GAP_MS = 45;
-
-interface FlashState {
-  id: number;
-  uid: string;
-}
 
 function randomJitterDegrees(maxDegrees: number): number {
   const bytes = new Uint32Array(1);
@@ -93,6 +81,7 @@ export function SplitWheelDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -101,6 +90,8 @@ export function SplitWheelDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's share goes on their slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -108,56 +99,25 @@ export function SplitWheelDialog({
   const { startRound } = useGameRound();
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
-  const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
-  const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
-  const [loserCountInput, setLoserCountInput] = useState(String(remembered?.loserCount ?? 1));
-  const [stepperDirection, setStepperDirection] = useState<1 | -1>(1);
+  // Everyone but one at most: with everyone paying, the last spin would have
+  // a single wedge and nothing left to decide.
+  const setup = useGamePoolSetup(memberUids, maxPayerCount, groupId);
+  const poolUids = setup.poolUids;
   const [rotation, setRotation] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [spinDuration, setSpinDuration] = useState(MIN_SPIN_DURATION);
-  const [flash, setFlash] = useState<FlashState | null>(null);
-  const flashIdRef = useRef(0);
-  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Which wedge boundary the flapper last clicked past, and when — refs
   // because they're read and written from the per-frame rotation callback.
   const lastPegRef = useRef(0);
   const lastTickAtRef = useRef(0);
   const flapperRotate = useMotionValue(0);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const [stageRef, catches] = useCatchFlashes();
   const draw = useSequentialDraw();
-
-  useEffect(() => {
-    return () => {
-      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    };
-  }, []);
-
-  function clearFlash() {
-    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    setFlash(null);
-  }
-
-  function togglePoolMember(uid: string) {
-    setPoolUids((current) =>
-      current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid],
-    );
-  }
-
-  const maxLoserCount = Math.max(poolUids.length, 1);
-  const loserCount = Math.min(
-    Math.max(Number.parseInt(loserCountInput, 10) || 1, 1),
-    maxLoserCount,
-  );
-
-  function stepLoserCount(delta: number) {
-    setStepperDirection(delta > 0 ? 1 : -1);
-    setLoserCountInput(String(Math.min(Math.max(loserCount + delta, 1), maxLoserCount)));
-  }
 
   function startGame() {
     startRound();
-    rememberSetup(groupId, { poolUids, loserCount });
-    draw.start(poolUids, loserCount);
+    setup.remember();
+    draw.start(poolUids, setup.loserCount);
     setRotation(0);
     setStep("playing");
   }
@@ -165,7 +125,7 @@ export function SplitWheelDialog({
   function goToSetup() {
     draw.reset();
     setRotation(0);
-    clearFlash();
+    catches.cancel();
     setStep("setup");
   }
 
@@ -175,7 +135,7 @@ export function SplitWheelDialog({
       draw.reset();
       setRotation(0);
       setSpinning(false);
-      clearFlash();
+      catches.cancel();
     }
     onOpenChange(nextOpen);
   }
@@ -201,7 +161,7 @@ export function SplitWheelDialog({
     setRotation(base <= rotation ? base + 360 : base);
     setSpinDuration(randomSpinDuration());
     setSpinning(true);
-    clearFlash();
+    catches.cancel();
     lastPegRef.current = Math.floor(rotation / segAngle);
   }
 
@@ -231,19 +191,13 @@ export function SplitWheelDialog({
     if (!spinning) return;
     const caughtUid = draw.currentUid;
     setSpinning(false);
-    playStampSound(STAMP_IMPACT_S);
-    playLaughSound(STAMP_IMPACT_S + 0.1);
     draw.revealNext();
     if (!reduceMotion) {
       // The flapper's last, lazy wobble as the wheel comes to rest on it.
       animate(flapperRotate, [FLAPPER_KICK_DEG * 0.6, 7, -3, 0], { duration: 0.6 });
     }
     if (!caughtUid) return;
-    shakeStage();
-    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    flashIdRef.current += 1;
-    setFlash({ id: flashIdRef.current, uid: caughtUid });
-    flashTimeoutRef.current = setTimeout(() => setFlash(null), CATCH_FLASH_HOLD_MS);
+    catches.catchOne(caughtUid, { finale: draw.revealedCount + 1 >= draw.losers.length });
   }
 
   function applyResult() {
@@ -255,7 +209,10 @@ export function SplitWheelDialog({
   const lastLoserUid = draw.revealedLosers[draw.revealedLosers.length - 1];
   // The verdict waits for the last catch's takeover to clear, as the
   // lottery's does — otherwise its bloom and rise play out hidden behind it.
-  const showVerdict = draw.gameOver && flash === null;
+  const showVerdict = draw.gameOver && !catches.active;
+  const flash = catches.flash;
+  // The whole draw is fixed at the start, so every slip's share is final.
+  const shares = stakeShares(stake, draw.losers);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -278,11 +235,11 @@ export function SplitWheelDialog({
             memberUids={memberUids}
             members={members}
             poolUids={poolUids}
-            onTogglePoolMember={togglePoolMember}
-            loserCount={loserCount}
-            maxLoserCount={maxLoserCount}
-            onStepLoserCount={stepLoserCount}
-            stepperDirection={stepperDirection}
+            onTogglePoolMember={setup.togglePoolMember}
+            loserCount={setup.loserCount}
+            maxLoserCount={setup.maxLoserCount}
+            onStepLoserCount={setup.stepLoserCount}
+            stepperDirection={setup.stepperDirection}
             countHint={t("expenses.wheelCountHint")}
             countIcon="🎡"
           />
@@ -299,7 +256,7 @@ export function SplitWheelDialog({
             </p>
 
             {showVerdict ? (
-              <GameResultBanner loserUids={draw.losers} members={members} />
+              <GameResultBanner loserUids={draw.losers} members={members} stake={stake} />
             ) : (
               lastLoserUid && (
                 <div className="bg-muted/40 flex items-center gap-3 rounded-xl border p-3">
@@ -429,14 +386,16 @@ export function SplitWheelDialog({
                   seed={flash.id}
                   name={members[flash.uid].displayName}
                   stampLabel={t("expenses.gameCaughtStamp")}
-                  finale={draw.gameOver}
+                  finale={flash.finale}
                   caption={
-                    <span className="text-muted-foreground text-sm font-medium">
-                      {t("expenses.wheelProgress", {
+                    <CatchCaption
+                      share={shares?.[flash.uid]}
+                      stake={stake}
+                      detail={t("expenses.wheelProgress", {
                         found: draw.revealedCount,
                         target: draw.losers.length,
                       })}
-                    </span>
+                    />
                   }
                 />
               )}
@@ -466,7 +425,14 @@ export function SplitWheelDialog({
               >
                 {t("expenses.gamePlayAgain")}
               </Button>
-              <Button type="button" size="lg" className="flex-1" onClick={applyResult}>
+              {/* Waits for the last slip, like the verdict: it's the same moment. */}
+              <Button
+                type="button"
+                size="lg"
+                className="flex-1"
+                disabled={!showVerdict}
+                onClick={applyResult}
+              >
                 {t("expenses.gameApply")}
               </Button>
             </>

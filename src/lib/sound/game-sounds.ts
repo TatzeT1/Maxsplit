@@ -461,6 +461,44 @@ export function playDiceLandSound(): void {
   noiseBurst(ctx, now, 0.03, 0.07, "bandpass", 1100, 1.1);
 }
 
+/**
+ * One half of a heartbeat: a sine that drops from a knock to a thud. It starts
+ * at 150 Hz on purpose — a phone speaker reproduces next to nothing below
+ * ~120 Hz, so a "real" 50 Hz heartbeat would be silent exactly where this
+ * game is played; the drop is what still reads as a thump.
+ */
+function heartThump(ctx: AudioContext, at: number, gainPeak: number, pitch: number): void {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(150 * pitch, at);
+  osc.frequency.exponentialRampToValueAtTime(52 * pitch, at + 0.12);
+  gain.gain.setValueAtTime(0, at);
+  gain.gain.linearRampToValueAtTime(gainPeak, at + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.001, at + 0.16);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(at);
+  osc.stop(at + 0.16);
+  noiseBurst(ctx, at, 0.05, gainPeak * 0.25, "lowpass", 420, 0.7);
+}
+
+/**
+ * One heartbeat, "lub-dub", for the lottery's tension. `intensity` (0..1) is
+ * how close the next tap is to a laughing face: the beat gets louder and the
+ * "dub" crowds the "lub", the way a racing pulse sounds. The caller sets the
+ * tempo by how often it calls this.
+ */
+export function playHeartbeatSound(intensity = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const level = Math.min(Math.max(intensity, 0), 1);
+  const now = ctx.currentTime;
+  const gainPeak = 0.1 + level * 0.14;
+  heartThump(ctx, now, gainPeak, 1);
+  heartThump(ctx, now + 0.17 - level * 0.05, gainPeak * 0.7, 0.85);
+}
+
 /** A pencil stroke: a short, dry scratch of high-passed noise — a Käsekästchen line being drawn. */
 export function playPencilSound(): void {
   const ctx = getContext();

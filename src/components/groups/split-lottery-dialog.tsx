@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Minus, Plus } from "lucide-react";
+import { Heart } from "lucide-react";
 import Image from "next/image";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useGameRound } from "@/components/groups/split-game/game-round";
@@ -13,13 +13,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { GameAvatar } from "@/components/groups/split-game/game-avatar";
+import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
+import { GameResultBanner } from "@/components/groups/split-game/game-result-banner";
 import { GameDialogContent } from "@/components/groups/split-game/game-stage";
-import { Label } from "@/components/ui/label";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { useT } from "@/components/locale-provider";
-import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
+import { lotteryHeartbeat } from "@/lib/games/lottery-heartbeat";
+import { maxPayerCount, stakeShares, type GameStake } from "@/lib/games/payers";
+import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
 import { springs } from "@/lib/motion";
 import { avatarGradient, cn } from "@/lib/utils";
-import { playAppliedSound, playLaughSound, playMissSound } from "@/lib/sound/game-sounds";
+import { playAppliedSound, playHeartbeatSound, playMissSound } from "@/lib/sound/game-sounds";
 import type { GroupMember } from "@/lib/types";
 
 /**
@@ -78,41 +85,32 @@ function randomCharacter(): LotteryCharacter {
   return CHARACTERS[bytes[0] % CHARACTERS.length];
 }
 
+/** The caught face peeking over the slip: `CatchFlash`'s `hero` slot is `size-24`. */
+const HERO_SIZES = "96px";
+
 /**
  * Every laugh variant fetched once, up front, at the same resolution the
- * full-board flash renders it at. Without this, the first time any given
- * character is caught mid-session, the celebratory takeover is a cold
- * `/_next/image` fetch racing the "ha" sound — on the phone-outdoors-cellular
- * conditions this component is built for, that's a blank card under a laugh
- * track. `sr-only` keeps the boxes out of layout without skipping the fetch.
+ * catch slip's peeking face renders it at (`HERO_SIZES`, so the same
+ * `/_next/image` URL). Without this, the first time any given character is
+ * caught mid-session, the face behind the slip is a cold fetch racing the
+ * stamp — on the phone-outdoors-cellular conditions this component is built
+ * for, that's an empty corner under a laugh track. `sr-only` keeps the boxes
+ * out of layout without skipping the fetch.
  */
 function LotteryFacePreload() {
   return (
     <div aria-hidden="true" className="sr-only">
       {CHARACTERS.map((character) => (
-        <span key={character.id} className="relative block size-[400px]">
-          <Image src={character.laughSrc} alt="" fill sizes="400px" />
+        <span key={character.id} className="relative block size-24">
+          <Image src={character.laughSrc} alt="" fill sizes={HERO_SIZES} />
         </span>
       ))}
     </div>
   );
 }
 
-/** The app's deterministic name-colored initial chip, at whatever size the caller needs. */
-function PlayerAvatar({ name, className }: { name: string; className?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-linear-to-br font-semibold text-white",
-        avatarGradient(name),
-        className,
-      )}
-    >
-      {name.charAt(0).toUpperCase() || "?"}
-    </span>
-  );
-}
+/** Heartbeats per turn before the pulse goes quiet, so a phone put down mid-turn doesn't thump on forever. */
+const HEARTBEAT_BEATS_PER_TURN = 8;
 
 type Outcome = "pay" | "safe";
 
@@ -296,14 +294,6 @@ function LotteryCard({
 
 type Step = "setup" | "playing";
 
-interface FlashState {
-  id: number;
-  character: LotteryCharacter;
-}
-
-/** How long the full-board takeover holds before the caught face drops back into its slot. */
-const FLASH_HOLD_MS = 620; // --duration-deliberate
-
 /**
  * "Pass the phone" lottery for deciding who ends up owing an expense —
  * modeled on the tap-to-reveal party game it's inspired by: a grid of 16-32
@@ -316,6 +306,11 @@ const FLASH_HOLD_MS = 620; // --duration-deliberate
  * they split the full amount between themselves, everyone else owes
  * nothing. It never touches `paidBy`: who actually fronted the money stays
  * a separate, manual choice, since the game only decides who owes it back.
+ *
+ * A laughing face is the shared `CatchFlash`: a slip naming whoever tapped
+ * it, the face itself peeking over the slip, stamp, shake and confetti. In
+ * between, a heartbeat (`lottery-heartbeat.ts`) quickens as the safe faces
+ * run out.
  */
 export function SplitLotteryDialog({
   open,
@@ -323,6 +318,7 @@ export function SplitLotteryDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -331,6 +327,8 @@ export function SplitLotteryDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — shares go on the last slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -339,15 +337,16 @@ export function SplitLotteryDialog({
   const reduceMotion = useReducedMotion();
   const [step, setStep] = useState<Step>("setup");
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
-  const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
-  const [loserCountInput, setLoserCountInput] = useState(String(remembered?.loserCount ?? 1));
+  // At most everyone but one laughing face: with as many as players, the
+  // last turns would have nobody left to keep dry.
+  const setup = useGamePoolSetup(memberUids, maxPayerCount, groupId);
+  const poolUids = setup.poolUids;
   const [targetLoserCount, setTargetLoserCount] = useState(1);
   const [cells, setCells] = useState<LotteryCell[]>([]);
   const [turnIndex, setTurnIndex] = useState(0);
-  const [flash, setFlash] = useState<FlashState | null>(null);
-  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flashIdRef = useRef(0);
+  // The face behind the slip on screen: the last laughing face tapped.
+  const [caughtCellIndex, setCaughtCellIndex] = useState<number | null>(null);
+  const [stageRef, catches] = useCatchFlashes();
   // Mutable, synchronous shadows of `cells`/`turnIndex` state: two taps that
   // land in the same React batch (two fingers on two different cells) would
   // otherwise both read the same pre-update snapshot and get attributed to
@@ -355,28 +354,12 @@ export function SplitLotteryDialog({
   // change commits, so the second tap always sees the first one's result.
   const tappedIndicesRef = useRef<Set<number>>(new Set());
   const turnCounterRef = useRef(0);
-  // Direction the count last moved, for the stepper digit's slide — read
-  // during render (to pick the enter/exit offset), so state rather than a
-  // ref.
-  const [stepperDirection, setStepperDirection] = useState<1 | -1>(1);
-
-  useEffect(() => {
-    return () => {
-      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    };
-  }, []);
-
-  function togglePoolMember(uid: string) {
-    setPoolUids((current) =>
-      current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid],
-    );
-  }
 
   function startGame() {
     startRound();
-    const requested = Number.parseInt(loserCountInput, 10) || 1;
-    const target = Math.min(Math.max(requested, 1), poolUids.length);
-    rememberSetup(groupId, { poolUids, loserCount: target });
+    const target = setup.loserCount;
+    setup.remember();
+    catches.cancel();
     const size = randomGridSize();
     const outcomes = shuffledOutcomes(size, target);
     // Each cell gets its own random cast member — a colourful mix, not one
@@ -392,6 +375,7 @@ export function SplitLotteryDialog({
     );
     setTargetLoserCount(target);
     setTurnIndex(0);
+    setCaughtCellIndex(null);
     turnCounterRef.current = 0;
     tappedIndicesRef.current = new Set();
     setDirection(1);
@@ -399,26 +383,10 @@ export function SplitLotteryDialog({
   }
 
   function goToSetup() {
+    // "Neu mischen" works mid-slip too: the slip doesn't block the footer.
+    catches.cancel();
     setDirection(-1);
     setStep("setup");
-  }
-
-  /*
-   * The count is a stepper rather than a text field: the range is 1..pool
-   * size, every value in it is one tap away, and nothing about setting up a
-   * party game should summon a keyboard over the phone being passed around.
-   * `loserCountInput` stays the source of truth in the same string form
-   * `startGame` has always parsed and clamped.
-   */
-  const maxLoserCount = Math.max(poolUids.length, 1);
-  const loserCount = Math.min(
-    Math.max(Number.parseInt(loserCountInput, 10) || 1, 1),
-    maxLoserCount,
-  );
-
-  function stepLoserCount(delta: number) {
-    setStepperDirection(delta > 0 ? 1 : -1);
-    setLoserCountInput(String(Math.min(Math.max(loserCount + delta, 1), maxLoserCount)));
   }
 
   const revealedPayCells = cells.filter((cell) => cell.revealed && cell.outcome === "pay");
@@ -430,16 +398,57 @@ export function SplitLotteryDialog({
   // people instead could make the target unreachable.
   const loserUids = [...new Set(revealedPayCells.map((cell) => cell.tappedByUid as string))];
   const gameOver = revealedPayCells.length >= targetLoserCount;
-  // The result banner waits for the flash to clear: both fire from the same
-  // tap, and without this the whole celebration — the bloom, the settle
-  // ring, the result rising in — plays out hidden behind the opaque
-  // takeover and is never actually seen.
-  const showVerdict = gameOver && flash === null;
+  // The result banner waits for the last slip to clear: both fire from the
+  // same tap, and without this the whole celebration — the bloom, the settle
+  // ring, the result rising in — plays out hidden behind the takeover and is
+  // never actually seen.
+  const showVerdict = gameOver && !catches.active;
+  const flash = catches.flash;
   const currentTurnUid = poolUids[turnIndex % poolUids.length];
   const boardCols = cells.length > 0 ? cells.length / 4 : 1;
+  // One person can catch two faces, so who pays — and so each share — is
+  // only certain once the last laughing face is found.
+  const shares = gameOver ? stakeShares(stake, loserUids) : null;
+  const caughtCell = caughtCellIndex !== null ? cells[caughtCellIndex] : undefined;
+  const caughtAgain =
+    flash !== null && revealedPayCells.filter((cell) => cell.tappedByUid === flash.uid).length > 1;
+
+  // Herzklopfen: public odds only (laughing faces left, faces left), never where they are.
+  const payLeft = targetLoserCount - revealedPayCells.length;
+  const facesLeft = cells.filter((cell) => !cell.revealed).length;
+  const heartbeat = step === "playing" && !gameOver ? lotteryHeartbeat(payLeft, facesLeft) : null;
+  const beatBpm = heartbeat?.bpm ?? null;
+  const beatIntensity = heartbeat?.intensity ?? 0;
+  const oddsText =
+    payLeft >= facesLeft
+      ? t("expenses.lotteryOddsAll")
+      : payLeft === 1
+        ? t("expenses.lotteryOddsOne", { faces: facesLeft })
+        : t("expenses.lotteryOdds", { count: payLeft, faces: facesLeft });
+
+  /*
+   * The heartbeat itself: a beat at the current tempo, restarted by every
+   * tap, quiet while a slip is up and after a few beats if nobody taps. It
+   * waits for the first tap, which is also what unlocks audio on iOS. An
+   * effect-owned interval, so a new turn, "Neu mischen", closing and
+   * unmounting all stop it on their own.
+   */
+  useEffect(() => {
+    if (!open || beatBpm === null || catches.active || turnIndex === 0) return;
+    let beats = 0;
+    const interval = setInterval(() => {
+      playHeartbeatSound(beatIntensity);
+      beats += 1;
+      if (beats >= HEARTBEAT_BEATS_PER_TURN) clearInterval(interval);
+    }, 60_000 / beatBpm);
+    return () => clearInterval(interval);
+  }, [open, beatBpm, beatIntensity, catches.active, turnIndex]);
 
   function tapCell(index: number) {
     if (gameOver) return;
+    // The board is locked while a slip is up. A ref, not `catches.active`:
+    // a second finger in the same frame must already see the first catch.
+    if (catches.isActive()) return;
     if (tappedIndicesRef.current.has(index)) return;
     const cell = cells[index];
     if (cell.revealed) return;
@@ -455,15 +464,13 @@ export function SplitLotteryDialog({
     setTurnIndex(turnCounterRef.current);
 
     if (cell.outcome === "pay") {
-      playLaughSound();
-      // Re-triggers even if a previous flash's timeout hasn't fired yet, so
-      // back-to-back catches each get their own full-length takeover — the
-      // monotonic id is what makes AnimatePresence treat it as a new element
-      // rather than a prop update on the one still on screen.
-      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-      flashIdRef.current += 1;
-      setFlash({ id: flashIdRef.current, character: cell.character });
-      flashTimeoutRef.current = setTimeout(() => setFlash(null), FLASH_HOLD_MS);
+      // Counted from the tapped set, not `cells`: that may not have caught up
+      // with a tap from the same frame. Outcomes never change mid-round.
+      const found = [...tappedIndicesRef.current].filter(
+        (tapped) => cells[tapped].outcome === "pay",
+      ).length;
+      setCaughtCellIndex(index);
+      catches.catchOne(tapperUid, { finale: found >= targetLoserCount });
     } else {
       playMissSound();
     }
@@ -474,10 +481,10 @@ export function SplitLotteryDialog({
       setStep("setup");
       setCells([]);
       setTurnIndex(0);
+      setCaughtCellIndex(null);
       turnCounterRef.current = 0;
       tappedIndicesRef.current = new Set();
-      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-      setFlash(null);
+      catches.cancel();
     }
     onOpenChange(nextOpen);
   }
@@ -488,52 +495,45 @@ export function SplitLotteryDialog({
     handleOpenChange(false);
   }
 
-  const loserNames = loserUids.map((uid) => members[uid].displayName);
-  const resultText =
-    loserNames.length === 1
-      ? t("expenses.gameResultOne", { name: loserNames[0] })
-      : t("expenses.gameResultMultiple", { names: loserNames.join(", ") });
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <GameDialogContent>
+        {/* Over the whole dialog, as the scratch cards' is: the board is taller than the slip. */}
         <AnimatePresence>
           {flash && (
-            <motion.div
+            <CatchFlash
               key={flash.id}
-              aria-hidden="true"
-              initial={{ opacity: 0 }}
-              animate={{
-                opacity: 1,
-                transition: reduceMotion ? { duration: 0 } : { duration: 0.12 },
-              }}
-              exit={{
-                opacity: 0,
-                transition: reduceMotion
-                  ? { duration: 0 }
-                  : { duration: 0.18, ease: [0.4, 0, 1, 1] },
-              }}
-              // Eats taps for its whole hold: without this, a second finger on
-              // the board mid-flash can register on a hidden cell.
-              className="bg-popover/95 pointer-events-auto absolute inset-0 z-50 flex items-center justify-center rounded-xl"
-            >
-              <motion.span
-                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={reduceMotion ? { duration: 0 } : springs.weighted}
-                className="relative size-[85%]"
-              >
-                <span className="animate-laugh-land absolute inset-0">
+              seed={flash.id}
+              name={members[flash.uid].displayName}
+              stampLabel={t("expenses.gameCaughtStamp")}
+              finale={flash.finale}
+              className="inset-0 z-50 rounded-xl"
+              hero={
+                caughtCell && (
                   <Image
-                    src={flash.character.laughSrc}
+                    src={caughtCell.character.laughSrc}
                     alt=""
                     fill
-                    sizes="400px"
-                    className="object-contain drop-shadow-2xl"
+                    sizes={HERO_SIZES}
+                    className="object-contain drop-shadow-xl"
                   />
-                </span>
-              </motion.span>
-            </motion.div>
+                )
+              }
+              caption={
+                <CatchCaption
+                  share={flash.finale ? shares?.[flash.uid] : null}
+                  stake={stake}
+                  detail={
+                    caughtAgain
+                      ? t("expenses.lotteryCaughtAgain")
+                      : t("expenses.lotteryProgress", {
+                          found: revealedPayCells.length,
+                          target: targetLoserCount,
+                        })
+                  }
+                />
+              }
+            />
           )}
         </AnimatePresence>
         <DialogHeader>
@@ -566,156 +566,27 @@ export function SplitLotteryDialog({
                       }
                 }
                 transition={reduceMotion ? { duration: 0 } : springs.weighted}
-                className="flex flex-col gap-4"
               >
-                <div className="flex flex-col gap-2">
-                  <Label id="lottery-pool-label">{t("expenses.gamePoolLabel")}</Label>
-                  <div
-                    role="group"
-                    aria-labelledby="lottery-pool-label"
-                    className="flex flex-col gap-1.5"
-                  >
-                    {memberUids.map((uid, index) => {
-                      const name = members[uid].displayName;
-                      const selected = poolUids.includes(uid);
-                      return (
-                        <label
-                          key={uid}
-                          style={{ "--stagger": index } as CSSProperties}
-                          className={cn(
-                            "has-focus-visible:ring-ring/50 ease-spring animate-rise active:shadow-pressed flex cursor-pointer items-center gap-3 rounded-xl border p-2 transition-[background-color,border-color,transform,box-shadow] duration-(--duration-fast) select-none active:scale-[0.99] has-focus-visible:ring-3",
-                            selected
-                              ? "border-primary/40 bg-primary/5 shadow-e1"
-                              : "border-border bg-background",
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => togglePoolMember(uid)}
-                            className="sr-only"
-                          />
-                          <PlayerAvatar
-                            name={name}
-                            className={cn(
-                              "size-9 text-sm transition-all duration-(--duration-fast)",
-                              !selected && "opacity-40 grayscale",
-                            )}
-                          />
-                          <span
-                            className={cn(
-                              "flex-1 truncate text-sm font-medium",
-                              !selected && "text-muted-foreground",
-                            )}
-                          >
-                            {name}
-                          </span>
-                          <span
-                            className={cn(
-                              "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-(--duration-fast)",
-                              selected
-                                ? "border-primary bg-primary text-primary-foreground"
-                                : "border-border",
-                            )}
-                          >
-                            {selected && (
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth={2}
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="size-3.5"
-                                aria-hidden="true"
-                              >
-                                <path
-                                  d="M20 6 9 17l-5-5"
-                                  pathLength={1}
-                                  className="animate-draw-stroke [--stroke-length:1]"
-                                />
-                              </svg>
-                            )}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {poolUids.length < 2 && (
-                    <p className="text-muted-foreground text-xs">{t("expenses.gamePoolMinHint")}</p>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Label id="lottery-count-label">{t("expenses.gameCountLabel")}</Label>
-                  <div
-                    role="group"
-                    aria-labelledby="lottery-count-label"
-                    className="bg-muted/40 flex items-center gap-3 rounded-xl border p-2"
-                  >
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-lg"
-                      aria-label={t("expenses.gameCountDecrease")}
-                      disabled={loserCount <= 1}
-                      onClick={() => stepLoserCount(-1)}
-                    >
-                      <Minus />
-                    </Button>
-                    <div className="relative flex flex-1 items-center justify-center gap-2">
-                      {/* Live, so stepping the count is audible as well as visible. */}
-                      <span aria-live="polite" className="sr-only">
-                        {loserCount}
-                      </span>
-                      <span className="relative h-8 overflow-hidden">
-                        <AnimatePresence mode="popLayout" initial={false}>
-                          <motion.span
-                            key={loserCount}
-                            aria-hidden="true"
-                            initial={
-                              reduceMotion ? false : { opacity: 0, y: stepperDirection * 14 }
-                            }
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={
-                              reduceMotion
-                                ? { opacity: 0 }
-                                : {
-                                    opacity: 0,
-                                    y: -stepperDirection * 14,
-                                    transition: { duration: 0.12 },
-                                  }
-                            }
-                            transition={reduceMotion ? { duration: 0 } : springs.snappy}
-                            className="font-heading tabular-money block text-2xl leading-none font-medium"
-                          >
-                            {loserCount}
-                          </motion.span>
-                        </AnimatePresence>
-                      </span>
-                      <span className="relative size-7 shrink-0">
-                        <Image
-                          src={CHARACTERS[0].laughSrc}
-                          alt=""
-                          fill
-                          sizes="28px"
-                          className="object-contain"
-                        />
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-lg"
-                      aria-label={t("expenses.gameCountIncrease")}
-                      disabled={loserCount >= maxLoserCount}
-                      onClick={() => stepLoserCount(1)}
-                    >
-                      <Plus />
-                    </Button>
-                  </div>
-                  <p className="text-muted-foreground text-xs">{t("expenses.lotteryCountHint")}</p>
-                </div>
+                <GamePoolSetupStep
+                  memberUids={memberUids}
+                  members={members}
+                  poolUids={poolUids}
+                  onTogglePoolMember={setup.togglePoolMember}
+                  loserCount={setup.loserCount}
+                  maxLoserCount={setup.maxLoserCount}
+                  onStepLoserCount={setup.stepLoserCount}
+                  stepperDirection={setup.stepperDirection}
+                  countHint={t("expenses.lotteryCountHint")}
+                  countIcon={
+                    <Image
+                      src={CHARACTERS[0].laughSrc}
+                      alt=""
+                      fill
+                      sizes="28px"
+                      className="object-contain"
+                    />
+                  }
+                />
               </motion.div>
             ) : (
               <motion.div
@@ -732,184 +603,193 @@ export function SplitLotteryDialog({
                       }
                 }
                 transition={reduceMotion ? { duration: 0 } : springs.weighted}
-                className="flex flex-col gap-3"
               >
-                {/*
+                {/* A plain box for the impact shake: the motion.div around it owns its own y. */}
+                <div ref={stageRef} className="flex flex-col gap-3">
+                  {/*
                   The banner and the tray are decorative rearrangements of what this
                   line says, so the live region carries the whole state change — one
-                  announcement per turn instead of four fragments.
+                  announcement per turn instead of four fragments. The verdict
+                  banner announces itself.
                 */}
-                <p aria-live="polite" className="sr-only">
-                  {showVerdict
-                    ? resultText
-                    : t("expenses.lotteryTurnLabel", {
-                        name: members[currentTurnUid].displayName,
-                      })}
-                </p>
+                  <p aria-live="polite" className="sr-only">
+                    {showVerdict
+                      ? ""
+                      : flash
+                        ? t("expenses.lotteryCaughtLabel", { name: members[flash.uid].displayName })
+                        : t("expenses.lotteryTurnLabel", {
+                            name: members[currentTurnUid].displayName,
+                          })}
+                  </p>
 
-                {showVerdict ? (
-                  <div className="border-primary/30 bg-primary/5 animate-rise relative flex flex-col items-center gap-2 overflow-hidden rounded-xl border p-4 text-center">
-                    <span
-                      aria-hidden="true"
-                      className="bg-primary/25 animate-bloom pointer-events-none absolute -top-10 left-1/2 size-28 -translate-x-1/2 rounded-full blur-2xl"
-                    />
-                    <span className="text-muted-foreground relative text-[11px] font-semibold tracking-[0.12em] uppercase">
-                      {t("expenses.gameResultEyebrow")}
-                    </span>
-                    <div className="relative flex -space-x-2">
-                      {loserNames.map((name, index) => (
-                        <PlayerAvatar
-                          key={loserUids[index]}
-                          name={name}
-                          className="ring-popover size-10 text-sm ring-2"
-                        />
-                      ))}
-                    </div>
-                    <DialogDescription className="font-heading text-foreground relative text-lg font-medium">
-                      {resultText}
-                    </DialogDescription>
-                  </div>
-                ) : (
-                  <div className="bg-muted/40 relative flex items-center gap-3 overflow-hidden rounded-xl border p-3">
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.div
-                        key={turnIndex}
-                        initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={
-                          reduceMotion
-                            ? { opacity: 0 }
-                            : {
-                                opacity: 0,
-                                y: -8,
-                                transition: { duration: 0.12, ease: [0.4, 0, 1, 1] },
-                              }
-                        }
-                        transition={reduceMotion ? { duration: 0 } : springs.weighted}
-                        className="flex min-w-0 flex-1 items-center gap-3"
-                      >
-                        <span className="relative flex shrink-0">
-                          <span
-                            aria-hidden="true"
-                            className="bg-primary/25 animate-breathe absolute inset-0 rounded-full blur-sm"
-                          />
-                          <span
-                            aria-hidden="true"
-                            className="animate-settle-ring border-primary/40 absolute inset-0 rounded-full border"
-                          />
-                          <PlayerAvatar
-                            name={members[currentTurnUid].displayName}
-                            className="ring-popover relative size-10 text-sm ring-2"
-                          />
-                        </span>
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                          <span
-                            aria-hidden="true"
-                            className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase"
-                          >
-                            {t("expenses.lotteryTurnEyebrow")}
-                          </span>
-                          <span
-                            aria-hidden="true"
-                            className="font-heading truncate text-lg leading-tight font-medium"
-                          >
-                            {members[currentTurnUid].displayName}
-                          </span>
-                          <DialogDescription className="text-xs">
-                            {t("expenses.lotteryTapAnyHint")}
-                          </DialogDescription>
-                        </div>
-                      </motion.div>
-                    </AnimatePresence>
-                  </div>
-                )}
-
-                {/* How many laughing faces are still out there, as slots rather than a sentence. */}
-                <div className="flex flex-wrap items-center justify-center gap-1.5">
-                  <span className="sr-only">
-                    {t("expenses.lotteryProgress", {
-                      found: revealedPayCells.length,
-                      target: targetLoserCount,
-                    })}
-                  </span>
-                  {Array.from({ length: targetLoserCount }, (_, index) => {
-                    const found = index < revealedPayCells.length;
-                    return (
-                      <span
-                        key={index}
-                        aria-hidden="true"
-                        className={cn(
-                          "relative flex size-7 items-center justify-center rounded-lg border transition-colors duration-(--duration-base)",
-                          found
-                            ? "border-destructive/40 bg-destructive/10"
-                            : "border-border border-dashed",
-                        )}
-                      >
-                        {found ? (
-                          <>
-                            <span className="animate-settle-ring border-destructive/40 pointer-events-none absolute inset-0 rounded-lg border" />
+                  {showVerdict ? (
+                    <GameResultBanner loserUids={loserUids} members={members} stake={stake} />
+                  ) : (
+                    <div className="bg-muted/40 relative flex items-center gap-3 overflow-hidden rounded-xl border p-3">
+                      <AnimatePresence mode="wait" initial={false}>
+                        <motion.div
+                          key={turnIndex}
+                          initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={
+                            reduceMotion
+                              ? { opacity: 0 }
+                              : {
+                                  opacity: 0,
+                                  y: -8,
+                                  transition: { duration: 0.12, ease: [0.4, 0, 1, 1] },
+                                }
+                          }
+                          transition={reduceMotion ? { duration: 0 } : springs.weighted}
+                          className="flex min-w-0 flex-1 items-center gap-3"
+                        >
+                          <span className="relative flex shrink-0">
                             <span
-                              className="animate-rise relative size-5"
-                              style={{ "--stagger": 22 } as CSSProperties}
+                              aria-hidden="true"
+                              className="bg-primary/25 animate-breathe absolute inset-0 rounded-full blur-sm"
+                            />
+                            <span
+                              aria-hidden="true"
+                              className="animate-settle-ring border-primary/40 absolute inset-0 rounded-full border"
+                            />
+                            <GameAvatar
+                              name={members[currentTurnUid].displayName}
+                              className="ring-popover relative size-10 text-sm ring-2"
+                            />
+                          </span>
+                          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                            <span
+                              aria-hidden="true"
+                              className="text-muted-foreground text-[11px] font-semibold tracking-[0.12em] uppercase"
                             >
-                              <Image
-                                src={CHARACTERS[0].laughSrc}
-                                alt=""
-                                fill
-                                sizes="20px"
-                                className="object-contain"
-                              />
+                              {t("expenses.lotteryTurnEyebrow")}
                             </span>
-                          </>
-                        ) : (
-                          <span className="bg-muted-foreground/25 size-1.5 rounded-full" />
-                        )}
-                      </span>
-                    );
-                  })}
-                </div>
+                            <span
+                              aria-hidden="true"
+                              className="font-heading truncate text-lg leading-tight font-medium"
+                            >
+                              {members[currentTurnUid].displayName}
+                            </span>
+                            <DialogDescription className="text-xs">
+                              {t("expenses.lotteryTapAnyHint")}
+                            </DialogDescription>
+                          </div>
+                        </motion.div>
+                      </AnimatePresence>
+                    </div>
+                  )}
 
-                {/* The board gets a frame of its own so the cards read as laid out on a table. */}
-                {/*
+                  {/* How many laughing faces are still out there, as slots rather than a sentence. */}
+                  <div className="flex flex-wrap items-center justify-center gap-1.5">
+                    <span className="sr-only">
+                      {t("expenses.lotteryProgress", {
+                        found: revealedPayCells.length,
+                        target: targetLoserCount,
+                      })}
+                    </span>
+                    {Array.from({ length: targetLoserCount }, (_, index) => {
+                      const found = index < revealedPayCells.length;
+                      return (
+                        <span
+                          key={index}
+                          aria-hidden="true"
+                          className={cn(
+                            "relative flex size-7 items-center justify-center rounded-lg border transition-colors duration-(--duration-base)",
+                            found
+                              ? "border-destructive/40 bg-destructive/10"
+                              : "border-border border-dashed",
+                          )}
+                        >
+                          {found ? (
+                            <>
+                              <span className="animate-settle-ring border-destructive/40 pointer-events-none absolute inset-0 rounded-lg border" />
+                              <span
+                                className="animate-rise relative size-5"
+                                style={{ "--stagger": 22 } as CSSProperties}
+                              >
+                                <Image
+                                  src={CHARACTERS[0].laughSrc}
+                                  alt=""
+                                  fill
+                                  sizes="20px"
+                                  className="object-contain"
+                                />
+                              </span>
+                            </>
+                          ) : (
+                            <span className="bg-muted-foreground/25 size-1.5 rounded-full" />
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {/* The odds the heartbeat follows, with a heart beating at its tempo. */}
+                  {heartbeat && (
+                    <p className="text-muted-foreground -mt-1 flex items-center justify-center gap-1.5 text-xs font-medium">
+                      <motion.span
+                        // Restarted per tempo: a running repeat keeps its old duration.
+                        key={heartbeat.bpm}
+                        aria-hidden="true"
+                        className="text-destructive flex"
+                        animate={reduceMotion ? undefined : { scale: [1, 1.3, 1, 1.15, 1] }}
+                        transition={{
+                          duration: 60 / heartbeat.bpm,
+                          times: [0, 0.12, 0.26, 0.38, 1],
+                          ease: "easeOut",
+                          repeat: Infinity,
+                        }}
+                      >
+                        <Heart className="size-3.5 fill-current" />
+                      </motion.span>
+                      {oddsText}
+                    </p>
+                  )}
+
+                  {/* The board gets a frame of its own so the cards read as laid out on a table. */}
+                  {/*
                   Always four rows (landscape) or four columns (portrait, so a
                   phone's height goes to bigger faces instead of 8 tiny ones
                   across): cap the width so the whole grid fits the stage.
                 */}
-                <div
-                  className="bg-muted/30 relative mx-auto w-full max-w-[calc(var(--game-board-h,100vh)_*_var(--lottery-cols)_/_4)] rounded-xl border p-2 portrait:max-w-[calc(var(--game-board-h,100vh)_*_4_/_var(--lottery-cols))]"
-                  style={{ "--lottery-cols": boardCols } as CSSProperties}
-                >
-                  <span
-                    aria-hidden="true"
-                    className="bg-paper-texture pointer-events-none absolute inset-0 rounded-xl opacity-60"
-                  />
                   <div
-                    className={cn(
-                      "relative grid",
-                      GRID_COLUMN_CLASS[cells.length] ?? "grid-cols-6",
-                      "portrait:grid-cols-4",
-                      cells.length > 24 ? "gap-1" : "gap-1.5",
-                    )}
+                    className="bg-muted/30 relative mx-auto w-full max-w-[calc(var(--game-board-h,100vh)_*_var(--lottery-cols)_/_4)] rounded-xl border p-2 portrait:max-w-[calc(var(--game-board-h,100vh)_*_4_/_var(--lottery-cols))]"
+                    style={{ "--lottery-cols": boardCols } as CSSProperties}
                   >
-                    {cells.map((cell, index) => (
-                      <LotteryCard
-                        key={index}
-                        cell={cell}
-                        stagger={dealStagger(index, boardCols)}
-                        boardLocked={gameOver}
-                        label={
-                          cell.revealed
-                            ? cell.outcome === "pay"
-                              ? t("expenses.lotteryRevealPay")
-                              : t("expenses.lotterySafe")
-                            : t("expenses.lotteryCardUntapped")
-                        }
-                        tapperName={
-                          cell.tappedByUid ? (members[cell.tappedByUid]?.displayName ?? null) : null
-                        }
-                        onTap={() => tapCell(index)}
-                      />
-                    ))}
+                    <span
+                      aria-hidden="true"
+                      className="bg-paper-texture pointer-events-none absolute inset-0 rounded-xl opacity-60"
+                    />
+                    <div
+                      className={cn(
+                        "relative grid",
+                        GRID_COLUMN_CLASS[cells.length] ?? "grid-cols-6",
+                        "portrait:grid-cols-4",
+                        cells.length > 24 ? "gap-1" : "gap-1.5",
+                      )}
+                    >
+                      {cells.map((cell, index) => (
+                        <LotteryCard
+                          key={index}
+                          cell={cell}
+                          stagger={dealStagger(index, boardCols)}
+                          boardLocked={gameOver}
+                          label={
+                            cell.revealed
+                              ? cell.outcome === "pay"
+                                ? t("expenses.lotteryRevealPay")
+                                : t("expenses.lotterySafe")
+                              : t("expenses.lotteryCardUntapped")
+                          }
+                          tapperName={
+                            cell.tappedByUid
+                              ? (members[cell.tappedByUid]?.displayName ?? null)
+                              : null
+                          }
+                          onTap={() => tapCell(index)}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
               </motion.div>
@@ -948,7 +828,13 @@ export function SplitLotteryDialog({
                   >
                     {t("expenses.gamePlayAgain")}
                   </Button>
-                  <Button type="button" size="lg" className="flex-1" onClick={applyResult}>
+                  <Button
+                    type="button"
+                    size="lg"
+                    className="flex-1"
+                    disabled={!showVerdict}
+                    onClick={applyResult}
+                  >
                     {t("expenses.gameApply")}
                   </Button>
                 </>

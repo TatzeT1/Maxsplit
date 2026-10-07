@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   distributeByWeights,
+  payerShare,
   splitByPercent,
   splitByShares,
   splitEqual,
@@ -38,6 +39,35 @@ describe("splitEqual", () => {
     const result = splitEqual(1000, uids);
     const sum = Object.values(result).reduce((total, v) => total + v, 0);
     expect(sum).toBe(1000);
+  });
+});
+
+describe("payerShare", () => {
+  // Realistic uids (Firebase auth ids, `ph_<uuid>` placeholders): never
+  // integer-like, so object keys keep the order the payers came in.
+  const uids = ["xK9fQ2mLr0aB", "ph_3f1c2a9e", "Zt7Lw0pQe4cD", "ph_88d1b0f2", "aa", "b1", "c_2"];
+
+  it("pins every payer's share to what splitEqual books for the same order", () => {
+    for (const amount of [0, 1, 2, 99, 100, 101, 2390, 4780, 4781, 99999, 123457]) {
+      for (let count = 1; count <= uids.length; count++) {
+        const payers = uids.slice(0, count);
+        const booked = splitEqual(amount, payers);
+        payers.forEach((uid, index) => {
+          expect(payerShare(amount, count, index)).toBe(booked[uid]);
+        });
+      }
+    }
+  });
+
+  it("gives the leftover cents to the first payers in order", () => {
+    expect([0, 1, 2].map((index) => payerShare(100, 3, index))).toEqual([34, 33, 33]);
+    expect([0, 1, 2].map((index) => payerShare(101, 3, index))).toEqual([34, 34, 33]);
+  });
+
+  it("rejects an index outside the payers and non-integer amounts", () => {
+    expect(() => payerShare(100, 2, 2)).toThrow();
+    expect(() => payerShare(100, 0, 0)).toThrow();
+    expect(() => payerShare(10.5, 2, 0)).toThrow();
   });
 });
 

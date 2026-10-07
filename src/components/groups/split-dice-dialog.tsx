@@ -24,22 +24,14 @@ import {
   type DiceGame,
   type DicePair,
 } from "@/lib/games/dice-cup";
+import { stakeShares, type GameStake } from "@/lib/games/payers";
 import { randomInt } from "@/lib/games/random";
 import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
-import {
-  playAppliedSound,
-  playDiceLandSound,
-  playDiceRattleSound,
-  playLaughSound,
-  playStampSound,
-} from "@/lib/sound/game-sounds";
+import { playAppliedSound, playDiceLandSound, playDiceRattleSound } from "@/lib/sound/game-sounds";
 import { cn } from "@/lib/utils";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { DiceCupFigure, DiceFace } from "@/components/groups/split-game/dice-figure";
 import { DuelDrawNotice } from "@/components/groups/split-game/duel-ladder";
 import { DuelTurnBanner } from "@/components/groups/split-game/duel-turn-banner";
@@ -54,7 +46,7 @@ type Step = "setup" | "playing";
 const SHAKE_MS = 850;
 /** How long the dice sit on the table, readable, before the roll is written down. */
 const SETTLE_MS = 1000;
-/** A beat between the last roll and the "caught" takeover. */
+/** A beat between the last roll and the first "caught" takeover. */
 const VERDICT_BEAT_MS = 450;
 
 function rollDie(): number {
@@ -104,6 +96,7 @@ export function SplitDiceDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -112,6 +105,8 @@ export function SplitDiceDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's share goes on their slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -128,11 +123,8 @@ export function SplitDiceDialog({
     pair: DicePair;
     stage: "shaking" | "landed";
   } | null>(null);
-  const [flash, setFlash] = useState<{ id: number; uid: string } | null>(null);
-  const [celebrated, setCelebrated] = useState(false);
-  const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const [stageRef, catches] = useCatchFlashes();
 
   useEffect(() => {
     // The same array for the component's whole lifetime — only ever pushed to.
@@ -157,8 +149,7 @@ export function SplitDiceDialog({
   function resetStage() {
     clearTimers();
     setRolling(null);
-    setFlash(null);
-    setCelebrated(false);
+    catches.cancel();
   }
 
   function startGame() {
@@ -184,19 +175,13 @@ export function SplitDiceDialog({
     onOpenChange(nextOpen);
   }
 
+  /**
+   * Every payer gets a slip of their own. `losers` runs lowest roll first, so
+   * it plays backwards: whoever only just missed first, the lowest roll last,
+   * as the finale.
+   */
   function celebrate(finished: DiceGame) {
-    const loserUid = finished.losers[0];
-    later(VERDICT_BEAT_MS, () => {
-      playStampSound(STAMP_IMPACT_S);
-      playLaughSound(STAMP_IMPACT_S + 0.1);
-      shakeStage();
-      idRef.current += 1;
-      setFlash({ id: idRef.current, uid: loserUid });
-      later(CATCH_FLASH_HOLD_MS, () => {
-        setFlash(null);
-        setCelebrated(true);
-      });
-    });
+    catches.catchEach([...finished.losers].reverse(), { delayMs: VERDICT_BEAT_MS });
   }
 
   function commit(uid: string, pair: DicePair) {
@@ -237,12 +222,14 @@ export function SplitDiceDialog({
   }
 
   const over = game !== null && isDiceGameOver(game);
-  const showVerdict = over && celebrated;
+  // The verdict waits for the last payer's slip to clear.
+  const showVerdict = over && !catches.active;
+  const flash = catches.flash;
   const rollerUid = game && !over ? nextRoller(game) : null;
   const stageUid = rolling?.uid ?? rollerUid;
   const tieBreak = game !== null && !over && game.rounds.length > 0;
-  const worstUid = game?.losers[0];
-  const worstRoll = game && worstUid ? latestRoll(game, worstUid) : null;
+  const shares = over ? stakeShares(stake, game.losers) : null;
+  const flashRoll = game && flash ? latestRoll(game, flash.uid) : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -276,11 +263,13 @@ export function SplitDiceDialog({
                     name: members[rolling.uid].displayName,
                     number: diceNumber(rolling.pair),
                   })
-                : ""}
+                : flash
+                  ? t("expenses.gameCaughtLabel", { name: members[flash.uid].displayName })
+                  : ""}
             </p>
 
             {showVerdict ? (
-              <GameResultBanner loserUids={game.losers} members={members} />
+              <GameResultBanner loserUids={game.losers} members={members} stake={stake} />
             ) : (
               rollerUid && (
                 <DuelTurnBanner uid={rollerUid} members={members} hint={t("expenses.diceHint")} />
@@ -413,14 +402,21 @@ export function SplitDiceDialog({
                   key={flash.id}
                   seed={flash.id}
                   name={members[flash.uid].displayName}
-                  stampLabel={t("expenses.diceLowestStamp")}
-                  finale
+                  stampLabel={
+                    flash.finale ? t("expenses.diceLowestStamp") : t("expenses.gameCaughtStamp")
+                  }
+                  finale={flash.finale}
                   caption={
-                    worstRoll && (
-                      <span className="text-muted-foreground text-sm font-medium">
-                        {t("expenses.diceLowestCaption", { number: diceNumber(worstRoll) })}
-                      </span>
-                    )
+                    <CatchCaption
+                      share={shares?.[flash.uid]}
+                      stake={stake}
+                      detail={
+                        flashRoll &&
+                        (flash.finale
+                          ? t("expenses.diceLowestCaption", { number: diceNumber(flashRoll) })
+                          : t("expenses.diceRollCaption", { number: diceNumber(flashRoll) }))
+                      }
+                    />
                   }
                 />
               )}

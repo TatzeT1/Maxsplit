@@ -21,23 +21,19 @@ import {
   type DuckRace,
 } from "@/lib/games/duck-race";
 import { memberColor } from "@/lib/games/member-colors";
+import { stakeShares, type GameStake } from "@/lib/games/payers";
 import { secureShuffle } from "@/lib/games/random";
 import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
 import {
   playAppliedSound,
   playGoSound,
-  playLaughSound,
   playQuackSound,
   playSplashSound,
-  playStampSound,
 } from "@/lib/sound/game-sounds";
 import { cn } from "@/lib/utils";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { DuckFigure } from "@/components/groups/split-game/duck-figure";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
@@ -54,7 +50,7 @@ const FINISH_BAND = 26;
 const START_PAD = 8;
 /** How far a finished duck's beak reaches into the finish band, in px. */
 const FINISH_OVERLAP = 6;
-/** A beat between the last duck crossing the line and the "caught" takeover. */
+/** A beat between the last duck crossing the line and the first "caught" takeover. */
 const FINISH_BEAT_MS = 700;
 /** Closest two quacks may sound, so a packed finish is a chorus rather than a buzz. */
 const MIN_QUACK_GAP_MS = 140;
@@ -89,6 +85,7 @@ export function SplitDuckRaceDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -97,6 +94,8 @@ export function SplitDuckRaceDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's share goes on their slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -108,13 +107,9 @@ export function SplitDuckRaceDialog({
   const [staged, setStaged] = useState<Staged | null>(null);
   const [phase, setPhase] = useState<Phase>("ready");
   const [finished, setFinished] = useState<string[]>([]);
-  const [flash, setFlash] = useState<{ id: number; uid: string } | null>(null);
-  // Set once the last-place takeover has come and gone — the verdict's cue.
-  const [celebrated, setCelebrated] = useState(false);
-  const idRef = useRef(0);
   const lastQuackRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const [stageRef, catches] = useCatchFlashes();
 
   useEffect(() => {
     // The same array for the component's whole lifetime — only ever pushed to.
@@ -142,8 +137,7 @@ export function SplitDuckRaceDialog({
     clearTimers();
     setPhase("ready");
     setFinished([]);
-    setFlash(null);
-    setCelebrated(false);
+    catches.cancel();
   }
 
   function startGame() {
@@ -177,18 +171,13 @@ export function SplitDuckRaceDialog({
     onOpenChange(nextOpen);
   }
 
-  function celebrateLastPlace(plan: Staged) {
-    later(FINISH_BEAT_MS, () => {
-      playStampSound(STAMP_IMPACT_S);
-      playLaughSound(STAMP_IMPACT_S + 0.1);
-      shakeStage();
-      idRef.current += 1;
-      setFlash({ id: idRef.current, uid: plan.losers[0] });
-      later(CATCH_FLASH_HOLD_MS, () => {
-        setFlash(null);
-        setCelebrated(true);
-      });
-    });
+  /**
+   * Every payer gets a slip of their own, in the order they crossed the line,
+   * so the last duck — the one everybody was watching — comes last, as the
+   * finale. (`losers` runs last place first, hence the reverse.)
+   */
+  function celebratePayers(plan: Staged) {
+    catches.catchEach([...plan.losers].reverse(), { delayMs: FINISH_BEAT_MS });
   }
 
   function startRace() {
@@ -197,7 +186,7 @@ export function SplitDuckRaceDialog({
       // No swimming to watch: the result is already on the board.
       setFinished(staged.order);
       setPhase("done");
-      celebrateLastPlace(staged);
+      celebratePayers(staged);
       return;
     }
     playSplashSound();
@@ -211,7 +200,7 @@ export function SplitDuckRaceDialog({
     }
     later(staged.race.totalSec * 1000 + 50, () => {
       setPhase("done");
-      celebrateLastPlace(staged);
+      celebratePayers(staged);
     });
   }
 
@@ -223,8 +212,10 @@ export function SplitDuckRaceDialog({
   }
 
   const done = phase === "done";
-  // The verdict waits for the takeover to clear, as the wheel's does.
-  const showVerdict = done && celebrated && staged !== null;
+  // The verdict waits for the last payer's slip to clear, as the wheel's does.
+  const showVerdict = done && !catches.active && staged !== null;
+  const flash = catches.flash;
+  const shares = staged ? stakeShares(stake, staged.losers) : null;
   const count = staged?.order.length ?? 0;
   const width = duckWidth(count);
   // The beak ends up a few px over the checkered band, so "crossed the line" reads as a crossing.
@@ -258,15 +249,17 @@ export function SplitDuckRaceDialog({
           <div ref={stageRef} className="relative flex flex-col gap-3">
             <p aria-live="polite" className="sr-only">
               {done && flash
-                ? t("expenses.duckRaceLastLabel", {
-                    name: members[staged.losers[0]].displayName,
-                  })
+                ? flash.finale
+                  ? t("expenses.duckRaceLastLabel", { name: members[flash.uid].displayName })
+                  : t("expenses.gameCaughtLabel", { name: members[flash.uid].displayName })
                 : phase === "racing"
                   ? t("expenses.duckRaceRunningLabel")
                   : ""}
             </p>
 
-            {showVerdict && <GameResultBanner loserUids={staged.losers} members={members} />}
+            {showVerdict && (
+              <GameResultBanner loserUids={staged.losers} members={members} stake={stake} />
+            )}
 
             <div
               aria-hidden="true"
@@ -389,12 +382,23 @@ export function SplitDuckRaceDialog({
                   key={flash.id}
                   seed={flash.id}
                   name={members[flash.uid].displayName}
-                  stampLabel={t("expenses.duckRaceLastStamp")}
-                  finale
+                  stampLabel={
+                    flash.finale ? t("expenses.duckRaceLastStamp") : t("expenses.gameCaughtStamp")
+                  }
+                  finale={flash.finale}
                   caption={
-                    <span className="text-muted-foreground text-sm font-medium">
-                      {t("expenses.duckRaceLastCaption", { place: staged.order.length })}
-                    </span>
+                    <CatchCaption
+                      share={shares?.[flash.uid]}
+                      stake={stake}
+                      detail={
+                        flash.finale
+                          ? t("expenses.duckRaceLastCaption", { place: staged.order.length })
+                          : t("expenses.duckRacePlaceCaption", {
+                              place: staged.order.indexOf(flash.uid) + 1,
+                              count: staged.order.length,
+                            })
+                      }
+                    />
                   }
                 />
               )}
