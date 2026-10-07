@@ -40,7 +40,7 @@ The fifteen games split into two categories, each with its own resolution engine
 | Game                       | Dialog                          | Mechanic                                                                                        |
 | -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 🎲 [[Split Lottery]]       | `split-lottery-dialog.tsx`      | Tap-to-reveal grid, turn-based, up to 32 anonymous faces                                        |
-| 🎡 Glücksrad               | `split-wheel-dialog.tsx`        | Spin a wheel of the remaining pool; the needle picks the loser                                  |
+| 🎡 Glücksrad               | `split-wheel-dialog.tsx`        | Flick (or spin) a wheel of the remaining pool; the needle picks the loser                       |
 | 🎰 Spielautomat            | `split-slot-dialog.tsx`         | Turns at one machine; symbol combos from a paytable decide who pays how much                    |
 | 🎫 Rubbellos               | `split-scratch-dialog.tsx`      | Everyone scratches their own card; whoever gets a blank pays                                    |
 | ⭕ Tic-Tac-Toe             | `split-tic-tac-toe-dialog.tsx`  | 3×3 grid, alternating marks; a draw replays and escalates to a vanishing "sudden death" variant |
@@ -1025,6 +1025,84 @@ The course takes the stage's board budget, `clamp(300px, var(--game-board-h) −
 a definite height, measured by a `ResizeObserver` for the ducks' travel. Under reduced motion
 there is no countdown, swimming, zoom or slow motion: the board, the markers and the print are
 simply there (the shutter still clicks), then the slips.
+
+### Glücksrad: anschubsen, Ratsche, Zitter-Finale
+
+Before, the only way to spin was the footer button, and the person holding the phone had no
+hand in it. The pegs were the wedge boundaries, so a two- or three-person wheel — the most
+common small group — clicked a handful of times per spin and never sounded like a ratchet
+slowing down. The landing was capped at ±30 % of the wedge, so a spin never ended on a close
+call. A caught wedge vanished and the rest re-printed in one frame, and every wedge showed an
+initial, so two "M"s looked the same.
+
+**Still decided first.** `useSequentialDraw` fixes the payers before anyone touches the wheel.
+`lib/games/wheel-plan.ts` only plans the way there: `planWheelSpin({ from, layout, targetIndex,
+velocity })` returns a spin that ends inside `targetIndex` whatever the swing, pinned by tests
+over every wedge count from 1 to 20, every target, both directions and swings from the weakest
+to absurd. The swing changes how long it spins and how far it goes, never the wedge. The
+decorative randomness (duration jitter, where in the wedge it rests, whether it's a nail-biter)
+is `Math.random`; who pays never is.
+
+**The flick.** The card mount takes the drag, not the disc: it doesn't turn, so its
+`getBoundingClientRect` is a steady centre, already scaled by `StageScale`. The pointer's angle
+around it (`pointerAngle`, unwrapped across ±180° by `angleDelta`) turns the wheel 1:1; within
+a quarter of the radius of the hub the angle jumps about, so the finger stops steering there.
+`touch-none select-none` on the mount keeps a swipe from scrolling the stage. On release,
+`flickVelocity` averages the last 100 ms (0 if the finger rested 80 ms before lifting), and
+`classifyRelease` decides: 240 °/s or more spins, in whichever direction it was thrown; a
+real drag without swing wobbles back to where the wheel rested on a loose spring, with a
+chuckle and "Zu lasch! Mehr Schwung!" under the wheel; a mere touch slips back without
+comment. A hint line under the wheel ("Schubs das Rad mit dem Finger an — oder tipp auf
+„Drehen"") holds that row's height, so neither message moves the layout. The button stays — for
+keyboards, screen readers and reduced motion — and throws a made-up solid swing (600–2000 °/s),
+clockwise.
+
+**The spin.** The main spin is an ease-out `1 − (1 − τ)^p`. Its duration grows with the swing
+(3.4–6.2 s, ±6 %), its travel is about `swing · duration / 2.6` rounded to the whole turn that
+lands in the wedge, at least two turns, and the power `p` is then chosen so the first frame's
+speed equals the swing: the wheel leaves the finger at the finger's speed, never slower (a very
+weak flick gets a slight push, because below `p = 1.8` the stop turns abrupt). One
+`requestAnimationFrame` loop sets a `rotation` motion value from `wheelRotationAt(plan, t)` —
+React doesn't re-render while it spins — and "Neu mischen", closing and unmounting cancel it.
+
+**The ratchet.** The rim carries `pegsPerWedge(n) = round(24 / n)` pegs per wedge (at least
+one), so about two dozen go round whatever the group size — 24 for two people, 24 for three, 25
+for five — and every wedge boundary has one (drawn bigger, at the end of its divider). Every
+rotation the wheel takes, dragged, spun or wobbling, goes through one `rattle()`: `pegIndexAt`
+changes by exactly one per peg crossing, the flapper kicks the way the peg travels, and the
+click keeps the old 45 ms throttle, so a fast spin is a ratchet and not a buzz. A plain spin
+comes to rest in the middle half of the wedge _between_ two pegs, never on one.
+
+**Zitter-Finale.** About one spin in four (`NAIL_BITER_CHANCE`, never under reduced motion, never
+with one wedge) the main spin ends with the boundary peg before the drawn wedge pressing on the
+flapper — up to 6° short of the needle, always nearer than the previous peg. For 0.9–1.5 s the
+wheel creeps toward it while the flapper bends up to 30° against the travel and trembles
+(`flapperLeanAt`), over a drum roll. Then the peg slips past: the flapper snaps back and
+overshoots, and the wheel stops 3–8 % inside the drawn wedge — still short of its first inner
+peg, so exactly one peg crosses on the tip. Tests pin all of it: no peg passes during the hang,
+the wheel never moves backwards, the landing is in the wedge. The roll is scheduled on the audio
+clock up front, so `playDrumrollSound` now returns a stop, and closing the game mid-hang
+silences it.
+
+**The caught wedge closes up.** After a landing the caught wedge stays on the disc under the
+slip. When the slip clears (`catchOne`'s `onDone`), `wheelFace(uids, origin, leaving)` shrinks
+it to nothing over 0.55 s while the others widen into its room. The rotation stays put; the
+face's origin moves so that the needle keeps pointing at the same spot of the shrinking wedge
+and the neighbours close in on it from both sides, ending on exactly the settled face of the
+smaller wheel (`originAfterLeaving`, tested). The pegs re-space with it — new ones emerge from
+the next boundary and fade in, the leaver's inner pegs fade out early instead of bunching up. A
+spin or a drag that starts sooner settles it at once; under reduced motion it simply happens.
+
+**Names.** Up to eight wedges, each shows its person's first name on a chip whose width is most
+of the chord at the chip's inner edge (`wedgeNameWidth`), truncated with an ellipsis when it
+doesn't fit ("Joh…" on an eight-person wheel). Above eight, initials as before.
+
+**Sound on iPhone.** The wheel's clicks come from the frame loop, never from a tap, and iOS only
+starts an audio context inside a gesture. `primeGameSounds()` (new in `game-sounds.ts`) wakes it
+from "Spiel starten", the button and the release of a flick.
+
+The preview text says it plainly: the swing decides how long it spins, chance decides where it
+stops.
 
 ## Related
 

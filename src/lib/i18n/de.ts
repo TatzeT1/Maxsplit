@@ -337,7 +337,7 @@ export const de = {
     gameNameLottery: "Wer zahlt?",
     gameBlurbLottery: "Gesichter tippen, bis es wen erwischt.",
     gameNameWheel: "Glücksrad",
-    gameBlurbWheel: "Drehen und schauen, wo die Nadel stehen bleibt.",
+    gameBlurbWheel: "Anschubsen und schauen, wo die Nadel stehen bleibt.",
     gameNameSlot: "Spielautomat",
     gameBlurbSlot: "Drei Zitronen? Sauer. Drei Siebenen? Jackpot.",
     gameNameScratch: "Rubbellos",
@@ -367,7 +367,7 @@ export const de = {
     gameHowLottery:
       "Ein Feld aus 16 bis 32 Gesichtern erscheint. Reihum tippt jede Person auf eines — wer ein lachendes Gesicht erwischt, zahlt. Vorher legt ihr fest, wie viele lachende Gesichter versteckt sind.",
     gameHowWheel:
-      "Jede Person bekommt ein Feld auf dem Rad. Ihr dreht so oft, wie Leute zahlen sollen — wo die Nadel stehen bleibt, der zahlt und fliegt aus dem Rad.",
+      "Jede Person bekommt ein Feld auf dem Rad. Ihr schubst es mit dem Finger an (oder tippt auf „Drehen“), so oft, wie Leute zahlen sollen — wo die Nadel stehen bleibt, der zahlt und fliegt aus dem Rad. Der Schwung bestimmt nur, wie lange es sich dreht; wo es stehen bleibt, entscheidet der Zufall.",
     gameHowSlot:
       "Jede Person dreht dreimal am Stück. Eine Niete kostet den Einsatz und füttert den Jackpot, zwei gleiche geben ihn zurück — und dürfen einmal pro Serie gehalten und nachgedreht werden. Drillinge haben es in sich: Zitronen, Bomben und die Rechnung kosten, Glocken, Sterne, Klee und das Duell lassen andere zahlen, der Geist tauscht Zwischensummen, Bonusrad und Geschenkbox bringen Preise, Kirschen Freispiele mit Münzen und steigendem Multiplikator. Ein 💎 Wild verdoppelt jeden Drilling, nach einem Verlust gibt's Risiko, und 777 ist der Jackpot.",
     gameHowScratch:
@@ -753,6 +753,8 @@ export const de = {
     wheelSpinningLabel: "Das Rad dreht sich …",
     wheelRoundResult: "{{name}} zahlt in dieser Runde.",
     wheelProgress: "{{found}} von {{target}} entschieden",
+    wheelFlickHint: "Schubs das Rad mit dem Finger an — oder tipp auf „Drehen“.",
+    wheelTooWeak: "Zu lasch! Mehr Schwung!",
     slotTitle: "Spielautomat",
     slotIntro:
       "Handy rumreichen: Jede Person dreht dreimal am Stück, und die Walzen entscheiden, wer wie viel zahlt — bis die ganze Rechnung verteilt ist.",

@@ -40,6 +40,9 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | rote Laterne                      | "red lantern" — the last-placed      | the 🏮 over whichever ducks would pay if the race ended now, following the picture — [[Split Games]]                   |
 | Zeitlupe                          | "Slow motion"                        | the duck race's clock running at 0.3× around the decisive crossing, with the camera zoomed in — [[Split Games]]        |
 | Fotofinish                        | "Photo finish"                       | the last safe duck and the first payer, a beak apart; the camera's print stays on the water — [[Split Games]]          |
+| anschubsen                        | "to give it a push"                  | flicking the Glücksrad by hand: the swing sets how long it spins, never where it stops — [[Split Games]]               |
+| Zu lasch!                         | "Too limp!" (en UI: "Too gentle!")   | a Glücksrad flick without enough swing: the wheel wobbles back to where it rested — [[Split Games]]                    |
+| Zitter-Finale                     | "Trembling finale" — a nail-biter    | about one wheel spin in four hangs on the peg before the drawn wedge, then tips into it — [[Split Games]]              |
 
 ## Domain vocabulary
 

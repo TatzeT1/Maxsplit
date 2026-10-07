@@ -58,6 +58,16 @@ function getContext(): AudioContext | null {
   return audioCtx;
 }
 
+/**
+ * Creates (or wakes) the audio context inside a tap. iOS Safari only lets a
+ * context start from a user gesture, so a game whose sounds come from a frame
+ * loop or a timer — never from the tap itself — calls this from the tap that
+ * set it going. Silent, and a no-op while sounds are off.
+ */
+export function primeGameSounds(): void {
+  getContext();
+}
+
 function tone(
   ctx: AudioContext,
   freq: number,
@@ -88,6 +98,7 @@ function noiseBurst(
   filterType: BiquadFilterType,
   frequency: number,
   q: number,
+  destination: AudioNode = ctx.destination,
 ): void {
   const frameCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
   const buffer = ctx.createBuffer(1, frameCount, ctx.sampleRate);
@@ -109,7 +120,7 @@ function noiseBurst(
 
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(destination);
   source.start(startTime);
   source.stop(startTime + duration);
 }
@@ -608,15 +619,28 @@ function coinPing(ctx: AudioContext, startTime: number, gainPeak: number): void 
   tone(ctx, freq * 1.5, startTime + 0.005, 0.1, "sine", gainPeak * 0.5);
 }
 
-/** A drum roll for the teased third reel: quick snare hits swelling toward the stop. */
-export function playDrumrollSound(seconds: number): void {
+/**
+ * A drum roll for the teased third reel: quick snare hits swelling toward the
+ * stop. The whole roll is scheduled up front on the audio clock, so it would
+ * play on after a game was closed; the returned function silences it at once
+ * (the wheel's nail-biter uses it; the other rolls are short enough to ignore it).
+ */
+export function playDrumrollSound(seconds: number): () => void {
   const ctx = getContext();
-  if (!ctx) return;
+  if (!ctx) return () => {};
   const start = ctx.currentTime;
+  const bus = ctx.createGain();
+  bus.connect(ctx.destination);
   for (let time = 0; time < seconds; time += 0.055) {
     const swell = 0.03 + (time / seconds) * 0.07;
-    noiseBurst(ctx, start + time, 0.05, swell, "bandpass", 1800 + Math.random() * 300, 0.9);
+    noiseBurst(ctx, start + time, 0.05, swell, "bandpass", 1800 + Math.random() * 300, 0.9, bus);
   }
+  return () => {
+    const now = ctx.currentTime;
+    bus.gain.cancelScheduledValues(now);
+    bus.gain.setValueAtTime(bus.gain.value, now);
+    bus.gain.linearRampToValueAtTime(0, now + 0.04);
+  };
 }
 
 /** Two of a kind, stake back: a couple of coins dropping into the tray. */

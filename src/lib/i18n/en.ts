@@ -333,7 +333,7 @@ export const en: Dictionary = {
     gameNameLottery: "Who pays?",
     gameBlurbLottery: "Tap faces until one catches someone.",
     gameNameWheel: "Wheel of fortune",
-    gameBlurbWheel: "Spin it and see where the needle lands.",
+    gameBlurbWheel: "Give it a flick and see where the needle lands.",
     gameNameSlot: "Slot machine",
     gameBlurbSlot: "Three lemons? Sour. Three sevens? Jackpot.",
     gameNameScratch: "Scratch cards",
@@ -363,7 +363,7 @@ export const en: Dictionary = {
     gameHowLottery:
       "A grid of 16 to 32 faces appears. Everyone taps one in turn — whoever gets a laughing face pays. You decide up front how many laughing faces are hidden in the grid.",
     gameHowWheel:
-      "Every person gets a slice of the wheel. You spin it as many times as people should pay — wherever the needle lands, that person pays and drops out of the wheel.",
+      "Every person gets a slice of the wheel. You flick it with your finger (or tap “Spin”) as many times as people should pay — wherever the needle lands, that person pays and drops out of the wheel. Your swing only decides how long it spins; where it stops is down to chance.",
     gameHowSlot:
       "Everyone spins three times in a row. A no-win costs the stake and feeds the jackpot; two of a kind gives it back — and can be held and respun once per series. Three-of-a-kinds pack a punch: lemons, bombs and the bill cost, bells, stars, the clover and the duel make others pay, the ghost swaps running totals, the bonus wheel and gift box bring prizes, and cherries bring free spins with coins and a rising multiplier. A 💎 wild doubles any three-of-a-kind, a loss can be played on Risiko, and 777 is the jackpot.",
     gameHowScratch:
@@ -742,6 +742,8 @@ export const en: Dictionary = {
     wheelSpinningLabel: "The wheel is spinning …",
     wheelRoundResult: "{{name}} pays this round.",
     wheelProgress: "{{found}} of {{target}} decided",
+    wheelFlickHint: "Flick the wheel with your finger — or tap “Spin”.",
+    wheelTooWeak: "Too gentle! Put some swing into it!",
     slotTitle: "Slot machine",
     slotIntro:
       "Pass the phone around: everyone spins three times in a row, and the reels decide who pays how much — until the whole bill is allocated.",
