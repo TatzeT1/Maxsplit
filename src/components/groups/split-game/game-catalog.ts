@@ -178,6 +178,17 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     blurbKey: "expenses.gameBlurbDots",
     howKey: "expenses.gameHowDots",
   },
+  {
+    // A skill game, but for the whole table at once — no duel, so the preview
+    // skips the knockout-ladder callout (it asks `isDuelGameId`).
+    id: "finger",
+    category: "skill",
+    emoji: "☝️",
+    imageSrc: "/game-tiles/finger.jpg",
+    nameKey: "expenses.gameNameFinger",
+    blurbKey: "expenses.gameBlurbFinger",
+    howKey: "expenses.gameHowFinger",
+  },
 ];
 
 export function splitGameInfo(id: SplitGameId): SplitGameInfo {

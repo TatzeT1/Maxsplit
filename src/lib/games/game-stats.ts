@@ -1,9 +1,10 @@
+import { isLuckGameId } from "@/lib/games/split-game-ids";
 import type { Expense, SplitGameId, Tournament } from "@/lib/types";
 
 /**
- * The Spiele tab's numbers, beyond "who lost how much": duel records,
- * head-to-head scores, the group's favourite games and the latest rounds.
- * Pure, so the tab only renders.
+ * The Spiele tab's numbers, beyond "who lost how much": the luck index, duel
+ * records, head-to-head scores, the group's favourite games and the latest
+ * rounds. Pure, so the tab only renders.
  *
  * Two sources, joined without counting a game twice:
  * - game-decided expenses (`viaLottery`, and since 2026-10 `game`) — every
@@ -45,6 +46,97 @@ function finishedInPeriod(tournaments: Tournament[], start: string | null): Tour
       tournament.status === "finished" &&
       tournament.finishedAt !== null &&
       inPeriod(localDay(tournament.finishedAt), start),
+  );
+}
+
+/** Below this many luck rounds in the period a person isn't in the luck index — fewer is noise. */
+export const LUCK_INDEX_MIN_ROUNDS = 3;
+
+export interface LuckIndexEntry {
+  uid: string;
+  /** Luck rounds this person played in the period. */
+  rounds: number;
+  /** What they actually paid in those rounds. */
+  paidMinor: number;
+  /** Their fair share of those bills — each one divided by everyone who played it — rounded to minor units. */
+  expectedMinor: number;
+  /** `paidMinor - expectedMinor`: above zero they paid more than expected ("Pech"), below zero less ("Glück"). */
+  differenceMinor: number;
+}
+
+/**
+ * The luck index: per person, what the period's luck rounds cost them
+ * against what chance would have them pay on average. In a round of `n`
+ * players every one of them pays `amountMinor / n` in expectation — whether
+ * one person pays it all or three split it, and the slot machine's uneven
+ * charges are fair in expectation too — so the gap is chance (in the
+ * balloon, chance and a little nerve). Most "Pech" first.
+ *
+ * Only luck games count (a duel is won, not drawn), and only expenses that
+ * record their game: before 2026-10 an expense didn't say which game decided
+ * it, and an edit that splits by hand stores `game: null`. A round also has
+ * to hold together — its players paid exactly the bill between them — which
+ * leaves out one whose split names someone outside the pool (a placeholder
+ * claimed since moves the split to the new uid, not `playerUids`).
+ *
+ * Integer-safe: each share is a fraction of a cent, so bills are summed per
+ * pool size in minor units and divided once at the end, then rounded for
+ * display. The difference is taken from the rounded expectation, so
+ * `paidMinor === expectedMinor + differenceMinor` holds exactly.
+ */
+export function luckIndex(
+  expenses: Expense[],
+  start: string | null,
+  minRounds: number = LUCK_INDEX_MIN_ROUNDS,
+): LuckIndexEntry[] {
+  const tallies = new Map<
+    string,
+    { rounds: number; paidMinor: number; billsByPoolSize: Map<number, number> }
+  >();
+
+  for (const expense of gameExpensesInPeriod(expenses, start)) {
+    const game = expense.game;
+    if (!game || !isLuckGameId(game.gameId) || expense.amountMinor <= 0) continue;
+    const players = new Set(game.playerUids);
+    if (players.size < 2) continue;
+    const paidByPlayers = [...players].reduce(
+      (sum, uid) => sum + (expense.splits[uid]?.amountMinor ?? 0),
+      0,
+    );
+    if (paidByPlayers !== expense.amountMinor) continue;
+
+    for (const uid of players) {
+      let tally = tallies.get(uid);
+      if (!tally) {
+        tally = { rounds: 0, paidMinor: 0, billsByPoolSize: new Map() };
+        tallies.set(uid, tally);
+      }
+      tally.rounds += 1;
+      tally.paidMinor += expense.splits[uid]?.amountMinor ?? 0;
+      tally.billsByPoolSize.set(
+        players.size,
+        (tally.billsByPoolSize.get(players.size) ?? 0) + expense.amountMinor,
+      );
+    }
+  }
+
+  const entries: LuckIndexEntry[] = [];
+  for (const [uid, tally] of tallies) {
+    if (tally.rounds < minRounds) continue;
+    let expected = 0;
+    for (const [poolSize, billsMinor] of tally.billsByPoolSize) expected += billsMinor / poolSize;
+    const expectedMinor = Math.round(expected);
+    entries.push({
+      uid,
+      rounds: tally.rounds,
+      paidMinor: tally.paidMinor,
+      expectedMinor,
+      differenceMinor: tally.paidMinor - expectedMinor,
+    });
+  }
+  return entries.sort(
+    (a, b) =>
+      b.differenceMinor - a.differenceMinor || b.rounds - a.rounds || a.uid.localeCompare(b.uid),
   );
 }
 

@@ -11,6 +11,12 @@ describe("normalizeExpenseGame", () => {
     expect(normalizeExpenseGame(undefined, context)).toEqual({ ok: true, game: null });
   });
 
+  it("accepts the whole-table finger game like any other", () => {
+    expect(
+      normalizeExpenseGame({ gameId: "finger", playerUids: ["a", "b", "c"], attempt: 1 }, context),
+    ).toEqual({ ok: true, game: { gameId: "finger", playerUids: ["a", "b", "c"], attempt: 1 } });
+  });
+
   it("keeps a sound record, players deduplicated", () => {
     expect(
       normalizeExpenseGame({ gameId: "wheel", playerUids: ["a", "b", "a"], attempt: 2 }, context),

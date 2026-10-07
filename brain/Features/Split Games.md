@@ -2,7 +2,7 @@
 tags: [feature, split-games, fun]
 ---
 
-# Split Games (🎲🎡🎰🎫🎈🦆🥃🎱 · ⭕🔴🧠⚡✊🥢✏️)
+# Split Games (🎲🎡🎰🎫🎈🦆🥃🎱 · ⭕🔴🧠⚡✊🥢✏️ · ☝️)
 
 Picker: `src/components/groups/split-game-picker-dialog.tsx`. Shared "luck" engine:
 `src/lib/games/` (`use-sequential-draw.ts`, `random.ts`, `member-colors.ts`) and
@@ -23,14 +23,14 @@ the per-payer catch moment with the amount on the slip in
 A family of gamified alternatives to manually choosing a split, all reachable from the same
 "🎮 Spiel" button in `add-expense-dialog.tsx`: tapping it opens `SplitGamePickerDialog`, a
 two-category tile picker (see [[#The picker: two categories and a preview step]]), which hands
-off to one of fifteen game dialogs. Every game is, like [[Split Lottery]] before it, purely a
+off to one of sixteen game dialogs. Every game is, like [[Split Lottery]] before it, purely a
 **front-end input mechanism** that flows through the same `resolveExpense` / `buildSplits`
 pipeline as a manually-entered split (see [[Expenses and Splitting]]) — none of them bypass or
 duplicate the money-invariant logic. All of them but the slot machine resolve to a plain list
 of "loser" uids that `add-expense-dialog.tsx` turns into an equal exact split via `splitEqual`.
 The slot machine is the exception — see below.
 
-The fifteen games split into two categories, each with its own resolution engine:
+The games split into two categories, each with its own resolution engine:
 
 | Category                | Games                                                                                                                                  | How "who pays" is decided                                                                              |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -54,6 +54,11 @@ The fifteen games split into two categories, each with its own resolution engine
 | ✊ Schnick-Schnack-Schnuck | `split-rps-dialog.tsx`          | Hidden simultaneous hands, first to two round wins; a drawn round replays                       |
 | 🥢 Streichholz-Duell       | `split-nim-dialog.tsx`          | Misère Nim on 1·3·5·7 under a shrinking fuse, with one joker each — last match loses            |
 | ✏️ Käsekästchen            | `split-dots-dialog.tsx`         | 4×4 dots, 9 boxes (odd — no tie); closing a box earns another move                              |
+| ☝️ Finger drauf!           | `split-finger-dialog.tsx`       | Everyone rests a finger at once and lifts on a random-delay „LOS!“ — too early or slowest pays  |
+
+Since round four the Minispiele also hold ☝️ Finger drauf!, the first skill game that is not a
+duel: the whole table plays it at once on one phone, so it has no ladder, tournament or online
+mode — see [[#Finger drauf! (☝️)]].
 
 ## The shared draw engine (wheel + scratch)
 
@@ -456,7 +461,7 @@ One game runs per group at a time (unchanged `createTournament` rule).
 
 ## Loaded on demand
 
-The picker and all fifteen game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
+The picker and all sixteen game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
 `next/dynamic`) — before 2026-09 they were static imports of `AddExpenseDialog`, so every
 group page shipped every game. `AddExpenseDialog` mounts the picker, and each game, the first
 time it's opened and then **keeps it mounted**: a duel game holds its running tournament
@@ -481,7 +486,7 @@ unclear. It's now a two-step flow, driven entirely by one table
    category blurb and the familiar emoji/name/blurb tiles.
 2. **Preview** (`SplitGamePreview`, `game-preview.tsx`) — tapping a tile doesn't start the game;
    it shows the game's name, a longer "So funktioniert's" paragraph (`howKey` per game in the
-   catalog), and — for every skill game — a callout explaining the knockout-ladder behavior for
+   catalog), and — for every duel (`isDuelGameId`) — a callout explaining the knockout-ladder behavior for
    pools bigger than two. "Los geht's" then hands off to that game's own dialog exactly as
    before; "Zurück" (or Escape) returns to the grid.
 
@@ -551,13 +556,13 @@ second player is bumped to the opposite side of the palette wheel.
 
 ## The `viaLottery` flag, now shared
 
-All fifteen games set `Expense.viaLottery = true` when their result is applied (and since
+All sixteen games set `Expense.viaLottery = true` when their result is applied (and since
 2026-10 `Expense.game` — which game, who played, which attempt; see
 [[#Round three: fairness, record, rematch, online luck (2026-10)]]) — the field name is
 a holdover from when the lottery was the only game (see [[Data Model]]), but its actual meaning
 has always been closer to "resolved via a split mini-game", so the existing
 `computeLotteryTotals` leaderboard (now the group page's Spiele tab, `games-tab.tsx` — see
-[[Group Page]]) already aggregates across all fifteen games
+[[Group Page]]) already aggregates across all sixteen games
 with zero code changes needed. Renaming the field would mean migrating live Firestore data for
 a purely cosmetic win, so it stays `viaLottery`. One side effect worth knowing: the leaderboard's
 title ("Wer hat wie viel vergambelt?") now also counts skill-game losses, which reads slightly
@@ -1103,6 +1108,125 @@ from "Spiel starten", the button and the release of a flick.
 
 The preview text says it plainly: the swing decides how long it spins, chance decides where it
 stops.
+
+### Glücks-Index
+
+`luckIndex` (`lib/games/game-stats.ts`) and `LuckIndexSection` (`luck-index-section.tsx`), in
+the Spiele tab under the podium and following its period picker. The podium ranks who lost the
+most money, which mostly means who played the most. The index answers the question the table
+actually argues about ("Ich hab IMMER Pech!"): did chance cost you more than it should have?
+
+- **Expected vs. paid.** In a round of _n_ players every one of them pays `amountMinor / n` in
+  expectation. That holds whether one person pays it all or three split it, and the slot
+  machine's uneven charges are fair in expectation too (its Monte-Carlo test). What someone
+  actually paid is their split. The index is the sum of `paid − expected` over the period's
+  rounds, **in euros**, which was the owner's call: "18,40 € mehr gezahlt als erwartet". A
+  count ("4× gezahlt, erwartet 2×") was the alternative. Euros are what people feel; the price
+  is that one expensive bill weighs more than a cheap one.
+- **What counts.** Only luck games (`isLuckGameId`), balloon and slot included: the balloon's
+  burst point is a fair draw even if pumping is a choice. Duels are won, not drawn. Only
+  expenses that carry a `game` record count. That means rounds from 2026-10 on, and not a
+  round whose split was later edited by hand (`game: null`). The footnote says so, so an empty
+  list isn't read as "nobody played". A round also has to hold together, meaning its players
+  paid exactly the bill between them. This leaves out the one case where they don't: claiming
+  a placeholder moves its split to the new uid (`moveMemberInLedgerEntry`) but not
+  `game.playerUids`.
+- **From three rounds.** A person is listed from `LUCK_INDEX_MIN_ROUNDS` (3) luck rounds in the
+  period. Below that, the number is noise. Former members still count in the others' rounds but
+  aren't listed, as on the podium.
+- **Integer-safe.** A fair share is a fraction of a cent, so the bills are summed per pool size
+  in minor units and divided once at the end. The expectation is then rounded for display, and
+  the difference is taken from that rounded value, so paid = expected + difference holds
+  exactly. Rounding each share first (3,33 € of a 10-€ bill) would have shown everyone in a
+  perfectly even three-way game as a cent unlucky.
+- **On screen.** Diverging bars around zero, like the Salden tab's "Wer steht wo": "◀ Glück"
+  on the left in green, "Pech ▶" on the right in red, scaled to the biggest gap, most Pech
+  first. The signed amount (`formatSignedMoney`, now shared with the balances tab) and the words
+  "mehr/weniger gezahlt als erwartet · 9 Runden" carry the meaning, never the color alone. The
+  section is hidden in a group that has never played a luck game with a record, where it could
+  only ever be empty.
+- **Wording.** Never as if the draw were rigged: "Gezogen wird fair – der Unterschied ist Glück
+  oder Pech." Pech and Glück are relative to the expectation, not an accusation.
+- **No new listener.** It renders from the same expenses as the podium, so offline use and
+  snapshot-error handling are the tab's own.
+
+### Finger drauf! (☝️)
+
+`finger-race.ts` (rules), `split-finger-dialog.tsx` (dialog), tile `public/game-tiles/finger.jpg`.
+The phone lies flat on the table and everyone rests one finger on their own circle. Once every
+finger has rested for `FINGER_REST_MS` (600 ms) the round arms, and after a crypto-random pause
+of 1.5–5 s (`randomInt`, the Reaktionsduell's range) the whole screen turns green with „LOS!“
+and the go chime. Lifting before that is a false start and pays; otherwise the slowest _k_
+pay. It is the only game in which everyone plays at the same moment: up to five people at once,
+nobody waiting for the phone to come round, which is what the owner wanted from it.
+
+- **A third id group.** It is neither a duel (no knockout ladder, no tournament, no online
+  match) nor luck, so it is neither `DuelGameId` nor `LuckGameId` but `TableGameId` (`types.ts`,
+  `TABLE_GAME_IDS` in `split-game-ids.ts`), part of `SplitGameId`. That one union is what
+  `isSplitGameId`, `SPLIT_GAME_META`, `normalizeExpenseGame`, the chat result card and the
+  Spiele tab key on, so all of them accept it without further changes, and `isLuckGameId`
+  leaves it out of the Glücks-Index by construction. It sits in the "Minispiele" section, whose
+  blurb now reads "im Duell oder alle auf einmal"; the preview shows the ladder callout only
+  for `isDuelGameId`, no longer for every skill game. Its setup and `onResolve(losers, players)`
+  are the luck games' (`useGamePoolSetup`, at most `pool − 1` payers).
+- **Who pays** (`judgeFingerRound`). False starters pay. If there are more of them than
+  payers, only they play again and everyone else is safe. The rest of the places go to the
+  slowest; a finger that never came off is slower than any that did. Lifts within
+  `FINGER_TIE_WINDOW_MS` (16 ms, the duel's) can't be ordered honestly by touch hardware, so a
+  player is settled only where the order _around_ them is certain, and whoever is left on the
+  paying line plays again — only they, like the dice cup's „Stechen“ (`FingerGame` carries the
+  remaining contenders and paying places from round to round). A property test pins that every
+  round fills exactly its paying places and that every safe player lifted certainly before
+  every slow payer.
+- **Closing early** (`fingerRoundSettled`). A round closes as soon as nothing left to happen
+  can change it: the false starts decide it (60 ms after the deciding one, so a simultaneous
+  second one still counts and „LOS!“ never comes), or every lift is older than the tie window
+  and every finger still down pays anyway — lifting later only makes it slower. The table
+  sees the verdict while the slowest finger is still on the glass (its circle says "noch
+  drauf"), nobody waits out a dawdler, and the person about to pay can't wipe the result: a
+  property test checks an early verdict against the one the remaining lifts would have given.
+  Nobody lifting at all closes after `FINGER_LIFT_TIMEOUT_MS` (3 s).
+- **`pointercancel` voids, never counts.** The system cancels touches on its own — an iPhone
+  tracks five and cancels all of them on a sixth, palms, system gestures, a call. Until the
+  round has closed a cancel voids it: false starts made before it stand, everyone else plays
+  again ("Das Handy hat einen Finger verloren …"). While the fingers are still gathering it just
+  frees the circle. Lifting while gathering is free too.
+- **Touch bookkeeping.** A finger belongs, by `pointerId`, to the circle it came down on
+  (`fingerDown`); a second finger on a held circle, a finger outside the circles and any finger
+  once the round is armed are ignored, and so are their lifts. The circles listen for
+  `pointerdown` (plus `setPointerCapture`); lifts and cancels are heard on `window` in the
+  capture phase, so a finger that slides off its circle is still that finger and nothing can
+  swallow its `pointerup`. Every handler goes through ref-mirrored state, like the reaction
+  duel's pads: several fingers land in one frame. Times are `event.timeStamp`, on the same clock
+  as the signal (`performance.now()`). The dialog only forwards events and timestamps; every
+  decision is in the pure module.
+- **The field.** A definite height (`clamp(20rem, --game-board-h, 34rem)`, never padding),
+  `touch-none`, `select-none`, `-webkit-user-select: none`, `-webkit-touch-callout: none` and
+  no context menu, so a resting finger starts no scroll, zoom, selection or long-press menu. The
+  circles (`w-[min(6.5rem,30%)]`, at least 86 px on the narrowest phone) sit round an ellipse
+  (`fingerSeats`, the first at the bottom edge, clockwise; tested to keep 104 px circles apart
+  on a 343 × 320 field), each face and name turned to read from the edge it is nearest to — the
+  table sits all round the phone. Circles show their owner's colours, fill when held, turn red
+  on a false start and show each time after „LOS!“. Fingers cover the field, so the signal is
+  the whole screen plus sound; on a muted phone it is the colour alone.
+- **No button during play.** The footer shows the payer pips instead: a stray finger resting on
+  a button would press it the moment it lifts on „LOS!“. ✕ still leaves; "Neu starten" and
+  "Übernehmen" come with the verdict.
+- **The end.** One slip per payer in the order they pay (1.1 s each, the full hold and the
+  finale on the game's last one: "Zu langsam!" / "Fehlstart!", "Nach 312 ms losgelassen"), then
+  `GameResultBanner` and "Wer war wie schnell?" (`fingerStandings`: safe players in round
+  order, then the payers in reverse, slow ones by time, false starters last).
+- **How many.** `fingerPoolLimit`: `min(5, navigator.maxTouchPoints || 5)`. A device that
+  reports no touchscreen still gets five (and a hint that the game wants a phone); bigger
+  groups get "höchstens 5 Finger … nimm das Glücksrad", like the pegboard's limit.
+- **Only a real device can tell** whether iOS's three-finger edit gestures, Android OEM
+  three-finger screenshot swipes and palm rejection leave the game alone. Chromium's touch
+  emulation (several touch points at once through CDP) drove whole rounds, a false start, a
+  cancel and a dead heat end to end; `split-finger-dialog.test.tsx` covers the same with
+  jsdom pointer events.
+- **The tile** was drawn as an SVG in the house style (cream ground, thick brown outlines, three
+  hands on a phone on a table, „LOS!“ in the middle, the bottom-right quarter left to the badge)
+  and rasterised with Chromium to a 390 px JPEG.
 
 ## Related
 

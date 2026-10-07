@@ -21,6 +21,7 @@ export const gameLoaders = {
   rps: () => import("@/components/groups/split-rps-dialog"),
   nim: () => import("@/components/groups/split-nim-dialog"),
   dots: () => import("@/components/groups/split-dots-dialog"),
+  finger: () => import("@/components/groups/split-finger-dialog"),
 } satisfies Record<SplitGameId, () => Promise<unknown>>;
 
 /**

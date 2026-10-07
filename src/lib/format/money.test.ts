@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMoney, minorToMajor, parseMoneyInput } from "./money";
+import { formatMoney, formatSignedMoney, minorToMajor, parseMoneyInput } from "./money";
 
 // Intl inserts a non-breaking space (U+00A0) between amount and currency symbol.
 const NBSP = " ";
@@ -19,6 +19,14 @@ describe("formatMoney", () => {
 
   it("respects currencies with no minor unit exponent", () => {
     expect(formatMoney(1234, "JPY")).toBe(`1.234${NBSP}¥`);
+  });
+});
+
+describe("formatSignedMoney", () => {
+  it("prints a plus, a real minus sign or nothing", () => {
+    expect(formatSignedMoney(1840, "EUR")).toBe(`+18,40${NBSP}€`);
+    expect(formatSignedMoney(-1250, "EUR")).toBe(`\u221212,50${NBSP}€`);
+    expect(formatSignedMoney(0, "EUR")).toBe(`0,00${NBSP}€`);
   });
 });
 

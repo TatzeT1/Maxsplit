@@ -26,6 +26,7 @@ import {
   SplitDiceDialog,
   SplitDotsDialog,
   SplitDuckRaceDialog,
+  SplitFingerDialog,
   SplitGamePickerDialog,
   SplitLotteryDialog,
   SplitMemoryDialog,
@@ -978,6 +979,16 @@ export function AddExpenseDialog({
             stake={{ description, amountMinor, currency }}
             expenseDraft={expenseDraft}
             onServerGameStarted={handleServerGameStarted}
+          />
+        )}
+        {mountedGames.has("finger") && (
+          <SplitFingerDialog
+            open={activeGame === "finger"}
+            onOpenChange={(next) => setActiveGame(next ? "finger" : null)}
+            members={members}
+            memberUids={memberUids}
+            groupId={groupId}
+            onResolve={handleSplitGameResolve}
           />
         )}
       </GameRoundProvider>

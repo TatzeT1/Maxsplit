@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, useMemo, useState } from "react";
+import { LuckIndexSection } from "@/components/groups/luck-index-section";
 import { SectionHeading } from "@/components/groups/section-heading";
 import { StartGameButton } from "@/components/groups/start-game-button";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
@@ -384,9 +385,10 @@ function RecentRound({ entry, group }: { entry: GameRoundEntry; group: Group }) 
 }
 
 /**
- * The Spiele tab: who lost how much, the duel record, the favourite games
- * and the latest rounds — for this month, this year or all time. The group
- * told us the games are something they come back to.
+ * The Spiele tab: who lost how much, who had more bad luck than expected
+ * (the luck index), the duel record, the favourite games and the latest
+ * rounds — for this month, this year or all time. The group told us the
+ * games are something they come back to.
  *
  * Money comes from game-decided expenses (`viaLottery`, every game, only
  * flagged going forward); duels also from finished tournaments, which
@@ -541,6 +543,8 @@ export function GamesTab({
           </div>
         )}
       </section>
+
+      <LuckIndexSection expenses={expenses} start={start} group={group} currentUid={currentUid} />
 
       <DuelSection
         tournaments={tournaments}

@@ -218,8 +218,14 @@ export type DuelGameId =
 export type LuckGameId =
   "lottery" | "wheel" | "slot" | "scratch" | "balloon" | "duckrace" | "dicecup" | "pegboard";
 
-/** Every split mini-game, luck and duel. */
-export type SplitGameId = LuckGameId | DuelGameId;
+/**
+ * The skill games the whole table plays at once, on one phone — no duel, so
+ * no ladder, tournament or online play, and not luck either — see [[Split Games]].
+ */
+export type TableGameId = "finger";
+
+/** Every split mini-game: luck, duel and the whole-table games. */
+export type SplitGameId = LuckGameId | DuelGameId | TableGameId;
 
 /** The luck games that can be played online, everyone on their own phone. */
 export type OnlineLuckGameId = "scratch";
