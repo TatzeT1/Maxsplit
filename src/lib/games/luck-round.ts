@@ -1,3 +1,4 @@
+import { maxPayerCount } from "@/lib/games/payers";
 import type { LuckRound } from "@/lib/types";
 
 /**
@@ -16,6 +17,20 @@ import type { LuckRound } from "@/lib/types";
 export type RandomInt = (min: number, max: number) => number;
 
 type RoundCards = Pick<LuckRound, "order" | "revealed" | "targetLoserCount">;
+
+/**
+ * Whether a round of `poolSize` cards may hold `targetLoserCount` "zahlt"
+ * faces: at least one, and never all of them — someone always stays dry, the
+ * same cap as on one phone (`maxPayerCount`).
+ */
+export function isValidLuckRoundCount(targetLoserCount: number, poolSize: number): boolean {
+  return (
+    Number.isInteger(targetLoserCount) &&
+    targetLoserCount >= 1 &&
+    poolSize >= 2 &&
+    targetLoserCount <= maxPayerCount(poolSize)
+  );
+}
 
 /** Cards still under foil, in card order. */
 export function unrevealedUids(round: Pick<LuckRound, "order" | "revealed">): string[] {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canScratchFor,
   drawScratchCard,
+  isValidLuckRoundCount,
   payerCardsLeft,
   scratchLosers,
   unrevealedUids,
@@ -81,5 +82,26 @@ describe("canScratchFor", () => {
     expect(canScratchFor(round, "a", "b")).toBe(false);
     expect(canScratchFor(round, "b", "tom")).toBe(false);
     expect(canScratchFor(round, "a", "stranger")).toBe(false);
+  });
+});
+
+describe("isValidLuckRoundCount", () => {
+  it("allows one payer up to everyone but one", () => {
+    expect(isValidLuckRoundCount(1, 2)).toBe(true);
+    expect(isValidLuckRoundCount(1, 3)).toBe(true);
+    expect(isValidLuckRoundCount(2, 3)).toBe(true);
+    expect(isValidLuckRoundCount(31, 32)).toBe(true);
+  });
+
+  it("never lets everyone pay — a pool of two is always exactly one payer", () => {
+    expect(isValidLuckRoundCount(2, 2)).toBe(false);
+    expect(isValidLuckRoundCount(3, 3)).toBe(false);
+    expect(isValidLuckRoundCount(4, 3)).toBe(false);
+  });
+
+  it("rejects nonsense counts and pools", () => {
+    expect(isValidLuckRoundCount(0, 3)).toBe(false);
+    expect(isValidLuckRoundCount(1.5, 3)).toBe(false);
+    expect(isValidLuckRoundCount(1, 1)).toBe(false);
   });
 });

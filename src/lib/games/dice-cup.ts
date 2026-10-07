@@ -134,3 +134,145 @@ export function recordDiceRoll(game: DiceGame, uid: string, pair: DicePair): Dic
     rounds: [...game.rounds, { rolls, tied: verdict.tied }],
   };
 }
+
+/** The latest roll of `uid` in this game: the current round's, else the most recent finished one. */
+export function latestDiceRoll(game: DiceGame, uid: string): DicePair | null {
+  const current = game.rolls[uid];
+  if (current) return current;
+  for (let index = game.rounds.length - 1; index >= 0; index--) {
+    const past = game.rounds[index].rolls[uid];
+    if (past) return past;
+  }
+  return null;
+}
+
+/*
+ * The live standings: where everyone stands relative to the line between
+ * paying and not, after every single roll — not only once a round is judged.
+ * Pure presentation: it reads a `DiceGame` and never changes one, so it can't
+ * move a payer; `resolveDiceRound` alone decides.
+ *
+ * The one fact everything below rests on: a player is safe at the end of a
+ * round exactly when at least `slots` of the round's rolls are strictly
+ * lower than theirs (see `resolveDiceRound`: fewer, and the line falls on or
+ * above them). Later rolls only ever add to that count. So whoever is above
+ * the line right now stays above it — being out of the zone is final the
+ * moment it happens, which is why the dialog can tick them off at once.
+ */
+
+/** Where a player stands right now. */
+export type DiceSeat =
+  /** Pays for certain: settled in an earlier round, or nothing the rest of this round rolls can save them. */
+  | "pays"
+  /** Would pay if the round ended now. */
+  | "zone"
+  /** Level with others on the line: would roll off if the round ended now. */
+  | "line"
+  /** Safe for certain: settled, or already above the line (which is final, see above). */
+  | "safe"
+  /** Still to roll in this round. */
+  | "waiting";
+
+export interface DiceTarget {
+  /** The roll on the line. The next roller has to beat it — by `diceRank`, so a Pasch beats 65 — to stay out. */
+  pair: DicePair;
+  /** Whose roll it is: one person, or several level on it. */
+  holders: string[];
+}
+
+export interface DiceStanding {
+  /**
+   * Everyone, most at risk first: the payers and the current round's zone
+   * (lowest roll first), then the "Zahlzone" line, then whoever is still to
+   * roll (in roll order), then the safe — the current round's, then earlier
+   * rounds' — each lowest roll first.
+   */
+  order: string[];
+  seats: Record<string, DiceSeat>;
+  /** How many of `order` sit above the line: they pay, or would if the round ended now. */
+  zoneSize: number;
+  /**
+   * What the next roller has to beat. `null` when nobody is up, and while
+   * the zone is still open — fewer rolls this round than places in it, so the
+   * next roll lands in the zone whatever it is.
+   */
+  target: DiceTarget | null;
+}
+
+/** The live standings of `game` — see `DiceStanding`. */
+export function diceStanding(game: DiceGame): DiceStanding {
+  const seats: Record<string, DiceSeat> = {};
+  const rank = (uid: string) => diceRank(game.rolls[uid]);
+  const rolled = game.contenders
+    .filter((uid) => uid in game.rolls)
+    .sort((a, b) => rank(a) - rank(b));
+  const waiting = game.contenders.filter((uid) => !(uid in game.rolls));
+
+  // The round as if it ended now, with only the rolls made so far.
+  const now = resolveDiceRound(
+    Object.fromEntries(rolled.map((uid) => [uid, game.rolls[uid]])),
+    game.slots,
+  );
+  for (const uid of now.tied) seats[uid] = "line";
+  for (const uid of now.safe) seats[uid] = "safe";
+  for (const uid of now.losers) {
+    // Even if everyone still to roll came in at or below them, they'd still fit in the zone.
+    const atOrBelow = rolled.filter((other) => rank(other) <= rank(uid)).length;
+    seats[uid] = atOrBelow + waiting.length <= game.slots ? "pays" : "zone";
+  }
+  for (const uid of waiting) seats[uid] = "waiting";
+  for (const uid of game.losers) seats[uid] = "pays";
+  for (const uid of game.safe) seats[uid] = "safe";
+
+  // Earlier rounds' safe players: the later they were settled, the closer
+  // they came to the line, so the last round's go first. `game.safe` is
+  // already lowest roll first within each round.
+  const settledIn = (uid: string) => {
+    for (let index = game.rounds.length - 1; index >= 0; index--) {
+      if (uid in game.rounds[index].rolls) return index;
+    }
+    return -1;
+  };
+  const settledSafe = [...game.safe].sort((a, b) => settledIn(b) - settledIn(a));
+
+  const atRisk = rolled.filter((uid) => seats[uid] !== "safe");
+  const clear = rolled.filter((uid) => seats[uid] === "safe");
+
+  let target: DiceTarget | null = null;
+  if (waiting.length > 0 && rolled.length >= game.slots && game.slots > 0) {
+    const boundary = rank(rolled[game.slots - 1]);
+    const holders = rolled.filter((uid) => rank(uid) === boundary);
+    target = { pair: game.rolls[holders[0]], holders };
+  }
+
+  return {
+    order: [...game.losers, ...atRisk, ...waiting, ...clear, ...settledSafe],
+    seats,
+    zoneSize: game.losers.length + atRisk.length,
+    target,
+  };
+}
+
+/** Who a roll moved across the line. */
+export interface DiceZoneChange {
+  /** Now in the zone (or level on its line), and weren't before: the buzzer. */
+  entered: string[];
+  /** Were in the zone (or on its line), now safe for good: "Gerettet!". */
+  saved: string[];
+}
+
+function inZone(seat: DiceSeat | undefined): boolean {
+  return seat === "pays" || seat === "zone" || seat === "line";
+}
+
+/**
+ * What changed between two standings, one roll apart. Someone level on the
+ * line who has to roll off is neither: they go from the line to waiting for
+ * the "Stechen", still in it.
+ */
+export function diceZoneChanges(before: DiceStanding, after: DiceStanding): DiceZoneChange {
+  return {
+    entered: after.order.filter((uid) => inZone(after.seats[uid]) && !inZone(before.seats[uid])),
+    saved: after.order.filter((uid) => inZone(before.seats[uid]) && after.seats[uid] === "safe"),
+  };
+}

@@ -33,7 +33,7 @@ import {
 import { buildGroupCsv, groupCsvFileName } from "@/lib/export/group-csv";
 import { saveBlob } from "@/lib/export/save-blob";
 import { useOnline } from "@/lib/use-online";
-import { formatMoney } from "@/lib/format/money";
+import { formatMoney, formatSignedMoney } from "@/lib/format/money";
 import {
   computeMemberTotals,
   computePairwiseDebts,
@@ -43,12 +43,6 @@ import {
 import { utcToday } from "@/lib/recurring/schedule";
 import { cn } from "@/lib/utils";
 import type { Expense, GroupMember, Settlement } from "@/lib/types";
-
-/** "+12,50 €" / "−12,50 €" — a real minus sign, so it lines up with the plus. */
-function formatSigned(amountMinor: number, currency: string): string {
-  const sign = amountMinor > 0 ? "+" : amountMinor < 0 ? "−" : "";
-  return `${sign}${formatMoney(Math.abs(amountMinor), currency)}`;
-}
 
 /**
  * Everyone's net balance as a diverging bar around a zero line: right and
@@ -95,9 +89,7 @@ function EveryoneChart({
                 {row.uid === currentUid && t("groups.selfSuffix")}
               </span>
               <span className="tabular-money shrink-0 font-medium">
-                {row.amountMinor === 0
-                  ? formatMoney(0, currency)
-                  : formatSigned(row.amountMinor, currency)}
+                {formatSignedMoney(row.amountMinor, currency)}
               </span>
             </div>
             <div aria-hidden="true" className="relative h-2">

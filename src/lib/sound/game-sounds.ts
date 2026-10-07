@@ -58,6 +58,16 @@ function getContext(): AudioContext | null {
   return audioCtx;
 }
 
+/**
+ * Creates (or wakes) the audio context inside a tap. iOS Safari only lets a
+ * context start from a user gesture, so a game whose sounds come from a frame
+ * loop or a timer — never from the tap itself — calls this from the tap that
+ * set it going. Silent, and a no-op while sounds are off.
+ */
+export function primeGameSounds(): void {
+  getContext();
+}
+
 function tone(
   ctx: AudioContext,
   freq: number,
@@ -88,6 +98,7 @@ function noiseBurst(
   filterType: BiquadFilterType,
   frequency: number,
   q: number,
+  destination: AudioNode = ctx.destination,
 ): void {
   const frameCount = Math.max(1, Math.floor(ctx.sampleRate * duration));
   const buffer = ctx.createBuffer(1, frameCount, ctx.sampleRate);
@@ -109,7 +120,7 @@ function noiseBurst(
 
   source.connect(filter);
   filter.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(destination);
   source.start(startTime);
   source.stop(startTime + duration);
 }
@@ -305,13 +316,17 @@ export function playGoSound(): void {
   tone(ctx, 1318.5, now + 0.06, 0.14, "triangle", 0.12);
 }
 
-/** A short, low buzz for a false start — deliberately flat and a little harsh, the opposite of the "Los!" chime. */
-export function playBuzzerSound(): void {
+/**
+ * A short, low buzz for a false start — deliberately flat and a little harsh,
+ * the opposite of the "Los!" chime. `volume` (0–1) scales it down where it is
+ * a tease rather than a penalty: the dice cup's slide into the pay zone.
+ */
+export function playBuzzerSound(volume = 1): void {
   const ctx = getContext();
   if (!ctx) return;
   const now = ctx.currentTime;
-  tone(ctx, 140, now, 0.22, "sawtooth", 0.08);
-  noiseBurst(ctx, now, 0.05, 0.05, "lowpass", 400, 0.8);
+  tone(ctx, 140, now, 0.22, "sawtooth", 0.08 * volume);
+  noiseBurst(ctx, now, 0.05, 0.05 * volume, "lowpass", 400, 0.8);
 }
 
 /** Two or three quick, high "ha"s — a lighter laugh for the slot machine's many small hits. */
@@ -433,6 +448,34 @@ export function playSplashSound(): void {
   noiseBurst(ctx, now + 0.04, 0.2, 0.06, "highpass", 3000, 0.6);
 }
 
+/**
+ * The finish camera going off, for the duck race's photo finish: the
+ * mirror's clack and the blades' snap a few hundredths apart — the
+ * double click everyone knows from a real camera — then the flash
+ * recharging, a thin whine climbing out of hearing.
+ */
+export function playShutterSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.028, 0.16, "bandpass", 2300, 1.3);
+  tone(ctx, 260, now, 0.05, "square", 0.025);
+  noiseBurst(ctx, now + 0.065, 0.022, 0.12, "bandpass", 3600, 1.8);
+
+  const whine = ctx.createOscillator();
+  const gain = ctx.createGain();
+  whine.type = "sine";
+  whine.frequency.setValueAtTime(1800, now + 0.12);
+  whine.frequency.exponentialRampToValueAtTime(7200, now + 0.7);
+  gain.gain.setValueAtTime(0, now + 0.12);
+  gain.gain.linearRampToValueAtTime(0.012, now + 0.2);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+  whine.connect(gain);
+  gain.connect(ctx.destination);
+  whine.start(now + 0.12);
+  whine.stop(now + 0.7);
+}
+
 /** Dice rattling in a cup: a burst of dry clicks at uneven gaps. */
 export function playDiceRattleSound(seconds = 0.75): void {
   const ctx = getContext();
@@ -461,6 +504,44 @@ export function playDiceLandSound(): void {
   noiseBurst(ctx, now, 0.03, 0.07, "bandpass", 1100, 1.1);
 }
 
+/**
+ * One half of a heartbeat: a sine that drops from a knock to a thud. It starts
+ * at 150 Hz on purpose — a phone speaker reproduces next to nothing below
+ * ~120 Hz, so a "real" 50 Hz heartbeat would be silent exactly where this
+ * game is played; the drop is what still reads as a thump.
+ */
+function heartThump(ctx: AudioContext, at: number, gainPeak: number, pitch: number): void {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(150 * pitch, at);
+  osc.frequency.exponentialRampToValueAtTime(52 * pitch, at + 0.12);
+  gain.gain.setValueAtTime(0, at);
+  gain.gain.linearRampToValueAtTime(gainPeak, at + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.001, at + 0.16);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(at);
+  osc.stop(at + 0.16);
+  noiseBurst(ctx, at, 0.05, gainPeak * 0.25, "lowpass", 420, 0.7);
+}
+
+/**
+ * One heartbeat, "lub-dub", for the lottery's tension. `intensity` (0..1) is
+ * how close the next tap is to a laughing face: the beat gets louder and the
+ * "dub" crowds the "lub", the way a racing pulse sounds. The caller sets the
+ * tempo by how often it calls this.
+ */
+export function playHeartbeatSound(intensity = 0): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const level = Math.min(Math.max(intensity, 0), 1);
+  const now = ctx.currentTime;
+  const gainPeak = 0.1 + level * 0.14;
+  heartThump(ctx, now, gainPeak, 1);
+  heartThump(ctx, now + 0.17 - level * 0.05, gainPeak * 0.7, 0.85);
+}
+
 /** A pencil stroke: a short, dry scratch of high-passed noise — a Käsekästchen line being drawn. */
 export function playPencilSound(): void {
   const ctx = getContext();
@@ -487,7 +568,7 @@ export function playMatchStrikeSound(): void {
 /**
  * One tick of the matchstick duel's fuse in its last seconds — higher and
  * sharper the closer the end, so the ear feels it tighten even with the eyes
- * on the board.
+ * on the board. The duck race counts "3 – 2 – 1" down on it too.
  */
 export function playFuseTickSound(secondsLeft: number): void {
   const ctx = getContext();
@@ -538,15 +619,28 @@ function coinPing(ctx: AudioContext, startTime: number, gainPeak: number): void 
   tone(ctx, freq * 1.5, startTime + 0.005, 0.1, "sine", gainPeak * 0.5);
 }
 
-/** A drum roll for the teased third reel: quick snare hits swelling toward the stop. */
-export function playDrumrollSound(seconds: number): void {
+/**
+ * A drum roll for the teased third reel: quick snare hits swelling toward the
+ * stop. The whole roll is scheduled up front on the audio clock, so it would
+ * play on after a game was closed; the returned function silences it at once
+ * (the wheel's nail-biter uses it; the other rolls are short enough to ignore it).
+ */
+export function playDrumrollSound(seconds: number): () => void {
   const ctx = getContext();
-  if (!ctx) return;
+  if (!ctx) return () => {};
   const start = ctx.currentTime;
+  const bus = ctx.createGain();
+  bus.connect(ctx.destination);
   for (let time = 0; time < seconds; time += 0.055) {
     const swell = 0.03 + (time / seconds) * 0.07;
-    noiseBurst(ctx, start + time, 0.05, swell, "bandpass", 1800 + Math.random() * 300, 0.9);
+    noiseBurst(ctx, start + time, 0.05, swell, "bandpass", 1800 + Math.random() * 300, 0.9, bus);
   }
+  return () => {
+    const now = ctx.currentTime;
+    bus.gain.cancelScheduledValues(now);
+    bus.gain.setValueAtTime(bus.gain.value, now);
+    bus.gain.linearRampToValueAtTime(0, now + 0.04);
+  };
 }
 
 /** Two of a kind, stake back: a couple of coins dropping into the tray. */
@@ -768,11 +862,11 @@ export function playGiftOpenSound(): void {
   bellTone(ctx, 1318.5, now + 0.18, 0.07);
 }
 
-/** Two blades crossing, for the duel. */
-export function playSwordSound(): void {
+/** Two blades crossing, for the duel — and for the dice cup's "Stechen", on the frame the tied faces clash. */
+export function playSwordSound(delaySeconds = 0): void {
   const ctx = getContext();
   if (!ctx) return;
-  const now = ctx.currentTime;
+  const now = ctx.currentTime + delaySeconds;
   noiseBurst(ctx, now, 0.25, 0.12, "highpass", 5000, 0.8);
   tone(ctx, 2600, now, 0.35, "triangle", 0.05);
   tone(ctx, 3900, now + 0.01, 0.3, "sine", 0.03);

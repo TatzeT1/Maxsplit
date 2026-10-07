@@ -14,36 +14,46 @@ import {
 import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
 import {
-  diceKind,
   diceNumber,
+  diceStanding,
+  diceZoneChanges,
   isDiceGameOver,
+  latestDiceRoll,
   maxDiceLoserCount,
   nextRoller,
   recordDiceRoll,
   startDiceGame,
   type DiceGame,
   type DicePair,
+  type DiceZoneChange,
 } from "@/lib/games/dice-cup";
+import { stakeShares, type GameStake } from "@/lib/games/payers";
 import { randomInt } from "@/lib/games/random";
 import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
 import {
   playAppliedSound,
+  playBuzzerSound,
   playDiceLandSound,
   playDiceRattleSound,
-  playLaughSound,
+  playDrumrollSound,
   playStampSound,
+  playSwordSound,
 } from "@/lib/sound/game-sounds";
-import { cn } from "@/lib/utils";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { DiceCupFigure, DiceFace } from "@/components/groups/split-game/dice-figure";
-import { DuelDrawNotice } from "@/components/groups/split-game/duel-ladder";
-import { DuelTurnBanner } from "@/components/groups/split-game/duel-turn-banner";
-import { GameAvatar } from "@/components/groups/split-game/game-avatar";
+import {
+  DiceStandings,
+  DiceTurnBanner,
+  RollTag,
+} from "@/components/groups/split-game/dice-standings";
+import {
+  DiceStechenTakeover,
+  STECHEN_HOLD_MS,
+  STECHEN_IMPACT_S,
+  STECHEN_STAMP_S,
+} from "@/components/groups/split-game/dice-stechen-takeover";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
 import { GameResultBanner } from "@/components/groups/split-game/game-result-banner";
 import type { GroupMember } from "@/lib/types";
@@ -54,40 +64,29 @@ type Step = "setup" | "playing";
 const SHAKE_MS = 850;
 /** How long the dice sit on the table, readable, before the roll is written down. */
 const SETTLE_MS = 1000;
-/** A beat between the last roll and the "caught" takeover. */
+/** A beat between the last roll and the first "caught" takeover. */
 const VERDICT_BEAT_MS = 450;
+/** Sliding into the pay zone is a tease, not a penalty: the false-start buzzer, quieter. */
+const ZONE_BUZZ_VOLUME = 0.55;
+/** …and a small jolt of the play area, well below a stamp's. */
+const ZONE_SHAKE = 0.4;
+/** The faces clashing in a "Stechen" jolt the play area harder. */
+const STECHEN_SHAKE = 0.75;
 
 function rollDie(): number {
   return randomInt(1, 6);
 }
 
-/** A roll as the people at the table say it: "54", "66 · Pasch", "21 · Mäxchen!". */
-function RollTag({ pair, showKind = true }: { pair: DicePair; showKind?: boolean }) {
-  const t = useT();
-  const kind = diceKind(pair);
-  return (
-    <span className="flex items-baseline gap-1.5">
-      <span className="font-heading tabular-money text-lg leading-none font-medium">
-        {diceNumber(pair)}
-      </span>
-      {showKind && kind !== "plain" && (
-        <span className="text-muted-foreground text-xs font-medium">
-          {kind === "maexchen" ? t("expenses.diceMaexchen") : t("expenses.dicePasch")}
-        </span>
-      )}
-    </span>
-  );
+/** What the last roll did to the zone, kept until the next one: the live region and the "Gerettet!" bubbles read it. */
+interface ZoneNews extends DiceZoneChange {
+  id: number;
 }
 
-/** The latest roll of `uid` in this game: the current round's, else the most recent finished one. */
-function latestRoll(game: DiceGame, uid: string): DicePair | null {
-  const current = game.rolls[uid];
-  if (current) return current;
-  for (let index = game.rounds.length - 1; index >= 0; index--) {
-    const past = game.rounds[index].rolls[uid];
-    if (past) return past;
-  }
-  return null;
+/** A "Stechen" on screen: who rolls off, and how many of them pay. */
+interface StechenShow {
+  id: number;
+  uids: string[];
+  slots: number;
 }
 
 /**
@@ -97,6 +96,12 @@ function latestRoll(game: DiceGame, uid: string): DicePair | null {
  * line roll again — "Stechen" — and only they do. The rules live in
  * `lib/games/dice-cup.ts`; every die is a crypto-random draw made the instant
  * the cup is shaken, the rattle and tumble are only for show.
+ *
+ * Between rolls the table is live (`diceStanding`, `dice-standings.tsx`): who
+ * would pay right now, the roll the next person has to beat, a buzzer for
+ * whoever slides into the zone and "Gerettet!" for whoever it pushes out. A
+ * tie on the line gets a "Stechen!" takeover before the roll-off. All of it
+ * only reads the game state; who pays is still `recordDiceRoll`'s verdict.
  */
 export function SplitDiceDialog({
   open,
@@ -104,6 +109,7 @@ export function SplitDiceDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -112,6 +118,8 @@ export function SplitDiceDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's share goes on their slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -128,11 +136,12 @@ export function SplitDiceDialog({
     pair: DicePair;
     stage: "shaking" | "landed";
   } | null>(null);
-  const [flash, setFlash] = useState<{ id: number; uid: string } | null>(null);
-  const [celebrated, setCelebrated] = useState(false);
-  const idRef = useRef(0);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const [stageRef, catches] = useCatchFlashes();
+  const [zoneNews, setZoneNews] = useState<ZoneNews | null>(null);
+  const [stechen, setStechen] = useState<StechenShow | null>(null);
+  // Monotonic ids for the two above, so back-to-back events each start fresh.
+  const eventIdRef = useRef(0);
 
   useEffect(() => {
     // The same array for the component's whole lifetime — only ever pushed to.
@@ -157,8 +166,9 @@ export function SplitDiceDialog({
   function resetStage() {
     clearTimers();
     setRolling(null);
-    setFlash(null);
-    setCelebrated(false);
+    setZoneNews(null);
+    setStechen(null);
+    catches.cancel();
   }
 
   function startGame() {
@@ -184,33 +194,52 @@ export function SplitDiceDialog({
     onOpenChange(nextOpen);
   }
 
+  /**
+   * Every payer gets a slip of their own. `losers` runs lowest roll first, so
+   * it plays backwards: whoever only just missed first, the lowest roll last,
+   * as the finale.
+   */
   function celebrate(finished: DiceGame) {
-    const loserUid = finished.losers[0];
-    later(VERDICT_BEAT_MS, () => {
-      playStampSound(STAMP_IMPACT_S);
-      playLaughSound(STAMP_IMPACT_S + 0.1);
-      shakeStage();
-      idRef.current += 1;
-      setFlash({ id: idRef.current, uid: loserUid });
-      later(CATCH_FLASH_HOLD_MS, () => {
-        setFlash(null);
-        setCelebrated(true);
-      });
-    });
+    catches.catchEach([...finished.losers].reverse(), { delayMs: VERDICT_BEAT_MS });
+  }
+
+  /**
+   * A tie on the line: the faces creep in under a drum roll and clash on
+   * `STECHEN_IMPACT_S` — the sounds are scheduled on the audio clock from
+   * here, like a catch's stamp, so they land on that frame — then the
+   * roll-off starts once the takeover has cleared.
+   */
+  function announceStechen(next: DiceGame) {
+    eventIdRef.current += 1;
+    setStechen({ id: eventIdRef.current, uids: next.contenders, slots: next.slots });
+    playDrumrollSound(STECHEN_IMPACT_S);
+    playSwordSound(STECHEN_IMPACT_S);
+    playStampSound(STECHEN_STAMP_S);
+    catches.shake(STECHEN_SHAKE, STECHEN_IMPACT_S);
+    later(STECHEN_HOLD_MS, () => setStechen(null));
   }
 
   function commit(uid: string, pair: DicePair) {
     const current = gameRef.current;
     if (!current) return;
     const next = recordDiceRoll(current, uid, pair);
+    const change = diceZoneChanges(diceStanding(current), diceStanding(next));
     update(next);
     setRolling(null);
+    eventIdRef.current += 1;
+    setZoneNews({ id: eventIdRef.current, ...change });
+    // The last roll's payoff is the catch, a tie's the takeover; the buzzer is for everything in between.
     if (isDiceGameOver(next)) celebrate(next);
+    else if (next.rounds.length > current.rounds.length) announceStechen(next);
+    else if (change.entered.length > 0) {
+      playBuzzerSound(ZONE_BUZZ_VOLUME);
+      catches.shake(ZONE_SHAKE, 0);
+    }
   }
 
   function roll() {
     const current = gameRef.current;
-    if (!current || rolling) return;
+    if (!current || rolling || stechen) return;
     const uid = nextRoller(current);
     if (!uid) return;
     // Decided now, before anything moves; the rest is staging.
@@ -237,12 +266,30 @@ export function SplitDiceDialog({
   }
 
   const over = game !== null && isDiceGameOver(game);
-  const showVerdict = over && celebrated;
+  // The verdict waits for the last payer's slip to clear.
+  const showVerdict = over && !catches.active;
+  const flash = catches.flash;
   const rollerUid = game && !over ? nextRoller(game) : null;
   const stageUid = rolling?.uid ?? rollerUid;
   const tieBreak = game !== null && !over && game.rounds.length > 0;
-  const worstUid = game?.losers[0];
-  const worstRoll = game && worstUid ? latestRoll(game, worstUid) : null;
+  const shares = over ? stakeShares(stake, game.losers) : null;
+  const flashRoll = game && flash ? latestDiceRoll(game, flash.uid) : null;
+  const standing = game ? diceStanding(game) : null;
+  const nameList = (uids: readonly string[]) =>
+    uids.map((uid) => members[uid].displayName).join(", ");
+  const zoneAnnouncement =
+    zoneNews && !over
+      ? [
+          zoneNews.entered.length > 0
+            ? t("expenses.diceZoneEnteredLabel", { names: nameList(zoneNews.entered) })
+            : "",
+          zoneNews.saved.length > 0
+            ? t("expenses.diceSavedLabel", { names: nameList(zoneNews.saved) })
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+      : "";
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -276,26 +323,31 @@ export function SplitDiceDialog({
                     name: members[rolling.uid].displayName,
                     number: diceNumber(rolling.pair),
                   })
-                : ""}
+                : flash
+                  ? t("expenses.gameCaughtLabel", { name: members[flash.uid].displayName })
+                  : stechen
+                    ? t("expenses.diceTieBreak", { names: nameList(stechen.uids) })
+                    : zoneAnnouncement}
             </p>
 
             {showVerdict ? (
-              <GameResultBanner loserUids={game.losers} members={members} />
+              <GameResultBanner loserUids={game.losers} members={members} stake={stake} />
             ) : (
-              rollerUid && (
-                <DuelTurnBanner uid={rollerUid} members={members} hint={t("expenses.diceHint")} />
+              rollerUid &&
+              standing && (
+                <DiceTurnBanner uid={rollerUid} game={game} standing={standing} members={members} />
               )
             )}
 
             {tieBreak && !showVerdict && (
-              <>
-                <DuelDrawNotice />
-                <p className="text-muted-foreground text-center text-xs">
-                  {t("expenses.diceTieBreak", {
-                    names: game.contenders.map((uid) => members[uid].displayName).join(", "),
-                  })}
-                </p>
-              </>
+              <div className="border-primary/40 bg-primary/5 flex items-center gap-2.5 rounded-xl border border-dashed px-3 py-2">
+                <span className="text-primary font-heading shrink-0 text-sm font-black tracking-wide uppercase">
+                  {t("expenses.diceTiedTag")}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {t("expenses.diceTieBreak", { names: nameList(game.contenders) })}
+                </span>
+              </div>
             )}
 
             <div className="relative flex min-h-[170px] items-center justify-center overflow-hidden rounded-xl border border-black/20 bg-[#1f5a4b] shadow-[inset_0_2px_10px_rgb(0_0_0/0.45)]">
@@ -351,61 +403,26 @@ export function SplitDiceDialog({
               )}
             </div>
 
-            <ul className="flex flex-col gap-1.5">
-              {setup.poolUids.map((uid) => {
-                const name = members[uid].displayName;
-                const pair = latestRoll(game, uid);
-                const kind = pair ? diceKind(pair) : "plain";
-                const pays = game.losers.includes(uid);
-                const safe = game.safe.includes(uid);
-                const tied = !over && game.rounds.length > 0 && game.contenders.includes(uid);
-                return (
-                  <li
-                    key={uid}
-                    className={cn(
-                      "flex items-center gap-3 rounded-xl border p-2",
-                      pays && "border-destructive/40 bg-destructive/5",
-                      !pays && "bg-background",
-                    )}
-                  >
-                    <GameAvatar name={name} className="size-8 text-xs" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">{name}</span>
-                      {kind !== "plain" && (
-                        <span className="text-muted-foreground block text-xs font-medium">
-                          {kind === "maexchen"
-                            ? t("expenses.diceMaexchen")
-                            : t("expenses.dicePasch")}
-                        </span>
-                      )}
-                    </span>
-                    {/* A fixed-width column, so the dice line up from row to row. */}
-                    {pair ? (
-                      <span className="flex w-[5.5rem] shrink-0 items-center gap-2">
-                        <span className="flex gap-0.5" aria-hidden="true">
-                          <DiceFace value={pair[0]} size={24} />
-                          <DiceFace value={pair[1]} size={24} />
-                        </span>
-                        <RollTag pair={pair} showKind={false} />
-                      </span>
-                    ) : (
-                      <span className="text-muted-foreground w-[5.5rem] shrink-0 text-xs">
-                        {t("expenses.diceWaiting")}
-                      </span>
-                    )}
-                    <span className="flex w-16 shrink-0 justify-end text-xs font-semibold">
-                      {pays ? (
-                        <span className="text-destructive">{t("expenses.dicePays")}</span>
-                      ) : safe ? (
-                        <span className="text-success">{t("expenses.diceSafe")}</span>
-                      ) : tied ? (
-                        <span className="text-primary">{t("expenses.diceTiedTag")}</span>
-                      ) : null}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            {standing && (
+              <DiceStandings
+                game={game}
+                standing={standing}
+                members={members}
+                activeUid={over ? null : stageUid}
+                saved={zoneNews && { id: zoneNews.id, uids: zoneNews.saved }}
+              />
+            )}
+
+            <AnimatePresence>
+              {stechen && (
+                <DiceStechenTakeover
+                  key={stechen.id}
+                  uids={stechen.uids}
+                  slots={stechen.slots}
+                  members={members}
+                />
+              )}
+            </AnimatePresence>
 
             <AnimatePresence>
               {flash && (
@@ -413,14 +430,21 @@ export function SplitDiceDialog({
                   key={flash.id}
                   seed={flash.id}
                   name={members[flash.uid].displayName}
-                  stampLabel={t("expenses.diceLowestStamp")}
-                  finale
+                  stampLabel={
+                    flash.finale ? t("expenses.diceLowestStamp") : t("expenses.gameCaughtStamp")
+                  }
+                  finale={flash.finale}
                   caption={
-                    worstRoll && (
-                      <span className="text-muted-foreground text-sm font-medium">
-                        {t("expenses.diceLowestCaption", { number: diceNumber(worstRoll) })}
-                      </span>
-                    )
+                    <CatchCaption
+                      share={shares?.[flash.uid]}
+                      stake={stake}
+                      detail={
+                        flashRoll &&
+                        (flash.finale
+                          ? t("expenses.diceLowestCaption", { number: diceNumber(flashRoll) })
+                          : t("expenses.diceRollCaption", { number: diceNumber(flashRoll) }))
+                      }
+                    />
                   }
                 />
               )}
@@ -465,7 +489,7 @@ export function SplitDiceDialog({
               type="button"
               size="lg"
               className="flex-1"
-              disabled={rolling !== null}
+              disabled={rolling !== null || stechen !== null}
               onClick={roll}
             >
               {t("expenses.diceRoll")}

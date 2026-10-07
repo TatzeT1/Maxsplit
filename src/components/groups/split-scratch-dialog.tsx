@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { useGameRound } from "@/components/groups/split-game/game-round";
 import { Button } from "@/components/ui/button";
@@ -13,20 +13,13 @@ import {
 } from "@/components/ui/dialog";
 import { GameDialogContent } from "@/components/groups/split-game/game-stage";
 import { useT } from "@/components/locale-provider";
-import { readRememberedSetup, rememberSetup } from "@/lib/games/game-memory";
+import { maxPayerCount, stakeShares, type GameStake } from "@/lib/games/payers";
+import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
 import { useSequentialDraw } from "@/lib/games/use-sequential-draw";
-import {
-  playAppliedSound,
-  playLaughSound,
-  playMissSound,
-  playStampSound,
-} from "@/lib/sound/game-sounds";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { playAppliedSound, playMissSound } from "@/lib/sound/game-sounds";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
 import { GameResultBanner } from "@/components/groups/split-game/game-result-banner";
 import { GameProgressPips } from "@/components/groups/split-game/game-progress-pips";
@@ -41,13 +34,6 @@ import { useOnline } from "@/lib/use-online";
 import type { GameExpenseDraft, GroupMember } from "@/lib/types";
 
 type Step = "setup" | "playing";
-
-interface FlashState {
-  id: number;
-  uid: string;
-  /** The round's last losing card. */
-  finale: boolean;
-}
 
 /**
  * Rubbellos ("who pays" scratch cards): unlike the wheel and slot machine,
@@ -64,6 +50,7 @@ export function SplitScratchDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
   expenseDraft,
   onRoundStarted,
@@ -74,6 +61,8 @@ export function SplitScratchDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's share goes on their slip and in the verdict. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
   /**
@@ -88,15 +77,12 @@ export function SplitScratchDialog({
   const t = useT();
   const { startRound } = useGameRound();
   const [step, setStep] = useState<Step>("setup");
-  const [remembered] = useState(() => readRememberedSetup(groupId, memberUids));
-  const [poolUids, setPoolUids] = useState<string[]>(remembered?.poolUids ?? memberUids);
-  const [loserCountInput, setLoserCountInput] = useState(String(remembered?.loserCount ?? 1));
-  const [stepperDirection, setStepperDirection] = useState<1 | -1>(1);
+  // Everyone but one at most — on one phone and online alike: a round where
+  // every card is a Niete has nothing to scratch for.
+  const setup = useGamePoolSetup(memberUids, maxPayerCount, groupId);
+  const { poolUids, loserCount } = setup;
   const [scratchedUids, setScratchedUids] = useState<string[]>([]);
-  const [flash, setFlash] = useState<FlashState | null>(null);
-  const flashIdRef = useRef(0);
-  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  const [stageRef, catches] = useCatchFlashes();
   const draw = useSequentialDraw();
   const online = useOnline();
   // Online: everyone scratches their own card on their own phone (ADR-005).
@@ -104,34 +90,6 @@ export function SplitScratchDialog({
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
   const canOfferOnline = !!groupId && expenseDraft !== undefined && !!onRoundStarted;
-
-  useEffect(() => {
-    return () => {
-      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    };
-  }, []);
-
-  function clearFlash() {
-    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    setFlash(null);
-  }
-
-  function togglePoolMember(uid: string) {
-    setPoolUids((current) =>
-      current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid],
-    );
-  }
-
-  const maxLoserCount = Math.max(poolUids.length, 1);
-  const loserCount = Math.min(
-    Math.max(Number.parseInt(loserCountInput, 10) || 1, 1),
-    maxLoserCount,
-  );
-
-  function stepLoserCount(delta: number) {
-    setStepperDirection(delta > 0 ? 1 : -1);
-    setLoserCountInput(String(Math.min(Math.max(loserCount + delta, 1), maxLoserCount)));
-  }
 
   // Two people with an account are needed to scratch anywhere but here.
   const playersWithPhone = poolUids.filter((uid) => members[uid]?.isPlaceholder !== true);
@@ -171,7 +129,7 @@ export function SplitScratchDialog({
       );
       return;
     }
-    rememberSetup(groupId, { poolUids, loserCount });
+    setup.remember();
     onRoundStarted(result.data.roundId);
   }
 
@@ -181,7 +139,7 @@ export function SplitScratchDialog({
       return;
     }
     startRound();
-    rememberSetup(groupId, { poolUids, loserCount });
+    setup.remember();
     draw.start(poolUids, loserCount);
     setScratchedUids([]);
     setStep("playing");
@@ -190,7 +148,7 @@ export function SplitScratchDialog({
   function goToSetup() {
     draw.reset();
     setScratchedUids([]);
-    clearFlash();
+    catches.cancel();
     setStep("setup");
   }
 
@@ -199,7 +157,7 @@ export function SplitScratchDialog({
       setStep("setup");
       draw.reset();
       setScratchedUids([]);
-      clearFlash();
+      catches.cancel();
     }
     onOpenChange(nextOpen);
   }
@@ -213,13 +171,7 @@ export function SplitScratchDialog({
     }
     // Presentation only: is this the last losing card still under foil?
     const losersFound = scratchedUids.filter((id) => draw.losers.includes(id)).length + 1;
-    playStampSound(STAMP_IMPACT_S);
-    playLaughSound(STAMP_IMPACT_S + 0.1);
-    shakeStage();
-    if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
-    flashIdRef.current += 1;
-    setFlash({ id: flashIdRef.current, uid, finale: losersFound >= draw.losers.length });
-    flashTimeoutRef.current = setTimeout(() => setFlash(null), CATCH_FLASH_HOLD_MS);
+    catches.catchOne(uid, { finale: losersFound >= draw.losers.length });
   }
 
   function applyResult() {
@@ -231,7 +183,10 @@ export function SplitScratchDialog({
   const allScratched = poolUids.length > 0 && scratchedUids.length >= poolUids.length;
   // The verdict waits for the last catch's takeover to clear, as the
   // lottery's does — otherwise its bloom and rise play out hidden behind it.
-  const showVerdict = allScratched && flash === null;
+  const showVerdict = allScratched && !catches.active;
+  const flash = catches.flash;
+  // The losing cards are fixed at the start, so every slip's share is final.
+  const shares = stakeShares(stake, draw.losers);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -256,9 +211,12 @@ export function SplitScratchDialog({
               finale={flash.finale}
               className="inset-0 z-50 rounded-xl"
               caption={
-                <span className="text-muted-foreground text-sm font-medium">
-                  {t("expenses.scratchResultPay")}
-                </span>
+                <CatchCaption
+                  share={shares?.[flash.uid]}
+                  stake={stake}
+                  // "Du zahlst!" says the same as the amount line, minus the amount.
+                  detail={shares ? undefined : t("expenses.scratchResultPay")}
+                />
               }
             />
           )}
@@ -285,11 +243,11 @@ export function SplitScratchDialog({
               memberUids={memberUids}
               members={members}
               poolUids={poolUids}
-              onTogglePoolMember={togglePoolMember}
+              onTogglePoolMember={setup.togglePoolMember}
               loserCount={loserCount}
-              maxLoserCount={maxLoserCount}
-              onStepLoserCount={stepLoserCount}
-              stepperDirection={stepperDirection}
+              maxLoserCount={setup.maxLoserCount}
+              onStepLoserCount={setup.stepLoserCount}
+              stepperDirection={setup.stepperDirection}
               countHint={t("expenses.scratchCountHint")}
               countIcon="🎫"
             />
@@ -307,7 +265,7 @@ export function SplitScratchDialog({
         ) : (
           <div ref={stageRef} className="flex flex-col gap-3">
             {showVerdict ? (
-              <GameResultBanner loserUids={draw.losers} members={members} />
+              <GameResultBanner loserUids={draw.losers} members={members} stake={stake} />
             ) : (
               <p className="text-muted-foreground text-center text-xs">
                 {t("expenses.scratchCardRevealHint")}
@@ -363,7 +321,14 @@ export function SplitScratchDialog({
               >
                 {t("expenses.gamePlayAgain")}
               </Button>
-              <Button type="button" size="lg" className="flex-1" onClick={applyResult}>
+              {/* Waits for the last slip, like the verdict: it's the same moment. */}
+              <Button
+                type="button"
+                size="lg"
+                className="flex-1"
+                disabled={!showVerdict}
+                onClick={applyResult}
+              >
                 {t("expenses.gameApply")}
               </Button>
             </>

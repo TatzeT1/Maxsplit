@@ -2,7 +2,7 @@
 tags: [feature, split-games, fun]
 ---
 
-# Split Games (🎲🎡🎰🎫🎈🦆🥃🎱 · ⭕🔴🧠⚡✊🥢✏️)
+# Split Games (🎲🎡🎰🎫🎈🦆🥃🎱 · ⭕🔴🧠⚡✊🥢✏️ · ☝️)
 
 Picker: `src/components/groups/split-game-picker-dialog.tsx`. Shared "luck" engine:
 `src/lib/games/` (`use-sequential-draw.ts`, `random.ts`, `member-colors.ts`) and
@@ -14,21 +14,23 @@ Shared "skill" engine (the seven duel games — see below): `src/lib/games/knock
 `game-preview.tsx`. Sound: `src/lib/sound/game-sounds.ts`. The seven games of the second batch
 (ballon, ducks, dice cup, pegboard, rock-paper-scissors, Nim, dots and boxes) are described in
 [[#The second batch: seven more games (2026-10)]]; fairness, statistics, rematch, nudges and
-the online scratch cards in [[#Round three: fairness, record, rematch, online luck (2026-10)]].
+the online scratch cards in [[#Round three: fairness, record, rematch, online luck (2026-10)]];
+the per-payer catch moment with the amount on the slip in
+[[#Round four: polish for the luck games, a luck index, a new game (2026-10)]].
 
 ## What it is
 
 A family of gamified alternatives to manually choosing a split, all reachable from the same
 "🎮 Spiel" button in `add-expense-dialog.tsx`: tapping it opens `SplitGamePickerDialog`, a
 two-category tile picker (see [[#The picker: two categories and a preview step]]), which hands
-off to one of fifteen game dialogs. Every game is, like [[Split Lottery]] before it, purely a
+off to one of sixteen game dialogs. Every game is, like [[Split Lottery]] before it, purely a
 **front-end input mechanism** that flows through the same `resolveExpense` / `buildSplits`
 pipeline as a manually-entered split (see [[Expenses and Splitting]]) — none of them bypass or
 duplicate the money-invariant logic. All of them but the slot machine resolve to a plain list
 of "loser" uids that `add-expense-dialog.tsx` turns into an equal exact split via `splitEqual`.
 The slot machine is the exception — see below.
 
-The fifteen games split into two categories, each with its own resolution engine:
+The games split into two categories, each with its own resolution engine:
 
 | Category                | Games                                                                                                                                  | How "who pays" is decided                                                                              |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
@@ -38,7 +40,7 @@ The fifteen games split into two categories, each with its own resolution engine
 | Game                       | Dialog                          | Mechanic                                                                                        |
 | -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
 | 🎲 [[Split Lottery]]       | `split-lottery-dialog.tsx`      | Tap-to-reveal grid, turn-based, up to 32 anonymous faces                                        |
-| 🎡 Glücksrad               | `split-wheel-dialog.tsx`        | Spin a wheel of the remaining pool; the needle picks the loser                                  |
+| 🎡 Glücksrad               | `split-wheel-dialog.tsx`        | Flick (or spin) a wheel of the remaining pool; the needle picks the loser                       |
 | 🎰 Spielautomat            | `split-slot-dialog.tsx`         | Turns at one machine; symbol combos from a paytable decide who pays how much                    |
 | 🎫 Rubbellos               | `split-scratch-dialog.tsx`      | Everyone scratches their own card; whoever gets a blank pays                                    |
 | ⭕ Tic-Tac-Toe             | `split-tic-tac-toe-dialog.tsx`  | 3×3 grid, alternating marks; a draw replays and escalates to a vanishing "sudden death" variant |
@@ -52,6 +54,11 @@ The fifteen games split into two categories, each with its own resolution engine
 | ✊ Schnick-Schnack-Schnuck | `split-rps-dialog.tsx`          | Hidden simultaneous hands, first to two round wins; a drawn round replays                       |
 | 🥢 Streichholz-Duell       | `split-nim-dialog.tsx`          | Misère Nim on 1·3·5·7 under a shrinking fuse, with one joker each — last match loses            |
 | ✏️ Käsekästchen            | `split-dots-dialog.tsx`         | 4×4 dots, 9 boxes (odd — no tie); closing a box earns another move                              |
+| ☝️ Finger drauf!           | `split-finger-dialog.tsx`       | Everyone rests a finger at once and lifts on a random-delay „LOS!“ — too early or slowest pays  |
+
+Since round four the Minispiele also hold ☝️ Finger drauf!, the first skill game that is not a
+duel: the whole table plays it at once on one phone, so it has no ladder, tournament or online
+mode — see [[#Finger drauf! (☝️)]].
 
 ## The shared draw engine (wheel + scratch)
 
@@ -158,15 +165,15 @@ On top of the table:
   - The reels size off the window (`useReelGeometry`): a third of the column wide, as tall as
     the leftover height allows, at most 1.2× their width. Cream paper, so the symbols pop on
     the dark cabinet.
-  - Tallies, paytable and, at the end, the award show sit *below* the first screen. A scroll
+  - Tallies, paytable and, at the end, the award show sit _below_ the first screen. A scroll
     or the "Mehr Infos" / "Zur Preisverleihung" button gets there. Any pull scrolls back up
     (`showMachine`).
   - Scroll with `scroller.scrollTo`, never `scrollIntoView`. That also scrolls the
-    `overflow-x-hidden` scroller *sideways*, shoving the whole stage left.
+    `overflow-x-hidden` scroller _sideways_, shoving the whole stage left.
   - The light rays behind the cabinet sit in a clipping span the size of the first screen. An
     unclipped `180vmax` sunburst made the scroller far taller than its content.
   - Every overlay (takeovers, decisions, reveals) lives in one `fixed` layer above the title
-    bar and the deck, below the ✕. It sits *outside* the stage, because the impact shake
+    bar and the deck, below the ✕. It sits _outside_ the stage, because the impact shake
     transforms the stage, and a transformed ancestor would trap a fixed child. The layer is
     `pointer-events-none` unless an overlay is up.
   - The lever is gone. The deck is the LED panel, Halten/Risiko when offered, and round
@@ -454,7 +461,7 @@ One game runs per group at a time (unchanged `createTournament` rule).
 
 ## Loaded on demand
 
-The picker and all fifteen game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
+The picker and all sixteen game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
 `next/dynamic`) — before 2026-09 they were static imports of `AddExpenseDialog`, so every
 group page shipped every game. `AddExpenseDialog` mounts the picker, and each game, the first
 time it's opened and then **keeps it mounted**: a duel game holds its running tournament
@@ -479,7 +486,7 @@ unclear. It's now a two-step flow, driven entirely by one table
    category blurb and the familiar emoji/name/blurb tiles.
 2. **Preview** (`SplitGamePreview`, `game-preview.tsx`) — tapping a tile doesn't start the game;
    it shows the game's name, a longer "So funktioniert's" paragraph (`howKey` per game in the
-   catalog), and — for every skill game — a callout explaining the knockout-ladder behavior for
+   catalog), and — for every duel (`isDuelGameId`) — a callout explaining the knockout-ladder behavior for
    pools bigger than two. "Los geht's" then hands off to that game's own dialog exactly as
    before; "Zurück" (or Escape) returns to the grid.
 
@@ -523,14 +530,16 @@ dimmed group page felt like a tab inside the app rather than being _in_ the game
 
 - `GamePoolChecklist` — just the "who's playing" member checklist, used directly by the slot
   machine (no "how many pay" concept applies to it) and wrapped by `GamePoolSetupStep` for the
-  three games that also need a count.
-- `GamePoolSetupStep` — `GamePoolChecklist` plus a 1..poolSize stepper, for the wheel, scratch
-  cards and lottery-style setup. Callers pass their own count-hint copy and stepper icon;
-  everything else, including the `expenses.game*` translation keys, is shared.
+  games that also need a count.
+- `GamePoolSetupStep` — `GamePoolChecklist` plus a 1..`maxLoserCount` stepper, for every luck
+  game with a payer count (since round four the lottery too). Callers pass their own count-hint
+  copy and stepper icon; everything else, including the `expenses.game*` translation keys, is
+  shared.
 - `GameResultBanner` — the final "X zahlt." verdict banner (`expenses.gameResultOne` /
-  `gameResultMultiple`) used by the wheel and scratch cards, including the `aria-live`
-  announcement — visible text alone isn't announced on arrival, that's the state change screen
-  readers actually hear. The slot machine has its own result view (a per-person amount
+  `gameResultMultiple`) used by every luck game but the slot (the lottery since round four),
+  including the `aria-live` announcement — visible text alone isn't announced on arrival,
+  that's the state change screen readers actually hear. With a `stake` it prints each payer's
+  share under their face. The slot machine has its own result view (a per-person amount
   breakdown, not a single "X zahlt." sentence) since its losers can owe different amounts.
 - `GameProgressPips` — the "N of target decided" dot row used by the wheel and scratch cards;
   callers choose what the target means. The slot machine shows a running allocated/remaining
@@ -547,13 +556,13 @@ second player is bumped to the opposite side of the palette wheel.
 
 ## The `viaLottery` flag, now shared
 
-All fifteen games set `Expense.viaLottery = true` when their result is applied (and since
+All sixteen games set `Expense.viaLottery = true` when their result is applied (and since
 2026-10 `Expense.game` — which game, who played, which attempt; see
 [[#Round three: fairness, record, rematch, online luck (2026-10)]]) — the field name is
 a holdover from when the lottery was the only game (see [[Data Model]]), but its actual meaning
 has always been closer to "resolved via a split mini-game", so the existing
 `computeLotteryTotals` leaderboard (now the group page's Spiele tab, `games-tab.tsx` — see
-[[Group Page]]) already aggregates across all fifteen games
+[[Group Page]]) already aggregates across all sixteen games
 with zero code changes needed. Renaming the field would mean migrating live Firestore data for
 a purely cosmetic win, so it stays `viaLottery`. One side effect worth knowing: the leaderboard's
 title ("Wer hat wie viel vergambelt?") now also counts skill-game losses, which reads slightly
@@ -570,7 +579,8 @@ online modes — so the picker, the money pipeline and the leaderboard needed no
 game keeps its rules in a pure, unit-tested module in `src/lib/games/` and the dialog only
 stages them. Shared bits: `use-game-pool-setup.ts` (the pool + payer-count state every luck
 dialog used to repeat) and the new synthesized sounds in `game-sounds.ts`. The luck games keep
-one person dry: at most `poolSize - 1` payers.
+one person dry: at most `poolSize - 1` payers (since round four the wheel, lottery and scratch
+cards too — see [[#Everyone but one]]).
 
 Tile art is `public/game-tiles/<name>.jpg`. Everything _inside_ the games is SVG/CSS — the
 pegboard, the dice pips, the balloon, the ducks, the dot grid — with emoji for the three
@@ -596,13 +606,16 @@ emoji badge covers it.
   first, animate after: the finishing order is one `secureShuffle`, the last _k_ ducks pay
   (`duckRaceLosers`). `planDuckRace` only stages it — finish times strictly increase with a
   minimum gap (`MIN_FINISH_GAP_SEC`), progress keyframes never go backwards and end on the line,
-  so ducks overtake but the order cannot change. Tapping a duck quacks; it is cosmetic.
+  so ducks overtake but the order cannot change. Tapping a duck quacks; it is cosmetic. Since
+  round four it counts down, hangs a 🏮 over whoever would pay right now and ends on a
+  slow-motion photo finish — see [[#Entenrennen: Countdown, rote Laterne, Fotofinish]].
 - **🥃 Würfelbecher** — `dice-cup.ts`, `split-dice-dialog.tsx`, `dice-figure.tsx`. Two dice per
   person, ranked like the pub game Mäxchen (`diceRank`: 21 beats everything, then the doubles
   66…11, then 65…31 by the bigger die first). The lowest roll pays; people level on the line
   between paying and not roll off again — only they do (`resolveDiceRound`, "Stechen") — so no
   payer is ever picked by seating order. `DiceGame` is the state machine, the dice are
-  `randomInt(1, 6)` drawn the instant the cup is shaken.
+  `randomInt(1, 6)` drawn the instant the cup is shaken. Since round four the table is live
+  between rolls — see [[#Würfelbecher: live Zahlzone, "Schlag die 42!", Stechen]].
 - **🎱 Kugelfall** — `pegboard.ts`, `pegboard-layout.ts`, `split-pegboard-dialog.tsx`. Sits on
   `useSequentialDraw`: the payers are fixed first, the ball's path is invented _backwards_ from
   the target slot (`planBallPath`, a random walk in half-slot columns that the walls and the
@@ -675,7 +688,7 @@ reload every other game played sound again.
 ### Games remember the last setup
 
 `game-memory.ts`: per group and device (`localStorage`, try/catch), the pool and payer count
-last *started* (`rememberSetup` in every `startGame`) seed the next game's setup
+last _started_ (`rememberSetup` in every `startGame`) seed the next game's setup
 (`readRememberedSetup`, trimmed to the current members, `null` below two). Shared across games:
 four people at dinner are four people for the wheel and the dice alike.
 
@@ -766,6 +779,463 @@ draws), `disabled` for someone else's card, and `payLabel` ("Zahlt!" on others' 
 - **The end.** The last card books the bill (`buildGameExpense` with the game record), clears
   `activeLuckRound`, posts the result card. `LuckRoundBanner` on the group page reads the
   pointer from the group document and only then the round ("Rubbel dein Los!").
+
+## Round four: polish for the luck games, a luck index, a new game (2026-10)
+
+Six improvements the owner approved together, one subsection each.
+
+### The catch moment, for every payer, with the amount
+
+Before, the "caught" moment depended on the game: the wheel, scratch cards, balloon and
+pegboard gave every payer the shared `CatchFlash`; the dice cup and the duck race gave it only
+to `losers[0]` (everybody else got a red pill in a list); and the lottery had its own 620 ms
+full-board image of the laughing face that never said _who_ had been caught — the payer was a
+16 px initial on the card. And no luck game but the slot knew what the bill was, so the slip
+said "Erwischt!" but never "23,90 €", which is what the table actually reacts to.
+
+**One hook for every catch.** `split-game/use-catch-flashes.ts` (`useCatchFlashes`) is the only
+place that knows how a catch lands: it owns the slip state, the hold timers, and — on the
+stamp's impact frame (`STAMP_IMPACT_S`) — the stamp sound, the laugh, the impact shake of the
+play area and a buzz in the hand. It returns `[stageRef, catches]` (a tuple like
+`useImpactShake`'s, so the React Compiler lint doesn't take reading `catches.flash` for reading
+a ref):
+
+- `catchOne(uid, { finale, delayMs })` — a catch the players just caused (a spin landing, a card
+  scratched, a pop, a face tapped). Replaces any slip still up, holds `CATCH_FLASH_HOLD_MS`.
+  With no delay it fires synchronously, inside the tap, which keeps iOS audio unlocked.
+- `catchEach(uids, { delayMs })` — every payer of a round decided all at once, one slip after
+  the other. Non-final slips hold `CATCH_FLASH_STEP_MS` (1.1 s), only the last gets the finale
+  and the full hold, so three payers take about four seconds rather than five. The dice cup
+  plays it lowest roll last ("Kleinster!" on that one, "Erwischt!" and "Gewürfelt: 42" on the
+  others); the duck race in crossing order, so the last duck — the one everybody watched — is
+  the finale ("Letzter!", the others "Platz 4 von 5"). `finale: false` keeps the finale back
+  for a run that more catches follow: Finger drauf! plays each round's payers through it and
+  gives the finale only to the game's last slip, after any replay.
+- `active` (state) and `isActive()` (a ref, for a tap guard two fingers in one frame can't slip
+  past) are true from the call until the last slip has cleared; every verdict and
+  "Übernehmen" waits on it, which replaced the per-dialog `celebrated` flags. `cancel()` —
+  "Neu mischen", closing, a new spin — drops the slip, every pending timer and a queued buzz;
+  unmounting does the same.
+
+The dialogs still render `CatchFlash` themselves, with their own stamp label and caption. The
+later round-four features (dice zone, photo finish, wheel flick) stage their own build-up and
+then hand the payers to `catchEach`/`catchOne`.
+
+**The stake on the slip.** `AddExpenseDialog` passes `stake={{ description, amountMinor,
+currency }}` to the seven one-phone luck dialogs and to Finger drauf!, as it already did for the
+duels. The amount
+is display only and never shown _during_ play — on each payer's slip (`CatchCaption`: "zahlt
+23,90 € · Pizza" over the game's own line) and under each face in `GameResultBanner`, which
+takes the `stake` and works the shares out from the very `loserUids` it shows. Hidden whenever
+there is no amount yet (`hasStakeAmount`: the form can open a game before one is typed).
+
+The cents must be the booked cents, rounding cent included. `handleSplitGameResolve` books
+`splitEqual(amountMinor, loserUids)` in the order a game hands to `onResolve`, and
+`lib/games/payers.ts` uses that same call in that same order (`stakeShares`), pinned by tests.
+`splitEqual` with equal weights gives the leftover minor units to the first payers in list
+order, so `payerShare(amountMinor, payerCount, index)` (`lib/money/split.ts`, tested against
+`splitEqual` for every position) knows a payer's share before the rest are found — the balloon
+uses it (`stakeShareAt`), since it books in pop order and the payer count is set. The wheel,
+scratch cards and pegboard draw every payer at the start, the duck order is fixed before the
+gun, the dice settle at the end — all of them show the final share on every slip. The lottery
+is the exception: one person can catch two faces, so who pays is only certain once the last
+laughing face is found, and only the last slip and the verdict carry an amount. The online
+scratch round's banner gets `round.stake` too — same `splitEqual`, same order as
+`buildGameExpense`.
+
+**The lottery's catch.** Its own takeover is gone; a laughing face is now a `CatchFlash` over the
+whole dialog naming whoever tapped it, with the face itself peeking over the slip's corner
+(`CatchFlash`'s new `hero` slot, behind the slip, popping up on the impact frame). Its laugh
+images are preloaded at the hero's size (`HERO_SIZES`), the same `/_next/image` URL, so the
+face never arrives after the stamp. A repeat catch says "Schon wieder erwischt!". The slip is
+`pointer-events-none` — the old overlay doubled as the board lock — so `tapCell` checks
+`catches.isActive()` instead; "Neu mischen" now works mid-slip and cancels it. The lottery's
+hand-copied setup and verdict block became `GamePoolSetupStep` and `GameResultBanner`. An
+`aria-live` line announces who was caught ("Lea hat ein lachendes Gesicht erwischt."), which
+nothing did before.
+
+**Herzklopfen.** The lottery's twentieth tap used to feel like its first, although the odds had
+long since changed. `lotteryHeartbeat(payLeft, facesLeft)` (`lib/games/lottery-heartbeat.ts`)
+turns the odds of the next tap — laughing faces left over faces left, both public — into a
+tempo between 60 and 160 bpm (on the square root of the odds, so a big board's early taps
+already differ audibly) and an intensity. The dialog plays `playHeartbeatSound(intensity)` — a
+"lub-dub" from 150 Hz down, because a phone speaker reproduces next to nothing below ~120 Hz —
+from an effect-owned interval: it starts with the first tap (audio is unlocked by then),
+restarts with every tap, rests while a slip is up, stops after eight beats if nobody taps, and
+a new turn, "Neu mischen", closing or unmounting each end it without extra bookkeeping. On
+screen: "Noch 2 von 5 Gesichtern lachen" under the found slots, with a heart beating at the same
+tempo (it holds still under reduced motion). The tempo follows only how many faces are left,
+never which, so it can't point at a face.
+
+**Haptics.** `lib/games/haptics.ts`: `vibrate(pattern, delayMs)` and `cancelVibration()`, a
+guarded `navigator.vibrate` that is a no-op where the API doesn't exist — iOS Safari, standalone
+PWA included — so a buzz only ever doubles what the screen and the speaker already say. The
+delay is written into the pattern (`[0, delay, …]`) rather than a timer, so the stamp's buzz
+lands on its impact frame with nothing to clean up; `cancelVibration` stops a queued one. The
+slot machine's private `vibrate()` moved onto it unchanged.
+
+#### Everyone but one
+
+The wheel, lottery and scratch cards used to allow `poolSize` payers. "Everyone pays" isn't a
+game — the wheel's last spin had one wedge, the last scratch card nothing to hide — and the
+four games of the second batch already capped at `poolSize - 1`. Now all of them do:
+`maxPayerCount` (`lib/games/payers.ts`) through `useGamePoolSetup`, which the three games now
+use instead of their own copies of that state, so a remembered count above the cap is clamped
+like any other and a pool of two always means one payer. The online scratch setup shares the
+stepper, and `createLuckRound` rejects `targetLoserCount === poolUids.length` as
+`invalid-count` (`isValidLuckRoundCount` in `luck-round.ts`, unit-tested, plus a case in
+`luck-rounds.emulator.test.ts`).
+
+### Würfelbecher: live Zahlzone, "Schlag die 42!", Stechen
+
+Before, the dice cup kept its list in seating order and `safe` only filled once a whole round
+had been judged, so nobody got a ✓ mid-round and the stakes of a roll stayed invisible until
+the round resolved. A tie on the line got the duels' small "Unentschieden — nochmal!" notice.
+
+**Derived, never decided.** `diceStanding(game)` (`lib/games/dice-cup.ts`) reads a `DiceGame`
+and returns the list `order`, a `seat` per player (`pays`, `zone`, `line`, `safe`, `waiting`),
+`zoneSize` and the `target`. It judges the current round _as if it ended now_ — the real
+`resolveDiceRound` on the rolls made so far — so it cannot disagree with the verdict, and it
+changes no state, so it cannot move a payer. A property test over 400 random games pins it:
+at every judged round the seats equal the verdict, nobody ever shown as safe ends up paying,
+nobody shown as paying gets away, and the target means what the banner says (beat it and you
+are safe, fall short and you are in).
+
+One fact carries the whole feature: at the end of a round a player is safe exactly when at
+least `slots` of the round's rolls are strictly lower than theirs, and later rolls only ever
+add to that count. So being above the line is **final** the moment it happens — "certainly
+safe" and "above the line right now" are the same set, there is no provisional "clear" state,
+and the ✓ goes up at once. The mirror case, `pays` mid-round, needs every roll still to come
+to land at or below them and still leave them in the zone (`atOrBelow + waiting ≤ slots`); it
+only happens with two or more payers late in a round.
+
+**The list.** `split-game/dice-standings.tsx`. Most at risk on top: settled payers, then the
+round's zone and anyone level on its line (lowest roll first), then the red dashed
+"↑ Zahlzone" line, then whoever is still to roll (in roll order, so the next roller sits right
+under the line, ringed to match the turn banner), then the safe — this round's, then earlier
+rounds' (later rounds first: they came closer to the line). Top rather than bottom, the
+opposite of a league table's relegation zone, because on a phone the top of the list is what
+shows under the felt without scrolling; hence the arrow. Rows move with `layout="position"`
+on `springs.precise` (position only, so a row growing a "Pasch" line doesn't squash its text),
+instantly under reduced motion. The fixed 5.5 rem / 4 rem columns are unchanged, so a row
+still fits at 320 px; the new tags ("✓ sicher", "gleichauf") fit the 4 rem.
+
+**The bill.** Every row in the zone or on its line holds a 🧾 on its avatar. It drops onto
+whoever a roll pushes in and flies off whoever it pushes out, on the same frame, which reads as
+one slip hopping across. It is not a shared `layoutId`: with the zone on top the bill's screen
+position barely changes when it changes hands — the rows slide under it — and an enter/exit
+pair also copes with a tie (more rows on the line than bills) without handing a bill to one of
+them by seating.
+
+**Per roll.** `diceZoneChanges(before, after)` names who `entered` the zone and who was
+`saved`. Entering: the false-start buzzer at 55 % (`playBuzzerSound` now takes a volume — a
+tease, not a penalty) and a 0.4 jolt through the catch hook's `shake`. Saved: a green
+"Gerettet!" bubble that floats off the row and fades out by itself, so there is no timer to
+clean up. Someone level on the line who has to roll off is neither — they go from the line to
+waiting for the Stechen, still in it. The last roll's payoff is the catch and a tie's is the
+takeover, so neither plays the buzzer. The live region follows the roll's own line with
+"In der Zahlzone: Lea. Gerettet: Max."
+
+**"Schlag die 42!"** The target is the `slots`-th lowest roll so far, compared by `diceRank`,
+and `null` while fewer people have rolled than will pay ("Die Zahlzone ist noch offen — dein
+Wurf landet erst mal drin."). The banner (`DiceTurnBanner`) words it the way the table reads
+ranks, not numbers: "Schlag die 42 von Lea!", "Schlag den 3er-Pasch von Lea!" (33 outranks 65
+although it is the smaller number), and over a Mäxchen "Ein Mäxchen ist nicht zu schlagen —
+nur ein zweites hält mit." A tie names everyone on it ("von Lea und Max", `Intl.ListFormat`). A
+chip beside it shows the roll as dice under "zu schlagen" — or "Mäxchen!", since nothing beats
+one — and pops in afresh whenever the line moves.
+
+**STECHEN!** When a judged round leaves people level on the line, `DiceStechenTakeover`
+(`split-game/dice-stechen-takeover.tsx`) takes the play area: their faces creep in from both
+sides under the drum roll and clash at `STECHEN_IMPACT_S` (0.9 s) — `playSwordSound` (now with a
+delay; _stechen_ is also what a fencer does) and a 0.75 jolt land there — then a "Stechen!"
+`InkStamp` in `--primary` ink hits the card 0.24 s later with the stamp's thump, so the two hits
+read as two. All three sounds are scheduled on the audio clock when the takeover starts, like a
+catch's stamp. The faces sit on a card of their own: over the scrim alone the names fought with
+the rows behind. It holds `STECHEN_HOLD_MS` (2.4 s) on the dialog's `later` timers with
+"Würfeln" disabled; "Neu mischen", closing and unmounting clear it with everything else. Under
+reduced motion the faces are simply there and the stamp is printed. Afterwards a dashed
+"STECHEN" strip with the existing "nur Lea, Max würfeln nochmal" stays until the roll-off ends.
+`STAMP_DROP_S` is now exported from `celebration.tsx` so a caller can time an `InkStamp`'s
+impact; `latestDiceRoll` moved from the dialog into `dice-cup.ts`.
+
+### Entenrennen: Countdown, rote Laterne, Fotofinish
+
+Before, one tap started the race at once, nothing on the water said who was losing, and the
+decisive moment was never close: finish times were spread evenly from 72 % of the race, so two
+ducks crossed almost two seconds apart and the payer was obvious long before the line. The
+course was a fixed 300 px, and the ducks moved piecewise-linearly between eight keyframes, with
+a visible kink in speed at each one.
+
+**Still decided first.** The order is one `secureShuffle`; everything below is staging in
+`lib/games/duck-race.ts`, and none of it can move a payer. `planDuckRace(order, random,
+payerCount)` now knows how many pay, so it knows the decisive pair: the last duck that stays
+dry and the first one that pays.
+
+- **Neck and neck.** The safe duck's finish is pulled up to `PHOTO_FINISH_GAP_SEC` (0.16 s, the
+  field's minimum gap) ahead of the payer's. It only ever moves _later_, so it stays clear of
+  the duck before it, and the last duck is still home at `duckRaceDuration`. The payer's own run
+  is squeezed to meet the safe duck's at the last quarter (keyframe 6 of 8) and follows its
+  keyframes from there — a hair behind, since its own clock runs 0.16 s longer. In about six
+  races out of ten it noses _ahead_ on the run-in (keyframe 7) and is out-lunged at the line,
+  so the 🏮 changes hands right at the end. Every shaped run is still strictly increasing.
+- **Smooth runs.** `duckProgressAt(duck, raceSec)` joins the keyframes with a monotone cubic
+  (Hermite with Fritsch–Butland tangents: the harmonic mean of the neighbouring slopes is never
+  more than twice either, which keeps every segment inside the monotone region) from a standing
+  start. Progress never decreases — pinned by a dense-sampling test over every field size.
+- **Two clocks.** Finish times and keyframes stay on the _race clock_; the screen plays them
+  through a `DuckTimeWarp`: knots of (race, screen) seconds, linear between, 1:1 past the end.
+  `slowMotionWarp` runs the clock at `SLOW_MOTION_RATE` (0.3) from 0.4 s before the safe
+  duck's crossing to just after the payer's, easing in and out over six constant-rate steps, so
+  the 0.16 s gap plays as about half a second. A monotone warp cannot reorder anything; tests
+  pin that it is strictly monotone both ways, that the order on the screen clock is the
+  finishing order, and that the race gets more than one and at most two seconds longer (about
+  1.5 s with one payer, 2 s with several, where the clock speeds up again for the rest).
+- **Cues.** `duckRaceCues(race)` turns the plan into screen-clock beats — every crossing, the
+  ease into slow motion, the flash (the safe duck's crossing), the payer's crossing, the
+  camera pulling back — so the dialog's timers and its frame loop read the same numbers and the
+  quacks land on the picture. `photoZoomAt` and `photoFinishFocus` (how close the camera can go,
+  up to 1.7×, while both lanes of the pair stay 14 % inside the edges; the origin stays on the
+  course, so the zoomed water still fills the frame) are pure and tested.
+- **Who's last right now.** `duckStandings(race, raceSec, lanes)` ranks the field as the picture
+  shows it: ducks already home in crossing order, then by progress. Exact ties — everyone on the
+  start line — go by lane, never by the finishing order, which would give the result away.
+  `duckMarkers` hangs 🏮 over the last `payerCount` and 👑 over the leader; at the finish it
+  equals the payers and the winner.
+
+**The dialog.** "3 – 2 – 1 – Platsch!" over the water (`playFuseTickSound` rising, the first
+beat inside the tap so iOS unlocks audio, then the existing splash and go). From the gun one
+`requestAnimationFrame` loop owns the motion: it sets a single `raceClock` motion value from the
+warped screen time, and every duck's `y` and swim waggle are `useTransform`s of it — so slow
+motion is nothing but the clock running slower, and the waggle slows with it. The same loop
+sets the camera's zoom and, every 125 ms (about 8 Hz) and only once 0.6 s are on the clock,
+recomputes the markers, setting state only when they change. They pop on and off with a spring;
+they stop updating at the finish and freeze on the final standing (lanterns over the payers,
+crown over the winner). The loop is an effect keyed on the run, so "Neu mischen", closing and
+unmounting all end it without bookkeeping; the timers sit in `timersRef`, which is now emptied
+in place, never replaced, so the unmount cleanup really does see every timer.
+
+At the ease into slow motion the drum roll starts and the finish camera's viewfinder fades in
+(corner brackets, a vignette, "● Zeitlupe"). The zoom scales only the inner water layer, toward
+the pair at the finish line — never the stage, whose transformed ancestor would trap the slips'
+fixed layers. On the safe duck's crossing a white flash, `playShutterSound` (a two-click shutter
+and a flash recharging) and a double tick on Android (`HAPTIC_SHUTTER`). When the last duck is
+home the **Fotofinish** print (`split-game/photo-finish-print.tsx`) drops onto the empty upper
+water and develops from a pale blank: the two ducks in their lanes' order, the safe one's beak
+over a red line, the payer `1 − payerProgress` of the travel behind it, scaled to the print and
+never under 6 px, with its 🏮, and "Ben knapp vor Lea". The print is cream paper in both
+themes (`paper-tokens`) and stays through the slips and the verdict until "Neu mischen". The
+slips (`catchEach`, unchanged from the catch-moment feature) wait `PHOTO_BEAT_MS` (1.5 s) for
+it. The live region says "Auf die Plätze …", "Das Rennen läuft.", then "Fotofinish: Ben ist
+knapp vor Lea im Ziel." until the first slip.
+
+The course takes the stage's board budget, `clamp(300px, var(--game-board-h) − 40px, 520px)` —
+a definite height, measured by a `ResizeObserver` for the ducks' travel. Under reduced motion
+there is no countdown, swimming, zoom or slow motion: the board, the markers and the print are
+simply there (the shutter still clicks), then the slips.
+
+### Glücksrad: anschubsen, Ratsche, Zitter-Finale
+
+Before, the only way to spin was the footer button, and the person holding the phone had no
+hand in it. The pegs were the wedge boundaries, so a two- or three-person wheel — the most
+common small group — clicked a handful of times per spin and never sounded like a ratchet
+slowing down. The landing was capped at ±30 % of the wedge, so a spin never ended on a close
+call. A caught wedge vanished and the rest re-printed in one frame, and every wedge showed an
+initial, so two "M"s looked the same.
+
+**Still decided first.** `useSequentialDraw` fixes the payers before anyone touches the wheel.
+`lib/games/wheel-plan.ts` only plans the way there: `planWheelSpin({ from, layout, targetIndex,
+velocity })` returns a spin that ends inside `targetIndex` whatever the swing, pinned by tests
+over every wedge count from 1 to 20, every target, both directions and swings from the weakest
+to absurd. The swing changes how long it spins and how far it goes, never the wedge. The
+decorative randomness (duration jitter, where in the wedge it rests, whether it's a nail-biter)
+is `Math.random`; who pays never is.
+
+**The flick.** The card mount takes the drag, not the disc: it doesn't turn, so its
+`getBoundingClientRect` is a steady centre, already scaled by `StageScale`. The pointer's angle
+around it (`pointerAngle`, unwrapped across ±180° by `angleDelta`) turns the wheel 1:1; within
+a quarter of the radius of the hub the angle jumps about, so the finger stops steering there.
+`touch-none select-none` on the mount keeps a swipe from scrolling the stage. On release,
+`flickVelocity` averages the last 100 ms (0 if the finger rested 80 ms before lifting), and
+`classifyRelease` decides: 240 °/s or more spins, in whichever direction it was thrown; a
+real drag without swing wobbles back to where the wheel rested on a loose spring, with a
+chuckle and "Zu lasch! Mehr Schwung!" under the wheel; a mere touch slips back without
+comment. A hint line under the wheel ("Schubs das Rad mit dem Finger an — oder tipp auf
+„Drehen"") holds that row's height, so neither message moves the layout. The button stays — for
+keyboards, screen readers and reduced motion — and throws a made-up solid swing (600–2000 °/s),
+clockwise.
+
+**The spin.** The main spin is an ease-out `1 − (1 − τ)^p`. Its duration grows with the swing
+(3.4–6.2 s, ±6 %), its travel is about `swing · duration / 2.6` rounded to the whole turn that
+lands in the wedge, at least two turns, and the power `p` is then chosen so the first frame's
+speed equals the swing: the wheel leaves the finger at the finger's speed, never slower (a very
+weak flick gets a slight push, because below `p = 1.8` the stop turns abrupt). One
+`requestAnimationFrame` loop sets a `rotation` motion value from `wheelRotationAt(plan, t)` —
+React doesn't re-render while it spins — and "Neu mischen", closing and unmounting cancel it.
+
+**The ratchet.** The rim carries `pegsPerWedge(n) = round(24 / n)` pegs per wedge (at least
+one), so about two dozen go round whatever the group size — 24 for two people, 24 for three, 25
+for five — and every wedge boundary has one (drawn bigger, at the end of its divider). Every
+rotation the wheel takes, dragged, spun or wobbling, goes through one `rattle()`: `pegIndexAt`
+changes by exactly one per peg crossing, the flapper kicks the way the peg travels, and the
+click keeps the old 45 ms throttle, so a fast spin is a ratchet and not a buzz. A plain spin
+comes to rest in the middle half of the wedge _between_ two pegs, never on one.
+
+**Zitter-Finale.** About one spin in four (`NAIL_BITER_CHANCE`, never under reduced motion, never
+with one wedge) the main spin ends with the boundary peg before the drawn wedge pressing on the
+flapper — up to 6° short of the needle, always nearer than the previous peg. For 0.9–1.5 s the
+wheel creeps toward it while the flapper bends up to 30° against the travel and trembles
+(`flapperLeanAt`), over a drum roll. Then the peg slips past: the flapper snaps back and
+overshoots, and the wheel stops 3–8 % inside the drawn wedge — still short of its first inner
+peg, so exactly one peg crosses on the tip. Tests pin all of it: no peg passes during the hang,
+the wheel never moves backwards, the landing is in the wedge. The roll is scheduled on the audio
+clock up front, so `playDrumrollSound` now returns a stop, and closing the game mid-hang
+silences it.
+
+**The caught wedge closes up.** After a landing the caught wedge stays on the disc under the
+slip. When the slip clears (`catchOne`'s `onDone`), `wheelFace(uids, origin, leaving)` shrinks
+it to nothing over 0.55 s while the others widen into its room. The rotation stays put; the
+face's origin moves so that the needle keeps pointing at the same spot of the shrinking wedge
+and the neighbours close in on it from both sides, ending on exactly the settled face of the
+smaller wheel (`originAfterLeaving`, tested). The pegs re-space with it — new ones emerge from
+the next boundary and fade in, the leaver's inner pegs fade out early instead of bunching up. A
+spin or a drag that starts sooner settles it at once; under reduced motion it simply happens.
+
+**Names.** Up to eight wedges, each shows its person's first name on a chip whose width is most
+of the chord at the chip's inner edge (`wedgeNameWidth`), truncated with an ellipsis when it
+doesn't fit ("Joh…" on an eight-person wheel). Above eight, initials as before.
+
+**Sound on iPhone.** The wheel's clicks come from the frame loop, never from a tap, and iOS only
+starts an audio context inside a gesture. `primeGameSounds()` (new in `game-sounds.ts`) wakes it
+from "Spiel starten", the button and the release of a flick.
+
+The preview text says it plainly: the swing decides how long it spins, chance decides where it
+stops.
+
+### Glücks-Index
+
+`luckIndex` (`lib/games/game-stats.ts`) and `LuckIndexSection` (`luck-index-section.tsx`), in
+the Spiele tab under the podium and following its period picker. The podium ranks who lost the
+most money, which mostly means who played the most. The index answers the question the table
+actually argues about ("Ich hab IMMER Pech!"): did chance cost you more than it should have?
+
+- **Expected vs. paid.** In a round of _n_ players every one of them pays `amountMinor / n` in
+  expectation. That holds whether one person pays it all or three split it, and the slot
+  machine's uneven charges are fair in expectation too (its Monte-Carlo test). What someone
+  actually paid is their split. The index is the sum of `paid − expected` over the period's
+  rounds, **in euros**, which was the owner's call: "18,40 € mehr gezahlt als erwartet". A
+  count ("4× gezahlt, erwartet 2×") was the alternative. Euros are what people feel; the price
+  is that one expensive bill weighs more than a cheap one.
+- **What counts.** Only luck games (`isLuckGameId`), balloon and slot included: the balloon's
+  burst point is a fair draw even if pumping is a choice. Duels are won, not drawn. Only
+  expenses that carry a `game` record count. That means rounds from 2026-10 on, and not a
+  round whose split was later edited by hand (`game: null`). The footnote says so, so an empty
+  list isn't read as "nobody played". A round also has to hold together, meaning its players
+  paid exactly the bill between them. This leaves out the one case where they don't: claiming
+  a placeholder moves its split to the new uid (`moveMemberInLedgerEntry`) but not
+  `game.playerUids`.
+- **From three rounds.** A person is listed from `LUCK_INDEX_MIN_ROUNDS` (3) luck rounds in the
+  period. Below that, the number is noise. Former members still count in the others' rounds but
+  aren't listed, as on the podium.
+- **Integer-safe.** A fair share is a fraction of a cent, so the bills are summed per pool size
+  in minor units and divided once at the end. The expectation is then rounded for display, and
+  the difference is taken from that rounded value, so paid = expected + difference holds
+  exactly. Rounding each share first (3,33 € of a 10-€ bill) would have shown everyone in a
+  perfectly even three-way game as a cent unlucky.
+- **On screen.** Diverging bars around zero, like the Salden tab's "Wer steht wo": "◀ Glück"
+  on the left in green, "Pech ▶" on the right in red, scaled to the biggest gap, most Pech
+  first. The signed amount (`formatSignedMoney`, now shared with the balances tab) and the words
+  "mehr/weniger gezahlt als erwartet · 9 Runden" carry the meaning, never the color alone. The
+  section is hidden in a group that has never played a luck game with a record, where it could
+  only ever be empty.
+- **Wording.** Never as if the draw were rigged: "Gezogen wird fair – der Unterschied ist Glück
+  oder Pech." Pech and Glück are relative to the expectation, not an accusation.
+- **No new listener.** It renders from the same expenses as the podium, so offline use and
+  snapshot-error handling are the tab's own.
+
+### Finger drauf! (☝️)
+
+`finger-race.ts` (rules), `split-finger-dialog.tsx` (dialog), tile `public/game-tiles/finger.jpg`.
+The phone lies flat on the table and everyone rests one finger on their own circle. Once every
+finger has rested for `FINGER_REST_MS` (600 ms) the round arms, and after a crypto-random pause
+of 1.5–5 s (`randomInt`, the Reaktionsduell's range) the whole screen turns green with „LOS!“
+and the go chime. Lifting before that is a false start and pays; otherwise the slowest _k_
+pay. It is the only game in which everyone plays at the same moment: up to five people at once,
+nobody waiting for the phone to come round, which is what the owner wanted from it.
+
+- **A third id group.** It is neither a duel (no knockout ladder, no tournament, no online
+  match) nor luck, so it is neither `DuelGameId` nor `LuckGameId` but `TableGameId` (`types.ts`,
+  `TABLE_GAME_IDS` in `split-game-ids.ts`), part of `SplitGameId`. That one union is what
+  `isSplitGameId`, `SPLIT_GAME_META`, `normalizeExpenseGame`, the chat result card and the
+  Spiele tab key on, so all of them accept it without further changes, and `isLuckGameId`
+  leaves it out of the Glücks-Index by construction. It sits in the "Minispiele" section, whose
+  blurb now reads "im Duell oder alle auf einmal"; the preview shows the ladder callout only
+  for `isDuelGameId`, no longer for every skill game. Its setup and `onResolve(losers, players)`
+  are the luck games' (`useGamePoolSetup`, at most `pool − 1` payers).
+- **Who pays** (`judgeFingerRound`). False starters pay. If there are more of them than
+  payers, only they play again and everyone else is safe. The rest of the places go to the
+  slowest; a finger that never came off is slower than any that did. Lifts within
+  `FINGER_TIE_WINDOW_MS` (16 ms, the duel's) can't be ordered honestly by touch hardware, so a
+  player is settled only where the order _around_ them is certain, and whoever is left on the
+  paying line plays again — only they, like the dice cup's „Stechen“ (`FingerGame` carries the
+  remaining contenders and paying places from round to round). A property test pins that every
+  round fills exactly its paying places and that every safe player lifted certainly before
+  every slow payer.
+- **Closing early** (`fingerRoundSettled`). A round closes as soon as nothing left to happen
+  can change it: the false starts decide it (60 ms after the deciding one, so a simultaneous
+  second one still counts and „LOS!“ never comes), or every lift is older than the tie window
+  and every finger still down pays anyway — lifting later only makes it slower. The table
+  sees the verdict while the slowest finger is still on the glass (its circle says "noch
+  drauf"), nobody waits out a dawdler, and the person about to pay can't wipe the result: a
+  property test checks an early verdict against the one the remaining lifts would have given.
+  Nobody lifting at all closes after `FINGER_LIFT_TIMEOUT_MS` (3 s).
+- **`pointercancel` voids, never counts.** The system cancels touches on its own — an iPhone
+  tracks five and cancels all of them on a sixth, palms, system gestures, a call. Until the
+  round has closed a cancel voids it: false starts made before it stand, everyone else plays
+  again ("Das Handy hat einen Finger verloren …"). While the fingers are still gathering it just
+  frees the circle. Lifting while gathering is free too.
+- **Touch bookkeeping.** A finger belongs, by `pointerId`, to the circle it came down on
+  (`fingerDown`); a second finger on a held circle, a finger outside the circles and any finger
+  once the round is armed are ignored, and so are their lifts. The circles listen for
+  `pointerdown` (plus `setPointerCapture`); lifts and cancels are heard on `window` in the
+  capture phase, so a finger that slides off its circle is still that finger and nothing can
+  swallow its `pointerup`. Every handler goes through ref-mirrored state, like the reaction
+  duel's pads: several fingers land in one frame. Times are `event.timeStamp`, on the same clock
+  as the signal (`performance.now()`). The dialog only forwards events and timestamps; every
+  decision is in the pure module.
+- **The field.** A definite height (`clamp(20rem, --game-board-h, 34rem)`, never padding),
+  `touch-none`, `select-none`, `-webkit-user-select: none`, `-webkit-touch-callout: none` and
+  no context menu, so a resting finger starts no scroll, zoom, selection or long-press menu. The
+  circles (`w-[min(6.5rem,30%)]`, at least 86 px on the narrowest phone) sit round an ellipse
+  (`fingerSeats`, the first at the bottom edge, clockwise; tested to keep 104 px circles apart
+  on a 343 × 320 field), each face and name turned to read from the edge it is nearest to — the
+  table sits all round the phone. Circles show their owner's colours, fill when held, turn red
+  on a false start and show each time after „LOS!“. Fingers cover the field, so the signal is
+  the whole screen plus sound; on a muted phone it is the colour alone.
+- **No button during play.** The footer shows the payer pips instead: a stray finger resting on
+  a button would press it the moment it lifts on „LOS!“. ✕ still leaves; "Neu starten" and
+  "Übernehmen" come with the verdict.
+- **The end.** One slip per payer in the order they pay ("Zu langsam!" / "Fehlstart!", "Nach
+  312 ms losgelassen"), through the luck games' shared `useCatchFlashes`, so a catch lands with
+  the same stamp, laugh, jolt and buzz as everywhere else: 1.1 s each, the full hold and the
+  finale only on the game's last one (`catchEach` with `finale: false` for a round a replay
+  follows). With a stake each slip says what that payer pays ("zahlt 5,01 € · Pizza",
+  `stakeShareAt`): payers are booked in the order they are caught and their number is fixed at
+  the start (a replay only fills places still open), so a share is final the moment it shows,
+  even before a replay. Then `GameResultBanner` with the shares, and "Wer war wie schnell?"
+  (`fingerStandings`: safe players in round order, then the payers in reverse, slow ones by
+  time, false starters last).
+- **How many.** `fingerPoolLimit`: `min(5, navigator.maxTouchPoints || 5)`. A device that
+  reports no touchscreen still gets five (and a hint that the game wants a phone); bigger
+  groups get "höchstens 5 Finger … nimm das Glücksrad", like the pegboard's limit.
+- **Only a real device can tell** whether iOS's three-finger edit gestures, Android OEM
+  three-finger screenshot swipes and palm rejection leave the game alone. Chromium's touch
+  emulation (several touch points at once through CDP) drove whole rounds, a false start, a
+  cancel and a dead heat end to end; `split-finger-dialog.test.tsx` covers the same with
+  jsdom pointer events.
+- **The tile** was drawn as an SVG in the house style (cream ground, thick brown outlines, three
+  hands on a phone on a table, „LOS!“ in the middle, the bottom-right quarter left to the badge)
+  and rasterised with Chromium to a 390 px JPEG.
 
 ## Related
 

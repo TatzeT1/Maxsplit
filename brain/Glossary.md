@@ -10,26 +10,43 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 
 ## German UI terms
 
-| German                            | English meaning                      | Where                                                                                                                 |
-| --------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------- |
-| Schulden vereinfachen             | "Simplify debts"                     | `simplifyDebts`, opt-in per-group debt-simplification toggle — [[Money Invariants]], [[Balances and Settlements]]     |
-| Du schuldest Anna 12,50 €         | "You owe Anna 12.50 €"               | pairwise debt display — `computePairwiseDebts`                                                                        |
-| Schuldenausgleich                 | "Debt settlement"                    | filename `schuldenausgleich.pdf` from the [[Settlement PDF Export]] route                                             |
-| vergambelt                        | roughly "gambled away"               | informal term for the [[Split Games]] leaderboard of who's lost the most across the split mini-games                  |
-| Überspringen                      | "Skip"                               | the onboarding skip action — see [[Onboarding and Payment Details]]                                                   |
-| Mit Google anmelden               | "Sign in with Google"                | the sign-in button label, incl. in the emulator's fake account picker                                                 |
-| Ausgaben teilen, ohne Kopfrechnen | "Split expenses without mental math" | the app's tagline (`app.tagline` in `de.ts`)                                                                          |
-| Glücksspiele                      | "Games of chance"                    | the picker's luck-based category (🎲🎡🎰🎫🎈🦆🥃🎱) — [[Split Games]]                                                 |
-| Minispiele                        | "Minigames"                          | the picker's skill-based, 1-vs-1 duel category (⭕🔴🧠⚡✊🥢✏️) — [[Split Games]]                                     |
-| K.-o.-Modus                       | "Knockout mode"                      | the picker's name for the knockout-ladder mechanic that scales a duel game to a pool bigger than 2 — [[Split Games]]  |
-| Stechen                           | "Roll-off" — a tie-break             | the Würfelbecher rolls again among only the people level on the line between paying and not — [[Split Games]]         |
-| Mäxchen                           | pub dice game                        | the Würfelbecher ranks two-dice rolls like it: 21 beats everything, then the doubles, then the rest — [[Split Games]] |
-| Lunte                             | "fuse"                               | the matchstick duel's move clock, shorter as matches run out; a burnt one plays a late move — [[Split Games]]         |
-| Joker                             | one skipped move                     | the matchstick duel's once-per-player skip: pass the move on without taking — [[Split Games]]                         |
-| Revanche                          | "Rematch"                            | the same online game, people and stake once more; the loser of a duel moves first — [[Split Games]]                   |
-| Anstupsen                         | "Nudge"                              | a fresh "Du bist dran" for the player an online match has been waiting on — [[Split Games]]                           |
-| n. Versuch                        | "attempt n"                          | how many rounds an expense form started before its result was taken ("Neu mischen" counted) — [[Split Games]]         |
-| Lose verschicken                  | "Send out the cards"                 | starts an online scratch-card round, everyone on their own phone (ADR-005) — [[Split Games]]                          |
+| German                            | English meaning                      | Where                                                                                                                  |
+| --------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Schulden vereinfachen             | "Simplify debts"                     | `simplifyDebts`, opt-in per-group debt-simplification toggle — [[Money Invariants]], [[Balances and Settlements]]      |
+| Du schuldest Anna 12,50 €         | "You owe Anna 12.50 €"               | pairwise debt display — `computePairwiseDebts`                                                                         |
+| Schuldenausgleich                 | "Debt settlement"                    | filename `schuldenausgleich.pdf` from the [[Settlement PDF Export]] route                                              |
+| vergambelt                        | roughly "gambled away"               | informal term for the [[Split Games]] leaderboard of who's lost the most across the split mini-games                   |
+| Überspringen                      | "Skip"                               | the onboarding skip action — see [[Onboarding and Payment Details]]                                                    |
+| Mit Google anmelden               | "Sign in with Google"                | the sign-in button label, incl. in the emulator's fake account picker                                                  |
+| Ausgaben teilen, ohne Kopfrechnen | "Split expenses without mental math" | the app's tagline (`app.tagline` in `de.ts`)                                                                           |
+| Glücksspiele                      | "Games of chance"                    | the picker's luck-based category (🎲🎡🎰🎫🎈🦆🥃🎱) — [[Split Games]]                                                  |
+| Minispiele                        | "Minigames"                          | the picker's skill category: the 1-vs-1 duels (⭕🔴🧠⚡✊🥢✏️) and ☝️ for the whole table — [[Split Games]]            |
+| K.-o.-Modus                       | "Knockout mode"                      | the picker's name for the knockout-ladder mechanic that scales a duel game to a pool bigger than 2 — [[Split Games]]   |
+| Stechen                           | "Roll-off" — a tie-break             | the Würfelbecher rolls again among only the people level on the line between paying and not — [[Split Games]]          |
+| Mäxchen                           | pub dice game                        | the Würfelbecher ranks two-dice rolls like it: 21 beats everything, then the doubles, then the rest — [[Split Games]]  |
+| Lunte                             | "fuse"                               | the matchstick duel's move clock, shorter as matches run out; a burnt one plays a late move — [[Split Games]]          |
+| Joker                             | one skipped move                     | the matchstick duel's once-per-player skip: pass the move on without taking — [[Split Games]]                          |
+| Revanche                          | "Rematch"                            | the same online game, people and stake once more; the loser of a duel moves first — [[Split Games]]                    |
+| Anstupsen                         | "Nudge"                              | a fresh "Du bist dran" for the player an online match has been waiting on — [[Split Games]]                            |
+| n. Versuch                        | "attempt n"                          | how many rounds an expense form started before its result was taken ("Neu mischen" counted) — [[Split Games]]          |
+| Lose verschicken                  | "Send out the cards"                 | starts an online scratch-card round, everyone on their own phone (ADR-005) — [[Split Games]]                           |
+| Erwischt!                         | "Caught!" (en UI: "Gotcha!")         | the stamp on a payer's slip (`CatchFlash`): every payer in the luck games gets one, with their share — [[Split Games]] |
+| Herzklopfen                       | "Pounding heart"                     | the lottery's heartbeat, faster as the odds of the next tap catching a laughing face rise — [[Split Games]]            |
+| Zahlzone                          | "Pay zone"                           | the Würfelbecher's live red zone: who would pay if the round ended now, re-sorted after every roll — [[Split Games]]   |
+| Schlag die 42!                    | "Beat the 42!"                       | the roll the next Würfelbecher roller has to top to stay out of the Zahlzone, compared by rank — [[Split Games]]       |
+| Gerettet!                         | "Saved!"                             | the bubble over whoever a roll just pushed out of the Zahlzone — out for good, never back in — [[Split Games]]         |
+| gleichauf                         | "level", "tied"                      | a Würfelbecher row level with others on the Zahlzone's line: a Stechen if the round ended now — [[Split Games]]        |
+| Platsch!                          | "Splash!"                            | the duck race's start, after "3 – 2 – 1" counted down over the water — [[Split Games]]                                 |
+| rote Laterne                      | "red lantern" — the last-placed      | the 🏮 over whichever ducks would pay if the race ended now, following the picture — [[Split Games]]                   |
+| Zeitlupe                          | "Slow motion"                        | the duck race's clock running at 0.3× around the decisive crossing, with the camera zoomed in — [[Split Games]]        |
+| Fotofinish                        | "Photo finish"                       | the last safe duck and the first payer, a beak apart; the camera's print stays on the water — [[Split Games]]          |
+| anschubsen                        | "to give it a push"                  | flicking the Glücksrad by hand: the swing sets how long it spins, never where it stops — [[Split Games]]               |
+| Zu lasch!                         | "Too limp!" (en UI: "Too gentle!")   | a Glücksrad flick without enough swing: the wheel wobbles back to where it rested — [[Split Games]]                    |
+| Zitter-Finale                     | "Trembling finale" — a nail-biter    | about one wheel spin in four hangs on the peg before the drawn wedge, then tips into it — [[Split Games]]              |
+| Glücks-Index                      | "Luck index"                         | per person, what the luck games cost them against their fair share (bill ÷ players), in euros — [[Split Games]]        |
+| Pech / Glück                      | "Bad luck" / "good luck"             | the luck index's two sides: paid more / less than expected — never meant as "the draw is unfair" — [[Split Games]]     |
+| Finger drauf!                     | "Finger on it!"                      | the whole-table skill game: everyone rests a finger, lifts on „LOS!“; too early or slowest pays — [[Split Games]]      |
+| Fehlstart                         | "False start"                        | lifting (or tapping) before „LOS!“ in Finger drauf! and the Reaktionsduell — it pays — [[Split Games]]                 |
 
 ## Domain vocabulary
 

@@ -8,6 +8,7 @@ import { isGroupManager } from "@/lib/groups/permissions";
 import {
   canScratchFor,
   drawScratchCard,
+  isValidLuckRoundCount,
   scratchLosers,
   unrevealedUids,
 } from "@/lib/games/luck-round";
@@ -84,11 +85,7 @@ export async function createLuckRound(input: {
   ) {
     return { ok: false, error: "invalid-pool" };
   }
-  if (
-    !Number.isInteger(input.targetLoserCount) ||
-    input.targetLoserCount < 1 ||
-    input.targetLoserCount > poolUids.length
-  ) {
+  if (!isValidLuckRoundCount(input.targetLoserCount, poolUids.length)) {
     return { ok: false, error: "invalid-count" };
   }
   const draft = input.autoBook;

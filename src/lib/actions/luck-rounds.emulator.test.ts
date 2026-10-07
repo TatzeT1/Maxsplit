@@ -94,6 +94,8 @@ describe("createLuckRound", () => {
     [{ poolUids: ["max", "tom"] }, "invalid-pool"],
     [{ poolUids: ["max", "stranger"] }, "invalid-pool"],
     [{ targetLoserCount: 4 }, "invalid-count"],
+    // Everyone paying isn't a game: one card always stays a winner.
+    [{ targetLoserCount: 3 }, "invalid-count"],
     [{ targetLoserCount: 0 }, "invalid-count"],
     [{ gameId: "wheel" }, "invalid-game"],
     [{ autoBook: { ...pizza, paidBy: { max: 100 } } }, "invalid-payer"],

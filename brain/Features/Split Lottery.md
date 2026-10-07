@@ -45,9 +45,19 @@ a loss).
 ...; note the gaps in numbering, that's not a bug, just which assets exist), so tapping a face
 reads as "the same person, a different mood" rather than swapping to an unrelated image.
 Grid cells get a random cast member per game, mixed across the board rather than one face
-repeated. Sound effects (`playAppliedSound`, `playLaughSound`, `playMissSound`) and motion
-(`motion/react` via `src/lib/motion.ts`'s `springs`) are purely cosmetic — no correctness
-surface there.
+repeated. Sound effects (`playAppliedSound`, `playMissSound`, the shared catch's stamp and
+laugh, `playHeartbeatSound`) and motion (`motion/react` via `src/lib/motion.ts`'s `springs`)
+are purely cosmetic — no correctness surface there.
+
+## The catch and the heartbeat (2026-10)
+
+A laughing face is the shared `CatchFlash` since round four: a slip naming whoever tapped it,
+the laughing character peeking over its corner, stamp, shake and confetti; the last slip and
+the verdict carry what each payer owes. Between taps a heartbeat quickens as the safe faces
+run out ("Noch 2 von 5 Gesichtern lachen"). Why and how:
+[[Split Games#The catch moment, for every payer, with the amount]]. At most everyone but one can
+pay ([[Split Games#Everyone but one]]).
 
 ## Related
+
 [[Split Games]] · [[Expenses and Splitting]] · [[Money Invariants]] · [[Design System and Theming]]
