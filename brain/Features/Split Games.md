@@ -607,7 +607,8 @@ emoji badge covers it.
   66…11, then 65…31 by the bigger die first). The lowest roll pays; people level on the line
   between paying and not roll off again — only they do (`resolveDiceRound`, "Stechen") — so no
   payer is ever picked by seating order. `DiceGame` is the state machine, the dice are
-  `randomInt(1, 6)` drawn the instant the cup is shaken.
+  `randomInt(1, 6)` drawn the instant the cup is shaken. Since round four the table is live
+  between rolls — see [[#Würfelbecher: live Zahlzone, "Schlag die 42!", Stechen]].
 - **🎱 Kugelfall** — `pegboard.ts`, `pegboard-layout.ts`, `split-pegboard-dialog.tsx`. Sits on
   `useSequentialDraw`: the payers are fixed first, the ball's path is invented _backwards_ from
   the target slot (`planBallPath`, a random walk in half-slot columns that the walls and the
@@ -874,6 +875,79 @@ like any other and a pool of two always means one payer. The online scratch setu
 stepper, and `createLuckRound` rejects `targetLoserCount === poolUids.length` as
 `invalid-count` (`isValidLuckRoundCount` in `luck-round.ts`, unit-tested, plus a case in
 `luck-rounds.emulator.test.ts`).
+
+### Würfelbecher: live Zahlzone, "Schlag die 42!", Stechen
+
+Before, the dice cup kept its list in seating order and `safe` only filled once a whole round
+had been judged, so nobody got a ✓ mid-round and the stakes of a roll stayed invisible until
+the round resolved. A tie on the line got the duels' small "Unentschieden — nochmal!" notice.
+
+**Derived, never decided.** `diceStanding(game)` (`lib/games/dice-cup.ts`) reads a `DiceGame`
+and returns the list `order`, a `seat` per player (`pays`, `zone`, `line`, `safe`, `waiting`),
+`zoneSize` and the `target`. It judges the current round _as if it ended now_ — the real
+`resolveDiceRound` on the rolls made so far — so it cannot disagree with the verdict, and it
+changes no state, so it cannot move a payer. A property test over 400 random games pins it:
+at every judged round the seats equal the verdict, nobody ever shown as safe ends up paying,
+nobody shown as paying gets away, and the target means what the banner says (beat it and you
+are safe, fall short and you are in).
+
+One fact carries the whole feature: at the end of a round a player is safe exactly when at
+least `slots` of the round's rolls are strictly lower than theirs, and later rolls only ever
+add to that count. So being above the line is **final** the moment it happens — "certainly
+safe" and "above the line right now" are the same set, there is no provisional "clear" state,
+and the ✓ goes up at once. The mirror case, `pays` mid-round, needs every roll still to come
+to land at or below them and still leave them in the zone (`atOrBelow + waiting ≤ slots`); it
+only happens with two or more payers late in a round.
+
+**The list.** `split-game/dice-standings.tsx`. Most at risk on top: settled payers, then the
+round's zone and anyone level on its line (lowest roll first), then the red dashed
+"↑ Zahlzone" line, then whoever is still to roll (in roll order, so the next roller sits right
+under the line, ringed to match the turn banner), then the safe — this round's, then earlier
+rounds' (later rounds first: they came closer to the line). Top rather than bottom, the
+opposite of a league table's relegation zone, because on a phone the top of the list is what
+shows under the felt without scrolling; hence the arrow. Rows move with `layout="position"`
+on `springs.precise` (position only, so a row growing a "Pasch" line doesn't squash its text),
+instantly under reduced motion. The fixed 5.5 rem / 4 rem columns are unchanged, so a row
+still fits at 320 px; the new tags ("✓ sicher", "gleichauf") fit the 4 rem.
+
+**The bill.** Every row in the zone or on its line holds a 🧾 on its avatar. It drops onto
+whoever a roll pushes in and flies off whoever it pushes out, on the same frame, which reads as
+one slip hopping across. It is not a shared `layoutId`: with the zone on top the bill's screen
+position barely changes when it changes hands — the rows slide under it — and an enter/exit
+pair also copes with a tie (more rows on the line than bills) without handing a bill to one of
+them by seating.
+
+**Per roll.** `diceZoneChanges(before, after)` names who `entered` the zone and who was
+`saved`. Entering: the false-start buzzer at 55 % (`playBuzzerSound` now takes a volume — a
+tease, not a penalty) and a 0.4 jolt through the catch hook's `shake`. Saved: a green
+"Gerettet!" bubble that floats off the row and fades out by itself, so there is no timer to
+clean up. Someone level on the line who has to roll off is neither — they go from the line to
+waiting for the Stechen, still in it. The last roll's payoff is the catch and a tie's is the
+takeover, so neither plays the buzzer. The live region follows the roll's own line with
+"In der Zahlzone: Lea. Gerettet: Max."
+
+**"Schlag die 42!"** The target is the `slots`-th lowest roll so far, compared by `diceRank`,
+and `null` while fewer people have rolled than will pay ("Die Zahlzone ist noch offen — dein
+Wurf landet erst mal drin."). The banner (`DiceTurnBanner`) words it the way the table reads
+ranks, not numbers: "Schlag die 42 von Lea!", "Schlag den 3er-Pasch von Lea!" (33 outranks 65
+although it is the smaller number), and over a Mäxchen "Ein Mäxchen ist nicht zu schlagen —
+nur ein zweites hält mit." A tie names everyone on it ("von Lea und Max", `Intl.ListFormat`). A
+chip beside it shows the roll as dice under "zu schlagen" — or "Mäxchen!", since nothing beats
+one — and pops in afresh whenever the line moves.
+
+**STECHEN!** When a judged round leaves people level on the line, `DiceStechenTakeover`
+(`split-game/dice-stechen-takeover.tsx`) takes the play area: their faces creep in from both
+sides under the drum roll and clash at `STECHEN_IMPACT_S` (0.9 s) — `playSwordSound` (now with a
+delay; _stechen_ is also what a fencer does) and a 0.75 jolt land there — then a "Stechen!"
+`InkStamp` in `--primary` ink hits the card 0.24 s later with the stamp's thump, so the two hits
+read as two. All three sounds are scheduled on the audio clock when the takeover starts, like a
+catch's stamp. The faces sit on a card of their own: over the scrim alone the names fought with
+the rows behind. It holds `STECHEN_HOLD_MS` (2.4 s) on the dialog's `later` timers with
+"Würfeln" disabled; "Neu mischen", closing and unmounting clear it with everything else. Under
+reduced motion the faces are simply there and the stamp is printed. Afterwards a dashed
+"STECHEN" strip with the existing "nur Lea, Max würfeln nochmal" stays until the roll-off ends.
+`STAMP_DROP_S` is now exported from `celebration.tsx` so a caller can time an `InkStamp`'s
+impact; `latestDiceRoll` moved from the dialog into `dice-cup.ts`.
 
 ## Related
 

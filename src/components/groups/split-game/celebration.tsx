@@ -42,8 +42,8 @@ import { cn, nameHash } from "@/lib/utils";
  * a single physical hit.
  */
 
-/** When the stamp starts falling, in seconds after the flash mounts. */
-const STAMP_DROP_S = 0.12;
+/** When the stamp starts falling, in seconds after the flash mounts — `InkStamp`'s default `delay`. */
+export const STAMP_DROP_S = 0.12;
 /** How long the stamp's fall-and-settle takes. The impact is halfway through. */
 const STAMP_DURATION_S = 0.36;
 /** The frame the stamp hits the paper. Everything with weight keys off this one beat. */

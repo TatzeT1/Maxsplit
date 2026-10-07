@@ -32,6 +32,10 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Lose verschicken                  | "Send out the cards"                 | starts an online scratch-card round, everyone on their own phone (ADR-005) — [[Split Games]]                           |
 | Erwischt!                         | "Caught!" (en UI: "Gotcha!")         | the stamp on a payer's slip (`CatchFlash`): every payer in the luck games gets one, with their share — [[Split Games]] |
 | Herzklopfen                       | "Pounding heart"                     | the lottery's heartbeat, faster as the odds of the next tap catching a laughing face rise — [[Split Games]]            |
+| Zahlzone                          | "Pay zone"                           | the Würfelbecher's live red zone: who would pay if the round ended now, re-sorted after every roll — [[Split Games]]   |
+| Schlag die 42!                    | "Beat the 42!"                       | the roll the next Würfelbecher roller has to top to stay out of the Zahlzone, compared by rank — [[Split Games]]       |
+| Gerettet!                         | "Saved!"                             | the bubble over whoever a roll just pushed out of the Zahlzone — out for good, never back in — [[Split Games]]         |
+| gleichauf                         | "level", "tied"                      | a Würfelbecher row level with others on the Zahlzone's line: a Stechen if the round ended now — [[Split Games]]        |
 
 ## Domain vocabulary
 

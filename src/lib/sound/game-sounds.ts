@@ -305,13 +305,17 @@ export function playGoSound(): void {
   tone(ctx, 1318.5, now + 0.06, 0.14, "triangle", 0.12);
 }
 
-/** A short, low buzz for a false start — deliberately flat and a little harsh, the opposite of the "Los!" chime. */
-export function playBuzzerSound(): void {
+/**
+ * A short, low buzz for a false start — deliberately flat and a little harsh,
+ * the opposite of the "Los!" chime. `volume` (0–1) scales it down where it is
+ * a tease rather than a penalty: the dice cup's slide into the pay zone.
+ */
+export function playBuzzerSound(volume = 1): void {
   const ctx = getContext();
   if (!ctx) return;
   const now = ctx.currentTime;
-  tone(ctx, 140, now, 0.22, "sawtooth", 0.08);
-  noiseBurst(ctx, now, 0.05, 0.05, "lowpass", 400, 0.8);
+  tone(ctx, 140, now, 0.22, "sawtooth", 0.08 * volume);
+  noiseBurst(ctx, now, 0.05, 0.05 * volume, "lowpass", 400, 0.8);
 }
 
 /** Two or three quick, high "ha"s — a lighter laugh for the slot machine's many small hits. */
@@ -806,11 +810,11 @@ export function playGiftOpenSound(): void {
   bellTone(ctx, 1318.5, now + 0.18, 0.07);
 }
 
-/** Two blades crossing, for the duel. */
-export function playSwordSound(): void {
+/** Two blades crossing, for the duel — and for the dice cup's "Stechen", on the frame the tied faces clash. */
+export function playSwordSound(delaySeconds = 0): void {
   const ctx = getContext();
   if (!ctx) return;
-  const now = ctx.currentTime;
+  const now = ctx.currentTime + delaySeconds;
   noiseBurst(ctx, now, 0.25, 0.12, "highpass", 5000, 0.8);
   tone(ctx, 2600, now, 0.35, "triangle", 0.05);
   tone(ctx, 3900, now + 0.01, 0.3, "sine", 0.03);
