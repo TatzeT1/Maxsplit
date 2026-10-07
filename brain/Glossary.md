@@ -30,6 +30,8 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Anstupsen                         | "Nudge"                              | a fresh "Du bist dran" for the player an online match has been waiting on — [[Split Games]]                           |
 | n. Versuch                        | "attempt n"                          | how many rounds an expense form started before its result was taken ("Neu mischen" counted) — [[Split Games]]         |
 | Lose verschicken                  | "Send out the cards"                 | starts an online scratch-card round, everyone on their own phone (ADR-005) — [[Split Games]]                          |
+| Glücks-Index                      | "Luck index"                         | per person, what the luck games cost them against their fair share (bill ÷ players), in euros — [[Split Games]]       |
+| Pech / Glück                      | "Bad luck" / "good luck"             | the luck index's two sides: paid more / less than expected — never meant as "the draw is unfair" — [[Split Games]]    |
 
 ## Domain vocabulary
 

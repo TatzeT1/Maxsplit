@@ -736,6 +736,17 @@ export const de = {
     gamesFavoriteRoundsOne: "1 Runde",
     gamesFavoriteRounds: "{{count}} Runden",
     gamesRoundFree: "nur zum Spaß",
+    gamesLuckIndexTitle: "Glücks-Index",
+    gamesLuckIndexIntro:
+      "Gezahlt im Vergleich zum fairen Anteil: jede Rechnung geteilt durch alle, die mitgespielt haben. Gezogen wird fair – der Unterschied ist Glück oder Pech.",
+    gamesLuckIndexLuck: "Glück",
+    gamesLuckIndexBadLuck: "Pech",
+    gamesLuckIndexMore: "mehr gezahlt als erwartet",
+    gamesLuckIndexLess: "weniger gezahlt als erwartet",
+    gamesLuckIndexEven: "genau wie erwartet",
+    gamesLuckIndexEmpty: "Noch zu wenige Glücksspiel-Runden in diesem Zeitraum.",
+    gamesLuckIndexFootnote:
+      "Nur Glücksspiele, ab {{count}} Runden pro Person. Es zählen nur Runden, bei denen die Ausgabe ihr Spiel vermerkt – ältere Runden und von Hand geänderte Aufteilungen nicht.",
     wheelTitle: "Glücksrad",
     wheelIntro: "Handy rumreichen: Das Rad entscheidet, wer zahlt.",
     wheelCountHint: "So oft dreht sich das Rad, bis alle Zahler feststehen.",

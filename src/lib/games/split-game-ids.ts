@@ -14,6 +14,10 @@ export const LUCK_GAME_IDS: readonly LuckGameId[] = [
   "pegboard",
 ];
 
+export function isLuckGameId(value: string): value is LuckGameId {
+  return (LUCK_GAME_IDS as readonly string[]).includes(value);
+}
+
 /** Runtime list mirroring the `SplitGameId` union, for validating a Server Action's input. */
 export const SPLIT_GAME_IDS: readonly SplitGameId[] = [...LUCK_GAME_IDS, ...DUEL_GAME_IDS];
 

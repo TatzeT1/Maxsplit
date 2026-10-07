@@ -725,6 +725,17 @@ export const en: Dictionary = {
     gamesFavoriteRoundsOne: "1 round",
     gamesFavoriteRounds: "{{count}} rounds",
     gamesRoundFree: "just for fun",
+    gamesLuckIndexTitle: "Luck index",
+    gamesLuckIndexIntro:
+      "Paid compared with the fair share: each bill divided by everyone who played. The draw is fair — the difference is luck.",
+    gamesLuckIndexLuck: "Lucky",
+    gamesLuckIndexBadLuck: "Unlucky",
+    gamesLuckIndexMore: "paid more than expected",
+    gamesLuckIndexLess: "paid less than expected",
+    gamesLuckIndexEven: "exactly as expected",
+    gamesLuckIndexEmpty: "Not enough games of chance in this period yet.",
+    gamesLuckIndexFootnote:
+      "Games of chance only, from {{count}} rounds per person. Only rounds whose expense records its game count — not older rounds or splits changed by hand.",
     wheelTitle: "Wheel of fortune",
     wheelIntro: "Pass the phone around: the wheel decides who pays.",
     wheelCountHint: "That's how many spins it takes before every payer is decided.",

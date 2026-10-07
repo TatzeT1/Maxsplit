@@ -158,15 +158,15 @@ On top of the table:
   - The reels size off the window (`useReelGeometry`): a third of the column wide, as tall as
     the leftover height allows, at most 1.2× their width. Cream paper, so the symbols pop on
     the dark cabinet.
-  - Tallies, paytable and, at the end, the award show sit *below* the first screen. A scroll
+  - Tallies, paytable and, at the end, the award show sit _below_ the first screen. A scroll
     or the "Mehr Infos" / "Zur Preisverleihung" button gets there. Any pull scrolls back up
     (`showMachine`).
   - Scroll with `scroller.scrollTo`, never `scrollIntoView`. That also scrolls the
-    `overflow-x-hidden` scroller *sideways*, shoving the whole stage left.
+    `overflow-x-hidden` scroller _sideways_, shoving the whole stage left.
   - The light rays behind the cabinet sit in a clipping span the size of the first screen. An
     unclipped `180vmax` sunburst made the scroller far taller than its content.
   - Every overlay (takeovers, decisions, reveals) lives in one `fixed` layer above the title
-    bar and the deck, below the ✕. It sits *outside* the stage, because the impact shake
+    bar and the deck, below the ✕. It sits _outside_ the stage, because the impact shake
     transforms the stage, and a transformed ancestor would trap a fixed child. The layer is
     `pointer-events-none` unless an overlay is up.
   - The lever is gone. The deck is the LED panel, Halten/Risiko when offered, and round
@@ -675,7 +675,7 @@ reload every other game played sound again.
 ### Games remember the last setup
 
 `game-memory.ts`: per group and device (`localStorage`, try/catch), the pool and payer count
-last *started* (`rememberSetup` in every `startGame`) seed the next game's setup
+last _started_ (`rememberSetup` in every `startGame`) seed the next game's setup
 (`readRememberedSetup`, trimmed to the current members, `null` below two). Shared across games:
 four people at dinner are four people for the wheel and the dice alike.
 
@@ -766,6 +766,51 @@ draws), `disabled` for someone else's card, and `payLabel` ("Zahlt!" on others' 
 - **The end.** The last card books the bill (`buildGameExpense` with the game record), clears
   `activeLuckRound`, posts the result card. `LuckRoundBanner` on the group page reads the
   pointer from the group document and only then the round ("Rubbel dein Los!").
+
+## Round four: catch moments, drama, a luck index, a new game (2026-10)
+
+Six improvements, all approved by the owner. Each one's subsection says what changed and why.
+
+### Glücks-Index
+
+`luckIndex` (`lib/games/game-stats.ts`) and `LuckIndexSection` (`luck-index-section.tsx`), in
+the Spiele tab under the podium and following its period picker. The podium ranks who lost the
+most money, which mostly means who played the most. The index answers the question the table
+actually argues about ("Ich hab IMMER Pech!"): did chance cost you more than it should have?
+
+- **Expected vs. paid.** In a round of _n_ players every one of them pays `amountMinor / n` in
+  expectation. That holds whether one person pays it all or three split it, and the slot
+  machine's uneven charges are fair in expectation too (its Monte-Carlo test). What someone
+  actually paid is their split. The index is the sum of `paid − expected` over the period's
+  rounds, **in euros**, which was the owner's call: "18,40 € mehr gezahlt als erwartet". A
+  count ("4× gezahlt, erwartet 2×") was the alternative. Euros are what people feel; the price
+  is that one expensive bill weighs more than a cheap one.
+- **What counts.** Only luck games (`isLuckGameId`), balloon and slot included: the balloon's
+  burst point is a fair draw even if pumping is a choice. Duels are won, not drawn. Only
+  expenses that carry a `game` record count. That means rounds from 2026-10 on, and not a
+  round whose split was later edited by hand (`game: null`). The footnote says so, so an empty
+  list isn't read as "nobody played". A round also has to hold together, meaning its players
+  paid exactly the bill between them. This leaves out the one case where they don't: claiming
+  a placeholder moves its split to the new uid (`moveMemberInLedgerEntry`) but not
+  `game.playerUids`.
+- **From three rounds.** A person is listed from `LUCK_INDEX_MIN_ROUNDS` (3) luck rounds in the
+  period. Below that, the number is noise. Former members still count in the others' rounds but
+  aren't listed, as on the podium.
+- **Integer-safe.** A fair share is a fraction of a cent, so the bills are summed per pool size
+  in minor units and divided once at the end. The expectation is then rounded for display, and
+  the difference is taken from that rounded value, so paid = expected + difference holds
+  exactly. Rounding each share first (3,33 € of a 10-€ bill) would have shown everyone in a
+  perfectly even three-way game as a cent unlucky.
+- **On screen.** Diverging bars around zero, like the Salden tab's "Wer steht wo": "◀ Glück"
+  on the left in green, "Pech ▶" on the right in red, scaled to the biggest gap, most Pech
+  first. The signed amount (`formatSignedMoney`, now shared with the balances tab) and the words
+  "mehr/weniger gezahlt als erwartet · 9 Runden" carry the meaning, never the color alone. The
+  section is hidden in a group that has never played a luck game with a record, where it could
+  only ever be empty.
+- **Wording.** Never as if the draw were rigged: "Gezogen wird fair – der Unterschied ist Glück
+  oder Pech." Pech and Glück are relative to the expectation, not an accusation.
+- **No new listener.** It renders from the same expenses as the podium, so offline use and
+  snapshot-error handling are the tab's own.
 
 ## Related
 

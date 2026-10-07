@@ -45,7 +45,7 @@ re-deriving it from scratch by reading every file.
 - [[Split Games]] — the gamified split pickers: eight luck-based (🎲🎡🎰🎫🎈🦆🥃🎱) and seven skill-based
   1-vs-1 duels (⭕🔴🧠⚡✊🥢✏️) on a shared knockout-ladder engine, plus an opt-in live tournament
   bracket for all seven duel games, syncing across every player's own phone; online scratch
-  cards, rematches, nudges, counted reshuffles and a duel record in the Spiele tab
+  cards, rematches, nudges, counted reshuffles, a duel record and a luck index in the Spiele tab
 - [[Admin Panel]] — the single hardcoded admin email, ban, group moderation
 - [[Onboarding and Payment Details]] — first-run guide, PayPal/IBAN details
 - [[Offline Mode]] — view-only offline: Firestore's IndexedDB cache, the service worker,

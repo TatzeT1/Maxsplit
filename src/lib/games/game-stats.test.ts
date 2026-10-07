@@ -4,10 +4,12 @@ import {
   favoriteGames,
   gameExpensesInPeriod,
   localDay,
+  luckIndex,
   periodStartDay,
   recentRounds,
 } from "@/lib/games/game-stats";
-import type { Expense, Tournament, TournamentMatch } from "@/lib/types";
+import { isLuckGameId } from "@/lib/games/split-game-ids";
+import type { Expense, SplitGameId, Tournament, TournamentMatch } from "@/lib/types";
 
 function expense(id: string, date: string, extra: Partial<Expense> = {}): Expense {
   return {
@@ -178,5 +180,124 @@ describe("rounds across expenses and tournaments", () => {
       "e3",
       "t-orphan",
     ]);
+  });
+});
+
+describe("luckIndex", () => {
+  /** A game-decided expense: `paid` is each payer's split; the bill is their sum unless given. */
+  function round(
+    id: string,
+    gameId: SplitGameId,
+    playerUids: string[],
+    paid: Record<string, number>,
+    extra: Partial<Expense> = {},
+  ): Expense {
+    const amountMinor = Object.values(paid).reduce((sum, amount) => sum + amount, 0);
+    return expense(id, "2026-10-02", {
+      amountMinor,
+      paidBy: { max: amountMinor },
+      splits: Object.fromEntries(
+        Object.entries(paid).map(([uid, amount]) => [
+          uid,
+          { rawValue: amount, amountMinor: amount },
+        ]),
+      ),
+      game: { gameId, playerUids, attempt: 1 },
+      ...extra,
+    });
+  }
+  const four = ["lea", "max", "ben", "mia"];
+
+  it("compares what each player paid with the bill divided by everyone who played", () => {
+    // Lea pays all three 40-€ bills; a fair share would have been 10 € each time.
+    const expenses = [1, 2, 3].map((n) => round(`r${n}`, "wheel", four, { lea: 4000 }));
+    expect(luckIndex(expenses, null)).toEqual([
+      { uid: "lea", rounds: 3, paidMinor: 12000, expectedMinor: 3000, differenceMinor: 9000 },
+      { uid: "ben", rounds: 3, paidMinor: 0, expectedMinor: 3000, differenceMinor: -3000 },
+      { uid: "max", rounds: 3, paidMinor: 0, expectedMinor: 3000, differenceMinor: -3000 },
+      { uid: "mia", rounds: 3, paidMinor: 0, expectedMinor: 3000, differenceMinor: -3000 },
+    ]);
+  });
+
+  it("treats several payers and the slot's uneven charges like any other split", () => {
+    const expenses = [
+      round("r1", "lottery", four, { lea: 2000, max: 2000 }),
+      round("r2", "slot", four, { lea: 2500, ben: 1000, mia: 500 }),
+      round("r3", "balloon", four, { mia: 4000 }),
+    ];
+    const byUid = Object.fromEntries(luckIndex(expenses, null).map((e) => [e.uid, e]));
+    expect(byUid.lea.differenceMinor).toBe(4500 - 3000);
+    expect(byUid.max.differenceMinor).toBe(2000 - 3000);
+    expect(byUid.ben.differenceMinor).toBe(1000 - 3000);
+    expect(byUid.mia.differenceMinor).toBe(4500 - 3000);
+  });
+
+  it("keeps fractions of a cent exact until the end", () => {
+    // 10 € among three, three times, everyone pays once: exactly even. Rounding
+    // each share to 3,33 € first would have everyone 1 cent "unlucky".
+    const three = ["lea", "max", "ben"];
+    const even = [
+      round("r1", "dicecup", three, { lea: 1000 }),
+      round("r2", "dicecup", three, { max: 1000 }),
+      round("r3", "dicecup", three, { ben: 1000 }),
+    ];
+    for (const entry of luckIndex(even, null)) {
+      expect(entry).toMatchObject({ paidMinor: 1000, expectedMinor: 1000, differenceMinor: 0 });
+    }
+
+    // Mixed pool sizes: 1000/3 + 1000/3 + 1001/2 = 1167.17 → 11,67 €, and the
+    // printed numbers add up.
+    const mixed = [
+      round("r1", "pegboard", three, { lea: 1000 }),
+      round("r2", "pegboard", three, { max: 1000 }),
+      round("r3", "duckrace", ["lea", "max"], { max: 1001 }),
+    ];
+    expect(luckIndex(mixed, null)).toEqual([
+      { uid: "max", rounds: 3, paidMinor: 2001, expectedMinor: 1167, differenceMinor: 834 },
+      { uid: "lea", rounds: 3, paidMinor: 1000, expectedMinor: 1167, differenceMinor: -167 },
+    ]);
+  });
+
+  it("lists a person only from three rounds in the period on", () => {
+    const expenses = [
+      round("r1", "scratch", ["lea", "max"], { lea: 1000 }),
+      round("r2", "scratch", ["lea", "max"], { lea: 1000 }),
+      round("r3", "scratch", ["lea", "max", "ben"], { lea: 900 }),
+      round("r4", "scratch", ["lea", "max"], { max: 1000 }, { date: "2026-09-30" }),
+    ];
+    expect(luckIndex(expenses, null).map((e) => [e.uid, e.rounds])).toEqual([
+      ["lea", 4],
+      ["max", 4],
+    ]);
+    expect(luckIndex(expenses, "2026-10-01").map((e) => [e.uid, e.rounds])).toEqual([
+      ["lea", 3],
+      ["max", 3],
+    ]);
+    expect(luckIndex(expenses, null, 1).map((e) => e.uid)).toContain("ben");
+  });
+
+  it("counts only luck rounds that record their game and hold together", () => {
+    const counted = [1, 2, 3].map((n) => round(`ok${n}`, "wheel", ["lea", "max"], { lea: 1000 }));
+    const skipped = [
+      // A duel is won, not drawn.
+      round("duel", "memory", ["lea", "max"], { max: 1000 }),
+      // From before the game record, and split by hand since.
+      round("old", "wheel", ["lea", "max"], { max: 1000 }, { game: undefined }),
+      round("edited", "wheel", ["lea", "max"], { max: 1000 }, { game: null }),
+      // Not game-decided at all.
+      round("manual", "wheel", ["lea", "max"], { max: 1000 }, { viaLottery: false }),
+      // A claimed placeholder: the split moved to "max", the record still names "ph_max".
+      round("claimed", "wheel", ["lea", "ph_max"], { max: 1000 }),
+    ];
+    expect(luckIndex([...counted, ...skipped], null)).toEqual([
+      { uid: "lea", rounds: 3, paidMinor: 3000, expectedMinor: 1500, differenceMinor: 1500 },
+      { uid: "max", rounds: 3, paidMinor: 0, expectedMinor: 1500, differenceMinor: -1500 },
+    ]);
+  });
+
+  it("knows which games are luck games", () => {
+    expect(isLuckGameId("balloon")).toBe(true);
+    expect(isLuckGameId("slot")).toBe(true);
+    expect(isLuckGameId("rps")).toBe(false);
   });
 });

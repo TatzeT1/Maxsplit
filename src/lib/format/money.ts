@@ -22,6 +22,15 @@ export function formatMoney(amountMinor: number, currency: string): string {
 }
 
 /**
+ * "+12,50 €" / "−12,50 €" / "0,00 €" — a difference rather than an amount. A
+ * real minus sign (U+2212), so it lines up with the plus in a column.
+ */
+export function formatSignedMoney(amountMinor: number, currency: string): string {
+  const sign = amountMinor > 0 ? "+" : amountMinor < 0 ? "−" : "";
+  return `${sign}${formatMoney(Math.abs(amountMinor), currency)}`;
+}
+
+/**
  * Converts an integer minor-units amount to a plain major-units number (e.g.
  * 2550 -> 25.5 for EUR), respecting each currency's actual minor-unit
  * exponent the same way formatMoney does. For feeding a raw amount into
