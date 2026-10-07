@@ -808,7 +808,9 @@ a ref):
   and the full hold, so three payers take about four seconds rather than five. The dice cup
   plays it lowest roll last ("Kleinster!" on that one, "Erwischt!" and "Gewürfelt: 42" on the
   others); the duck race in crossing order, so the last duck — the one everybody watched — is
-  the finale ("Letzter!", the others "Platz 4 von 5").
+  the finale ("Letzter!", the others "Platz 4 von 5"). `finale: false` keeps the finale back
+  for a run that more catches follow: Finger drauf! plays each round's payers through it and
+  gives the finale only to the game's last slip, after any replay.
 - `active` (state) and `isActive()` (a ref, for a tap guard two fingers in one frame can't slip
   past) are true from the call until the last slip has cleared; every verdict and
   "Übernehmen" waits on it, which replaced the per-dialog `celebrated` flags. `cancel()` —
@@ -820,7 +822,8 @@ later round-four features (dice zone, photo finish, wheel flick) stage their own
 then hand the payers to `catchEach`/`catchOne`.
 
 **The stake on the slip.** `AddExpenseDialog` passes `stake={{ description, amountMinor,
-currency }}` to the seven one-phone luck dialogs, as it already did for the duels. The amount
+currency }}` to the seven one-phone luck dialogs and to Finger drauf!, as it already did for the
+duels. The amount
 is display only and never shown _during_ play — on each payer's slip (`CatchCaption`: "zahlt
 23,90 € · Pizza" over the game's own line) and under each face in `GameResultBanner`, which
 takes the `stake` and works the shares out from the very `loserUids` it shows. Hidden whenever
@@ -1212,10 +1215,16 @@ nobody waiting for the phone to come round, which is what the owner wanted from 
 - **No button during play.** The footer shows the payer pips instead: a stray finger resting on
   a button would press it the moment it lifts on „LOS!“. ✕ still leaves; "Neu starten" and
   "Übernehmen" come with the verdict.
-- **The end.** One slip per payer in the order they pay (1.1 s each, the full hold and the
-  finale on the game's last one: "Zu langsam!" / "Fehlstart!", "Nach 312 ms losgelassen"), then
-  `GameResultBanner` and "Wer war wie schnell?" (`fingerStandings`: safe players in round
-  order, then the payers in reverse, slow ones by time, false starters last).
+- **The end.** One slip per payer in the order they pay ("Zu langsam!" / "Fehlstart!", "Nach
+  312 ms losgelassen"), through the luck games' shared `useCatchFlashes`, so a catch lands with
+  the same stamp, laugh, jolt and buzz as everywhere else: 1.1 s each, the full hold and the
+  finale only on the game's last one (`catchEach` with `finale: false` for a round a replay
+  follows). With a stake each slip says what that payer pays ("zahlt 5,01 € · Pizza",
+  `stakeShareAt`): payers are booked in the order they are caught and their number is fixed at
+  the start (a replay only fills places still open), so a share is final the moment it shows,
+  even before a replay. Then `GameResultBanner` with the shares, and "Wer war wie schnell?"
+  (`fingerStandings`: safe players in round order, then the payers in reverse, slow ones by
+  time, false starters last).
 - **How many.** `fingerPoolLimit`: `min(5, navigator.maxTouchPoints || 5)`. A device that
   reports no touchscreen still gets five (and a hint that the game wants a phone); bigger
   groups get "höchstens 5 Finger … nimm das Glücksrad", like the pegboard's limit.

@@ -11,9 +11,15 @@ vi.mock("@/lib/games/random", async (original) => ({
 
 import { LocaleProvider } from "@/components/locale-provider";
 import { GameRoundProvider } from "@/components/groups/split-game/game-round";
-import { CATCH_FLASH_HOLD_MS } from "@/components/groups/split-game/celebration";
+import {
+  CATCH_FLASH_HOLD_MS,
+  CATCH_FLASH_STEP_MS,
+} from "@/components/groups/split-game/celebration";
+import { formatMoney } from "@/lib/format/money";
 import { FINGER_MAX_DELAY_MS, FINGER_MIN_DELAY_MS, FINGER_REST_MS } from "@/lib/games/finger-race";
+import type { GameStake } from "@/lib/games/payers";
 import { randomInt } from "@/lib/games/random";
+import { splitEqual } from "@/lib/money/split";
 import type { GroupMember } from "@/lib/types";
 import { SplitFingerDialog } from "./split-finger-dialog";
 
@@ -34,7 +40,7 @@ function member(displayName: string): GroupMember {
 const members = { lea: member("Lea"), max: member("Max"), ben: member("Ben") };
 const uids = ["lea", "max", "ben"];
 
-function renderDialog(onResolve = vi.fn()) {
+function renderDialog(onResolve = vi.fn(), stake?: GameStake) {
   render(
     <LocaleProvider initialLocale="de">
       <GameRoundProvider value={{ round: 1, startRound: () => {} }}>
@@ -43,6 +49,7 @@ function renderDialog(onResolve = vi.fn()) {
           onOpenChange={() => {}}
           members={members}
           memberUids={uids}
+          stake={stake}
           onResolve={onResolve}
         />
       </GameRoundProvider>
@@ -80,6 +87,8 @@ function startAndArm() {
 
 /** Long enough for the reveal and every slip of a one-payer game. */
 const SLIPS_MS = 900 + CATCH_FLASH_HOLD_MS + 100;
+// Intl puts a no-break space before "€"; Testing Library's matcher normalizes it to a space.
+const euros = (minor: number) => formatMoney(minor, "EUR").replace(/\s/g, " ");
 
 describe("Finger drauf!", () => {
   beforeEach(() => {
@@ -121,6 +130,30 @@ describe("Finger drauf!", () => {
     expect(screen.getAllByText("Ben zahlt.").length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
     expect(onResolve).toHaveBeenCalledWith(["ben"], uids);
+  });
+
+  it("gives every payer a slip with the share they are booked for", () => {
+    const pizza = { description: "Pizza", amountMinor: 1001, currency: "EUR" };
+    const onResolve = renderDialog(vi.fn(), pizza);
+    fireEvent.click(screen.getByRole("button", { name: "Mehr" }));
+    startAndArm();
+    wait(2000 + 210);
+    // Only Lea lifts; Max and Ben are still on the glass and pay, in seat order.
+    up(1);
+    wait(100);
+    const booked = splitEqual(pizza.amountMinor, ["max", "ben"]);
+    expect(booked).toEqual({ max: 501, ben: 500 });
+
+    wait(900);
+    expect(screen.getAllByText(`zahlt ${euros(booked.max)} · Pizza`).length).toBeGreaterThan(0);
+    wait(CATCH_FLASH_STEP_MS);
+    expect(screen.getAllByText(`zahlt ${euros(booked.ben)} · Pizza`).length).toBeGreaterThan(0);
+
+    wait(CATCH_FLASH_HOLD_MS + 100);
+    expect(screen.getByText(`Max: ${euros(booked.max)}`, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(`Ben: ${euros(booked.ben)}`, { exact: false })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(onResolve).toHaveBeenCalledWith(["max", "ben"], uids);
   });
 
   it("makes a finger lifted before „LOS!“ pay, and never shows the signal", () => {

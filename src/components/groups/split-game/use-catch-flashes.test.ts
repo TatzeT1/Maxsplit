@@ -55,6 +55,22 @@ describe("useCatchFlashes", () => {
     expect(vibrate).toHaveBeenLastCalledWith([45, 70, 110], expect.any(Number));
   });
 
+  it("keeps the finale back for a run that more catches follow", () => {
+    const { result } = renderHook(() => useCatchFlashes()[1]);
+    const onDone = vi.fn();
+    act(() => result.current.catchEach(["ben", "lea"], { finale: false, onDone }));
+
+    expect(result.current.flash).toMatchObject({ uid: "ben", finale: false, index: 0 });
+    act(() => vi.advanceTimersByTime(CATCH_FLASH_STEP_MS));
+    expect(result.current.flash).toMatchObject({ uid: "lea", finale: false, index: 1 });
+
+    // An ordinary slip's hold, not the finale's.
+    act(() => vi.advanceTimersByTime(CATCH_FLASH_STEP_MS));
+    expect(result.current.flash).toBeNull();
+    expect(onDone).toHaveBeenCalledTimes(1);
+    expect(vibrate).toHaveBeenLastCalledWith(45, expect.any(Number));
+  });
+
   it("lands a single catch at once, inside the tap that caused it", () => {
     const { result } = renderHook(() => useCatchFlashes()[1]);
     act(() => result.current.catchOne("lea", { finale: true }));

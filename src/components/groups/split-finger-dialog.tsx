@@ -52,6 +52,7 @@ import {
   type FingerRoundRecord,
 } from "@/lib/games/finger-race";
 import { memberPalette } from "@/lib/games/member-colors";
+import { stakeShareAt, type GameStake } from "@/lib/games/payers";
 import { randomInt } from "@/lib/games/random";
 import { useGamePoolSetup } from "@/lib/games/use-game-pool-setup";
 import type { Locale } from "@/lib/i18n/translate";
@@ -60,21 +61,16 @@ import {
   playAppliedSound,
   playBuzzerSound,
   playGoSound,
-  playLaughSound,
-  playStampSound,
   playTickSound,
 } from "@/lib/sound/game-sounds";
 import { cn } from "@/lib/utils";
-import {
-  CATCH_FLASH_HOLD_MS,
-  CatchFlash,
-  STAMP_IMPACT_S,
-  useImpactShake,
-} from "@/components/groups/split-game/celebration";
+import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CatchCaption } from "@/components/groups/split-game/catch-caption";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
 import { GameProgressPips } from "@/components/groups/split-game/game-progress-pips";
 import { GameResultBanner } from "@/components/groups/split-game/game-result-banner";
+import { useCatchFlashes } from "@/components/groups/split-game/use-catch-flashes";
 import type { GroupMember } from "@/lib/types";
 
 type Step = "setup" | "playing";
@@ -82,8 +78,6 @@ type Timer = ReturnType<typeof setTimeout>;
 
 /** The round's times stay on the circles this long before the first slip drops. */
 const REVEAL_MS = 900;
-/** A payer's slip when another one follows; the game's very last slip holds `CATCH_FLASH_HOLD_MS`. */
-const SLIP_STEP_MS = 1100;
 /** How long the full-screen „LOS!“ stands before it gives the field back, tinted green. */
 const GO_FLASH_MS = 650;
 
@@ -137,6 +131,7 @@ export function SplitFingerDialog({
   members,
   memberUids,
   groupId,
+  stake,
   onResolve,
 }: {
   open: boolean;
@@ -145,6 +140,8 @@ export function SplitFingerDialog({
   memberUids: string[];
   /** Keys the setup remembered on this device (`game-memory.ts`). */
   groupId?: string;
+  /** The bill being played for — each payer's slip and the verdict show their share. Display only. */
+  stake?: GameStake | null;
   /** Who pays, and everyone who played (stored on the expense). */
   onResolve: (loserUids: string[], playerUids: string[]) => void;
 }) {
@@ -168,12 +165,12 @@ export function SplitFingerDialog({
   const roundRef = useRef<FingerRound | null>(null);
   const signalTimerRef = useRef<Timer | null>(null);
   const [goFlash, setGoFlash] = useState(false);
-  const [flash, setFlash] = useState<{ id: number; uid: string; finale: boolean } | null>(null);
   // Set once the last slip has come and gone — the verdict's cue.
   const [celebrated, setCelebrated] = useState(false);
-  const idRef = useRef(0);
   const timersRef = useRef<Timer[]>([]);
-  const [stageRef, shakeStage] = useImpactShake<HTMLDivElement>();
+  // A slip per payer, with the stamp, laugh, jolt and buzz every luck game's catch has.
+  const [stageRef, catches] = useCatchFlashes();
+  const flash = catches.flash;
 
   useEffect(() => {
     // The same array for the component's whole lifetime — pushed to and
@@ -209,7 +206,7 @@ export function SplitFingerDialog({
     updateRound(null);
     updateGame(null);
     setGoFlash(false);
-    setFlash(null);
+    catches.cancel();
     setCelebrated(false);
   }
 
@@ -273,14 +270,6 @@ export function SplitFingerDialog({
     if (current && fingerRoundSettled(current, clock())) closeRound(current);
   }
 
-  function catchPayer(uid: string, finale: boolean) {
-    playStampSound(STAMP_IMPACT_S);
-    playLaughSound(STAMP_IMPACT_S + 0.1);
-    shakeStage();
-    idRef.current += 1;
-    setFlash({ id: idRef.current, uid, finale });
-  }
-
   /**
    * Judges the round and stages it: a beat with everyone's time on the
    * circles, one slip per person it made pay (the game's last one is the
@@ -302,19 +291,16 @@ export function SplitFingerDialog({
     updateGame(next);
     const payers = next.rounds[next.rounds.length - 1].verdict.losers;
     const over = isFingerGameOver(next);
-    later(REVEAL_MS, () => {
-      let at = 0;
-      payers.forEach((uid, index) => {
-        const finale = over && index === payers.length - 1;
-        later(at, () => catchPayer(uid, finale));
-        at += finale ? CATCH_FLASH_HOLD_MS : SLIP_STEP_MS;
-      });
-      later(at, () => {
-        setFlash(null);
-        if (over) setCelebrated(true);
-        else updateRound(nextFingerRound(next));
-      });
-    });
+    later(REVEAL_MS, () =>
+      catches.catchEach(payers, {
+        // A round a replay follows keeps the finale for the game's last slip.
+        finale: over,
+        onDone: () => {
+          if (over) setCelebrated(true);
+          else updateRound(nextFingerRound(next));
+        },
+      }),
+    );
   }
 
   function handlePointerDown(uid: string) {
@@ -471,6 +457,16 @@ export function SplitFingerDialog({
     return { state: "result", note, outcome };
   }
 
+  /**
+   * A payer's share, the moment they are caught. Payers are booked in the
+   * order they are caught and the payer count is set at the start (a replay
+   * only fills places still open), so it is already the booked amount.
+   */
+  function slipShare(uid: string): number | null {
+    const index = game ? game.losers.indexOf(uid) : -1;
+    return index < 0 ? null : stakeShareAt(stake, payerTotal, index);
+  }
+
   function slipCaption(uid: string): string | null {
     const caught = game ? fingerCatch(game, uid) : null;
     if (!caught) return null;
@@ -524,7 +520,7 @@ export function SplitFingerDialog({
 
             {showVerdict ? (
               <>
-                <GameResultBanner loserUids={game.losers} members={members} />
+                <GameResultBanner loserUids={game.losers} members={members} stake={stake} />
                 <section className="flex flex-col gap-2" aria-labelledby="finger-standings">
                   <span
                     id="finger-standings"
@@ -734,9 +730,11 @@ export function SplitFingerDialog({
                   }
                   finale={flash.finale}
                   caption={
-                    <span className="text-muted-foreground text-sm font-medium">
-                      {slipCaption(flash.uid)}
-                    </span>
+                    <CatchCaption
+                      share={slipShare(flash.uid)}
+                      stake={stake}
+                      detail={slipCaption(flash.uid)}
+                    />
                   }
                 />
               )}

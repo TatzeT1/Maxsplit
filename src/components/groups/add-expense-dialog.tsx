@@ -988,6 +988,7 @@ export function AddExpenseDialog({
             members={members}
             memberUids={memberUids}
             groupId={groupId}
+            stake={gameStake}
             onResolve={handleSplitGameResolve}
           />
         )}

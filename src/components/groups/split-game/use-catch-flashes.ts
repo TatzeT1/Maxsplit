@@ -37,8 +37,10 @@ type Timer = ReturnType<typeof setTimeout>;
  *   card scratched, a balloon popping, a face tapped. Replaces any slip still
  *   on screen and holds for `CATCH_FLASH_HOLD_MS`.
  * - `catchEach` — every payer of a round that was decided all at once (the
- *   dice, the ducks): one slip after the other, each but the last held for
- *   `CATCH_FLASH_STEP_MS`, the finale only on the last.
+ *   dice, the ducks, the fingers): one slip after the other, each but the
+ *   last held for `CATCH_FLASH_STEP_MS`, the finale only on the last. Pass
+ *   `finale: false` for a run that more catches follow (a finger-race round
+ *   before a replay): then the last slip is an ordinary one too.
  *
  * `active` is true from the call until the last slip has cleared — the
  * verdict and "Übernehmen" wait for it — and `isActive()` reads the same
@@ -114,10 +116,13 @@ export function useCatchFlashes() {
     [clearTimers, finish, hit, later, setBusy],
   );
 
-  /** Every payer in turn, in the order given; the last one is the finale. */
+  /** Every payer in turn, in the order given; the last one is the finale unless `finale` is false. */
   const catchEach = useCallback(
-    (uids: readonly string[], options: { delayMs?: number; onDone?: () => void } = {}) => {
-      const { delayMs = 0, onDone } = options;
+    (
+      uids: readonly string[],
+      options: { delayMs?: number; finale?: boolean; onDone?: () => void } = {},
+    ) => {
+      const { delayMs = 0, finale = true, onDone } = options;
       clearTimers();
       if (uids.length === 0) {
         finish(onDone);
@@ -126,7 +131,7 @@ export function useCatchFlashes() {
       setBusy(true);
       let at = delayMs;
       uids.forEach((uid, index) => {
-        const last = index === uids.length - 1;
+        const last = finale && index === uids.length - 1;
         later(at, () => hit(uid, last, index, uids.length));
         at += last ? CATCH_FLASH_HOLD_MS : CATCH_FLASH_STEP_MS;
       });
