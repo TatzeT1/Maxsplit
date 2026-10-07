@@ -53,7 +53,9 @@ Google anmelden") — no real Google account needed.
   `src/lib/recurring/schedule.test.ts`, `src/lib/i18n/translate.test.ts`,
   `src/lib/firebase/config.test.ts`, `src/lib/use-visible-height.test.ts`,
   `src/lib/games/{knockout-ladder,use-knockout-ladder,tic-tac-toe,connect-four,memory-duel,reaction-duel,rock-paper-scissors,nim,use-turn-fuse,dots-and-boxes,balloon,dice-cup,duck-race,pegboard,pegboard-layout,online-match,game-memory,expense-game,game-stats,rematch,nudge,luck-round}.test.ts`,
-  `src/lib/chat/game-result.test.ts`, `src/lib/sound/game-sounds.test.ts`
+  `src/lib/chat/{game-result,rich-text,cards,reactions}.test.ts`, `src/lib/chat/use-chat-sender.test.tsx`,
+  `src/components/groups/chat-{composer,message}.test.tsx` (see [[Chat]]),
+  `src/lib/sound/game-sounds.test.ts`
   (see [[Split Games]] for what each pure module encodes). This is where [[Money Invariants]]'
   guarantees (rounding remainders, multi-payer attribution, zero-sum) are actually pinned down —
   read these before changing split/balance logic, they encode the invariants as concrete cases,
@@ -81,6 +83,18 @@ action would have sent from `sentPushes`. An action that needs the request's lan
 (`getServerT`, a cookie) gets a German translator from `vitest.emulator.setup.ts`, mocked
 for every emulator test file since 2026-10 (game invites and results write chat text from
 several actions).
+
+**A signed-in screen in a real browser, no Firebase project needed** (how the chat was checked
+2026-10-07): `firebase emulators:start --only auth,firestore --project demo-split`; build and
+start the production server with placeholder `NEXT_PUBLIC_FIREBASE_*` values,
+`NEXT_PUBLIC_USE_FIREBASE_EMULATORS=true`, `FIREBASE_AUTH_EMULATOR_HOST` /
+`FIRESTORE_EMULATOR_HOST` and a throwaway service-account key (the one
+`vitest.emulator.setup.ts` generates works); create accounts with the Auth emulator's REST
+`accounts:signUp?key=x`, seed `users/{uid}` (with `onboardingCompletedAt`), the group and its
+messages with the Admin SDK, then sign in through the email form ("Mit E-Mail fortfahren") with
+Playwright (`playwright-core` + `executablePath: /opt/pw-browsers/chromium`, installed in a
+scratch directory, not in the repo). A mobile context (`isMobile`, `hasTouch`, 390×844) and one
+context per user covers multi-user flows. This does **not** reproduce iOS keyboard behaviour.
 
 **Service worker, offline and push by hand.** The worker only registers in production
 builds (`pnpm build && pnpm start`), never in `pnpm dev`. Offline: Playwright's

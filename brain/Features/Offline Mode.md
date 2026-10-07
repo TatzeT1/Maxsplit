@@ -72,6 +72,12 @@ the add-expense dialog spinning forever (the rejected `await` skipped `setLoadin
 **New write button? Disable it on `!useOnline()` and call the action through
 `callAction`.**
 
+The chat follows it everywhere: send, reactions, delete and the mute bell are disabled
+offline, the composer says why ("Du bist offline …") and keeps the text (and a per-group
+draft), and a send that fails _after_ it started stays on screen as "Nicht gesendet" with
+"Erneut senden" — see [[Chat]]. The offline banner appears above the chat's pinned frame, so
+`useVisibleHeight` re-measures on `online`/`offline`.
+
 ## Sign-out wipes it
 
 `useSignOut` → `clearLocalData()` (`src/lib/offline/clear-local-data.ts`): terminates

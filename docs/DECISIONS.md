@@ -332,3 +332,54 @@ straight from Firestore (ADR-001).
 - A luck game whose outcome must be fixed before anyone acts (a race everyone watches start
   together, say) would need a dealt secret after all — then a server-only secrets document
   next to the round, like `liveSecrets`.
+
+## ADR-006: Chat grows reactions, replies and mentions — and sending becomes retry-safe
+
+**Status:** Accepted
+**Date:** 2026-10-07
+
+### Context
+
+The chat was kept "intentionally minimal (v1)" — text only, no reactions or edits. The group
+uses it regularly (it asked for it, see the group page note) and asked for it to be improved. Reading
+the code showed problems beyond missing features: every snapshot scrolled you to the bottom
+while you were reading history; deleting was a hover-only button (invisible on a phone, the
+primary surface); a send waited for the server round trip with no feedback, and a failed or
+repeated one could be lost or doubled; `markChatRead` fired on every snapshot, also while the
+app was in the background.
+
+### Decision
+
+- **Reactions and replies, still no attachments or edits.** A reaction is `reactions.<id>`
+  (a fixed set of five ids, `arrayUnion`/`arrayRemove` of the caller's uid) set by an
+  idempotent action that states the end state (`active`), not "toggle". A reply stores a
+  server-copied snapshot of the quote, so it survives the original's deletion. Neither needs
+  a rules change — messages are still written only by Server Actions (ADR-001).
+- **`clientId` makes a send retry-safe.** The client chooses the message id (a UUID) and the
+  server `create()`s it; an `ALREADY_EXISTS` from the same sender is a successful retry. That
+  lets the UI keep a failed send visible and resend it without risking a duplicate, and
+  show a message optimistically with its final id.
+- **Mentions are decided by the server** (whole-word match of `@displayName` against the
+  group's members) and stored as `mentions`; a mention push breaks through a per-group mute.
+  Muting is per user and group (`users/{uid}.mutedChatGroupIds`), checked in `deliverPushes`.
+- **Expense and payment cards are silent**, written in the same batch as the entry, and never
+  light the unread dot. They are a record of the moment, not a live view.
+- **Actions open inline under the bubble**, not in a portal: a popup would be positioned
+  against the layout viewport, which iOS gets wrong while the keyboard is up.
+
+### Consequences
+
+- No rules change and no new index; `sendMessage`'s signature gained two optional fields.
+- Chat documents grow optional fields (see [[Data Model]]); old messages are unaffected.
+- A card shows the figures as entered; if the expense is edited or deleted afterwards the
+  card says what was true when it was posted.
+- Read receipts remain private (rules), so there is no "gesehen von".
+- Not verified on a real iPhone: the new composer parts (suggestions, reply bar) inside the
+  keyboard-aware frame.
+
+### What would make us reverse this
+
+- Message editing or attachments are a separate step (editing needs a history rule,
+  attachments need Storage) — a new ADR.
+- If cards go stale often enough to confuse, make them live (a listener per card or a
+  denormalized status) instead of snapshots.

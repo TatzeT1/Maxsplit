@@ -156,9 +156,18 @@ so the group page's banner needs no extra listener.
 
 ## `ChatMessage` / `ChatRead`
 
-Text-only chat, no attachments/edits/reactions in v1. `ChatRead` doc id equals the member's
-uid (one receipt per member, enforced by Firestore doc-id semantics rather than a query).
-See [[Chat]].
+Text chat with reactions, a quoted reply and @mentions; no attachments or edits. Optional
+fields (absent, not `null`, on a normal message): `reactions` (`Record<reactionId, uid[]>`,
+emptied lists stay), `replyTo` (`{ id, senderUid, text }`, copied by the server), `mentions`
+(`uid[]`, worked out by the server from the text), and the card payloads `gameInvite`,
+`luckInvite`, `gameResult`, **`expenseCard`** and **`settlementCard`** (a snapshot of the
+figures at that moment). A message's doc id is Firestore's auto id, or the sender's `clientId`
+(a UUID) when it came from the chat — what makes a retry safe. `ChatRead` doc id equals the
+member's uid (one receipt per member, enforced by Firestore doc-id semantics rather than a
+query). See [[Chat]].
+
+`users/{uid}.mutedChatGroupIds` (absent = none) lists the groups whose chat pushes the user
+silenced — server-only, read into `Session`.
 
 ## Related
 

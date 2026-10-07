@@ -251,6 +251,22 @@ describe("chatPushes", () => {
     expect(pushes[0].event).toBe("chat");
   });
 
+  it("lets every recipient silence the group's chat — except for a mention", () => {
+    const pushes = chatPushes({
+      groupId: "g1",
+      group,
+      text: "Kommst du, @Lea?",
+      actorUid: "max",
+      mentions: ["lea"],
+    });
+    const [lea, ben] = pushes;
+    expect(lea.unlessMuted).toBeUndefined();
+    expect(de(lea).body).toBe("Max hat dich erwähnt: Kommst du, @Lea?");
+    expect(ben.unlessMuted).toEqual({ groupId: "g1" });
+    expect(de(ben).body).toBe("Max: Kommst du, @Lea?");
+    expect(lea.tag).toBe(ben.tag);
+  });
+
   it("shortens a long message", () => {
     const [push] = chatPushes({ groupId: "g1", group, text: "x".repeat(500), actorUid: "max" });
     expect(de(push).body.length).toBeLessThan(140);

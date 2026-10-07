@@ -1,6 +1,8 @@
 "use server";
 
+import { FieldValue } from "firebase-admin/firestore";
 import { getSession } from "@/lib/auth/session";
+import { MESSAGE_ID } from "@/lib/chat/constants";
 import { adminDb } from "@/lib/firebase/admin";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/translate";
 import { deliverPushes } from "@/lib/push/deliver";
@@ -91,6 +93,41 @@ export async function updateNotificationPrefs(
   }
   const prefs = Object.fromEntries(PUSH_EVENTS.map((event) => [event, input[event]]));
   await adminDb.doc(`users/${session.uid}`).set({ notificationPrefs: prefs }, { merge: true });
+  return { ok: true, data: null };
+}
+
+/**
+ * Silences (or un-silences) the push for every message in one group's chat,
+ * on all the caller's devices. A message that names them with @ still comes
+ * through. Silencing needs membership; un-silencing doesn't, so a group left
+ * long ago can still be cleaned out of the list.
+ */
+export async function setChatMuted(input: {
+  groupId: string;
+  muted: boolean;
+}): Promise<ActionResult<null>> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "unauthenticated" };
+  if (typeof input.groupId !== "string" || !MESSAGE_ID.test(input.groupId)) {
+    return { ok: false, error: "invalid-group" };
+  }
+  if (typeof input.muted !== "boolean") return { ok: false, error: "invalid-group" };
+
+  if (input.muted) {
+    const groupSnap = await adminDb.collection("groups").doc(input.groupId).get();
+    if (!groupSnap.exists) return { ok: false, error: "not-found" };
+    if (!(groupSnap.get("memberUids") as string[]).includes(session.uid)) {
+      return { ok: false, error: "forbidden" };
+    }
+  }
+  await adminDb.doc(`users/${session.uid}`).set(
+    {
+      mutedChatGroupIds: input.muted
+        ? FieldValue.arrayUnion(input.groupId)
+        : FieldValue.arrayRemove(input.groupId),
+    },
+    { merge: true },
+  );
   return { ok: true, data: null };
 }
 

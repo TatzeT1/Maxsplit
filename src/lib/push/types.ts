@@ -48,6 +48,13 @@ export interface PendingPush {
   ttlSeconds: number;
   /** "Du bist dran" is pointless while the player is looking at the game. */
   unlessWatching?: { groupId: string; tournamentId: string };
+  /** A chat push the recipient can silence per group (`users/{uid}.mutedChatGroupIds`) — left off for a mention, which breaks through. */
+  unlessMuted?: { groupId: string };
+}
+
+/** `users/{uid}.mutedChatGroupIds`: the groups whose chat pushes this user silenced. Absent means none. */
+export function readMutedChatGroupIds(raw: unknown): string[] {
+  return Array.isArray(raw) ? raw.filter((id): id is string => typeof id === "string") : [];
 }
 
 /** What the service worker receives (public/sw.js). */

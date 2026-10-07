@@ -1,7 +1,11 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
-import { readNotificationPrefs, type NotificationPrefs } from "@/lib/push/types";
+import {
+  readMutedChatGroupIds,
+  readNotificationPrefs,
+  type NotificationPrefs,
+} from "@/lib/push/types";
 
 export const SESSION_COOKIE_NAME = "session";
 
@@ -26,6 +30,8 @@ export interface Session {
   onboardingCompletedAt: string | null;
   /** Which push events this user wants, on every device (lib/push/types.ts). */
   notificationPrefs: NotificationPrefs;
+  /** Groups whose chat pushes this user silenced (a mention still gets through). */
+  mutedChatGroupIds: string[];
 }
 
 /**
@@ -60,6 +66,7 @@ export async function getSession(): Promise<Session | null> {
       accountHolderName: (profile?.accountHolderName as string | undefined) || null,
       onboardingCompletedAt: (profile?.onboardingCompletedAt as string | undefined) || null,
       notificationPrefs: readNotificationPrefs(profile?.notificationPrefs),
+      mutedChatGroupIds: readMutedChatGroupIds(profile?.mutedChatGroupIds),
     };
   } catch {
     return null;

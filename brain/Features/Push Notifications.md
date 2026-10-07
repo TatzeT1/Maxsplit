@@ -6,17 +6,23 @@ tags: [feature, push, pwa]
 
 Five events, each switchable in the profile (ADR-004 in `docs/DECISIONS.md`):
 
-| Event (`PushEvent`)              | Who gets it                                                       | Example                                                                |
-| -------------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `expense` — Neue Ausgabe mit dir | everyone with a share or money laid out, minus whoever entered it | "Max hat „Pizza“ eingetragen – du schuldest dafür 22,50 €"             |
-| `settlement` — Zahlung erhalten  | the receiver, unless they entered it                              | "Ben hat dir 52,50 € gezahlt"                                          |
-| `challenge` — Herausforderung    | everyone drawn into an **online** game, minus the challenger      | "Max fordert dich zu Vier gewinnt heraus – es geht um Pizza · 36,00 €" |
-| `turn` — Du bist dran            | the player to move / whose match is waiting                       | "Lea hat gezogen – Tic-Tac-Toe in WG Küche"                            |
-| `chat` — Chat-Nachricht          | every other member with an account; one `tag` per group chat      | "Max: Wer bringt Getränke mit?"                                        |
+| Event (`PushEvent`)              | Who gets it                                                                                       | Example                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `expense` — Neue Ausgabe mit dir | everyone with a share or money laid out, minus whoever entered it                                 | "Max hat „Pizza“ eingetragen – du schuldest dafür 22,50 €"             |
+| `settlement` — Zahlung erhalten  | the receiver, unless they entered it                                                              | "Ben hat dir 52,50 € gezahlt"                                          |
+| `challenge` — Herausforderung    | everyone drawn into an **online** game, minus the challenger                                      | "Max fordert dich zu Vier gewinnt heraus – es geht um Pizza · 36,00 €" |
+| `turn` — Du bist dran            | the player to move / whose match is waiting                                                       | "Lea hat gezogen – Tic-Tac-Toe in WG Küche"                            |
+| `chat` — Chat-Nachricht          | every other member with an account, unless they muted that group's chat; one `tag` per group chat | "Max: Wer bringt Getränke mit?"                                        |
 
 A challenge also goes out for an online luck round ("Max lädt dich zum Rubbellos ein") and
 for a "Revanche". "Anstupsen" sends an extra `turn` push — its own tag, so it buzzes over an
 earlier one — and asks `pushReach` (`deliver.ts`) first whether it can reach anyone at all.
+
+A chat message that names someone with `@` gives them "Max hat dich erwähnt: …" instead —
+the same `chat` event and tag, but **it also reaches a member who muted that group's chat**
+(`PendingPush.unlessMuted` is left off; `users/{uid}.mutedChatGroupIds`, see [[Chat]]). The
+profile's global "Chat-Nachricht" switch still turns both off. The silent expense/payment cards
+and reactions send no push.
 
 Placeholders never get one (no account, no device). Recurring bookings (cron) and a
 game's auto-booked stake also produce `expense` pushes — the stake one skips the game's

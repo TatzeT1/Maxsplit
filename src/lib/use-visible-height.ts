@@ -107,13 +107,20 @@ export function useVisibleHeight(ref: RefObject<HTMLElement | null>): number | n
     measure();
     viewport.addEventListener("resize", schedule);
     viewport.addEventListener("scroll", schedule);
-    // No ResizeObserver on purpose: nothing above this element changes height
-    // without also firing a viewport event, and observing an element whose
-    // height we set invites a feedback loop.
+    // The offline banner is the one thing that appears above this element
+    // without a viewport event — going offline mid-chat pushes the frame down
+    // by the banner's height, and with it the composer below the fold.
+    window.addEventListener("online", schedule);
+    window.addEventListener("offline", schedule);
+    // No ResizeObserver on purpose: nothing else above this element changes
+    // height without also firing a viewport event, and observing an element
+    // whose height we set invites a feedback loop.
     return () => {
       if (frame) cancelAnimationFrame(frame);
       viewport.removeEventListener("resize", schedule);
       viewport.removeEventListener("scroll", schedule);
+      window.removeEventListener("online", schedule);
+      window.removeEventListener("offline", schedule);
     };
   }, [ref]);
 

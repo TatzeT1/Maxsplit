@@ -52,7 +52,9 @@ validation), it's defined **once** and imported by both, never duplicated as two
 could drift:
 
 - `MAX_MESSAGE_LENGTH` (`src/lib/chat/constants.ts`) — chat input limit + `sendMessage`
-  rejection.
+  rejection. Same file: `CHAT_REACTIONS` (the picker + the server's allowed ids),
+  `CLIENT_MESSAGE_ID` / `MESSAGE_ID`. `src/lib/chat/rich-text.ts` — the @mention matching the
+  server stores and the chat highlights.
 - `src/lib/ledger-input.ts` — `MAX_DESCRIPTION_LENGTH`, `MAX_NOTE_LENGTH`, `MAX_NAME_LENGTH`
   (the form inputs' `maxLength`) and the server checks `isIsoDate`, `isValidDescription`,
   `isValidName`, `isValidEmoji`.

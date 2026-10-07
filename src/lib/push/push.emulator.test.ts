@@ -5,6 +5,7 @@ import {
   removePushSubscription,
   savePushSubscription,
   sendTestPush,
+  setChatMuted,
   updateNotificationPrefs,
 } from "@/lib/actions/notifications";
 import { recordSettlement } from "@/lib/actions/settlements";
@@ -296,6 +297,25 @@ describe("delivery", () => {
       ok: false,
       error: "invalid-prefs",
     });
+  });
+
+  it("skips a chat push for a group the recipient silenced — unless it is a mention", async () => {
+    await seedWg();
+    await subscribe("lea");
+    signInAs({ uid: "lea" });
+    expect(await setChatMuted({ groupId: "g1", muted: true })).toEqual({ ok: true, data: null });
+    const chat = push("lea", { event: "chat", unlessMuted: { groupId: "g1" } });
+    const mention = push("lea", { event: "chat" });
+    const send = vi.fn<PushSender>(async () => {});
+
+    expect(await deliverPushes([chat], send)).toMatchObject({ sent: 0, skipped: 1 });
+    expect(await deliverPushes([mention], send)).toMatchObject({ sent: 1, skipped: 0 });
+    // Another group's chat is not silenced.
+    const other = push("lea", { event: "chat", unlessMuted: { groupId: "g2" } });
+    expect(await deliverPushes([other], send)).toMatchObject({ sent: 1, skipped: 0 });
+
+    await setChatMuted({ groupId: "g1", muted: false });
+    expect(await deliverPushes([chat], send)).toMatchObject({ sent: 1, skipped: 0 });
   });
 
   it("skips 'your turn' for a player who is watching the game", async () => {

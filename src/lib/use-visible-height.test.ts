@@ -128,6 +128,31 @@ describe("useVisibleHeight", () => {
     expect(result.current).toBe(272);
   });
 
+  it("re-measures when the connection drops and the offline banner pushes the frame down", async () => {
+    stubVisualViewport({ height: 664 });
+    const element = { top: 0 };
+    const ref = {
+      current: { getBoundingClientRect: () => ({ top: element.top }) } as unknown as HTMLElement,
+    };
+    const { result } = renderHook(() => useVisibleHeight(ref));
+    expect(result.current).toBe(664);
+
+    // No viewport event: the banner just appears above the frame.
+    element.top = 36;
+    await act(async () => {
+      window.dispatchEvent(new Event("offline"));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    expect(result.current).toBe(628);
+
+    element.top = 0;
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    });
+    expect(result.current).toBe(664);
+  });
+
   it("holds its last height while the user is pinch-zoomed in", async () => {
     const handle = stubVisualViewport({ height: 664 });
     const { result } = renderHook(() => useVisibleHeight(elementAt(56)));

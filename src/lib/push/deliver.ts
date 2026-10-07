@@ -5,7 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/i18n/translate";
 import { renderPayload } from "./render";
 import { PRESENCE_WINDOW_MS, presenceRef, subscriptionsOf, type StoredSubscription } from "./store";
-import { readNotificationPrefs, type PendingPush } from "./types";
+import { readMutedChatGroupIds, readNotificationPrefs, type PendingPush } from "./types";
 import { getVapidConfig } from "./vapid";
 
 export interface SendOptions {
@@ -85,8 +85,9 @@ export async function pushReach(
 
 /**
  * Sends each push to every device its recipient turned notifications on for,
- * in that device's language — honoring the per-event switches, skipping "Du
- * bist dran" for a player who is watching the game, and deleting
+ * in that device's language — honoring the per-event switches and a silenced
+ * group chat, skipping "Du bist dran" for a player who is watching the game,
+ * and deleting
  * subscriptions a push service reports gone (404/410). Never throws for one
  * device's failure. Without VAPID keys, push is off and nothing is sent.
  */
@@ -114,9 +115,14 @@ export async function deliverPushes(
         return;
       }
       const prefs = readNotificationPrefs(userSnap.get("notificationPrefs"));
+      const mutedChats = readMutedChatGroupIds(userSnap.get("mutedChatGroupIds"));
 
       for (const push of list) {
         if (push.event !== "test" && !prefs[push.event]) {
+          report.skipped++;
+          continue;
+        }
+        if (push.unlessMuted && mutedChats.includes(push.unlessMuted.groupId)) {
           report.skipped++;
           continue;
         }

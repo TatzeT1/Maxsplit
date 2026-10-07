@@ -1,8 +1,10 @@
 "use server";
 
 import { getSession } from "@/lib/auth/session";
+import { settlementCardMessage } from "@/lib/chat/cards";
 import { adminDb } from "@/lib/firebase/admin";
 import { formatMoney } from "@/lib/format/money";
+import { getServerT } from "@/lib/i18n/server";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isIsoDate, MAX_NOTE_LENGTH } from "@/lib/ledger-input";
 import { recomputeGroupBalances } from "@/lib/money/balance-cache";
@@ -82,7 +84,23 @@ export async function recordSettlement(
     createdAt: new Date().toISOString(),
   };
 
-  const docRef = await groupRef.collection("settlements").add(settlement);
+  const docRef = groupRef.collection("settlements").doc();
+  const batch = adminDb.batch();
+  batch.set(docRef, settlement);
+  // The group chat sees the payment as a silent card, in the same write (the
+  // payment push already reaches the receiver).
+  batch.set(
+    groupRef.collection("messages").doc(),
+    settlementCardMessage({
+      t: await getServerT(),
+      senderUid: session.uid,
+      settlementId: docRef.id,
+      settlement,
+      nameOf: (uid) => group.members[uid]?.displayName ?? "?",
+      now: settlement.createdAt,
+    }),
+  );
+  await batch.commit();
   await recomputeGroupBalances(groupRef);
   notifyAfterResponse(
     settlementPushes({

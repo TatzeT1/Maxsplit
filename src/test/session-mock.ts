@@ -20,6 +20,7 @@ export function signInAs(session: Partial<Session> & { uid: string }): Session {
     accountHolderName: null,
     onboardingCompletedAt: "2026-01-01T00:00:00.000Z",
     notificationPrefs: { expense: true, settlement: true, challenge: true, turn: true, chat: true },
+    mutedChatGroupIds: [],
     ...session,
   };
   return current;

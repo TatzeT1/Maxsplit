@@ -169,7 +169,10 @@ export interface ActivityLogEntry {
   createdAt: string;
 }
 
-/** A single message in a group's chat (`groups/{groupId}/messages`). Text only for v1 — no attachments, edits, or reactions. */
+/**
+ * A single message in a group's chat (`groups/{groupId}/messages`). Text,
+ * plus reactions, a quoted reply and @mentions — no attachments, no edits.
+ */
 export interface ChatMessage {
   id: string;
   senderUid: string;
@@ -181,6 +184,47 @@ export interface ChatMessage {
   gameResult?: ChatGameResult;
   /** Set on the automatic message an online luck round posts when it starts — a join card. */
   luckInvite?: { roundId: string; gameId: OnlineLuckGameId };
+  /** Set on the automatic, silent message a newly entered expense posts — renders as an expense card. */
+  expenseCard?: ChatExpenseCard;
+  /** Set on the automatic, silent message a recorded payment posts — renders as a payment card. */
+  settlementCard?: ChatSettlementCard;
+  /** Reaction id (`CHAT_REACTIONS`) → uids who reacted. A reaction everyone took back stays as an empty list. Absent until the first one. */
+  reactions?: Record<string, string[]>;
+  /** The message this answers, copied by the server when it was sent so it survives the original being deleted. */
+  replyTo?: ChatReply;
+  /** Members named with @Name, worked out by the server from `text` — a push reaches them even in a muted chat. */
+  mentions?: string[];
+}
+
+/** A quoted message — see `ChatMessage.replyTo`. `text` is already shortened. */
+export interface ChatReply {
+  id: string;
+  senderUid: string;
+  text: string;
+}
+
+/**
+ * What a newly entered expense tells the group chat. A record of that moment —
+ * editing or deleting the expense later does not rewrite the card.
+ */
+export interface ChatExpenseCard {
+  expenseId: string;
+  description: string;
+  amountMinor: number;
+  currency: string;
+  /** Who laid out how much (non-zero entries only). */
+  paidBy: Record<string, number>;
+  /** What each member owes of it (non-zero entries only). */
+  shares: Record<string, number>;
+}
+
+/** What a recorded payment tells the group chat — see `ChatMessage.settlementCard`. */
+export interface ChatSettlementCard {
+  settlementId: string;
+  fromUid: string;
+  toUid: string;
+  amountMinor: number;
+  currency: string;
 }
 
 /** What a decided game tells the group chat — see `ChatMessage.gameResult`. */

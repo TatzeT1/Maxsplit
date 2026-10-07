@@ -41,7 +41,8 @@ re-deriving it from scratch by reading every file.
 - [[Balances and Settlements]] — net balances, pairwise debts, debt simplification
 - [[Settlement PDF Export]] — the public, tokenized, on-demand PDF link
 - [[Recurring Expenses]] — cron-driven materialization with catch-up
-- [[Chat]] — per-group text chat and read receipts
+- [[Chat]] — per-group chat: optimistic retry-safe sending, reactions, replies, @mentions, mute,
+  unread line, silent expense/payment cards, read receipts
 - [[Split Games]] — the gamified split pickers: eight luck-based (🎲🎡🎰🎫🎈🦆🥃🎱) and seven skill-based
   1-vs-1 duels (⭕🔴🧠⚡✊🥢✏️) on a shared knockout-ladder engine, plus an opt-in live tournament
   bracket for all seven duel games, syncing across every player's own phone; online scratch

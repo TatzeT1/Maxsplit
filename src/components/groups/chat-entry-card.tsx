@@ -4,14 +4,20 @@ import { collection, doc, limit, onSnapshot, orderBy, query } from "firebase/fir
 import { ChevronRight, MessageCircle } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { isCardMessage } from "@/components/groups/chat-cards";
 import { useT } from "@/components/locale-provider";
+import { isSilentCard } from "@/lib/chat/cards";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { cn } from "@/lib/utils";
 import type { ChatMessage, ChatRead, GroupMember } from "@/lib/types";
 
-/** How many of the newest messages decide the unread dot. */
-const RECENT_FOR_UNREAD = 5;
+/**
+ * How many of the newest messages decide the unread dot. More than a handful:
+ * your own messages and the silent expense and payment cards never count, so
+ * whatever someone wrote just before a run of them still has to be seen.
+ */
+const RECENT_FOR_UNREAD = 12;
 
 export function ChatEntryCard({
   groupId,
@@ -28,7 +34,7 @@ export function ChatEntryCard({
   const t = useT();
 
   useEffect(() => {
-    // A few rather than one: your own messages never count as unread — a
+    // A dozen rather than one: your own messages never count as unread — a
     // game result your expense just posted mustn't light the badge for you —
     // so whatever someone else wrote just before it still has to be seen.
     const latestQuery = query(
@@ -64,7 +70,9 @@ export function ChatEntryCard({
   const latest = recent?.[0] ?? null;
   const unread = (recent ?? []).some(
     (message) =>
-      message.senderUid !== currentUid && (!lastReadAt || message.createdAt > lastReadAt),
+      message.senderUid !== currentUid &&
+      !isSilentCard(message) &&
+      (!lastReadAt || message.createdAt > lastReadAt),
   );
   const senderName = latest ? (members[latest.senderUid]?.displayName ?? "?") : null;
 
@@ -100,7 +108,12 @@ export function ChatEntryCard({
               unread ? "text-foreground/80" : "text-muted-foreground",
             )}
           >
-            {latest ? `${senderName}: ${latest.text}` : t("chat.noPreview")}
+            {latest
+              ? // An automatic message already names who did it ("Max fordert euch heraus").
+                isCardMessage(latest)
+                ? latest.text
+                : `${senderName}: ${latest.text}`
+              : t("chat.noPreview")}
           </p>
         )}
       </div>
