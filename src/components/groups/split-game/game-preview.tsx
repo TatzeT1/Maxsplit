@@ -3,6 +3,7 @@
 import { Dices, Swords } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useT } from "@/components/locale-provider";
+import { isDuelGameId } from "@/lib/games/duel-game-ids";
 import { springs } from "@/lib/motion";
 import type { SplitGameInfo } from "@/components/groups/split-game/game-catalog";
 import { GameTileImage } from "@/components/groups/split-game/game-tile-image";
@@ -11,7 +12,7 @@ import { GameTileImage } from "@/components/groups/split-game/game-tile-image";
  * The picker's second step: before a tile hands off into the actual game
  * dialog, this explains what tapping "Los geht's" is about to start —
  * addressing the "tap a tile, a popup just appears" confusion the flat
- * 2×2 grid used to cause. One shared component for all 8 games, driven
+ * 2×2 grid used to cause. One shared component for every game, driven
  * entirely by `game-catalog.ts`, so no per-game preview copy lives here.
  */
 export function SplitGamePreview({
@@ -62,7 +63,8 @@ export function SplitGamePreview({
         </span>
         <p className="text-sm leading-relaxed">{t(game.howKey)}</p>
       </div>
-      {game.category === "skill" && (
+      {/* Only a duel scales to a bigger group through the ladder; „Finger drauf!“ seats everyone at once. */}
+      {isDuelGameId(game.id) && (
         <div className="bg-muted/40 flex gap-3 rounded-xl border p-3">
           <Swords aria-hidden="true" className="text-muted-foreground mt-0.5 size-5 shrink-0" />
           <div className="flex flex-col gap-1">

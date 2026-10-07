@@ -279,8 +279,9 @@ describe("luckIndex", () => {
   it("counts only luck rounds that record their game and hold together", () => {
     const counted = [1, 2, 3].map((n) => round(`ok${n}`, "wheel", ["lea", "max"], { lea: 1000 }));
     const skipped = [
-      // A duel is won, not drawn.
+      // A duel is won, not drawn — and so is the whole table's finger race.
       round("duel", "memory", ["lea", "max"], { max: 1000 }),
+      round("finger", "finger", ["lea", "max"], { max: 1000 }),
       // From before the game record, and split by hand since.
       round("old", "wheel", ["lea", "max"], { max: 1000 }, { game: undefined }),
       round("edited", "wheel", ["lea", "max"], { max: 1000 }, { game: null }),
@@ -299,5 +300,6 @@ describe("luckIndex", () => {
     expect(isLuckGameId("balloon")).toBe(true);
     expect(isLuckGameId("slot")).toBe(true);
     expect(isLuckGameId("rps")).toBe(false);
+    expect(isLuckGameId("finger")).toBe(false);
   });
 });

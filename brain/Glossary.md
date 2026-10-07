@@ -20,7 +20,7 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Mit Google anmelden               | "Sign in with Google"                | the sign-in button label, incl. in the emulator's fake account picker                                                 |
 | Ausgaben teilen, ohne Kopfrechnen | "Split expenses without mental math" | the app's tagline (`app.tagline` in `de.ts`)                                                                          |
 | Glücksspiele                      | "Games of chance"                    | the picker's luck-based category (🎲🎡🎰🎫🎈🦆🥃🎱) — [[Split Games]]                                                 |
-| Minispiele                        | "Minigames"                          | the picker's skill-based, 1-vs-1 duel category (⭕🔴🧠⚡✊🥢✏️) — [[Split Games]]                                     |
+| Minispiele                        | "Minigames"                          | the picker's skill category: the 1-vs-1 duels (⭕🔴🧠⚡✊🥢✏️) and ☝️ for the whole table — [[Split Games]]           |
 | K.-o.-Modus                       | "Knockout mode"                      | the picker's name for the knockout-ladder mechanic that scales a duel game to a pool bigger than 2 — [[Split Games]]  |
 | Stechen                           | "Roll-off" — a tie-break             | the Würfelbecher rolls again among only the people level on the line between paying and not — [[Split Games]]         |
 | Mäxchen                           | pub dice game                        | the Würfelbecher ranks two-dice rolls like it: 21 beats everything, then the doubles, then the rest — [[Split Games]] |
@@ -32,6 +32,8 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Lose verschicken                  | "Send out the cards"                 | starts an online scratch-card round, everyone on their own phone (ADR-005) — [[Split Games]]                          |
 | Glücks-Index                      | "Luck index"                         | per person, what the luck games cost them against their fair share (bill ÷ players), in euros — [[Split Games]]       |
 | Pech / Glück                      | "Bad luck" / "good luck"             | the luck index's two sides: paid more / less than expected — never meant as "the draw is unfair" — [[Split Games]]    |
+| Finger drauf!                     | "Finger on it!"                      | the whole-table skill game: everyone rests a finger, lifts on „LOS!“; too early or slowest pays — [[Split Games]]     |
+| Fehlstart                         | "False start"                        | lifting (or tapping) before „LOS!“ in Finger drauf! and the Reaktionsduell — it pays — [[Split Games]]                |
 
 ## Domain vocabulary
 
