@@ -375,7 +375,7 @@ export const de = {
     gameHowBalloon:
       "Der Ballon geht reihum: Jede Person pumpt ihn ein- bis dreimal und gibt das Handy weiter. Niemand weiß, wie viel Luft er verträgt — wer ihn zum Platzen bringt, zahlt. Sollen mehrere zahlen, scheidet der Zahler aus und ein neuer Ballon geht an die nächste Person.",
     gameHowDuckRace:
-      "Jede Person ist eine Ente in ihrer Farbe, das Rennen läuft vor euren Augen — die letzte Ente im Ziel zahlt. Wer mag, feuert seine Ente per Tippen an (quak!). Am Ergebnis ändert das nichts.",
+      "Jede Person ist eine Ente in ihrer Farbe, das Rennen läuft vor euren Augen — die letzte Ente im Ziel zahlt. Die rote Laterne 🏮 hängt über der Ente, die gerade zahlen würde, und am Ende entscheidet ein Fotofinish in Zeitlupe. Wer mag, feuert seine Ente per Tippen an (quak!). Am Ergebnis ändert das nichts.",
     gameHowDice:
       "Jede Person schüttelt den Becher und würfelt mit zwei Würfeln. Gezählt wird wie beim Kneipenklassiker Mäxchen: Die 21 schlägt alles, dann kommen die Päsche, dann die übrigen Würfe nach dem größeren Würfel. Der kleinste Wurf zahlt — bei Gleichstand wird gestochen.",
     gameHowPegboard:
@@ -970,6 +970,14 @@ export const de = {
     duckRaceLastCaption: "Als Letzte im Ziel (Platz {{place}}).",
     duckRaceLastLabel: "Die Ente von {{name}} kommt als Letzte ins Ziel — {{name}} zahlt.",
     duckRacePlaceCaption: "Platz {{place}} von {{count}}",
+    duckRaceCountdown: "Auf die Plätze …",
+    duckRaceCountdownLabel: "Auf die Plätze — gleich geht's los.",
+    duckRaceSplash: "Platsch!",
+    duckRaceLegend: "🏮 würde gerade zahlen · 👑 liegt vorn",
+    duckRaceSlowMotion: "Zeitlupe",
+    duckRacePhotoTitle: "Fotofinish",
+    duckRacePhotoCaption: "{{safe}} knapp vor {{payer}}",
+    duckRacePhotoLabel: "Fotofinish: {{safe}} ist knapp vor {{payer}} im Ziel.",
     diceTitle: "Würfelbecher",
     diceIntro:
       "Handy rumreichen: Jede Person würfelt mit zwei Würfeln — der kleinste Wurf zahlt. Bei Gleichstand wird gestochen.",

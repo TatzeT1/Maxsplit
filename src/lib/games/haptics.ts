@@ -18,6 +18,8 @@ export type HapticPattern = number | readonly number[];
 export const HAPTIC_STAMP: HapticPattern = 45;
 /** The round's last stamp: a thump, a breath, a longer one. */
 export const HAPTIC_STAMP_FINALE: HapticPattern = [45, 70, 110];
+/** The finish camera's shutter: two ticks, like its double click. */
+export const HAPTIC_SHUTTER: HapticPattern = [12, 50, 12];
 
 /** When the last pattern started here ends, so a cancel without anything queued stays a no-op. */
 let buzzingUntil = 0;

@@ -371,7 +371,7 @@ export const en: Dictionary = {
     gameHowBalloon:
       "The balloon goes round the table: everyone pumps it once to three times and passes the phone on. Nobody knows how much air it takes — whoever makes it burst pays. If several people should pay, the payer drops out and a fresh balloon goes to the next person.",
     gameHowDuckRace:
-      "Everyone is a duck in their own colour and the race plays out in front of you — the last duck across the line pays. If you like, cheer your duck on by tapping it (quack!). It doesn't change the result.",
+      "Everyone is a duck in their own colour and the race plays out in front of you — the last duck across the line pays. The red lantern 🏮 hangs over whichever duck would pay right now, and a slow-motion photo finish settles it at the end. If you like, cheer your duck on by tapping it (quack!). It doesn't change the result.",
     gameHowDice:
       "Everyone shakes the cup and rolls two dice. Rolls count as in the pub classic Mäxchen: 21 beats everything, then come the doubles, then the other rolls by the bigger die. The lowest roll pays — a tie on the line is rolled off.",
     gameHowPegboard:
@@ -958,6 +958,14 @@ export const en: Dictionary = {
     duckRaceLastCaption: "Last across the line (place {{place}}).",
     duckRaceLastLabel: "{{name}}'s duck comes in last — {{name}} pays.",
     duckRacePlaceCaption: "Place {{place}} of {{count}}",
+    duckRaceCountdown: "On your marks …",
+    duckRaceCountdownLabel: "On your marks — the race starts in a moment.",
+    duckRaceSplash: "Splash!",
+    duckRaceLegend: "🏮 would pay right now · 👑 in the lead",
+    duckRaceSlowMotion: "Slow motion",
+    duckRacePhotoTitle: "Photo finish",
+    duckRacePhotoCaption: "{{safe}} just ahead of {{payer}}",
+    duckRacePhotoLabel: "Photo finish: {{safe}} crosses the line just ahead of {{payer}}.",
     diceTitle: "Dice cup",
     diceIntro:
       "Pass the phone round: everyone rolls two dice — the lowest roll pays. A tie on the line is rolled off.",

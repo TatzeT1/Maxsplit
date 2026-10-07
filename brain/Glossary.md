@@ -36,6 +36,10 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Schlag die 42!                    | "Beat the 42!"                       | the roll the next Würfelbecher roller has to top to stay out of the Zahlzone, compared by rank — [[Split Games]]       |
 | Gerettet!                         | "Saved!"                             | the bubble over whoever a roll just pushed out of the Zahlzone — out for good, never back in — [[Split Games]]         |
 | gleichauf                         | "level", "tied"                      | a Würfelbecher row level with others on the Zahlzone's line: a Stechen if the round ended now — [[Split Games]]        |
+| Platsch!                          | "Splash!"                            | the duck race's start, after "3 – 2 – 1" counted down over the water — [[Split Games]]                                 |
+| rote Laterne                      | "red lantern" — the last-placed      | the 🏮 over whichever ducks would pay if the race ended now, following the picture — [[Split Games]]                   |
+| Zeitlupe                          | "Slow motion"                        | the duck race's clock running at 0.3× around the decisive crossing, with the camera zoomed in — [[Split Games]]        |
+| Fotofinish                        | "Photo finish"                       | the last safe duck and the first payer, a beak apart; the camera's print stays on the water — [[Split Games]]          |
 
 ## Domain vocabulary
 

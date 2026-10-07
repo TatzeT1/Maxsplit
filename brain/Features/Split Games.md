@@ -601,7 +601,9 @@ emoji badge covers it.
   first, animate after: the finishing order is one `secureShuffle`, the last _k_ ducks pay
   (`duckRaceLosers`). `planDuckRace` only stages it — finish times strictly increase with a
   minimum gap (`MIN_FINISH_GAP_SEC`), progress keyframes never go backwards and end on the line,
-  so ducks overtake but the order cannot change. Tapping a duck quacks; it is cosmetic.
+  so ducks overtake but the order cannot change. Tapping a duck quacks; it is cosmetic. Since
+  round four it counts down, hangs a 🏮 over whoever would pay right now and ends on a
+  slow-motion photo finish — see [[#Entenrennen: Countdown, rote Laterne, Fotofinish]].
 - **🥃 Würfelbecher** — `dice-cup.ts`, `split-dice-dialog.tsx`, `dice-figure.tsx`. Two dice per
   person, ranked like the pub game Mäxchen (`diceRank`: 21 beats everything, then the doubles
   66…11, then 65…31 by the bigger die first). The lowest roll pays; people level on the line
@@ -948,6 +950,81 @@ reduced motion the faces are simply there and the stamp is printed. Afterwards a
 "STECHEN" strip with the existing "nur Lea, Max würfeln nochmal" stays until the roll-off ends.
 `STAMP_DROP_S` is now exported from `celebration.tsx` so a caller can time an `InkStamp`'s
 impact; `latestDiceRoll` moved from the dialog into `dice-cup.ts`.
+
+### Entenrennen: Countdown, rote Laterne, Fotofinish
+
+Before, one tap started the race at once, nothing on the water said who was losing, and the
+decisive moment was never close: finish times were spread evenly from 72 % of the race, so two
+ducks crossed almost two seconds apart and the payer was obvious long before the line. The
+course was a fixed 300 px, and the ducks moved piecewise-linearly between eight keyframes, with
+a visible kink in speed at each one.
+
+**Still decided first.** The order is one `secureShuffle`; everything below is staging in
+`lib/games/duck-race.ts`, and none of it can move a payer. `planDuckRace(order, random,
+payerCount)` now knows how many pay, so it knows the decisive pair: the last duck that stays
+dry and the first one that pays.
+
+- **Neck and neck.** The safe duck's finish is pulled up to `PHOTO_FINISH_GAP_SEC` (0.16 s, the
+  field's minimum gap) ahead of the payer's. It only ever moves _later_, so it stays clear of
+  the duck before it, and the last duck is still home at `duckRaceDuration`. The payer's own run
+  is squeezed to meet the safe duck's at the last quarter (keyframe 6 of 8) and follows its
+  keyframes from there — a hair behind, since its own clock runs 0.16 s longer. In about six
+  races out of ten it noses _ahead_ on the run-in (keyframe 7) and is out-lunged at the line,
+  so the 🏮 changes hands right at the end. Every shaped run is still strictly increasing.
+- **Smooth runs.** `duckProgressAt(duck, raceSec)` joins the keyframes with a monotone cubic
+  (Hermite with Fritsch–Butland tangents: the harmonic mean of the neighbouring slopes is never
+  more than twice either, which keeps every segment inside the monotone region) from a standing
+  start. Progress never decreases — pinned by a dense-sampling test over every field size.
+- **Two clocks.** Finish times and keyframes stay on the _race clock_; the screen plays them
+  through a `DuckTimeWarp`: knots of (race, screen) seconds, linear between, 1:1 past the end.
+  `slowMotionWarp` runs the clock at `SLOW_MOTION_RATE` (0.3) from 0.4 s before the safe
+  duck's crossing to just after the payer's, easing in and out over six constant-rate steps, so
+  the 0.16 s gap plays as about half a second. A monotone warp cannot reorder anything; tests
+  pin that it is strictly monotone both ways, that the order on the screen clock is the
+  finishing order, and that the race gets more than one and at most two seconds longer (about
+  1.5 s with one payer, 2 s with several, where the clock speeds up again for the rest).
+- **Cues.** `duckRaceCues(race)` turns the plan into screen-clock beats — every crossing, the
+  ease into slow motion, the flash (the safe duck's crossing), the payer's crossing, the
+  camera pulling back — so the dialog's timers and its frame loop read the same numbers and the
+  quacks land on the picture. `photoZoomAt` and `photoFinishFocus` (how close the camera can go,
+  up to 1.7×, while both lanes of the pair stay 14 % inside the edges; the origin stays on the
+  course, so the zoomed water still fills the frame) are pure and tested.
+- **Who's last right now.** `duckStandings(race, raceSec, lanes)` ranks the field as the picture
+  shows it: ducks already home in crossing order, then by progress. Exact ties — everyone on the
+  start line — go by lane, never by the finishing order, which would give the result away.
+  `duckMarkers` hangs 🏮 over the last `payerCount` and 👑 over the leader; at the finish it
+  equals the payers and the winner.
+
+**The dialog.** "3 – 2 – 1 – Platsch!" over the water (`playFuseTickSound` rising, the first
+beat inside the tap so iOS unlocks audio, then the existing splash and go). From the gun one
+`requestAnimationFrame` loop owns the motion: it sets a single `raceClock` motion value from the
+warped screen time, and every duck's `y` and swim waggle are `useTransform`s of it — so slow
+motion is nothing but the clock running slower, and the waggle slows with it. The same loop
+sets the camera's zoom and, every 125 ms (about 8 Hz) and only once 0.6 s are on the clock,
+recomputes the markers, setting state only when they change. They pop on and off with a spring;
+they stop updating at the finish and freeze on the final standing (lanterns over the payers,
+crown over the winner). The loop is an effect keyed on the run, so "Neu mischen", closing and
+unmounting all end it without bookkeeping; the timers sit in `timersRef`, which is now emptied
+in place, never replaced, so the unmount cleanup really does see every timer.
+
+At the ease into slow motion the drum roll starts and the finish camera's viewfinder fades in
+(corner brackets, a vignette, "● Zeitlupe"). The zoom scales only the inner water layer, toward
+the pair at the finish line — never the stage, whose transformed ancestor would trap the slips'
+fixed layers. On the safe duck's crossing a white flash, `playShutterSound` (a two-click shutter
+and a flash recharging) and a double tick on Android (`HAPTIC_SHUTTER`). When the last duck is
+home the **Fotofinish** print (`split-game/photo-finish-print.tsx`) drops onto the empty upper
+water and develops from a pale blank: the two ducks in their lanes' order, the safe one's beak
+over a red line, the payer `1 − payerProgress` of the travel behind it, scaled to the print and
+never under 6 px, with its 🏮, and "Ben knapp vor Lea". The print is cream paper in both
+themes (`paper-tokens`) and stays through the slips and the verdict until "Neu mischen". The
+slips (`catchEach`, unchanged from the catch-moment feature) wait `PHOTO_BEAT_MS` (1.5 s) for
+it. The live region says "Auf die Plätze …", "Das Rennen läuft.", then "Fotofinish: Ben ist
+knapp vor Lea im Ziel." until the first slip.
+
+The course takes the stage's board budget, `clamp(300px, var(--game-board-h) − 40px, 520px)` —
+a definite height, measured by a `ResizeObserver` for the ducks' travel. Under reduced motion
+there is no countdown, swimming, zoom or slow motion: the board, the markers and the print are
+simply there (the shutter still clicks), then the slips.
 
 ## Related
 

@@ -437,6 +437,34 @@ export function playSplashSound(): void {
   noiseBurst(ctx, now + 0.04, 0.2, 0.06, "highpass", 3000, 0.6);
 }
 
+/**
+ * The finish camera going off, for the duck race's photo finish: the
+ * mirror's clack and the blades' snap a few hundredths apart — the
+ * double click everyone knows from a real camera — then the flash
+ * recharging, a thin whine climbing out of hearing.
+ */
+export function playShutterSound(): void {
+  const ctx = getContext();
+  if (!ctx) return;
+  const now = ctx.currentTime;
+  noiseBurst(ctx, now, 0.028, 0.16, "bandpass", 2300, 1.3);
+  tone(ctx, 260, now, 0.05, "square", 0.025);
+  noiseBurst(ctx, now + 0.065, 0.022, 0.12, "bandpass", 3600, 1.8);
+
+  const whine = ctx.createOscillator();
+  const gain = ctx.createGain();
+  whine.type = "sine";
+  whine.frequency.setValueAtTime(1800, now + 0.12);
+  whine.frequency.exponentialRampToValueAtTime(7200, now + 0.7);
+  gain.gain.setValueAtTime(0, now + 0.12);
+  gain.gain.linearRampToValueAtTime(0.012, now + 0.2);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+  whine.connect(gain);
+  gain.connect(ctx.destination);
+  whine.start(now + 0.12);
+  whine.stop(now + 0.7);
+}
+
 /** Dice rattling in a cup: a burst of dry clicks at uneven gaps. */
 export function playDiceRattleSound(seconds = 0.75): void {
   const ctx = getContext();
@@ -529,7 +557,7 @@ export function playMatchStrikeSound(): void {
 /**
  * One tick of the matchstick duel's fuse in its last seconds — higher and
  * sharper the closer the end, so the ear feels it tighten even with the eyes
- * on the board.
+ * on the board. The duck race counts "3 – 2 – 1" down on it too.
  */
 export function playFuseTickSound(secondsLeft: number): void {
   const ctx = getContext();
