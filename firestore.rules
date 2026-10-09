@@ -99,6 +99,30 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Estimate rounds (ADR-007) — "Schätzfragen", one phone or online. Every
+      // member watches a round live; only lib/actions/estimate-rounds.ts writes.
+      // The truth and the still-hidden guesses live in secrets/ and reach this
+      // (member-readable) document only when a stage is revealed, in the same
+      // transaction that closes it.
+      match /estimateRounds/{roundId} {
+        allow read: if isGroupMember(groupId);
+        allow write: if false;
+
+        // The full bank row as played + hidden guesses. Readable by nobody:
+        // a member who could read it would see the answer before guessing.
+        // Rules do not cascade, so this needs its own block.
+        match /secrets/{stageIndex} {
+          allow read, write: if false;
+        }
+      }
+
+      // Which questions this group has seen and the anti-spam creation log
+      // (estimateState/seen). Server-only: a member who could read the seen
+      // set could learn which questions are coming next.
+      match /estimateState/{docId} {
+        allow read, write: if false;
+      }
+
       // Doc id == uid, so a member can only ever read their own read
       // receipt — no need to gate on it beyond that plus membership.
       match /chatReads/{uid} {

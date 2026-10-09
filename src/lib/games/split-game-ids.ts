@@ -1,6 +1,6 @@
 import { DUEL_GAME_IDS } from "@/lib/games/duel-game-ids";
 import type { TranslationKey } from "@/lib/i18n/translate";
-import type { LuckGameId, SplitGameId, TableGameId } from "@/lib/types";
+import type { LuckGameId, QuizGameId, SplitGameId, TableGameId } from "@/lib/types";
 
 /** Runtime list mirroring the `LuckGameId` union. */
 export const LUCK_GAME_IDS: readonly LuckGameId[] = [
@@ -25,11 +25,23 @@ export function isLuckGameId(value: string): value is LuckGameId {
  */
 export const TABLE_GAME_IDS: readonly TableGameId[] = ["finger"];
 
+/**
+ * Runtime list mirroring the `QuizGameId` union: the knowledge games — one
+ * question, one answer — played on one phone or online. Not luck (the
+ * Glücks-Index skips them) and not a duel (no ladder, no tournament).
+ */
+export const QUIZ_GAME_IDS: readonly QuizGameId[] = ["estimate"];
+
+export function isQuizGameId(value: string): value is QuizGameId {
+  return (QUIZ_GAME_IDS as readonly string[]).includes(value);
+}
+
 /** Runtime list mirroring the `SplitGameId` union, for validating a Server Action's input. */
 export const SPLIT_GAME_IDS: readonly SplitGameId[] = [
   ...LUCK_GAME_IDS,
   ...DUEL_GAME_IDS,
   ...TABLE_GAME_IDS,
+  ...QUIZ_GAME_IDS,
 ];
 
 export function isSplitGameId(value: unknown): value is SplitGameId {
@@ -58,4 +70,5 @@ export const SPLIT_GAME_META: Record<SplitGameId, { emoji: string; nameKey: Tran
   nim: { emoji: "🥢", nameKey: "expenses.gameNameNim" },
   dots: { emoji: "✏️", nameKey: "expenses.gameNameDots" },
   finger: { emoji: "☝️", nameKey: "expenses.gameNameFinger" },
+  estimate: { emoji: "🎯", nameKey: "expenses.gameNameEstimate" },
 };

@@ -5,8 +5,17 @@ import {
   initializeTestEnvironment,
   type RulesTestEnvironment,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { afterAll, beforeAll, beforeEach, describe, it } from "vitest";
+import {
+  collection,
+  collectionGroup,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+} from "firebase/firestore";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const PROJECT_ID = "split-app-rules-test";
 
@@ -323,5 +332,126 @@ describe("firestore.rules", () => {
         at: "2026-09-29T12:00:00.000Z",
       }),
     );
+  });
+
+  // Estimate rounds (ADR-007): the round document is member-readable, its
+  // secrets (the truth, the hidden guesses) and the seen set are server-only.
+
+  it("allows a member to watch an estimate round, and nobody else", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/estimateRounds/r1")
+        .set({ gameId: "estimate", status: "running", stages: [] });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    const bob = testEnv.authenticatedContext("bob").firestore();
+    const anon = testEnv.unauthenticatedContext().firestore();
+    await assertSucceeds(getDoc(doc(alice, "groups/group1/estimateRounds/r1")));
+    await assertFails(getDoc(doc(bob, "groups/group1/estimateRounds/r1")));
+    await assertFails(getDoc(doc(anon, "groups/group1/estimateRounds/r1")));
+  });
+
+  it("denies a banned member from reading an estimate round", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("users/alice").set({ displayName: "Alice", banned: true });
+      await context
+        .firestore()
+        .doc("groups/group1/estimateRounds/r1")
+        .set({ gameId: "estimate", status: "running", stages: [] });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1/estimateRounds/r1")));
+  });
+
+  it("denies a member writing an estimate round", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/estimateRounds/r1")
+        .set({ gameId: "estimate", status: "running", stages: [{ index: 0 }] });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/estimateRounds/r1"), { gameId: "estimate", stages: [] }),
+    );
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/estimateRounds/r2"), { gameId: "estimate", stages: [] }),
+    );
+    await assertFails(updateDoc(doc(alice, "groups/group1/estimateRounds/r1"), { stages: [] }));
+    await assertFails(deleteDoc(doc(alice, "groups/group1/estimateRounds/r1")));
+  });
+
+  it("denies even a member reading the secrets of a stage", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/estimateRounds/r1/secrets/0")
+        .set({ question: { value: "2962" }, guesses: {} });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1/estimateRounds/r1/secrets/0")));
+  });
+
+  it("denies listing the secrets of a round", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/estimateRounds/r1/secrets/0")
+        .set({ question: { value: "2962" }, guesses: {} });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDocs(collection(alice, "groups/group1/estimateRounds/r1/secrets")));
+  });
+
+  it("denies a collection-group read of secrets", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/estimateRounds/r1/secrets/0")
+        .set({ question: { value: "2962" }, guesses: {} });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDocs(collectionGroup(alice, "secrets")));
+  });
+
+  it("denies a member writing a secret", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/estimateRounds/r1/secrets/0")
+        .set({ question: { value: "2962" }, guesses: {} });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(
+      setDoc(doc(alice, "groups/group1/estimateRounds/r1/secrets/0"), {
+        guesses: { alice: { milli: 1 } },
+      }),
+    );
+  });
+
+  it("denies a member reading or writing the seen set", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1/estimateState/seen")
+        .set({ ids: ["est-tst-0001"], resets: 0, recent: {} });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "groups/group1/estimateState/seen")));
+    await assertFails(setDoc(doc(alice, "groups/group1/estimateState/seen"), { ids: [] }));
+  });
+
+  it("lets a member read the estimate pointer on the group document", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("groups/group1")
+        .update({ activeEstimateRound: { id: "r1" } });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    const snap = await assertSucceeds(getDoc(doc(alice, "groups/group1")));
+    expect(snap.data()?.memberUids).toEqual(["alice"]);
+    expect(snap.data()?.activeEstimateRound).toEqual({ id: "r1" });
   });
 });

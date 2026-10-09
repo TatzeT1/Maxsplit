@@ -15,6 +15,12 @@ export interface SplitGameInfo {
   blurbKey: TranslationKey;
   /** The longer "how it works" paragraph shown on the picker's preview step. */
   howKey: TranslationKey;
+  /**
+   * The game can't start without a server round trip (its questions come from
+   * the server), so the picker and the preview offer it only while online —
+   * its chunk may not even be on a device that never opened it.
+   */
+  needsConnection?: true;
 }
 
 /** Drives both the picker's section headings and the preview screen's category badge. */
@@ -188,6 +194,19 @@ export const SPLIT_GAMES: readonly SplitGameInfo[] = [
     nameKey: "expenses.gameNameFinger",
     blurbKey: "expenses.gameBlurbFinger",
     howKey: "expenses.gameHowFinger",
+  },
+  {
+    // Knowledge, not luck: one question, one number, everyone guesses in
+    // secret. The question and its answer live on the server, so the game
+    // needs a connection even on one phone.
+    id: "estimate",
+    category: "skill",
+    emoji: "🎯",
+    imageSrc: "/game-tiles/estimate.jpg",
+    nameKey: "expenses.gameNameEstimate",
+    blurbKey: "expenses.gameBlurbEstimate",
+    howKey: "expenses.gameHowEstimate",
+    needsConnection: true,
   },
 ];
 

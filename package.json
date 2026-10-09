@@ -12,6 +12,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "check:bank-leak": "ESTIMATE_LEAK_CHECK=1 vitest run src/lib/games/estimate-bank/bundle-leak.test.ts",
+    "check:bank-floors": "ESTIMATE_BANK_FLOORS=1 vitest run src/lib/games/estimate-bank/bank-floors.test.ts",
     "test:rules": "firebase emulators:exec --only firestore,storage \"vitest run --config vitest.rules.config.ts\"",
     "test:emulator": "firebase emulators:exec --only firestore \"vitest run --config vitest.emulator.config.ts\"",
     "emulators": "firebase emulators:start --import=./.firebase-emulator-data --export-on-exit"

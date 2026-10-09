@@ -1,6 +1,8 @@
 import { formatMoney } from "@/lib/format/money";
 import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
+import { estimateRoundPath } from "@/lib/games/round-paths";
 import { SPLIT_GAME_META } from "@/lib/games/split-game-ids";
+import { isGroupManager } from "@/lib/groups/permissions";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import type {
   DuelGameId,
@@ -240,6 +242,155 @@ export function luckChallengePushes(input: {
       url: luckRoundUrl(input.groupId, input.roundId),
       tag: `challenge-${input.roundId}`,
       ttlSeconds: 6 * HOUR,
+    }));
+}
+
+// Estimate rounds ("Schätzfragen"). Not one of these carries a question or a
+// truth: they are built from names, the stake and a time, never from the round
+// document, so a lock screen can't spoil a question before the table has
+// guessed it (messages.test.ts pins the set of variables).
+
+/** What an estimate push calls the game — the same name the picker and the chat use. */
+function estimateGameName(): { key: TranslationKey } {
+  return { key: SPLIT_GAME_META.estimate.nameKey };
+}
+
+/**
+ * "Herausforderung" for an online estimate round: everyone in the pool with an
+ * account, except whoever started it. Like `luckChallengePushes`, but it states
+ * the window and the consequence ("wer nicht tippt, zahlt zuerst"), and goes
+ * stale with the window: a challenge whose time is up cannot be answered.
+ */
+export function estimateChallengePushes(input: {
+  groupId: string;
+  group: GroupInfo;
+  roundId: string;
+  stake: { description: string; amountMinor: number; currency: string };
+  poolUids: readonly string[];
+  actorUid: string;
+  /** The answer window, in minutes (5, 15 or 60). */
+  minutes: number;
+}): PendingPush[] {
+  const { group, stake } = input;
+  const body: PushText = {
+    key: "push.estimateChallenge",
+    vars: {
+      name: group.members[input.actorUid]?.displayName ?? "",
+      game: estimateGameName(),
+      stake: `${stake.description} · ${formatMoney(stake.amountMinor, stake.currency)}`,
+      minutes: input.minutes,
+    },
+  };
+  return [...new Set(input.poolUids)]
+    .filter((uid) => uid !== input.actorUid && hasAccount(group, uid))
+    .map((uid) => ({
+      uid,
+      event: "challenge",
+      title: { key: "push.challengeTitle", vars: { group: group.name } },
+      body: [body],
+      url: estimateRoundPath(input.groupId, input.roundId),
+      tag: `challenge-${input.roundId}`,
+      ttlSeconds: input.minutes * 60,
+    }));
+}
+
+/**
+ * "Gleichstand": a tie opened a Stechfrage, and only the players it concerns
+ * (`uids`, the stage's contenders) are asked to guess again. Sent as a turn, but
+ * without `unlessWatching` — nothing tracks who has the round page open yet.
+ */
+export function estimateStechenPushes(input: {
+  groupId: string;
+  group: GroupInfo;
+  roundId: string;
+  stageIndex: number;
+  uids: readonly string[];
+}): PendingPush[] {
+  const { group } = input;
+  return [...new Set(input.uids)]
+    .filter((uid) => hasAccount(group, uid))
+    .map((uid) => ({
+      uid,
+      event: "turn",
+      title: { key: "push.turnTitle" },
+      body: [
+        {
+          key: "push.estimateStechen",
+          vars: { game: estimateGameName(), group: group.name },
+        },
+      ],
+      url: estimateRoundPath(input.groupId, input.roundId),
+      tag: `estimate-stechen-${input.roundId}-${input.stageIndex}`,
+      // A tiebreaker from ten minutes ago is old news.
+      ttlSeconds: 10 * 60,
+    }));
+}
+
+/**
+ * "Letzte Chance": someone started the last call, so the players still without
+ * a guess (`uids`) have `minutes` left before the round is scored and they pay
+ * first. Its own tag, so it doesn't replace the Stechfrage push of the same stage.
+ */
+export function estimateLastCallPushes(input: {
+  groupId: string;
+  group: GroupInfo;
+  roundId: string;
+  stageIndex: number;
+  uids: readonly string[];
+  minutes: number;
+}): PendingPush[] {
+  const { group } = input;
+  return [...new Set(input.uids)]
+    .filter((uid) => hasAccount(group, uid))
+    .map((uid) => ({
+      uid,
+      event: "turn",
+      title: { key: "push.turnTitle" },
+      body: [
+        {
+          key: "push.estimateLastCall",
+          vars: { game: estimateGameName(), group: group.name, minutes: input.minutes },
+        },
+      ],
+      url: estimateRoundPath(input.groupId, input.roundId),
+      tag: `estimate-lastcall-${input.roundId}-${input.stageIndex}`,
+      // The last call lasts a couple of minutes; a later one is pointless.
+      ttlSeconds: 5 * 60,
+    }));
+}
+
+/**
+ * A scored round that could not book its bill (a payer left meanwhile): without
+ * this the loser escapes silently — the chat card has no amount and nobody is
+ * told. Goes to the round's creator (`actorUid`) and the group's managers with
+ * an account, who are asked to enter the expense by hand. `names` is the
+ * already-joined list of who pays, `description` what they pay for.
+ */
+export function estimateNotBookedPushes(input: {
+  groupId: string;
+  group: GroupInfo;
+  roundId: string;
+  /** The round's creator — told even when they are no manager. */
+  actorUid: string;
+  names: string;
+  description: string;
+}): PendingPush[] {
+  const { group } = input;
+  const body: PushText = {
+    key: "push.estimateNotBooked",
+    vars: { game: estimateGameName(), names: input.names, description: input.description },
+  };
+  return group.memberUids
+    .filter((uid) => uid === input.actorUid || isGroupManager(group.members[uid]?.role))
+    .map((uid) => ({
+      uid,
+      event: "challenge",
+      title: groupTitle(group),
+      body: [body],
+      url: estimateRoundPath(input.groupId, input.roundId),
+      tag: `estimate-notbooked-${input.roundId}`,
+      // Someone has to act on it by hand, so it stays around for a day.
+      ttlSeconds: DAY,
     }));
 }
 

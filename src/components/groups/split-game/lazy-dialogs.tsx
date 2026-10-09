@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { useT } from "@/components/locale-provider";
 import { gameLoaders } from "@/components/groups/split-game/game-loaders";
 
-// The picker and the sixteen split-game dialogs, each split into its own chunk.
+// The picker and the seventeen split-game dialogs, each split into its own chunk.
 // They used to be static imports of AddExpenseDialog, so every visit to a
 // group page downloaded every game — boards, bracket, online play, sound
 // — although most expenses are entered without one. Now a game's code loads
@@ -93,5 +93,9 @@ export const SplitDotsDialog = dynamic(() => gameLoaders.dots().then((m) => m.Sp
 });
 export const SplitFingerDialog = dynamic(
   () => gameLoaders.finger().then((m) => m.SplitFingerDialog),
+  { loading: GameLoading },
+);
+export const SplitEstimateDialog = dynamic(
+  () => gameLoaders.estimate().then((m) => m.SplitEstimateDialog),
   { loading: GameLoading },
 );

@@ -163,3 +163,192 @@ describe("useVisibleHeight", () => {
     expect(handle.listenerCount()).toBe(0);
   });
 });
+
+/**
+ * A real DOM frame inside a stage scroller, with the frame's top driven by a
+ * variable so a "scroll" can move it the way WebKit does when it brings a
+ * focused field into view.
+ */
+function mountFrame(top: { value: number }, withScroller = true) {
+  const scroller = document.createElement("div");
+  if (withScroller) scroller.setAttribute("data-slot", "stage-scroller");
+  const frame = document.createElement("div");
+  const form = document.createElement("form");
+  const input = document.createElement("input");
+  form.append(input);
+  frame.append(form);
+  scroller.append(frame);
+  document.body.append(scroller);
+  frame.getBoundingClientRect = () => ({ top: top.value }) as DOMRect;
+  form.scrollIntoView = vi.fn();
+  return { scroller, frame, form, input, ref: { current: frame } };
+}
+
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+
+describe("useVisibleHeight inside a stage scroller", () => {
+  afterEach(() => {
+    Object.defineProperty(window, "visualViewport", { value: undefined, configurable: true });
+    document.body.replaceChildren();
+    vi.restoreAllMocks();
+  });
+
+  it("re-measures when the scroller scrolls, with no viewport event", async () => {
+    // WebKit scrolls a focused field into view inside the scroller silently:
+    // the frame's top moves, visualViewport says nothing.
+    stubVisualViewport({ height: 320, offsetTop: 120 });
+    const top = { value: 200 };
+    const { scroller, ref } = mountFrame(top);
+    const { result } = renderHook(() => useVisibleHeight(ref));
+    expect(result.current).toBe(240);
+
+    top.value = 100;
+    await act(async () => {
+      scroller.dispatchEvent(new Event("scroll"));
+      await nextFrame();
+    });
+    // The frame bottom stays on the visible bottom (offsetTop + height = 440).
+    expect(result.current).toBe(320);
+  });
+
+  it("re-measures on focusin", async () => {
+    stubVisualViewport({ height: 320, offsetTop: 120 });
+    const top = { value: 200 };
+    const { input, ref } = mountFrame(top);
+    const { result } = renderHook(() => useVisibleHeight(ref));
+    expect(result.current).toBe(240);
+
+    top.value = 150;
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextFrame();
+    });
+    expect(result.current).toBe(290);
+  });
+
+  it("keeps the frame bottom at the visible bottom and never above the cap", async () => {
+    const handle = stubVisualViewport({ height: 320, offsetTop: 120 });
+    const top = { value: 200 };
+    const { scroller, ref } = mountFrame(top);
+    const { result } = renderHook(() => useVisibleHeight(ref));
+    for (const next of [200, 160, 120, -40]) {
+      top.value = next;
+      await act(async () => {
+        scroller.dispatchEvent(new Event("scroll"));
+        await nextFrame();
+      });
+      expect(result.current).toBeLessThanOrEqual(handle.viewport.height);
+      if (next >= 120) {
+        expect(next + result.current!).toBe(handle.viewport.offsetTop + handle.viewport.height);
+      }
+    }
+  });
+
+  it("scrolls the form into view two frames after the first resize that follows a focusin", async () => {
+    const handle = stubVisualViewport({ height: 664 });
+    const top = { value: 56 };
+    const { input, form, ref } = mountFrame(top);
+    renderHook(() => useVisibleHeight(ref));
+
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      await nextFrame();
+    });
+    // Focus alone does not scroll: the frame has not been resized yet.
+    expect(form.scrollIntoView).not.toHaveBeenCalled();
+
+    handle.viewport.height = 328;
+    await act(async () => {
+      handle.emit("resize");
+      await nextFrame();
+    });
+    expect(form.scrollIntoView).not.toHaveBeenCalled();
+    await act(async () => {
+      await nextFrame();
+      await nextFrame();
+    });
+    expect(form.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(form.scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+
+    // Only the first resize after a focus: the next one does nothing.
+    await act(async () => {
+      handle.emit("resize");
+      await nextFrame();
+      await nextFrame();
+      await nextFrame();
+    });
+    expect(form.scrollIntoView).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not scroll when focus left before the resize, or when revealFocused is off", async () => {
+    const handle = stubVisualViewport({ height: 664 });
+    const top = { value: 56 };
+    const { input, form, ref } = mountFrame(top);
+    const { rerender } = renderHook(
+      ({ reveal }) => useVisibleHeight(ref, { revealFocused: reveal }),
+      {
+        initialProps: { reveal: true },
+      },
+    );
+
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+      handle.emit("resize");
+      for (let i = 0; i < 3; i++) await nextFrame();
+    });
+    expect(form.scrollIntoView).not.toHaveBeenCalled();
+
+    rerender({ reveal: false });
+    await act(async () => {
+      input.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
+      handle.emit("resize");
+      for (let i = 0; i < 3; i++) await nextFrame();
+    });
+    expect(form.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("installs nothing extra without a scroller (the chat), and can be switched off", () => {
+    const top = { value: 56 };
+    const chat = mountFrame(top, false);
+    const added = vi.spyOn(chat.frame, "addEventListener");
+    const handle = stubVisualViewport({ height: 664 });
+    const { unmount } = renderHook(() => useVisibleHeight(chat.ref));
+    expect(added).not.toHaveBeenCalled();
+    expect(handle.listenerCount()).toBe(2);
+    unmount();
+    expect(handle.listenerCount()).toBe(0);
+
+    const staged = mountFrame(top);
+    const stagedAdded = vi.spyOn(staged.frame, "addEventListener");
+    renderHook(() => useVisibleHeight(staged.ref, { scroller: null }));
+    expect(stagedAdded).not.toHaveBeenCalled();
+  });
+
+  it("accepts another scroller selector", async () => {
+    stubVisualViewport({ height: 320 });
+    const top = { value: 100 };
+    const { scroller, ref } = mountFrame(top, false);
+    scroller.id = "custom";
+    const { result } = renderHook(() => useVisibleHeight(ref, { scroller: "#custom" }));
+    expect(result.current).toBe(220);
+    top.value = 50;
+    await act(async () => {
+      scroller.dispatchEvent(new Event("scroll"));
+      await nextFrame();
+    });
+    expect(result.current).toBe(270);
+  });
+
+  it("removes the scroller and focus listeners on unmount", () => {
+    stubVisualViewport({ height: 664 });
+    const { scroller, frame, ref } = mountFrame({ value: 56 });
+    const removedScroller = vi.spyOn(scroller, "removeEventListener");
+    const removedFrame = vi.spyOn(frame, "removeEventListener");
+    const { unmount } = renderHook(() => useVisibleHeight(ref));
+    unmount();
+    expect(removedScroller).toHaveBeenCalledWith("scroll", expect.any(Function));
+    expect(removedFrame).toHaveBeenCalledWith("focusin", expect.any(Function));
+    expect(removedFrame).toHaveBeenCalledWith("focusout", expect.any(Function));
+  });
+});
