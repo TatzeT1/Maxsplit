@@ -1226,6 +1226,8 @@ export const en: Dictionary = {
     estimateCloseCostLot: "A draw decides which of {{names}} pays — up to {{share}}.",
     estimateTimeNotUp: "Time to guess hasn't run out yet.",
     estimateBannerLastCall: "Last call — guess now!",
+    estimateTooManyPlayers: "Estimates takes at most {{max}} players.",
+    estimateLastCallButton: "Ring the last call",
     splitModeLabel: "Split",
     splitEqual: "Equal",
     splitShares: "Shares",

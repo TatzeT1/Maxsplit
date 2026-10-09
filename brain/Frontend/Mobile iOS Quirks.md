@@ -47,6 +47,37 @@ keyboard-safe fixed frame (chat) needs the _opposite_: a definite height, not "g
 > making the bug worse. `useVisibleHeight` pins the frame to a definite, measured height
 > instead — that's the only correct fix for this class of problem.
 
+### Rule 2 applied: the Schätzfragen guess screen
+
+The one-phone game dialog and the online round page both end in a number field, which makes them
+the second keyboard-heavy screen after [[Chat]] — and the hard case, because the field sits inside
+the game stage's scroller (`[data-slot="stage-scroller"]`), not on a free-standing page.
+`EstimateGuessPanel` (`split-game/estimate/estimate-guess-input.tsx`) therefore follows the rule
+to the letter:
+
+- **One keyboard frame.** The compact question card, the field with its echo line, the range
+  hint and the lock button live in **one** wrapper, sized with `maxHeight: visibleHeight`
+  (`useVisibleHeight`), **never `height`** and never bottom padding. Without a keyboard the frame
+  keeps its natural height; with one it is capped at the visible band. The question card is the
+  part that shrinks and scrolls (`min-h-0 flex-1 overflow-y-auto`); the field and the button are
+  `shrink-0`, so the button is always above the keyboard. Seats, countdown and everything else go
+  _after_ the frame. This is the "definite height, not padding" rule above, applied: a definite
+  cap on the frame instead of a taller document.
+- **A text field inside a scroller.** On focus WebKit scrolls it into view inside every
+  scrollable ancestor **without any viewport event**: the frame's top moves while `visualViewport`
+  stays silent, so the measured bottom goes stale — under the keypad. `useVisibleHeight` has a
+  `scroller` option (default: the stage scroller) that re-measures on the scroller's `scroll` and
+  on `focusin`, and a `revealFocused` option that scrolls the form into view once the frame has
+  been resized. A frame with no such ancestor (the chat) installs none of it.
+- **iPhone number pads have no Return key.** `inputMode="decimal"` (`"numeric"` for a year) shows
+  a pad without one, and `enterKeyHint` does nothing there. The form's only submit is its button,
+  which must therefore be visible with the pad open — which the single frame guarantees. The field
+  is a plain text input (`type="text"` with `inputMode`), because the locale-aware parser
+  (`parseEstimateInput`) reads what was typed itself — a comma, a grouped "1.000" — instead of
+  leaving it to the browser's `type="number"`.
+- **16 px (Rule 1)** comes from the shared `Input` (`text-base md:text-sm`); no autofocus either,
+  since a shared phone must not pop the keyboard up on a hand-over.
+
 ## Push and offline on iOS
 
 - **Push only for the home-screen app** (iOS 16.4+). In a Safari tab `PushManager` isn't

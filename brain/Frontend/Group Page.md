@@ -6,7 +6,8 @@ tags: [frontend, design, group-page, layout]
 
 Route: `/groups/[groupId]` → `GroupDetailClient` (`src/components/groups/group-detail-client.tsx`).
 Pieces: `balance-hero.tsx`, `activity-feed.tsx`, `balances-tab.tsx`, `games-tab.tsx`,
-`group-settings-tab.tsx`, `chat-entry-card.tsx`, `tournament-banner.tsx`, and the generic
+`group-settings-tab.tsx`, `chat-entry-card.tsx`, `tournament-banner.tsx`,
+`luck-round-banner.tsx`, `estimate-round-banner.tsx`, and the generic
 `src/components/ui/tabs.tsx`.
 
 ## Why it looks like this
@@ -21,7 +22,7 @@ often each thing is needed:
 ```
 header        ← back · icon · name · member stack ("5 Mitglieder · EUR" → Gruppe tab)
 BalanceHero   where *you* stand, printed as a till receipt, with settle-up actions
-banner        only while a tournament or an online luck round runs (time-critical, above the tabs)
+banner        only while a tournament, an online luck round or an online Schätzfragen round runs (time-critical, above the tabs)
 ChatEntryCard stays visible with the last message — the group uses chat regularly
 tabs          Ausgaben (default) · Salden · Spiele · Gruppe   (sticky, pinned band)
 action bar    "Ausgabe hinzufügen" + "Zahlung", sticky under the thumb
@@ -74,6 +75,15 @@ Each line carries its own actions — pay/GiroCode/record on "you owe", remind/s
 GiroCode on "owes you"; see [[Balances and Settlements]].
 
 ## Banner and toasts
+
+`EstimateRoundBanner` (Schätzfragen, ADR-007) sits right after the luck banner. The group
+document says _that_ a round runs (`activeEstimateRound`), so a group without one costs no extra
+listener; only then does the banner read the round, to say what is wanted from _you_: "Gib deinen
+Tipp ab!" (primary ring), "Letzte Chance — jetzt tippen!", "Zeit abgelaufen — auswerten",
+"Stechfrage läuft" or "x von y Tipps". A failed listener is a bordered error, never "nothing
+running"; a pointer to a finished or cancelled round draws nothing; a round this device cannot
+read yet (loading, or no cached copy offline) draws the title alone — the pointer is real. See
+[[Split Games]] and [[Offline Mode]].
 
 An archived group shows `ArchivedBanner` above the balance receipt on every tab — why it left
 the list, and (for managers) "Zurückholen". "Gruppe archivieren" lives in the Gruppe tab's

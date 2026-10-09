@@ -58,7 +58,23 @@ Pattern]]), so there is nothing to queue, and every button that saves is disable
      state, which AGENTS.md forbids.
 
 Game pages (`tournament-page-client.tsx`) show `NeedsConnection` whenever offline: every
-move goes through the server, and it keeps the runner from calling `openOnlineMatch`.
+move goes through the server, and it keeps the runner from calling `openOnlineMatch`. The
+Schätzfragen round page does the same for _any_ offline state — a cached guessing stage is stale
+by definition, and it would sit under the offline banner with its ✕ covered; "online but the
+cache is empty" (a round never opened here) is `NeedsConnection` too, never "not found" or a
+skeleton. A finished round stays readable offline from the cached expense and chat card.
+
+**🎯 Schätzfragen is the one game whose _one-phone_ mode needs a connection.** The question comes
+from the server-only bank (ADR-006), so `createLocalEstimateRound` is a Server Action; every other
+one-phone game works offline, this one cannot start. The tile stays in the picker (a game that
+vanished offline would read as a bug), and the explanation lives in the **preview**
+(`needsConnection` in the catalog): a `role="alert"` line, "Los geht's" disabled, no prefetch,
+no "Überrasch mich", no "Zuletzt gespielt" shortcut while offline — the lazy dialog chunk may not
+exist on a device that never opened the game, and a failed import would land in the error
+boundary and take the half-typed expense form with it. The dialog's own setup step keeps its alert
+for a connection that drops _after_ the chunk loaded. Once a round runs, losing the connection
+costs nothing: the hidden guesses are in memory, only the start and the final submit
+(`submitLocalEstimateGuesses`, safe to retry) need the network.
 
 ## Writes while offline
 

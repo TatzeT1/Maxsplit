@@ -27,7 +27,9 @@ import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { formatDate, formatTime } from "@/lib/format/date";
 import { gameResultSentence } from "@/lib/chat/game-result";
+import { EstimateChatLines } from "@/components/groups/split-game/estimate/estimate-chat-lines";
 import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
+import { estimateRoundPath, gameRoundPath } from "@/lib/games/round-paths";
 import { SPLIT_GAME_META } from "@/lib/games/split-game-ids";
 import { useVisibleHeight } from "@/lib/use-visible-height";
 import { avatarGradient, cn } from "@/lib/utils";
@@ -46,7 +48,7 @@ function dayKey(iso: string): string {
   return iso.slice(0, 10);
 }
 
-function MessageBubble({
+export function MessageBubble({
   message,
   senderName,
   isOwn,
@@ -144,6 +146,15 @@ function MessageBubble({
             href={`/groups/${groupId}/rounds/${message.luckInvite.roundId}`}
             isOwn={isOwn}
           />
+        ) : message.estimateInvite ? (
+          <GameInviteBubble
+            text={message.text}
+            emoji={SPLIT_GAME_META.estimate.emoji}
+            title={t(SPLIT_GAME_META.estimate.nameKey)}
+            eyebrow={t("chat.luckInviteEyebrow")}
+            href={estimateRoundPath(groupId, message.estimateInvite.roundId)}
+            isOwn={isOwn}
+          />
         ) : message.gameResult ? (
           <GameResultBubble
             result={message.gameResult}
@@ -172,8 +183,8 @@ function MessageBubble({
 }
 
 /**
- * The invitation an online game posts when it starts — a duel's challenge or
- * a luck round — as a card with a way in, not just a sentence, since joining
+ * The invitation an online game posts when it starts — a duel's challenge, a
+ * luck round or an estimate round — as a card with a way in, not just a sentence, since joining
  * is the whole point of the message. Same neutral card for both sides; only
  * the button label changes.
  */
@@ -275,11 +286,12 @@ function GameResultBubble({
         )}
       </div>
       <p className="text-sm font-medium break-words">{sentence}</p>
+      {result.estimate && <EstimateChatLines summary={result.estimate} />}
       <Button asChild size="sm" variant="outline" className="h-10 w-full">
         <Link
           href={
             result.roundId
-              ? `/groups/${groupId}/rounds/${result.roundId}`
+              ? gameRoundPath(groupId, result.gameId, result.roundId)
               : result.tournamentId
                 ? `/groups/${groupId}/tournaments/${result.tournamentId}`
                 : `/groups/${groupId}?tab=games`

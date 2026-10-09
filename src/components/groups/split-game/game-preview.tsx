@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useT } from "@/components/locale-provider";
 import { isDuelGameId } from "@/lib/games/duel-game-ids";
 import { springs } from "@/lib/motion";
+import { useOnline } from "@/lib/use-online";
 import type { SplitGameInfo } from "@/components/groups/split-game/game-catalog";
 import { GameTileImage } from "@/components/groups/split-game/game-tile-image";
 
@@ -27,6 +28,9 @@ export function SplitGamePreview({
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
+  const online = useOnline();
+  // The picker disables "Los geht's" on the same condition; this says why, visibly.
+  const needsConnection = !online && game.needsConnection === true;
 
   return (
     <div className="flex flex-col gap-4">
@@ -63,6 +67,11 @@ export function SplitGamePreview({
         </span>
         <p className="text-sm leading-relaxed">{t(game.howKey)}</p>
       </div>
+      {needsConnection && (
+        <p role="alert" className="text-destructive text-sm">
+          {t("expenses.estimateNeedsConnection")}
+        </p>
+      )}
       {/* Only a duel scales to a bigger group through the ladder; „Finger drauf!“ seats everyone at once. */}
       {isDuelGameId(game.id) && (
         <div className="bg-muted/40 flex gap-3 rounded-xl border p-3">

@@ -46,6 +46,14 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
     nudges/{matchId} → read, write: false — "Anstupsen"'s server-side rate limit.
   luckRounds/{id}    → read: isGroupMember(groupId). write: false. Online scratch cards (ADR-005);
                        no hidden state — a card is drawn when it's scratched. Needs deploying.
+  estimateRounds/{id} → read: isGroupMember(groupId). write: false. Schätzfragen rounds (ADR-007);
+                       the public document holds a stage's truth only once it is revealed.
+                       Needs deploying before first use.
+    secrets/{stage}  → read, write: false — the full bank row and the hidden guesses. Rules do not
+                       cascade, so it has its own block: a member who could read it would see the
+                       answer before guessing.
+  estimateState/{id} → read, write: false — the seen-set (a member who could read it would learn
+                       which questions are coming) and the creation log. Needs deploying.
 
 pushSubscriptions/{id} → read, write: false — devices' push endpoints and keys, server-only.
 
@@ -54,6 +62,14 @@ pushSubscriptions/{id} → read, write: false — devices' push endpoints and ke
 
 Every subcollection re-checks `isGroupMember(groupId)` independently rather than inheriting
 from the parent — Firestore rules don't cascade, each `match` block is self-contained.
+
+> [!warning] The Schätzfragen blocks must be deployed before first use
+> `pnpm exec firebase deploy --only firestore:rules` (the ADR-005 precedent). Until then the
+> round page shows a permission error (a visible error state, never a skeleton) and the group
+> banner an error line; the group page itself keeps working, since it only reads the pointer on
+> the group document. `firestore.rules.test.ts` pins that no client can read `secrets` or
+> `estimateState`, and none can write anything. The rows of the bank are public in the repository
+> either way (ADR-006); the rules keep the _truth out of the app_ until the reveal.
 
 ## The ban backstop, specifically
 

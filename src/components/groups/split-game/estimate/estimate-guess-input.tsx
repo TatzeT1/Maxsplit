@@ -67,6 +67,12 @@ const PROBLEM_KEYS: Record<EstimateGuessProblem, TranslationKey> = {
  *
  * Locking calls `onLock(milli)` and then clears the field and blurs it, so a
  * guess never survives on screen or in the browser's form history.
+ *
+ * `keepOnError` is for an online lock, which is one's OWN phone and can fail
+ * (no signal, a closed stage): the typed value then stays in the field, so a
+ * retry is one tap rather than retyping. The parent unmounts the panel when the
+ * lock succeeded (the guess is then on the server, not on screen); the field is
+ * still blurred. One phone passes nothing: the next player must not see it.
  */
 export function EstimateGuessPanel({
   question,
@@ -76,6 +82,7 @@ export function EstimateGuessPanel({
   busy = false,
   disabledReason = null,
   error = null,
+  keepOnError = false,
   onLock,
 }: {
   question: EstimatePublicQuestion;
@@ -88,6 +95,8 @@ export function EstimateGuessPanel({
   disabledReason?: string | null;
   /** The parent's own failure (a rejected action), shown as an alert under the button. */
   error?: string | null;
+  /** Keep the typed value after `onLock`, so a failed online lock needs no retyping; the parent unmounts the panel on success. */
+  keepOnError?: boolean;
   onLock: (milli: number) => void;
 }) {
   const t = useT();
@@ -169,10 +178,12 @@ export function EstimateGuessPanel({
       return;
     }
     onLock(parsed.milli);
-    // Shared-phone privacy: no value outlives the lock, on screen or in the field.
-    setText("");
-    setSettled(false);
-    setAnnouncedEcho("");
+    if (!keepOnError) {
+      // Shared-phone privacy: no value outlives the lock, on screen or in the field.
+      setText("");
+      setSettled(false);
+      setAnnouncedEcho("");
+    }
     lockingRef.current = true;
     inputRef.current?.blur();
     lockingRef.current = false;

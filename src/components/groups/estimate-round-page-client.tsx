@@ -657,6 +657,7 @@ function EstimateRoundBody({
                     busy={busy}
                     disabledReason={online ? null : t("expenses.estimateNeedsConnection")}
                     error={noticeHere?.kind === "error" ? noticeHere.text : null}
+                    keepOnError
                     onLock={(milli) => void lock(milli)}
                   />
                 ) : (
@@ -862,7 +863,7 @@ function CloseControl({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogTrigger asChild>
         <Button type="button" size="lg" disabled={!online || busy}>
-          {lastCallAction ? t("expenses.estimateLastCallConfirm") : t("expenses.estimateCloseNow")}
+          {lastCallAction ? t("expenses.estimateLastCallButton") : t("expenses.estimateCloseNow")}
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

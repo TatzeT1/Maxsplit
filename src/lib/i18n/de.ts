@@ -1241,6 +1241,8 @@ export const de = {
     estimateCloseCostLot: "Das Los entscheidet, wer von {{names}} zahlt — bis zu {{share}}.",
     estimateTimeNotUp: "Die Zeit zum Tippen läuft noch.",
     estimateBannerLastCall: "Letzte Chance — jetzt tippen!",
+    estimateTooManyPlayers: "Bei Schätzfragen können höchstens {{max}} Leute mitspielen.",
+    estimateLastCallButton: "Letzte Chance einläuten",
     splitModeLabel: "Aufteilung",
     splitEqual: "Gleich",
     splitShares: "Anteile",

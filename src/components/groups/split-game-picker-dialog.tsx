@@ -24,6 +24,7 @@ import { preloadSplitGame } from "@/components/groups/split-game/game-loaders";
 import { SplitGamePreview } from "@/components/groups/split-game/game-preview";
 import { GameTileImage } from "@/components/groups/split-game/game-tile-image";
 import { readRecentGames } from "@/lib/games/game-memory";
+import { useOnline } from "@/lib/use-online";
 
 export type { SplitGameId } from "@/components/groups/split-game/game-catalog";
 
@@ -38,6 +39,13 @@ export type { SplitGameId } from "@/components/groups/split-game/game-catalog";
  * Above the grid: the games this group picked last on this device, which
  * start straight away (they need no explaining), and "Überrasch mich", which
  * opens the preview of a random game.
+ *
+ * A game that `needsConnection` (its questions come from the server, and its
+ * chunk may never have been fetched on this device) stays on the grid while
+ * offline, so it never looks like a bug that it vanished — but its preview says
+ * why it can't start, "Los geht's" is disabled, nothing is preloaded, "Überrasch
+ * mich" never picks it and the "Zuletzt gespielt" shortcut (which skips the
+ * preview) leaves it out.
  */
 export function SplitGamePickerDialog({
   open,
@@ -53,6 +61,7 @@ export function SplitGamePickerDialog({
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
+  const online = useOnline();
   const [selectedId, setSelectedId] = useState<SplitGameId | null>(null);
   const [surprised, setSurprised] = useState(false);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -61,9 +70,11 @@ export function SplitGamePickerDialog({
   const recentGames = useMemo(
     () =>
       open
-        ? readRecentGames(groupId).flatMap((id) => SPLIT_GAMES.filter((game) => game.id === id))
+        ? readRecentGames(groupId).flatMap((id) =>
+            SPLIT_GAMES.filter((game) => game.id === id && (online || !game.needsConnection)),
+          )
         : [],
-    [open, groupId],
+    [open, groupId, online],
   );
 
   // A recent tile skips the preview, so its chunk should already be on its way.
@@ -72,8 +83,9 @@ export function SplitGamePickerDialog({
   }, [recentGames]);
 
   function openPreview(id: SplitGameId, bySurprise = false) {
-    // The games load on demand; fetch this one while its preview is read.
-    preloadSplitGame(id);
+    // The games load on demand; fetch this one while its preview is read
+    // (offline there is nothing to fetch, and the game can't start anyway).
+    if (online || !splitGameInfo(id).needsConnection) preloadSplitGame(id);
     setDirection(1);
     setSurprised(bySurprise);
     setSelectedId(id);
@@ -82,7 +94,9 @@ export function SplitGamePickerDialog({
   /** Any game but the one on screen and, where possible, the last one played. */
   function surprise() {
     const avoid = new Set([selectedId, recentGames[0]?.id]);
-    const candidates = SPLIT_GAMES.filter((game) => !avoid.has(game.id));
+    const candidates = SPLIT_GAMES.filter(
+      (game) => !avoid.has(game.id) && (online || !game.needsConnection),
+    );
     const pick = candidates[Math.floor(Math.random() * candidates.length)];
     openPreview(pick.id, true);
   }
@@ -102,7 +116,7 @@ export function SplitGamePickerDialog({
   }
 
   function startSelectedGame() {
-    if (!selectedId) return;
+    if (!selectedId || startBlocked) return;
     const id = selectedId;
     // Reset now: the parent closes this dialog by flipping `open` itself,
     // which — unlike a user-initiated close — never runs `onOpenChange`.
@@ -112,6 +126,8 @@ export function SplitGamePickerDialog({
   }
 
   const selectedGame = selectedId ? splitGameInfo(selectedId) : null;
+  // Read live: a connection that drops while the preview is open blocks the start too.
+  const startBlocked = !online && !!selectedGame?.needsConnection;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -245,6 +261,7 @@ export function SplitGamePickerDialog({
               size="lg"
               className="flex-1"
               autoFocus
+              disabled={startBlocked}
               onClick={startSelectedGame}
             >
               {t("expenses.gamePreviewStart")}

@@ -2,7 +2,7 @@
 tags: [feature, split-games, fun]
 ---
 
-# Split Games (🎲🎡🎰🎫🎈🦆🥃🎱 · ⭕🔴🧠⚡✊🥢✏️ · ☝️)
+# Split Games (🎲🎡🎰🎫🎈🦆🥃🎱 · ⭕🔴🧠⚡✊🥢✏️ · ☝️ · 🎯)
 
 Picker: `src/components/groups/split-game-picker-dialog.tsx`. Shared "luck" engine:
 `src/lib/games/` (`use-sequential-draw.ts`, `random.ts`, `member-colors.ts`) and
@@ -16,14 +16,15 @@ Shared "skill" engine (the seven duel games — see below): `src/lib/games/knock
 [[#The second batch: seven more games (2026-10)]]; fairness, statistics, rematch, nudges and
 the online scratch cards in [[#Round three: fairness, record, rematch, online luck (2026-10)]];
 the per-payer catch moment with the amount on the slip in
-[[#Round four: polish for the luck games, a luck index, a new game (2026-10)]].
+[[#Round four: polish for the luck games, a luck index, a new game (2026-10)]]; the knowledge
+game, one phone or online, in [[#Round five: Schätzfragen (🎯)]].
 
 ## What it is
 
 A family of gamified alternatives to manually choosing a split, all reachable from the same
 "🎮 Spiel" button in `add-expense-dialog.tsx`: tapping it opens `SplitGamePickerDialog`, a
 two-category tile picker (see [[#The picker: two categories and a preview step]]), which hands
-off to one of sixteen game dialogs. Every game is, like [[Split Lottery]] before it, purely a
+off to one of seventeen game dialogs. Every game is, like [[Split Lottery]] before it, purely a
 **front-end input mechanism** that flows through the same `resolveExpense` / `buildSplits`
 pipeline as a manually-entered split (see [[Expenses and Splitting]]) — none of them bypass or
 duplicate the money-invariant logic. All of them but the slot machine resolve to a plain list
@@ -32,10 +33,10 @@ The slot machine is the exception — see below.
 
 The games split into two categories, each with its own resolution engine:
 
-| Category                | Games                                                                                                                                  | How "who pays" is decided                                                                              |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Glücksspiele** (luck) | 🎲 Lottery, 🎡 Wheel, 🎰 Slot, 🎫 Scratch, 🎈 Ballon, 🦆 Entenrennen, 🥃 Würfelbecher, 🎱 Kugelfall                                    | A crypto-random draw — `useSequentialDraw`, or the game's own hidden-odds engine (slot, balloon, dice) |
-| **Minispiele** (skill)  | ⭕ Tic-Tac-Toe, 🔴 Vier gewinnt, 🧠 Memory-Duell, ⚡ Reaktionsduell, ✊ Schnick-Schnack-Schnuck, 🥢 Streichholz-Duell, ✏️ Käsekästchen | A 1-vs-1 duel, scaled to any pool size by a knockout ladder — see below                                |
+| Category                | Games                                                                                                                                                                     | How "who pays" is decided                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Glücksspiele** (luck) | 🎲 Lottery, 🎡 Wheel, 🎰 Slot, 🎫 Scratch, 🎈 Ballon, 🦆 Entenrennen, 🥃 Würfelbecher, 🎱 Kugelfall                                                                       | A crypto-random draw — `useSequentialDraw`, or the game's own hidden-odds engine (slot, balloon, dice)              |
+| **Minispiele** (skill)  | ⭕ Tic-Tac-Toe, 🔴 Vier gewinnt, 🧠 Memory-Duell, ⚡ Reaktionsduell, ✊ Schnick-Schnack-Schnuck, 🥢 Streichholz-Duell, ✏️ Käsekästchen, ☝️ Finger drauf!, 🎯 Schätzfragen | A 1-vs-1 duel, scaled to any pool size by a knockout ladder — or, for the whole-table games, one round for everyone |
 
 | Game                       | Dialog                          | Mechanic                                                                                        |
 | -------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -55,10 +56,13 @@ The games split into two categories, each with its own resolution engine:
 | 🥢 Streichholz-Duell       | `split-nim-dialog.tsx`          | Misère Nim on 1·3·5·7 under a shrinking fuse, with one joker each — last match loses            |
 | ✏️ Käsekästchen            | `split-dots-dialog.tsx`         | 4×4 dots, 9 boxes (odd — no tie); closing a box earns another move                              |
 | ☝️ Finger drauf!           | `split-finger-dialog.tsx`       | Everyone rests a finger at once and lifts on a random-delay „LOS!“ — too early or slowest pays  |
+| 🎯 Schätzfragen            | `split-estimate-dialog.tsx`     | One numeric question, everyone guesses in secret; the furthest off pay. One phone or online     |
 
 Since round four the Minispiele also hold ☝️ Finger drauf!, the first skill game that is not a
 duel: the whole table plays it at once on one phone, so it has no ladder, tournament or online
-mode — see [[#Finger drauf! (☝️)]].
+mode — see [[#Finger drauf! (☝️)]]. 🎯 Schätzfragen is the second: a knowledge game that is
+played on one phone _or_ online, and the only one whose tile needs a connection to start — see
+[[#Round five: Schätzfragen (🎯)]].
 
 ## The shared draw engine (wheel + scratch)
 
@@ -461,7 +465,7 @@ One game runs per group at a time (unchanged `createTournament` rule).
 
 ## Loaded on demand
 
-The picker and all sixteen game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
+The picker and all seventeen game dialogs are lazy chunks (`split-game/lazy-dialogs.tsx`,
 `next/dynamic`) — before 2026-09 they were static imports of `AddExpenseDialog`, so every
 group page shipped every game. `AddExpenseDialog` mounts the picker, and each game, the first
 time it's opened and then **keeps it mounted**: a duel game holds its running tournament
@@ -490,7 +494,8 @@ unclear. It's now a two-step flow, driven entirely by one table
    pools bigger than two. "Los geht's" then hands off to that game's own dialog exactly as
    before; "Zurück" (or Escape) returns to the grid.
 
-Adding another game later means adding one row to `SPLIT_GAMES` plus its translation keys (and, for the dialog, a `gameLoaders` entry and a mount in `add-expense-dialog.tsx`) — the
+A row may carry `needsConnection: true` (Schätzfragen): the picker and the preview then say so and
+disable "Los geht's" while offline — see [[Offline Mode]]. Adding another game later means adding one row to `SPLIT_GAMES` plus its translation keys (and, for the dialog, a `gameLoaders` entry and a mount in `add-expense-dialog.tsx`) — the
 picker itself doesn't change. The id also goes into `SplitGameId` (`lib/types.ts`),
 `SPLIT_GAME_IDS` and `SPLIT_GAME_META` (`lib/games/split-game-ids.ts`, emoji + name for
 places that only name a game); a test pins catalog and meta to each other.
@@ -556,13 +561,13 @@ second player is bumped to the opposite side of the palette wheel.
 
 ## The `viaLottery` flag, now shared
 
-All sixteen games set `Expense.viaLottery = true` when their result is applied (and since
+All seventeen games set `Expense.viaLottery = true` when their result is applied (and since
 2026-10 `Expense.game` — which game, who played, which attempt; see
 [[#Round three: fairness, record, rematch, online luck (2026-10)]]) — the field name is
 a holdover from when the lottery was the only game (see [[Data Model]]), but its actual meaning
 has always been closer to "resolved via a split mini-game", so the existing
 `computeLotteryTotals` leaderboard (now the group page's Spiele tab, `games-tab.tsx` — see
-[[Group Page]]) already aggregates across all sixteen games
+[[Group Page]]) already aggregates across all seventeen games
 with zero code changes needed. Renaming the field would mean migrating live Firestore data for
 a purely cosmetic win, so it stays `viaLottery`. One side effect worth knowing: the leaderboard's
 title ("Wer hat wie viel vergambelt?") now also counts skill-game losses, which reads slightly
@@ -1237,7 +1242,138 @@ nobody waiting for the phone to come round, which is what the owner wanted from 
   hands on a phone on a table, „LOS!“ in the middle, the bottom-right quarter left to the badge)
   and rasterised with Chromium to a 390 px JPEG.
 
+## Round five: Schätzfragen (🎯)
+
+ADR-006 (the bank) and ADR-007 (the rounds) in `docs/DECISIONS.md`. Rules:
+`src/lib/games/estimate-input.ts` (everything a client may import: constants, the locale-aware
+parser, formatters, the exact distance comparison) and `estimate-rules.ts` (the classifier and the
+Stechen state machine, server and lazy audit table only), `estimate-axis.ts` (number-line display
+math), `estimate-audit.ts` (build and replay). Server: `src/lib/actions/estimate-rounds.ts`. Bank:
+`src/lib/games/estimate-bank/`. UI: `split-estimate-dialog.tsx` (one phone and the online start),
+`estimate-round-page-client.tsx` and `estimate-round-banner.tsx` (online), and
+`split-game/estimate/*` (question card, guess panel, hand-over, seats, countdown, reveal with the
+number line, chat lines, audit table, invite card). Tile `public/game-tiles/estimate.jpg`.
+
+One numeric question — "Wie hoch ist die Zugspitze?" — everyone types a number in secret, then
+the truth lands on a number line and the _k_ furthest off pay. It is the first game where
+knowledge, not chance or reflexes, decides who pays.
+
+- **A fourth id group.** `QuizGameId` (`types.ts`, `QUIZ_GAME_IDS` in `split-game-ids.ts`), part
+  of `SplitGameId`. Not `TableGameId`: that group is documented as having no online play, and a
+  round here has it. Like the table games it sits in the "Minispiele" section, and
+  `isLuckGameId` leaves it out of the Glücks-Index by construction; it is never called "Pech".
+- **One model for one phone and online.** `groups/{g}/estimateRounds/{r}` is the public round
+  (members read it live, only Server Actions write it); `secrets/{stageIndex}` holds the full bank
+  row and the hidden guesses (nobody can read or write it); `groups/{g}/estimateState/seen` holds
+  seen question ids and the creation log (server-only too). The bank cannot live on a client, so
+  even a one-phone table gets its question from `createLocalEstimateRound`: **starting needs a
+  connection** ([[Offline Mode]]). The truth reaches the public document only in the transaction
+  that reveals a stage; no error code or action result carries a value before that.
+- **One phone.** The dialog (`useLocalEstimateFlow`) hands the phone round: `EstimateHandOver`
+  ("Handy an Lea", "Ich bin Lea"), the guess panel for one seat, a locked-in slip, the next seat.
+  The guesses live in memory until `submitLocalEstimateGuesses` sends all of them at once — a
+  subset would let a client peek by reading the reveal — and only the device owner (the round's
+  creator) may send. An identical resend of an already revealed stage answers the same round, so
+  a lost response cannot strand the table. "Auflösung zeigen" and "Nochmal versuchen" are disabled
+  offline; a dropped connection mid-round loses nothing (`estimateKeepOpen`). Placeholders may
+  play. The round books nothing: the payers go back through `onResolve(losers, order, {
+estimateRoundId })`, the form builds the equal exact split, and `addExpense` may **claim** the
+  round (below).
+- **Online.** Only members with an account. The setup step offers "Online" for a new bill with an
+  answer window of 5 / 15 / 60 minutes (default 5). `createEstimateRound` draws the question,
+  shuffles the order, posts an `estimateInvite` card (it says the deadline and "wer nicht tippt,
+  zahlt zuerst"), sets `Group.activeEstimateRound` and pushes the pool. Everyone guesses on
+  `/groups/[groupId]/estimate/[roundId]` (`EstimateRoundPageClient`), sees _who_ has locked a guess
+  (`submitted`, never the values) and a countdown; the creator gets `EstimateInviteCard`
+  (WhatsApp, copy link, `/play/[groupId]/estimate/[roundId]`) until somebody has guessed. The
+  guess that completes the stage reveals it **in the same transaction** and, if it decides the
+  round, books the bill (`buildGameExpense`, `autoBook`), posts the result card and clears the
+  pointer. `EstimateRoundBanner` on the group page reads the pointer, then the round: "Gib deinen
+  Tipp ab!" / "Letzte Chance — jetzt tippen!" / "Zeit abgelaufen — auswerten" / "Stechfrage läuft" /
+  "x von y Tipps". The page
+  is `NeedsConnection` for any offline state — a stale guessing stage is stale by definition.
+- **Scoring is exact and mixed.** All values are integer milli-units (`parseEstimateInput`
+  reads what the player typed in their locale: `de "1.000"` is 1000, `en "1,000"` is 1000, and the
+  echo line under the field shows exactly what will be sent, with a hint when the other reading
+  is possible). Quantities are `ratio` rows: the error is the factor `hi / lo`, compared by BigInt
+  cross-multiplication, so "Faktor 2 zu niedrig" and "Faktor 2 zu hoch" are equally far off and
+  no logarithm is ever evaluated. Years, temperatures and percentages are `interval` rows
+  (`|guess − truth|`). The guess range is a closed table per unit class (`ESTIMATE_BOUNDS`), never
+  a per-row range, so it does not hint at the value.
+- **Ties and the Stechfrage.** Two guesses are tied when the truth's own uncertainty band could
+  flip their order (a row's optional `tolerance`: the sources disagree by a little) or when they
+  are equal. `classifyEstimate` sorts every player by _possible rank_: pays for certain iff at
+  most _k − 1_ others can be at least as far, safe for certain iff at least _k_ others are
+  certainly further, otherwise contested. The contested play a **Stechfrage** — a fresh question,
+  preferring a row with no tolerance — and the strict facts so far travel along as `precedes`
+  ("further" before "closer"), so a stage can never let a certainly further player off while a
+  closer one pays. At most three Stechfragen (`ESTIMATE_MAX_STECHEN`); then `secureShuffle`
+  decides, again respecting `precedes` (`lotPicks`). The lot also decides at once if every
+  contested player is absent, or if the bank has no further question. The reveal shows a
+  tolerance note (`bandTie`) when a band, not an exact tie, kept two players level. The takeover
+  "Stechfrage!" reuses `DiceStechenTakeover` with its own stamp and caption.
+- **Absence costs money, with a last call.** An online player with no guess ranks furthest and
+  pays first — the owner's call, unlike [[#Rubbellos online]], where nothing punishes absence.
+  Safeguards: the guessing ends early only when everyone has locked a guess; nobody guesses for
+  another player; the invite, push and page state the deadline and the cost; and "Jetzt
+  auswerten" (an entrant, the creator or a manager, after the window plus 5 s grace) names who
+  is absent and does **not** score the first time — it starts the **last call** ("Letzte Chance":
+  two more minutes and a push to the absent), and the next call after that scores. Absent
+  players never get a Stechfrage. Nothing runs on a timer: a round nobody closes just sits.
+  Cancelling is for the creator or a manager, and only while nobody has locked a guess (one phone:
+  the creator, any time).
+- **The reveal.** `EstimateRevealView`: the guesses drop as pins onto the number line in seat order,
+  then the truth lands, then the ranking appears with errors in words ("Faktor 2,5 zu niedrig", "3 Jahre zu hoch"),
+  the source label (attribution) and the definition, and — online — how long each player took
+  (`answeredAfterMs`, the open-book deterrent). Each payer gets the shared catch slip through
+  `useCatchFlashes`, with their share of the bill.
+- **Audit.** The expense carries `game.estimate` (`EstimateAudit`): per stage the question id and
+  text, truth, unit, scale, tolerance, `asOf`, source label and URL, definition, every guess and
+  who typed it, the lot order, and the booked money. `replayEstimateAudit` re-derives the payers
+  from that alone, per `rulesVersion`; `compareEstimateAuditToExpense` checks the live expense
+  (payers and the equal split; tolerant of a placeholder claimed after booking). The expense
+  detail mounts `EstimateAuditTable` lazily (`next/dynamic`, the classifier stays out of the group
+  page's chunk) as "Protokoll anzeigen" with a check line. It proves the **arithmetic**, not that
+  a one-phone table guessed honestly: the device owner types every guess and the table says so
+  ("Tipps eingegeben am Handy von …"). The wording never says "verified".
+- **The claim.** A finished one-phone round can be attached to the expense that books it
+  (`ExpenseGameInput.estimateRoundId`, never stored): `isClaimableEstimateRound` demands the
+  booker's own, one-phone, finished, unclaimed round, at most two hours old, an `exact` split
+  that equals `splitEqual` of the amount among exactly the round's payers, and the table's
+  players. Anything else books a plain game record without an audit. A race between two claims
+  fails the batch (`lastUpdateTime`, `invalid-game`). `editExpense` keeps a server-written audit
+  only while the split stays the equal split among the same payers.
+- **The bank.** Plaintext rows in a **public** repository, server-only for _clients_: nobody
+  can read a truth out of the app before the reveal, but anyone can read it on GitHub, so
+  **online rounds are open-book** ("Ohne Googeln!" in the invite). Every row has two sources
+  (distinct hostnames, one primary), own wording in both languages, `definition`, `asOf` and
+  `verified`. `validateEstimateBank` (CI) enforces metric units, no persons, no death or disaster,
+  closed guess-range classes and a tolerance cap. `ESTIMATE_BANK` is **empty until the first batch**
+  (`estimate-bank/rows/*.ts`), and `createEstimateRound` answers `bank-empty` meanwhile.
+  Questions come from a per-group seen-set (`estimateState/seen`), updated in the drawing
+  transaction; "Auch freche Fun Facts" opts into `tone: "fun"` rows.
+- **Before this can ship.** (1) `pnpm exec firebase deploy --only firestore:rules` — the
+  `estimateRounds`, `secrets` and `estimateState` blocks, the ADR-005 precedent; without it the
+  round page shows a permission error. (2) `pnpm check:bank-floors` must pass (100 standard and 30
+  fun verified rows, 8 standard per category, a mix of both scales) before the game is merged to
+  `main`; the default `pnpm test` runs with the floors off. (3) `pnpm check:bank-leak` after
+  `pnpm build` proves no client chunk holds a row. Neither check is in CI yet.
+- **Chat and pushes.** The invite is `ChatMessage.estimateInvite`; the result card
+  (`gameResult.estimate`, `EstimateChatLines`) lists each payer's guess with its error, "kein Tipp"
+  or "per Los bestimmt", from name snapshots. Pushes (challenge, Stechfrage, last call, "not
+  booked" to the creator and managers) are built from names, the stake and a time, never the
+  round, so a lock screen cannot spoil a question. Creation is capped at 12 per member per group
+  per hour — anti-spam only, since the bank is public.
+- **Deferred in v1.** Free (no-bill) online rounds; rematch; presence; a "report question"
+  button; categories to choose from; difficulty or handicaps; a generator for questions; an offline
+  question pack; a timer that scores a stuck round by itself.
+- **Acknowledged risk.** Knowledge decides who pays, so a systematically least-informed player can
+  be billed again and again. Ratio scoring rewards a sense of magnitude over trivia, the game is
+  kept out of the Glücks-Index and out of "Pech" wording, and the setup copy says knowledge
+  counts; handicaps and balancing wait for evidence.
+
 ## Related
 
 [[Split Lottery]] · [[Expenses and Splitting]] · [[Money Invariants]] · [[Design System and Theming]]
-· [[Local Development and Testing]] · [[Data Model]] · [[Firestore Rules]] · [[Routing Map]]
+· [[Local Development and Testing]] · [[Data Model]] · [[Firestore Rules]] · [[Routing Map]] ·
+[[Offline Mode]] · [[Chat]] · [[Mobile iOS Quirks]] · [[Group Page]]

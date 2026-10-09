@@ -305,6 +305,17 @@ describe("EstimateGuessPanel", () => {
       expect(screen.queryByText(/= /)).toBeNull();
     });
 
+    it("keeps the typed value after the lock when the parent asks for it (a failed online lock needs no retyping)", () => {
+      const { onLock } = renderPanel({ keepOnError: true });
+      field().focus();
+      type("2.962,5");
+      fireEvent.click(screen.getByRole("button", { name: "Tipp sperren" }));
+      expect(onLock).toHaveBeenCalledWith(2_962_500);
+      expect(field().value).toBe("2.962,5");
+      expect(field()).not.toHaveFocus();
+      expect(screen.getByRole("button", { name: "Tipp sperren" })).toBeEnabled();
+    });
+
     it("locks on the keyboard's Enter too", () => {
       const { onLock } = renderPanel();
       type("1969");

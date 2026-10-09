@@ -15,6 +15,7 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
 
 /play/[groupId]/[tournamentId]     public invite link (WhatsApp/share): signed in → redirect to the game;
                                       signed out → sign-in that returns to it. Reveals nothing about the game.
+/play/[groupId]/estimate/[roundId] the same for an online Schätzfragen round → /groups/[groupId]/estimate/[roundId]
 (app)/                               layout.tsx: redirect("/") if !getSession()
                                       → renders AppSidebar + SessionGuard (see Two Auth States)
   /groups                            group list (balancesMinor cache — see Data Model)
@@ -23,6 +24,8 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
   /groups/[groupId]/tournaments/[tournamentId]
                                       live tournament bracket / online duel board — watch/play from any device, see Split Games
   /groups/[groupId]/rounds/[roundId] online luck round (scratch cards on everyone's own phone) — see Split Games, ADR-005
+  /groups/[groupId]/estimate/[roundId]
+                                      online Schätzfragen round (everyone guesses on their own phone) — see Split Games, ADR-007
   /profile                           profile + payment details — see Onboarding and Payment Details
   /admin                             requireAdminSession() → notFound() if not admin
   /admin/groups/[groupId]            admin group moderation
@@ -36,6 +39,12 @@ public/ (static, not routes)
   /sw.js                             the service worker — offline start + push; no-cache headers
   /offline.html                      what the worker shows for a page never saved on this device
 ```
+
+Estimate rounds have their own `/estimate/` route next to `/rounds/` (luck): one id, one
+collection, so a page never has to guess which collection a bare id belongs to (two listeners, one
+of which would fail like "still loading"). `gameRoundPath` (`lib/games/round-paths.ts`) picks the
+route for a result card or banner; ids are checked against `[A-Za-z0-9_-]{1,128}` before they
+reach a Firestore path.
 
 ## Layering of guards
 

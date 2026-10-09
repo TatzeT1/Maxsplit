@@ -16,6 +16,7 @@ import { StartGameButton } from "@/components/groups/start-game-button";
 import { GroupSettingsTab } from "@/components/groups/group-settings-tab";
 import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
+import { EstimateRoundBanner } from "@/components/groups/estimate-round-banner";
 import { LuckRoundBanner } from "@/components/groups/luck-round-banner";
 import { TournamentBanner } from "@/components/groups/tournament-banner";
 import { useT } from "@/components/locale-provider";
@@ -331,6 +332,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
 
         <TournamentBanner groupId={groupId} currentUid={user.uid} />
         <LuckRoundBanner group={group} currentUid={user.uid} />
+        <EstimateRoundBanner group={group} currentUid={user.uid} />
 
         <ChatEntryCard groupId={groupId} members={group.members} currentUid={user.uid} />
 

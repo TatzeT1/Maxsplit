@@ -1,5 +1,10 @@
 import "server-only";
 import type { EstimateQuestion } from "@/lib/games/estimate-bank/types";
+import { GEOGRAPHY_ROWS } from "./rows/geography";
+import { NATURE_ROWS } from "./rows/nature";
+import { ANIMALS_ROWS } from "./rows/animals";
+import { BODY_ROWS } from "./rows/body";
+import { EVERYDAY_ROWS } from "./rows/everyday";
 
 /**
  * The Schätzfragen question bank — plaintext rows in a PUBLIC repository.
@@ -13,7 +18,13 @@ import type { EstimateQuestion } from "@/lib/games/estimate-bank/types";
  * each starting with `import "server-only"`; until the first batch lands the
  * bank is empty.
  */
-export const ESTIMATE_BANK: readonly EstimateQuestion[] = Object.freeze<EstimateQuestion[]>([]);
+export const ESTIMATE_BANK: readonly EstimateQuestion[] = Object.freeze<EstimateQuestion[]>([
+  ...GEOGRAPHY_ROWS,
+  ...NATURE_ROWS,
+  ...ANIMALS_ROWS,
+  ...BODY_ROWS,
+  ...EVERYDAY_ROWS,
+]);
 
 export const ESTIMATE_BANK_BY_ID: ReadonlyMap<string, EstimateQuestion> = new Map(
   ESTIMATE_BANK.map((row) => [row.id, row]),

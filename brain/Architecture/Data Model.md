@@ -26,6 +26,9 @@ groups/{groupId}
   groups/{groupId}/tournaments/{tournamentId}/presence/{uid}          (server-only "watching" heartbeat)
   groups/{groupId}/tournaments/{tournamentId}/nudges/{matchId}        (server-only "Anstupsen" rate limit)
   groups/{groupId}/luckRounds/{roundId}                               (online luck round — ADR-005)
+  groups/{groupId}/estimateRounds/{roundId}                           (Schätzfragen round, one phone or online — ADR-007)
+  groups/{groupId}/estimateRounds/{roundId}/secrets/{stageIndex}      (bank row as played + hidden guesses — no client reads)
+  groups/{groupId}/estimateState/seen                                 (server-only: seen question ids, creation log)
 ```
 
 All money is **integer minor units** (cents) plus an ISO-4217 `currency` string. Never a
@@ -77,15 +80,19 @@ ExpenseSplit>` where `ExpenseSplit = { rawValue, amountMinor }` — `rawValue` i
 - `deletedAt: string | null` — **soft delete**. Every read that aggregates expenses
   (balances, PDF export, activity) filters `!expense.deletedAt`. Deleted expenses are never
   hard-removed, so the activity log and history stay coherent.
-- `viaLottery?: boolean` — set when the split came from any of the sixteen 🎲🎡🎰🎫🎈🦆🥃🎱⭕🔴🧠⚡✊🥢✏️☝️ split
+- `viaLottery?: boolean` — set when the split came from any of the seventeen 🎲🎡🎰🎫🎈🦆🥃🎱⭕🔴🧠⚡✊🥢✏️☝️🎯 split
   mini-games (see [[Split Games]]) rather than manual entry. The name predates every game but
   the original lottery and is kept as-is rather than migrated. Forward-only marker; rounds
   played before a given game shipped aren't retroactively flagged.
-- `game?: { gameId, playerUids, attempt } | null` — since 2026-10, next to `viaLottery`: which
+- `game?: { gameId, playerUids, attempt, estimate? } | null` — since 2026-10, next to `viaLottery`: which
   game decided it, who was in the pool, and in which attempt (rounds the form started, "Neu
   mischen" included). Validated server-side (`normalizeExpenseGame`); absent on older
   expenses, `null` after an edit replaced the game's split by hand. Feeds the Spiele tab and
-  the chat's result card — see [[Split Games]].
+  the chat's result card — see [[Split Games]]. `game.estimate` (an `EstimateAudit`) exists only for
+  🎯 Schätzfragen and is **server-written** (the online booking, or the verified claim in
+  `addExpense`): what the client sends never contains it, `normalizeExpenseGame` drops it, and
+  `editExpense` preserves it only while the split is still the equal split among the game's
+  payers. The one-phone claim id (`estimateRoundId`) travels beside the record and is never stored.
 
 ## `Settlement`
 
@@ -137,9 +144,11 @@ public `state` once flipped.
 
 `ChatMessage.gameInvite` (`{ tournamentId, gameId }`, absent on normal messages) marks the
 automatic challenge an online game posts; the chat renders it as a join card. Since 2026-10
-also `luckInvite` (`{ roundId, gameId }`, an online luck round) and `gameResult`
+also `luckInvite` (`{ roundId, gameId }`, an online luck round), `estimateInvite`
+(`{ roundId }`, an online Schätzfragen round) and `gameResult`
 (`ChatGameResult`: game, losers, a sole winner, the amount, the attempt, and the
-tournament's or round's id) — see [[Chat]].
+tournament's or round's id, and for Schätzfragen an `estimate` summary: per stage the question,
+the truth and each payer's guess and distance, with name snapshots) — see [[Chat]].
 
 `Tournament.rematchId` (absent until someone asks for a "Revanche") points at the rematch,
 so a second player's tap joins it instead of starting another.
@@ -153,6 +162,35 @@ so there is no secret anywhere), `revealedBy`, `loserUids` once done, and the bi
 (`stake`, `autoBook`, `expenseId`, `autoBookError`). `Group.activeLuckRound`
 (`{ id, gameId } | null`, absent on groups that never had one) points at the running round
 so the group page's banner needs no extra listener.
+
+## `EstimateRound` / `secrets` / `EstimateSeen`
+
+One Schätzfragen round (`groups/{groupId}/estimateRounds/{roundId}`, ADR-007), the same document
+for `mode: "local"` (one phone) and `"online"`. Public, written only by
+`lib/actions/estimate-rounds.ts`, read live by members. `rulesVersion` is stamped at creation
+(the audit replay dispatches on it); `entrants` is a name snapshot (online: accounts only, local:
+placeholders allowed); `order` is the display order (online: server-shuffled, local: the seating =
+hand-over order); `targetLoserCount`, `includeFun`, `answerWindowMs` (online 5/15/60 min, else
+`null`); `stages` is 1–4 `EstimateStage`s — the main question and up to three Stechfragen.
+A stage has the **public** question (`EstimatePublicQuestion`: text, unit, scale, format, the guess
+range from the unit class — no value, tolerance or source), `contenders`, `slots` (payers still
+to find), `openedAt` / `closesAt` / `lastCallAt` (online), `submitted` (uids that locked a guess,
+**never values**; local: `[]` until the reveal), `status: "guessing" | "revealed"` and, once
+revealed, an `EstimateReveal`: the truth, tolerance, `asOf`, sources and definition, the ranked
+`results` (guess, distance, `fate`, `enteredBy`, `answeredAfterMs`), `payers` / `safe` /
+`contested`, `precedes`, `bandTie` and `next` (`decided | stechen | shuffle`, with `shuffled` /
+`lotPayers` for the lot). Then `loserUids` (booking order: furthest first within a stage, the lot's
+picks last), `resolvedBy`, and online the bill (`stake`, `autoBook`, `expenseId`,
+`autoBookError`). For a one-phone round `expenseId` is the id of the expense that **claimed** it.
+`Group.activeEstimateRound` (`{ id } | null`, absent on groups that never had one) points at the
+running online round so the group page's banner needs no extra listener.
+
+`estimateRounds/{r}/secrets/{stageIndex}` (`EstimateSecrets`) is server-only: the **full** bank
+row as played (a snapshot — a later bank correction never rewrites a past game) and the still-hidden
+`guesses: { uid: { milli, at, by } }`. The truth leaves it only in the transaction that reveals
+the stage. `estimateState/seen` (`EstimateSeen`) holds `seenIds`, `resets` and `recent` (creation
+timestamps per member, for the 12-per-hour anti-spam cap); a missing document reads as empty.
+All numbers are integer **milli-units** (thousandths of the unit, `Milli`): never a float.
 
 ## `ChatMessage` / `ChatRead`
 

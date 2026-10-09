@@ -25,9 +25,16 @@ strings).
 
 ## Game messages
 
-Three kinds of automatic message carry structure next to their fallback `text` (which is
+Four kinds of automatic message carry structure next to their fallback `text` (which is
 what previews show): `gameInvite` (an online duel's challenge or a "Revanche"), `luckInvite`
-(an online luck round) and `gameResult` (how a decided game ended — see [[Split Games]]).
+(an online luck round), `estimateInvite` (an online Schätzfragen round: `{ roundId }`, rendered
+as a join card to `/groups/[groupId]/estimate/[roundId]`, saying the deadline and that whoever
+does not guess pays first) and `gameResult` (how a decided game ended — see [[Split Games]]).
+A Schätzfragen result carries `gameResult.estimate` (`EstimateChatSummary`), which
+`EstimateChatLines` prints under the sentence: the question, the truth, and each payer's guess
+with its error ("Faktor 2,5 zu niedrig"), "kein Tipp" or "per Los bestimmt", from name snapshots
+so a claimed placeholder or a departed member never shows as "?". The card links by
+`gameRoundPath` (luck rounds to `/rounds/`, estimate rounds to `/estimate/`).
 `chat-client.tsx` renders them as cards with a way in. They're written by the server in the
 same write as the game event and never trigger a chat push of their own.
 
@@ -54,4 +61,5 @@ frame with a composer parked at the bottom, which is exactly the case ordinary C
 express correctly on iOS Safari.
 
 ## Related
+
 [[Mobile iOS Quirks]] · [[Data Model]] · [[Firestore Rules]]

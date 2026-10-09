@@ -49,6 +49,7 @@ import { callAction } from "@/lib/call-action";
 import {
   ESTIMATE_ANSWER_WINDOWS_MS,
   ESTIMATE_DEFAULT_WINDOW_MS,
+  ESTIMATE_MAX_PLAYERS,
   formatEstimateWithUnit,
   maxEstimateLoserCount,
 } from "@/lib/games/estimate-input";
@@ -251,6 +252,8 @@ export const SplitEstimateDialog: FunctionComponent<SplitEstimateDialogProps> = 
           : null;
   const setupPlace: DuelPlace = onlineUnavailableHint === null ? place : "device";
 
+  // The server refuses a bigger pool (`invalid-pool`); say so before it has to.
+  const tooManyPlayers = poolUids.length > ESTIMATE_MAX_PLAYERS;
   const nameOf = (uid: string) => members[uid]?.displayName ?? "?";
   const starting = flow.busy || onlineStarting;
   const startErrorText =
@@ -288,6 +291,7 @@ export const SplitEstimateDialog: FunctionComponent<SplitEstimateDialogProps> = 
   }
 
   function startGame() {
+    if (tooManyPlayers) return;
     if (setupPlace === "online") {
       void startOnline();
       return;
@@ -430,6 +434,11 @@ export const SplitEstimateDialog: FunctionComponent<SplitEstimateDialogProps> = 
                 {t("expenses.estimateNeedsConnection")}
               </p>
             )}
+            {tooManyPlayers && (
+              <p role="alert" className="text-destructive text-sm">
+                {t("expenses.estimateTooManyPlayers", { max: ESTIMATE_MAX_PLAYERS })}
+              </p>
+            )}
             {startErrorText && (
               <p role="alert" className="text-destructive text-sm">
                 {startErrorText}
@@ -569,7 +578,7 @@ export const SplitEstimateDialog: FunctionComponent<SplitEstimateDialogProps> = 
                 type="button"
                 size="lg"
                 className="flex-1"
-                disabled={poolUids.length < 2 || starting || !online}
+                disabled={poolUids.length < 2 || tooManyPlayers || starting || !online}
                 onClick={startGame}
               >
                 {starting

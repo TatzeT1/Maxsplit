@@ -38,6 +38,7 @@ import {
   makeStage,
 } from "@/components/groups/split-game/estimate/estimate-test-data";
 import { formatMoney } from "@/lib/format/money";
+import { ESTIMATE_MAX_PLAYERS } from "@/lib/games/estimate-input";
 import type { GameStake } from "@/lib/games/payers";
 import { de } from "@/lib/i18n/de";
 import type { GameExpenseDraft, GroupMember } from "@/lib/types";
@@ -249,6 +250,31 @@ describe("SplitEstimateDialog", () => {
     it("offers no window picker on one phone", () => {
       renderDialog({ expenseDraft: DRAFT, onRoundStarted });
       expect(screen.queryByText(de.expenses.estimateWindowLabel)).toBeNull();
+    });
+  });
+
+  describe("too many players", () => {
+    const manyUids = Array.from({ length: ESTIMATE_MAX_PLAYERS + 1 }, (_, i) => `p${i}`);
+    const many: Record<string, GroupMember> = Object.fromEntries(
+      manyUids.map((uid) => [uid, { ...MEMBERS.lea, displayName: uid }]),
+    );
+
+    it("says so with its own message, disables the start and never calls the action", () => {
+      renderDialog({ members: many, memberUids: manyUids });
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        de.expenses.estimateTooManyPlayers.replace("{{max}}", String(ESTIMATE_MAX_PLAYERS)),
+      );
+      expect(screen.queryByText(de.expenses.estimatePlaceOnlinePlaceholderHint)).toBeNull();
+      expect(button("Frage ziehen")).toBeDisabled();
+      fireEvent.click(button("Frage ziehen"));
+      expect(mocks.create).not.toHaveBeenCalled();
+    });
+
+    it("starts again once the pool is small enough", () => {
+      renderDialog({ members: many, memberUids: manyUids });
+      fireEvent.click(screen.getByRole("checkbox", { name: "p0" }));
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(button("Frage ziehen")).toBeEnabled();
     });
   });
 

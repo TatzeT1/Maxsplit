@@ -26,6 +26,7 @@ import {
   SplitDiceDialog,
   SplitDotsDialog,
   SplitDuckRaceDialog,
+  SplitEstimateDialog,
   SplitFingerDialog,
   SplitGamePickerDialog,
   SplitLotteryDialog,
@@ -40,6 +41,7 @@ import {
   SplitWheelDialog,
 } from "@/components/groups/split-game/lazy-dialogs";
 import { recordRecentGame } from "@/lib/games/game-memory";
+import { estimateRoundPath } from "@/lib/games/round-paths";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
@@ -59,10 +61,21 @@ import type {
   CategoryId,
   Expense,
   ExpenseGame,
+  ExpenseGameInput,
   GameExpenseDraft,
   GroupMember,
   SplitMode,
 } from "@/lib/types";
+
+/** What goes to the server: never the stored audit (display only; the server writes its own). */
+function toGameInput({
+  gameId,
+  playerUids,
+  attempt,
+  estimateRoundId,
+}: ExpenseGame & Pick<ExpenseGameInput, "estimateRoundId">): ExpenseGameInput {
+  return { gameId, playerUids, attempt, ...(estimateRoundId ? { estimateRoundId } : {}) };
+}
 
 function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -259,7 +272,13 @@ export function AddExpenseDialog({
   // expense reuses the split numbers, but no game round was played for it.
   const [viaLottery, setViaLottery] = useState(expenseToEdit?.viaLottery ?? false);
   // Which game decided the split, who played, which attempt — saved with it.
-  const [gameRecord, setGameRecord] = useState<ExpenseGame | null>(expenseToEdit?.game ?? null);
+  // `estimateRoundId` is the one-phone estimate round that decided the split;
+  // it travels beside the record so `addExpense` can claim it (never stored).
+  // A stored `estimate` audit is carried for display only: the server drops a
+  // client-sent one and `editExpense` restores its own.
+  const [gameRecord, setGameRecord] = useState<
+    (ExpenseGame & Pick<ExpenseGameInput, "estimateRoundId">) | null
+  >(expenseToEdit?.game ?? null);
   // Game rounds started in this form ("Neu mischen" included). An edit
   // continues the count of the round that decided the expense, so replaying
   // it can't make it look like a first try.
@@ -291,13 +310,22 @@ export function AddExpenseDialog({
     setActiveGame(game);
   }
 
-  function recordGame(playerUids: string[]) {
+  function recordGame(playerUids: string[], estimateRoundId?: string) {
     if (!activeGame) return;
-    setGameRecord({ gameId: activeGame, playerUids, attempt: Math.max(gameRounds, 1) });
+    setGameRecord({
+      gameId: activeGame,
+      playerUids,
+      attempt: Math.max(gameRounds, 1),
+      ...(estimateRoundId ? { estimateRoundId } : {}),
+    });
   }
 
   /** Whichever mini-game decides who owes the bill, not who fronted it — it fills in an exact split, `paidBy` is untouched. */
-  function handleSplitGameResolve(loserUids: string[], playerUids: string[]) {
+  function handleSplitGameResolve(
+    loserUids: string[],
+    playerUids: string[],
+    meta?: { estimateRoundId: string },
+  ) {
     const amounts = amountMinor > 0 ? splitEqual(amountMinor, loserUids) : {};
     setExactInputs(
       Object.fromEntries(
@@ -306,7 +334,7 @@ export function AddExpenseDialog({
     );
     setSplitMode("exact");
     setViaLottery(true);
-    recordGame(playerUids);
+    recordGame(playerUids, meta?.estimateRoundId);
   }
 
   /**
@@ -431,6 +459,11 @@ export function AddExpenseDialog({
     openSelfBookingGame(`/groups/${groupId}/rounds/${roundId}`);
   }
 
+  /** The same for an online estimate round (`/estimate/`, its own collection). */
+  function handleEstimateRoundStarted(roundId: string) {
+    openSelfBookingGame(estimateRoundPath(groupId, roundId));
+  }
+
   function openSelfBookingGame(path: string) {
     setActiveGame(null);
     setOpen(false);
@@ -476,7 +509,7 @@ export function AddExpenseDialog({
       participantUids,
       splitInputs,
       viaLottery,
-      game: viaLottery ? gameRecord : null,
+      game: viaLottery && gameRecord ? toGameInput(gameRecord) : null,
     };
 
     const result = await callAction(() =>
@@ -979,6 +1012,19 @@ export function AddExpenseDialog({
             stake={{ description, amountMinor, currency }}
             expenseDraft={expenseDraft}
             onServerGameStarted={handleServerGameStarted}
+          />
+        )}
+        {mountedGames.has("estimate") && (
+          <SplitEstimateDialog
+            open={activeGame === "estimate"}
+            onOpenChange={(next) => setActiveGame(next ? "estimate" : null)}
+            members={members}
+            memberUids={memberUids}
+            groupId={groupId}
+            stake={gameStake}
+            onResolve={handleSplitGameResolve}
+            expenseDraft={expenseDraft}
+            onRoundStarted={handleEstimateRoundStarted}
           />
         )}
         {mountedGames.has("finger") && (

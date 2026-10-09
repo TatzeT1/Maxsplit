@@ -339,7 +339,7 @@ describe("EstimateRoundPageClient", () => {
       pushAll(guessing({ closesAt: inMs(-10_000), submitted: ["max"] }));
       expect(screen.getByText("Die Zeit ist um.")).toBeInTheDocument();
       expect(screen.queryByRole("textbox")).toBeNull();
-      fireEvent.click(screen.getByRole("button", { name: "Letzte Chance senden" }));
+      fireEvent.click(screen.getByRole("button", { name: "Letzte Chance einläuten" }));
       const dialog = screen.getByRole("alertdialog");
       expect(within(dialog).getByText("Letzte Chance einläuten?")).toBeInTheDocument();
       expect(dialog).toHaveTextContent("Noch ohne Tipp: Lea und Ben.");
@@ -359,7 +359,7 @@ describe("EstimateRoundPageClient", () => {
           },
         ),
       );
-      fireEvent.click(screen.getByRole("button", { name: "Letzte Chance senden" }));
+      fireEvent.click(screen.getByRole("button", { name: "Letzte Chance einläuten" }));
       expect(screen.getByRole("alertdialog")).toHaveTextContent(/Lea zahlen bis zu 15,00/);
     });
 
@@ -386,7 +386,7 @@ describe("EstimateRoundPageClient", () => {
       h.close.mockResolvedValue({ ok: true, data: { closed: false } });
       renderPage();
       pushAll(guessing({ closesAt: inMs(-10_000), submitted: ["max"] }));
-      fireEvent.click(screen.getByRole("button", { name: "Letzte Chance senden" }));
+      fireEvent.click(screen.getByRole("button", { name: "Letzte Chance einläuten" }));
       fireEvent.click(
         within(screen.getByRole("alertdialog")).getByRole("button", {
           name: "Letzte Chance senden",
@@ -422,7 +422,7 @@ describe("EstimateRoundPageClient", () => {
       pushAll(guessing({ closesAt: inMs(-10_000), submitted: ["max"] }));
       expect(screen.getByText("Die Zeit ist um.")).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: /Letzte Chance senden|Jetzt auswerten/ }),
+        screen.queryByRole("button", { name: /Letzte Chance einläuten|Jetzt auswerten/ }),
       ).toBeNull();
     });
 
@@ -433,14 +433,14 @@ describe("EstimateRoundPageClient", () => {
         guessing({ closesAt: inMs(-10_000), submitted: ["max"] }),
         group({ ...MEMBERS, tom: { ...member("Tom"), role: "admin" } }),
       );
-      expect(screen.getByRole("button", { name: "Letzte Chance senden" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Letzte Chance einläuten" })).toBeInTheDocument();
     });
 
     it("11: nobody can close before the deadline", () => {
       renderPage();
       pushAll(guessing({ closesAt: inMs(60_000), submitted: ["max"] }));
       expect(
-        screen.queryByRole("button", { name: /Letzte Chance senden|Jetzt auswerten/ }),
+        screen.queryByRole("button", { name: /Letzte Chance einläuten|Jetzt auswerten/ }),
       ).toBeNull();
       expect(screen.queryByText("Die Zeit ist um.")).toBeNull();
     });
@@ -448,9 +448,9 @@ describe("EstimateRoundPageClient", () => {
     it("11: the deadline arriving turns the countdown into the close button by itself", () => {
       renderPage();
       pushAll(guessing({ closesAt: inMs(2000), submitted: ["max"] }));
-      expect(screen.queryByRole("button", { name: "Letzte Chance senden" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Letzte Chance einläuten" })).toBeNull();
       act(() => void vi.advanceTimersByTime(8000));
-      expect(screen.getByRole("button", { name: "Letzte Chance senden" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Letzte Chance einläuten" })).toBeInTheDocument();
     });
 
     it("12: a Stechfrage shows the revealed stage as history and the frame for a contender", () => {
@@ -549,6 +549,23 @@ describe("EstimateRoundPageClient", () => {
       expect(screen.getByRole("textbox")).toBeInTheDocument();
     });
 
+    it("keeps what was typed after a failed lock, so the retry needs no retyping", async () => {
+      h.submit.mockResolvedValueOnce({ ok: false, error: "network" });
+      h.submit.mockResolvedValueOnce({ ok: true, data: { stageClosed: false } });
+      renderPage();
+      pushAll(guessing());
+      type("1000");
+      fireEvent.click(lockButton());
+      await flush();
+      expect((field() as HTMLInputElement).value).toBe("1000");
+      expect(lockButton()).toBeEnabled();
+      fireEvent.click(lockButton());
+      await flush();
+      expect(h.submit).toHaveBeenCalledTimes(2);
+      expect(h.submit).toHaveBeenLastCalledWith(expect.objectContaining({ guessMilli: 1_000_000 }));
+      expect(screen.queryByRole("textbox")).toBeNull();
+    });
+
     it("maps time-not-up during a last call to the last-call message", async () => {
       h.submit.mockResolvedValue({ ok: false, error: "time-not-up" });
       renderPage();
@@ -579,9 +596,8 @@ describe("EstimateRoundPageClient", () => {
       expect(h.submit).toHaveBeenCalledTimes(1);
       const alerts = screen.getAllByRole("alert").map((node) => node.textContent ?? "");
       expect(alerts.some((alert) => alert.includes("nichts gespeichert"))).toBe(true);
-      expect(screen.getByRole("textbox")).toBeInTheDocument();
-      expect(lockButton()).toBeDisabled();
-      type("1000");
+      // The value stays, so the retry is one tap.
+      expect((field() as HTMLInputElement).value).toBe("1000");
       expect(lockButton()).toBeEnabled();
     });
   });
