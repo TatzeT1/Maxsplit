@@ -77,7 +77,9 @@ export function ExpenseDetailDialog({
             </div>
           </div>
 
-          {expense.viaLottery && <GameRecordSummary game={expense.game} showPlayers />}
+          {expense.viaLottery && (
+            <GameRecordSummary game={expense.game} showPlayers expense={expense} />
+          )}
 
           <div className="flex flex-col gap-2">
             <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">

@@ -46,12 +46,22 @@ export function DiceStechenTakeover({
   uids,
   slots,
   members,
+  stamp,
+  caption,
 }: {
   /** Who rolls off, in roll order. */
   uids: readonly string[];
   /** How many of them will pay. */
   slots: number;
   members: Record<string, GroupMember>;
+  /**
+   * The stamp's text. Defaults to the dice game's ("Stechen!"); another game
+   * that levels players on the paying line (the estimate game's "Stechfrage!")
+   * passes its own.
+   */
+  stamp?: string;
+  /** The line under the names. Defaults to the dice game's, by `slots`. */
+  caption?: string;
 }) {
   const t = useT();
   const reduceMotion = useReducedMotion();
@@ -134,15 +144,16 @@ export function DiceStechenTakeover({
             {versus}
           </span>
           <span className="text-muted-foreground text-sm text-balance">
-            {slots === 1
-              ? t("expenses.diceStechenOne")
-              : t("expenses.diceStechenMany", { count: slots })}
+            {caption ??
+              (slots === 1
+                ? t("expenses.diceStechenOne")
+                : t("expenses.diceStechenMany", { count: slots }))}
           </span>
         </div>
         {/* Over the card's top edge, like the stamp on a slip. */}
         <span className="absolute inset-x-0 -top-6 flex justify-center">
           <InkStamp
-            label={t("expenses.diceStechenStamp")}
+            label={stamp ?? t("expenses.diceStechenStamp")}
             name={names.join(" ")}
             ink="var(--primary)"
             // InkStamp hits the paper (STAMP_IMPACT_S - STAMP_DROP_S) after its delay.
