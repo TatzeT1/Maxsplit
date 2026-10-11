@@ -89,11 +89,12 @@ const INITIAL: FlowState = {
 /**
  * The dictionary key for a failed action's error code: the start errors of G.2,
  * the guess range errors, `network` -> "not saved", and a generic fallback per
- * context. Shared by the dialog and the online page.
+ * context (`start-online` is the online start, whose `invalid-pool` is the
+ * placeholder hint). Shared by the dialog and the online page.
  */
 export function localEstimateErrorKey(
   code: string,
-  context: "start" | "submit" = "submit",
+  context: "start" | "start-online" | "submit" = "submit",
 ): TranslationKey {
   switch (code) {
     case "round-running":
@@ -103,7 +104,14 @@ export function localEstimateErrorKey(
     case "bank-empty":
       return "expenses.estimateBankEmpty";
     case "invalid-pool":
-      return "expenses.estimatePlaceOnlinePlaceholderHint";
+      // Online it means "somebody has no account" (the picker already says so). On one phone the
+      // pool simply changed under the form (a member left): the generic start error, never an
+      // "Online geht nur …" text about a mode the player did not choose.
+      return context === "start-online"
+        ? "expenses.estimatePlaceOnlinePlaceholderHint"
+        : context === "start"
+          ? "expenses.estimateStartError"
+          : "expenses.estimateActionError";
     case "network":
       return "errors.notSaved";
     case "guess-zero":

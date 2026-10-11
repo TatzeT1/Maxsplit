@@ -73,6 +73,10 @@ const PROBLEM_KEYS: Record<EstimateGuessProblem, TranslationKey> = {
  * retry is one tap rather than retyping. The parent unmounts the panel when the
  * lock succeeded (the guess is then on the server, not on screen); the field is
  * still blurred. One phone passes nothing: the next player must not see it.
+ *
+ * `initialText` / `onTextChange` let the online page keep the draft in memory
+ * above the panel, so the offline screen (which unmounts the panel) does not eat
+ * a number typed while the clock runs. Never persisted anywhere.
  */
 export function EstimateGuessPanel({
   question,
@@ -83,6 +87,8 @@ export function EstimateGuessPanel({
   disabledReason = null,
   error = null,
   keepOnError = false,
+  initialText = "",
+  onTextChange,
   onLock,
 }: {
   question: EstimatePublicQuestion;
@@ -97,6 +103,10 @@ export function EstimateGuessPanel({
   error?: string | null;
   /** Keep the typed value after `onLock`, so a failed online lock needs no retyping; the parent unmounts the panel on success. */
   keepOnError?: boolean;
+  /** The field's starting text: lets an online page hand back what was typed before the panel was unmounted (a connection blip). */
+  initialText?: string;
+  /** Every change of the field's text, for a parent that keeps the draft above the panel. One phone passes nothing. */
+  onTextChange?: (text: string) => void;
   onLock: (milli: number) => void;
 }) {
   const t = useT();
@@ -108,7 +118,7 @@ export function EstimateGuessPanel({
   const lockingRef = useRef(false);
   const visible = useVisibleHeight(frameRef);
 
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   /** The delayed errors may show: 600 ms after the last keystroke, or on blur / a lock attempt. */
   const [settled, setSettled] = useState(false);
   /** The echo, announced once on blur or a failed lock attempt (never per keystroke). */
@@ -158,6 +168,7 @@ export function EstimateGuessPanel({
 
   function handleChange(value: string) {
     setText(value);
+    onTextChange?.(value);
     setSettled(false);
     setAnnouncedEcho("");
   }

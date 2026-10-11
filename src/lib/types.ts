@@ -572,6 +572,8 @@ export interface EstimateAuditStage {
   scale: EstimateScale;
   format: EstimateFormat;
   truthMilli: number;
+  /** Set by buildEstimateAudit when the lot decided before the third Stechfrage because the bank offered no further question. */
+  noStechfrage?: true;
   tolerance: EstimateTolerance | null;
   asOf: number;
   sourceLabel: string;

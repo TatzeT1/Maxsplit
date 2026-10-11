@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   ESTIMATE_BANK_FLOORS,
+  ESTIMATE_UNIT_LABELS,
   validateEstimateBank,
   type EstimateBankProblem,
 } from "@/lib/games/estimate-bank/validate";
-import { CATEGORY_CODES, type EstimateQuestion } from "@/lib/games/estimate-bank/types";
+import {
+  CATEGORY_CODES,
+  ESTIMATE_UNIT_SYMBOLS,
+  type EstimateQuestion,
+} from "@/lib/games/estimate-bank/types";
 import { ESTIMATE_FIXTURE_BANK, makeEstimateRow } from "@/test/estimate-bank-fixture";
 import type { EstimateCategory } from "@/lib/types";
 
@@ -149,6 +154,58 @@ describe("unit", () => {
   it("rejects an empty label", () => {
     expectOnly(makeEstimateRow({ unit: { de: "", en: "metres", symbol: "m" } }), "unit");
     expectOnly(makeEstimateRow({ unit: { de: "Meter", en: "  ", symbol: "m" } }), "unit");
+  });
+
+  it("rejects a label that names another unit than the symbol", () => {
+    // The symbol drives the bounds and the display, the label drives the question: they must agree.
+    // Both labels are wrong: one problem per label.
+    const both = problems([makeEstimateRow({ unit: { de: "Meter", en: "metres", symbol: "km" } })]);
+    expect(rulesOf(both)).toEqual(["unit", "unit"]);
+    expect(both[0].message).toContain("unit.de");
+    expect(both[1].message).toContain("unit.en");
+    expectOnly(makeEstimateRow({ unit: { de: "Meter", en: "kilometres", symbol: "m" } }), "unit");
+    expectOnly(makeEstimateRow({ unit: { de: "Millimeter", en: "metres", symbol: "m" } }), "unit");
+    expectOnly(makeEstimateRow({ unit: { de: "Meter", en: "millimetres", symbol: "m" } }), "unit");
+  });
+
+  it("knows a label for every symbol but the empty one", () => {
+    const missing = ESTIMATE_UNIT_SYMBOLS.filter(
+      (symbol) => symbol !== "" && !Object.hasOwn(ESTIMATE_UNIT_LABELS, symbol),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("accepts the spellings of a label (case, metres/meters, per-compounds)", () => {
+    for (const [de, en, symbol] of [
+      ["Meter", "metres", "m"],
+      ["meter", "Meters", "m"],
+      ["Kilometer", "kilometers", "km"],
+      ["Kilometer pro Stunde", "kilometres per hour", "km/h"],
+      ["Quadratmeter", "square metres", "m²"],
+      ["Grad Celsius", "degrees Celsius", "°C"],
+      ["Prozent", "percent", "%"],
+      ["Stunden", "hours", "h"],
+      ["Stunden pro Tag", "hours per day", "h"],
+      ["Erdentage", "Earth days", "d"],
+      ["Tonnen", "tonnes", "t"],
+      ["Schläge pro Minute", "beats per minute", "1/min"],
+    ] as const) {
+      const found = problems([makeEstimateRow({ unit: { de, en, symbol } })]);
+      expect(
+        found.filter((problem) => problem.rule === "unit"),
+        `${de} / ${en} / ${symbol}`,
+      ).toEqual([]);
+    }
+  });
+
+  it("leaves the label of a counted noun or a year free", () => {
+    const found = problems([
+      makeEstimateRow({
+        unit: { de: "Einwohner", en: "inhabitants", symbol: "" },
+        value: "83200",
+      }),
+    ]);
+    expect(rulesOf(found)).toEqual([]);
   });
 
   it("rejects a year row with a unit symbol", () => {
@@ -421,6 +478,83 @@ describe("answer-not-in-text", () => {
     expectOnly(row, "answer-not-in-text");
   });
 
+  it.each([
+    [
+      "German number words, one compound",
+      { de: "Sind es achthundertsechsundsiebzig Meter?", en: "How high is Mount Test?" },
+      "876",
+    ],
+    [
+      "English number words, hyphenated",
+      {
+        de: "Wie hoch ist der Testberg?",
+        en: "Is Mount Test eight hundred seventy-six metres high?",
+      },
+      "876",
+    ],
+    [
+      "English number words with an and",
+      { de: "Wie hoch ist der Testberg?", en: "Is it one hundred and five metres?" },
+      "105",
+    ],
+    [
+      "a German thousand compound",
+      { de: "Sind es zweitausendvierhundert Meter?", en: "How high is Mount Test?" },
+      "2400",
+    ],
+    [
+      "a bare German tens word",
+      { de: "Sind es vierzig Meter?", en: "How high is Mount Test?" },
+      "40",
+    ],
+    ["a German hundert", { de: "Sind es hundert Meter?", en: "How high is Mount Test?" }, "100"],
+    [
+      "English words with a thousand",
+      { de: "Wie hoch ist der Testberg?", en: "Is it twenty-five thousand metres?" },
+      "25000",
+    ],
+    [
+      "a German scale word after a digit",
+      { de: "Sind es 2,5 Millionen Meter?", en: "How high is Mount Test?" },
+      "2500000",
+    ],
+    [
+      "an abbreviated scale (Mrd.)",
+      { de: "Sind es 3,1 Mrd. Meter?", en: "How high is Mount Test?" },
+      "3100000000",
+    ],
+    [
+      "an English scale word",
+      { de: "Wie hoch ist der Testberg?", en: "Is it 3.1 billion metres?" },
+      "3100000000",
+    ],
+    [
+      "number words with a scale word",
+      { de: "Sind es zwei Millionen Meter?", en: "How high is Mount Test?" },
+      "2000000",
+    ],
+  ])("rejects an answer spelled in words or with a scale word: %s", (_label, text, value) => {
+    expectIncludes(makeEstimateRow({ text, value }), "answer-not-in-text");
+  });
+
+  it("does not take other words or other numbers for the answer", () => {
+    for (const [text, value] of [
+      // "Einheit", "Achtung", "Elfmeter", "Zehntel" only start like number words.
+      [{ de: "Wie hoch ist die Einheit Elfmeter?", en: "How high is Mount Test?" }, "11"],
+      [{ de: "Achtung: wie hoch ist der Testberg?", en: "How high is Mount Test?" }, "8"],
+      [{ de: "Wie hoch ist der Testberg?", en: "Is it twenty-five metres?" }, "26"],
+      [{ de: "Wie hoch ist der Testberg?", en: "Which one is the highest?" }, "1"],
+      [{ de: "Wie hoch ist der Testberg?", en: "Is it two hundred metres?" }, "20"],
+      [{ de: "Sind es 2,5 Millionen Meter?", en: "How high is Mount Test?" }, "2500"],
+    ] as const) {
+      const found = problems([makeEstimateRow({ text, value })]);
+      expect(
+        found.filter((problem) => problem.rule === "answer-not-in-text"),
+        `${text.de} | ${text.en} vs ${value}`,
+      ).toEqual([]);
+    }
+  });
+
   it("lets an unrelated number stand", () => {
     const row = makeEstimateRow({
       text: {
@@ -512,6 +646,47 @@ describe("sources", () => {
     );
   });
 
+  describe("independence: registrable domains, not hostnames", () => {
+    const pair = (a: string, b: string) =>
+      makeEstimateRow({
+        sources: [
+          { label: "First (fake)", url: a, kind: "primary" },
+          { label: "Second (fake)", url: b, kind: "secondary" },
+        ],
+      });
+
+    it.each([
+      [
+        "two hosts of one institute",
+        "https://pubmed.ncbi.nlm.nih.gov/1/",
+        "https://pmc.ncbi.nlm.nih.gov/2/",
+      ],
+      ["two hosts of one agency", "https://nssdc.gsfc.nasa.gov/a", "https://ntrs.nasa.gov/b"],
+      [
+        "two language editions",
+        "https://en.wikipedia.org/wiki/A",
+        "https://de.wikipedia.org/wiki/A",
+      ],
+      ["a subdomain and its parent", "https://data.example.org/a", "https://example.org/b"],
+      ["a host in a two-label suffix", "https://news.bbc.co.uk/a", "https://www.bbc.co.uk/b"],
+      ["a host under gov.uk", "https://www.ons.gov.uk/a", "https://cy.ons.gov.uk/b"],
+      ["upper case hostnames", "https://WWW.Example.ORG/a", "https://api.EXAMPLE.org/b"],
+    ])("rejects %s", (_label, a, b) => {
+      expectOnly(pair(a, b), "sources");
+    });
+
+    it.each([
+      ["different .co.uk organisations", "https://www.bbc.co.uk/a", "https://www.itv.co.uk/b"],
+      ["different gov.uk bodies", "https://www.ons.gov.uk/a", "https://www.nhs.gov.uk/b"],
+      ["different universities under ac.uk", "https://www.ox.ac.uk/a", "https://www.cam.ac.uk/b"],
+      ["different .gov agencies", "https://www.nasa.gov/a", "https://www.noaa.gov/b"],
+      ["different .org organisations", "https://www.nature.org/a", "https://www.who.int/b"],
+      ["two tenants of a hosting domain", "https://alice.github.io/a", "https://bob.github.io/b"],
+    ])("accepts %s", (_label, a, b) => {
+      expect(rulesOf(problems([pair(a, b)]))).toEqual([]);
+    });
+  });
+
   it("rejects a plain http URL", () => {
     expectOnly(
       makeEstimateRow({ sources: [primary, { ...secondary, url: "http://example.com/b" }] }),
@@ -566,6 +741,99 @@ describe("sources", () => {
       makeEstimateRow({ sources: [primary, { ...secondary, kind: "tertiary" as never }] }),
       "sources",
     );
+  });
+});
+
+describe("duplicate-fact", () => {
+  const other = (overrides: Partial<EstimateQuestion>) =>
+    makeEstimateRow({
+      id: "est-geo-9002",
+      text: { de: "Wie hoch ist der Prüfberg?", en: "How high is Mount Check?" },
+      ...overrides,
+    });
+
+  it("is silent for the whole fixture bank and for unrelated rows", () => {
+    expect(rulesOf(problems(ESTIMATE_FIXTURE_BANK))).toEqual([]);
+    expect(rulesOf(problems([makeEstimateRow(), other({ value: "1235" })]))).toEqual([]);
+  });
+
+  it("flags the same value, unit symbol and scale with a shared source URL", () => {
+    // Same value 1234 m and the fixture's shared example.* sources.
+    const found = problems([makeEstimateRow(), other({})]);
+    expect(rulesOf(found)).toEqual(["duplicate-fact"]);
+    expect(found[0].id).toBe("est-geo-9002");
+    expect(found[0].message).toContain("est-geo-9001");
+  });
+
+  it("sees a shared source URL through www, a trailing slash and a fragment", () => {
+    const a = makeEstimateRow({
+      sources: [
+        { label: "A (fake)", url: "https://example.org/page", kind: "primary" },
+        { label: "B (fake)", url: "https://example.com/one", kind: "secondary" },
+      ],
+    });
+    const b = other({
+      sources: [
+        { label: "A (fake)", url: "https://www.example.org/page/#part", kind: "primary" },
+        { label: "C (fake)", url: "https://example.net/two", kind: "secondary" },
+      ],
+    });
+    expect(rulesOf(problems([a, b]))).toEqual(["duplicate-fact"]);
+  });
+
+  it("lets equal values stand when no source is shared", () => {
+    const b = other({
+      sources: [
+        { label: "Else (fake)", url: "https://example.org/else", kind: "primary" },
+        { label: "Other (fake)", url: "https://example.com/other", kind: "secondary" },
+      ],
+    });
+    expect(rulesOf(problems([makeEstimateRow(), b]))).toEqual([]);
+  });
+
+  it("lets a shared source stand when value, unit or scale differ", () => {
+    const base = makeEstimateRow();
+    expect(rulesOf(problems([base, other({ value: "1234.5" })]))).toEqual([]);
+    expect(
+      rulesOf(
+        problems([base, other({ unit: { de: "Kilometer", en: "kilometres", symbol: "km" } })]),
+      ),
+    ).toEqual([]);
+    expect(rulesOf(problems([base, other({ scale: "interval", value: "1234" })]))).not.toContain(
+      "duplicate-fact",
+    );
+  });
+
+  it("reads 1234 and 1234.0 as one value", () => {
+    expect(rulesOf(problems([makeEstimateRow(), other({ value: "1234.0" })]))).toEqual([
+      "duplicate-fact",
+    ]);
+  });
+
+  it("flags the same German text, however it is cased and punctuated", () => {
+    const b = other({
+      value: "99",
+      text: { de: "  wie HOCH ist der Testberg ?", en: "How tall is Mount Test?" },
+      sources: [
+        { label: "Else (fake)", url: "https://example.org/else", kind: "primary" },
+        { label: "Other (fake)", url: "https://example.com/other", kind: "secondary" },
+      ],
+    });
+    const found = problems([makeEstimateRow(), b]);
+    expect(rulesOf(found)).toContain("duplicate-fact");
+  });
+
+  it("names the later row only, once per row", () => {
+    const rows = [
+      makeEstimateRow(),
+      other({}),
+      other({
+        id: "est-geo-9003",
+        text: { de: "Wie hoch ist der Kontrollberg?", en: "How high is Mount Control?" },
+      }),
+    ];
+    const found = problems(rows).filter((problem) => problem.rule === "duplicate-fact");
+    expect(found.map((problem) => problem.id)).toEqual(["est-geo-9002", "est-geo-9003"]);
   });
 });
 
@@ -667,14 +935,17 @@ describe("blocklist", () => {
       makeEstimateRow({ note: "Some sources count the victims differently." }),
       "blocklist",
     );
-    expectOnly(
+    expectIncludes(
       makeEstimateRow({ unit: { de: "Meter", en: "age metres", symbol: "m" } }),
       "blocklist",
     );
   });
 
   it("scans the German unit label as German", () => {
-    expectOnly(makeEstimateRow({ unit: { de: "Opfer", en: "metres", symbol: "m" } }), "blocklist");
+    expectIncludes(
+      makeEstimateRow({ unit: { de: "Opfer", en: "metres", symbol: "m" } }),
+      "blocklist",
+    );
   });
 
   it('allows the Dead Sea as a proper noun: "Totes Meer", "Toten Meer", "das Tote Meer", "Dead Sea"', () => {
@@ -734,15 +1005,22 @@ describe("floors", () => {
     return Array.from({ length: count }, (_, index) => {
       const [category, code] = categories[index % categories.length];
       const interval = index % 2 === 1;
+      // Every row is its own fact (else `duplicate-fact` fires): a letters-only name and its own value.
+      const name = String(startNumber + index).replace(
+        /\d/g,
+        (digit) => "abcdefghij"[Number(digit)],
+      );
       return makeEstimateRow({
         id: `est-${code}-${String(startNumber + index).padStart(4, "0")}`,
         category,
         tone,
+        text: { de: `Wie hoch ist der Testberg ${name}?`, en: `How high is Mount Test ${name}?` },
+        value: String(1000 + startNumber + index),
         ...(interval
           ? {
               scale: "interval" as const,
               unit: { de: "Grad Celsius", en: "degrees Celsius", symbol: "°C" },
-              value: "660",
+              value: String(100 + ((startNumber + index) % 700)),
             }
           : {}),
         ...overrides(index),

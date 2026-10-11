@@ -1166,6 +1166,9 @@ export const en: Dictionary = {
     estimateAuditChecked: "Calculation re-checked — it matches.",
     estimateAuditMismatch: "The record doesn't match the split.",
     estimateAuditOpenRound: "Open the round",
+    estimateAuditUnavailable: "The record can't be loaded right now.",
+    estimateLocalElsewhere:
+      "This round is being played on one phone at the table — nothing to guess here.",
     estimateWaitingOthers: "Your guess is locked — waiting for the others …",
     estimateSpectator: "You're not playing — watch along.",
     estimateSeatDone: "guessed",

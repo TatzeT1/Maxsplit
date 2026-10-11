@@ -110,6 +110,13 @@ export function buildEstimateAudit(
       guessesMilli,
       enteredBy,
       slots: stage.slots,
+      // The lot came before the third Stechfrage with someone who answered still contested: the server
+      // only does that when the bank had no question left, and the replay needs that said (spec C.8).
+      ...(reveal.next === "shuffle" &&
+      stage.index < ESTIMATE_MAX_STECHEN &&
+      reveal.contested.some((uid) => guessesMilli[uid] !== null)
+        ? { noStechfrage: true }
+        : {}),
     };
   });
 
@@ -175,10 +182,22 @@ function sameSet(a: readonly string[], b: ReadonlySet<string>): boolean {
   return a.length === b.size && a.every((uid) => b.has(uid));
 }
 
+/**
+ * The marker of a stage whose contested players went to the lot although the
+ * round could have gone on, because the bank had no further question for it
+ * (`stechenAvailable: false`, spec C.8). Read off the stage, never trusted
+ * unless it is literally `true`.
+ */
+function noStechfrageMarked(stage: EstimateAuditStage): boolean {
+  return (stage as EstimateAuditStage & { noStechfrage?: unknown }).noStechfrage === true;
+}
+
 /** The rules of version 1 (this document): `null` for an audit that no round could have produced. */
 function replayV1(audit: EstimateAudit): string[] | null {
   const { stages } = audit;
   if (stages.length < 1 || stages.length > ESTIMATE_MAX_STECHEN + 1) return null;
+  // The draw never uses a question twice in one round (`exclude`): a repeat is no round.
+  if (new Set(stages.map((stage) => stage.questionId)).size !== stages.length) return null;
 
   const payers: string[] = [];
   let precedes: readonly EstimatePrecedes[] = [];
@@ -222,6 +241,10 @@ function replayV1(audit: EstimateAudit): string[] | null {
     }
     // Contested after the last stage: only the lot can have decided it, and its order is on the audit.
     if (audit.resolvedBy !== "shuffle" || audit.shuffled === null) return null;
+    // Before the third Stechfrage the server only draws the lot when nobody contested answered
+    // (checked above for every stage) or when the bank had no question left (the stage says so).
+    const someoneAnswered = contested.some((uid) => stage.guessesMilli[uid] !== null);
+    if (index < ESTIMATE_MAX_STECHEN && someoneAnswered && !noStechfrageMarked(stage)) return null;
     if (!sameSet(audit.shuffled, new Set(contested))) return null;
     payers.push(...lotPicks(audit.shuffled, classification.precedes, slots));
     return payers;
@@ -280,7 +303,8 @@ export function verifyEstimateAudit(audit: EstimateAudit): boolean {
  * `claimPlaceholder` rewrites `paidBy` / `splits` but not `expense.game`, so a
  * claimed placeholder keeps its old uid in `audit.names`.
  *
- * - `payers`: the uids that pay (a positive split) equal `audit.booked.loserUids`
+ * - `payers`: the uids that pay (a positive split; with a bill smaller than the
+ *   number of losers, every entry: `splitEqual` leaves some at 0) equal `audit.booked.loserUids`
  *   as sets, or every uid that does not match is a placeholder of the audit
  *   that an outsider took over (equally many on both sides; the new uids are
  *   unknown to the audit). A forged payer still fails.
@@ -298,7 +322,14 @@ export function compareEstimateAuditToExpense(
   if (amounts.some((amount) => !Number.isSafeInteger(amount) || amount < 0)) {
     return { payers: false, equalSplit: false, amountChanged };
   }
-  const expensePayers = entries.filter(([, split]) => split.amountMinor > 0).map(([uid]) => uid);
+  // Normally only a positive split pays. With a bill smaller than the number of losers
+  // `splitEqual` leaves some losers at 0 (1 cent among two: {a: 1, b: 0}), and the booking
+  // still lists every loser, so then the entries themselves are the payers.
+  const tinyBill = expense.amountMinor < audit.booked.loserUids.length;
+  const expensePayers = entries
+    .filter(([, split]) => tinyBill || split.amountMinor > 0)
+    .map(([uid]) => uid);
+  const positivePayers = entries.filter(([, split]) => split.amountMinor > 0).map(([uid]) => uid);
 
   const auditPayers = new Set(audit.booked.loserUids);
   const expenseSet = new Set(expensePayers);
@@ -315,10 +346,10 @@ export function compareEstimateAuditToExpense(
   let equalSplit = false;
   if (
     expense.currency === audit.booked.currency &&
-    expensePayers.length > 0 &&
+    positivePayers.length > 0 &&
     Number.isSafeInteger(expense.amountMinor)
   ) {
-    const expected = Object.values(splitEqual(expense.amountMinor, expensePayers)).sort(
+    const expected = Object.values(splitEqual(expense.amountMinor, positivePayers)).sort(
       (a, b) => a - b,
     );
     const actual = amounts.filter((amount) => amount > 0).sort((a, b) => a - b);

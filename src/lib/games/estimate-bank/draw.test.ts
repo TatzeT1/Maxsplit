@@ -260,6 +260,88 @@ describe("drawEstimateQuestion", () => {
   });
 });
 
+describe("a Stechfrage that states the same fact as a question already used", () => {
+  const first = makeEstimateRow({ id: "est-geo-7001" });
+  // Same value, unit, scale and sources as `first`, another id and wording: the twin of the same fact.
+  const twin = makeEstimateRow({
+    id: "est-geo-7002",
+    text: { de: "Wie hoch ragt der Testberg auf?", en: "How tall does Mount Test rise?" },
+  });
+  const other = makeEstimateRow({
+    id: "est-geo-7003",
+    text: { de: "Wie hoch ist der Prüfberg?", en: "How high is Mount Check?" },
+    value: "77",
+  });
+  const another = makeEstimateRow({
+    id: "est-geo-7004",
+    text: { de: "Wie hoch ist der Kontrollberg?", en: "How high is Mount Control?" },
+    value: "78",
+  });
+
+  it("is never drawn while a different question is left", () => {
+    for (const shuffle of [identity, reversed, seededShuffle(1), seededShuffle(2)]) {
+      const result = drawEstimateQuestion(
+        input({ bank: [first, twin, other], exclude: [first.id], shuffle }),
+      );
+      expect(result.question.id).toBe(other.id);
+    }
+    // Twin of any used question of the round, not only the main one.
+    for (let seed = 1; seed <= 20; seed++) {
+      const result = drawEstimateQuestion(
+        input({
+          bank: [first, twin, other, another],
+          exclude: [other.id, first.id],
+          shuffle: seededShuffle(seed),
+        }),
+      );
+      expect(result.question.id).toBe(another.id);
+    }
+  });
+
+  it("holds after a reset too", () => {
+    const result = drawEstimateQuestion(
+      input({
+        bank: [first, twin, other],
+        seen: [first.id, twin.id, other.id],
+        exclude: [first.id],
+        preferNoTolerance: true,
+      }),
+    );
+    expect(result.reset).toBe(true);
+    expect(result.question.id).toBe(other.id);
+  });
+
+  it("is still drawn when it is all that is left (a lot would need a question the bank has)", () => {
+    const bank = [first, twin];
+    expect(hasEligibleStechfrage({ bank, includeFun: false, exclude: [first.id] })).toBe(true);
+    const result = drawEstimateQuestion(input({ bank, exclude: [first.id] }));
+    expect(result.question.id).toBe(twin.id);
+  });
+
+  it("does not hold back a row that merely shares a source or a value", () => {
+    const sameValueOtherSource = makeEstimateRow({
+      id: "est-geo-7005",
+      text: { de: "Wie breit ist der Testsee?", en: "How wide is Test Lake?" },
+      sources: [
+        { label: "Else (fake)", url: "https://example.org/else", kind: "primary" },
+        { label: "Other (fake)", url: "https://example.com/other", kind: "secondary" },
+      ],
+    });
+    const seenIds = new Set<string>();
+    for (let seed = 1; seed <= 40; seed++) {
+      const result = drawEstimateQuestion(
+        input({
+          bank: [first, twin, sameValueOtherSource],
+          exclude: [first.id],
+          shuffle: seededShuffle(seed),
+        }),
+      );
+      seenIds.add(result.question.id);
+    }
+    expect([...seenIds]).toEqual([sameValueOtherSource.id]);
+  });
+});
+
 describe("hasEligibleStechfrage", () => {
   it("ignores the seen-set: a seen row is still eligible after a reset", () => {
     expect(hasEligibleStechfrage({ bank: BANK, includeFun: false, exclude: [] })).toBe(true);

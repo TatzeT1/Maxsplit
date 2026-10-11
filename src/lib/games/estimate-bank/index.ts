@@ -5,6 +5,13 @@ import { NATURE_ROWS } from "./rows/nature";
 import { ANIMALS_ROWS } from "./rows/animals";
 import { BODY_ROWS } from "./rows/body";
 import { EVERYDAY_ROWS } from "./rows/everyday";
+import { SPACE_ROWS } from "./rows/space";
+import { CULTURE_ROWS } from "./rows/culture";
+import { FOOD_ROWS } from "./rows/food";
+import { HISTORY_ROWS } from "./rows/history";
+import { SCIENCE_ROWS } from "./rows/science";
+import { SPORT_ROWS } from "./rows/sport";
+import { TECHNOLOGY_ROWS } from "./rows/technology";
 
 /**
  * The Schätzfragen question bank — plaintext rows in a PUBLIC repository.
@@ -24,6 +31,13 @@ export const ESTIMATE_BANK: readonly EstimateQuestion[] = Object.freeze<Estimate
   ...ANIMALS_ROWS,
   ...BODY_ROWS,
   ...EVERYDAY_ROWS,
+  ...SPACE_ROWS,
+  ...CULTURE_ROWS,
+  ...FOOD_ROWS,
+  ...HISTORY_ROWS,
+  ...SCIENCE_ROWS,
+  ...SPORT_ROWS,
+  ...TECHNOLOGY_ROWS,
 ]);
 
 export const ESTIMATE_BANK_BY_ID: ReadonlyMap<string, EstimateQuestion> = new Map(

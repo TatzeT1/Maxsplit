@@ -11,6 +11,7 @@
  * hide anything: the bank is public (docs/DECISIONS.md, ADR-006).
  */
 import type { EstimateQuestion } from "@/lib/games/estimate-bank/types";
+import { isDuplicateFact } from "@/lib/games/estimate-bank/validate";
 
 export interface EstimateDrawInput {
   bank: readonly EstimateQuestion[];
@@ -96,6 +97,15 @@ export function drawEstimateQuestion(input: EstimateDrawInput): EstimateDrawResu
     const recentSet = new Set(recent);
     pool = eligible.filter((row) => !recentSet.has(row.id));
     base = [...seenBase.filter((id) => !eligibleIds.has(id)), ...recent];
+  }
+
+  // A question that states the same fact as one already used in this round (a duplicate row the
+  // validator should have caught) would hand the contested players a guaranteed re-tie: skip it,
+  // unless it is all that is left.
+  const used = input.bank.filter((row) => input.exclude.includes(row.id));
+  if (used.length > 0) {
+    const fresh = pool.filter((row) => !used.some((usedRow) => isDuplicateFact(row, usedRow)));
+    if (fresh.length > 0) pool = fresh;
   }
 
   if (input.preferNoTolerance && pool.some((row) => !row.tolerance)) {

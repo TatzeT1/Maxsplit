@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
@@ -77,13 +77,18 @@ describe("GameRecordSummary", () => {
     ).toBeInTheDocument();
   });
 
-  it("still renders the audit (replay only) when the form passes no expense", async () => {
-    renderRecord({
+  it("mounts no audit when no expense is passed (the form, create and edit)", async () => {
+    const { container } = renderRecord({
       gameId: "estimate",
       playerUids: ["lea", "max", "ben"],
       attempt: 1,
       estimate: decidedAudit(),
     });
-    expect(await screen.findByText("Rechnung nachgeprüft — stimmt.")).toBeInTheDocument();
+    expect(screen.getByText(/Schätzfragen/)).toBeInTheDocument();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(container.querySelector("details")).toBeNull();
+    expect(screen.queryByText("Rechnung nachgeprüft — stimmt.")).toBeNull();
   });
 });

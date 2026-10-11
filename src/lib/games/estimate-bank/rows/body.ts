@@ -342,80 +342,6 @@ export const BODY_ROWS: readonly EstimateQuestion[] = [
     category: "body",
     tone: "fun",
     text: {
-      de: "Wie viele Zähne hat ein Kind, wenn das komplette Milchgebiss durchgebrochen ist?",
-      en: "How many teeth are in a child's complete set of baby teeth?",
-    },
-    unit: {
-      de: "Zähne",
-      en: "teeth",
-      symbol: "",
-    },
-    scale: "ratio",
-    format: "quantity",
-    value: "20",
-    definition:
-      "Total number of primary (deciduous) teeth in a complete human milk-tooth set, both jaws combined, permanent teeth excluded.",
-    asOf: 2025,
-    sources: [
-      {
-        label: "MouthHealthy (American Dental Association): Baby Teeth",
-        url: "https://www.mouthhealthy.org/all-topics-a-z/baby-teeth",
-        kind: "primary",
-      },
-      {
-        label: "UofM Health West / Healthwise: Primary baby teeth",
-        url: "https://uofmhealthwest.org/healthwise/primary-baby-teeth/",
-        kind: "secondary",
-      },
-    ],
-    note: "ADA treated as the authoritative professional body. Evidence from search-result text.",
-    verified: {
-      by: "Claude (Agenten, blind geprüft)",
-      on: "2026-10-09",
-    },
-  },
-  {
-    id: "est-bod-0011",
-    category: "body",
-    tone: "fun",
-    text: {
-      de: "Wie viele Millimeter misst ein erwachsener menschlicher Augapfel im Durchmesser?",
-      en: "How many millimetres wide is an adult human eyeball?",
-    },
-    unit: {
-      de: "Millimeter",
-      en: "millimetres",
-      symbol: "mm",
-    },
-    scale: "ratio",
-    format: "quantity",
-    value: "24",
-    definition:
-      "Typical diameter of a healthy adult human eyeball (transverse diameter and axial length are both close to this), in millimetres.",
-    asOf: 2023,
-    sources: [
-      {
-        label: "PubMed: Variations in eyeball diameters of the healthy adults (CT study)",
-        url: "https://pubmed.ncbi.nlm.nih.gov/25431659/",
-        kind: "primary",
-      },
-      {
-        label: "PMC: healthy-eye axial length study (table)",
-        url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC10366186/table/Tab1",
-        kind: "primary",
-      },
-    ],
-    note: "Individual eyes range about 21-27 mm; use the adult average. Second source attribution is slightly weaker than the first.",
-    verified: {
-      by: "Claude (Agenten, blind geprüft)",
-      on: "2026-10-09",
-    },
-  },
-  {
-    id: "est-bod-0012",
-    category: "body",
-    tone: "fun",
-    text: {
       de: "In welchem Jahr wurden die Röntgenstrahlen entdeckt, die den Blick durch den Körper ermöglichen?",
       en: "In which year were X-rays discovered, the rays that let us see bones inside the body?",
     },
@@ -454,7 +380,7 @@ export const BODY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-bod-0013",
+    id: "est-bod-0011",
     category: "body",
     tone: "fun",
     text: {
@@ -492,7 +418,7 @@ export const BODY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-bod-0014",
+    id: "est-bod-0012",
     category: "body",
     tone: "fun",
     text: {
@@ -534,7 +460,7 @@ export const BODY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-bod-0015",
+    id: "est-bod-0013",
     category: "body",
     tone: "fun",
     text: {
@@ -571,7 +497,7 @@ export const BODY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-bod-0016",
+    id: "est-bod-0014",
     category: "body",
     tone: "fun",
     text: {
@@ -602,6 +528,42 @@ export const BODY_ROWS: readonly EstimateQuestion[] = [
       },
     ],
     note: "LOW CONFIDENCE, needs review: both sources are the same single modelling study (about 25 percent uncertainty), not independent; older textbooks claimed 1-3 kg. Drop if a strict two-independent-sources rule applies.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-bod-0015",
+    category: "body",
+    tone: "standard",
+    text: {
+      de: "Wie viele Rippen hat ein erwachsener Mensch üblicherweise insgesamt?",
+      en: "How many ribs does a typical adult human have in total?",
+    },
+    unit: {
+      de: "Rippen",
+      en: "ribs",
+      symbol: "",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "24",
+    definition:
+      "Usual number of ribs in the adult human chest wall, both sides together (true, false and floating ribs); rare extra cervical ribs are not counted.",
+    asOf: 2024,
+    sources: [
+      {
+        label: "StatPearls (NCBI): Anatomy, Thorax, Ribs",
+        url: "https://www.ncbi.nlm.nih.gov/sites/books/NBK538328/",
+        kind: "primary",
+      },
+      {
+        label: "Cleveland Clinic: Parts of your rib cage",
+        url: "https://my.clevelandclinic.org/health/body/rib-cage",
+        kind: "secondary",
+      },
+    ],
     verified: {
       by: "Claude (Agenten, blind geprüft)",
       on: "2026-10-09",

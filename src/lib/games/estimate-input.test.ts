@@ -141,8 +141,13 @@ describe("parseEstimateInput: the table of spec C.2", () => {
   });
 
   it("rejects the sign of every kind, and anything that is not a typed number", () => {
-    for (const raw of ["-5", "−5", "–5", "+5", "  -0"]) {
+    for (const raw of ["-5", "−5", "–5", "  -0"]) {
       expect(parseEstimateInput(raw, "de")).toEqual(fail("negative"));
+    }
+    // A plus is no negative number: the "never negative" hint would be wrong, "only digits and marks" is right.
+    for (const raw of ["+5", " +0", "+"]) {
+      expect(parseEstimateInput(raw, "de")).toEqual(fail("chars"));
+      expect(parseEstimateInput(raw, "en")).toEqual(fail("chars"));
     }
     for (const raw of ["5 m", "5%", "1e3", "5\t0", "５", "5-3", "1_000", "5€", "0x10"]) {
       expect(parseEstimateInput(raw, "en")).toEqual(fail("chars"));
@@ -200,7 +205,7 @@ function referenceParse(raw: string, locale: EstimateLocale): EstimateParse {
   const neutral = /[\u0020\u00A0\u202F\u2019']/;
   const s = raw.trim();
   if (s === "") return fail("empty");
-  if (/^[-\u2212\u2013+]/.test(s)) return fail("negative");
+  if (/^[-\u2212\u2013]/.test(s)) return fail("negative");
   if (!/^[0-9.,\u0020\u00A0\u202F\u2019']+$/.test(s)) return fail("chars");
   const dec = locale === "de" ? "," : ".";
   const other = locale === "de" ? "." : ",";

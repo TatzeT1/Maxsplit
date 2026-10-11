@@ -611,80 +611,6 @@ export const ANIMALS_ROWS: readonly EstimateQuestion[] = [
     category: "animals",
     tone: "fun",
     text: {
-      de: "Wie viele Stunden pro Tag schläft ein Fregattvogel im Schnitt, solange er tagelang über dem Meer fliegt?",
-      en: "How many hours per day does a frigatebird sleep on average while it stays airborne over the ocean for days?",
-    },
-    unit: {
-      de: "Stunden pro Tag",
-      en: "hours per day",
-      symbol: "h",
-    },
-    scale: "ratio",
-    format: "quantity",
-    value: "0.69",
-    definition:
-      "Mean daily sleep time, measured by EEG, of great frigatebirds during multi-day foraging flights over the open ocean (2016 study); on land the same birds sleep many times longer.",
-    asOf: 2016,
-    sources: [
-      {
-        label: "Rattenborg et al., Evidence that birds sleep in mid-flight, Nature Communicat...",
-        url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC4976198",
-        kind: "primary",
-      },
-      {
-        label: "Discover Magazine, Birds Sleep During Flights, Too",
-        url: "https://discovermagazine.com/planet-earth/birds-sleep-during-flights-too",
-        kind: "secondary",
-      },
-    ],
-    note: "0.69 h is about 41 minutes; Discover rounds to 42 minutes. Value is the paper's own figure. Could be posed in minutes if the app prefers (41.4).",
-    verified: {
-      by: "Claude (Agenten, blind geprüft)",
-      on: "2026-10-09",
-    },
-  },
-  {
-    id: "est-ani-0018",
-    category: "animals",
-    tone: "fun",
-    text: {
-      de: "Wie viele Stunden am Tag schlafen Faultiere im Regenwald wirklich?",
-      en: "How many hours a day do sloths in the wild really sleep?",
-    },
-    unit: {
-      de: "Stunden pro Tag",
-      en: "hours per day",
-      symbol: "h",
-    },
-    scale: "ratio",
-    format: "quantity",
-    value: "9.6",
-    definition:
-      "Mean daily sleep of wild brown-throated three-toed sloths measured by EEG head recorders in a Panamanian rain forest (2008 study), versus the roughly 16 hours reported earlier for captive sloths.",
-    asOf: 2008,
-    sources: [
-      {
-        label: "Max Planck Society press release, Not living up to their name (sloth sleep)",
-        url: "https://www.mpg.de/567312/pressRelease20080521",
-        kind: "primary",
-      },
-      {
-        label: "ScienceDaily, wild sloths sleep less than captive ones (2008)",
-        url: "https://www.sciencedaily.com/releases/2008/05/080513191934.htm",
-        kind: "secondary",
-      },
-    ],
-    note: "Small sample (three adult females, Bradypus variegatus, Barro Colorado Island); 9.63 h rounded to 9.6. A later study found 9-10 h for mainland and island sloths.",
-    verified: {
-      by: "Claude (Agenten, blind geprüft)",
-      on: "2026-10-09",
-    },
-  },
-  {
-    id: "est-ani-0019",
-    category: "animals",
-    tone: "fun",
-    text: {
       de: "Wie weit schleudert eine Dickkopffalter-Raupe der Art Epargyreus clarus ihre Kotkügelchen?",
       en: "How far can a silver-spotted skipper caterpillar fire its droppings?",
     },
@@ -724,7 +650,7 @@ export const ANIMALS_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-ani-0020",
+    id: "est-ani-0018",
     category: "animals",
     tone: "fun",
     text: {
@@ -766,7 +692,7 @@ export const ANIMALS_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-ani-0021",
+    id: "est-ani-0019",
     category: "animals",
     tone: "fun",
     text: {
@@ -803,7 +729,7 @@ export const ANIMALS_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-ani-0022",
+    id: "est-ani-0020",
     category: "animals",
     tone: "fun",
     text: {
@@ -839,6 +765,84 @@ export const ANIMALS_ROWS: readonly EstimateQuestion[] = [
       },
     ],
     note: "The question is about the prize year; the underlying herring papers are cited as 2003 or 2004 depending on the outlet, so do not ask for the paper year. Meta-science row, drop first if the bank should stay purely anatomical.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-ani-0021",
+    category: "animals",
+    tone: "fun",
+    text: {
+      de: "Wie oft pro Sekunde schlägt eine schwebende Honigbiene mit den Flügeln?",
+      en: "How many times per second does a hovering honey bee beat its wings?",
+    },
+    unit: {
+      de: "Hertz (Flügelschläge pro Sekunde)",
+      en: "hertz (wingbeats per second)",
+      symbol: "Hz",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "230",
+    definition:
+      "Mean wingbeat frequency of a honey bee (Apis mellifera) hovering in normal air, as measured with high-speed filming in the original flight study.",
+    asOf: 2005,
+    sources: [
+      {
+        label: "PNAS: Short-amplitude high-frequency wing strokes (honeybee flight)",
+        url: "https://www.pnas.org/doi/10.1073/pnas.0506590102",
+        kind: "primary",
+      },
+      {
+        label: "PMC: Honey bee attraction to soybeans, bioacoustics monitoring",
+        url: "https://pmc.ncbi.nlm.nih.gov/articles/PMC10993721/",
+        kind: "primary",
+      },
+    ],
+    note: "Published values range roughly 200 to 250 Hz depending on temperature and load; the PNAS hovering measurement is the reference.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-ani-0022",
+    category: "animals",
+    tone: "fun",
+    text: {
+      de: "Wie viele Zähne hat ein ausgewachsener Hund?",
+      en: "How many teeth does a fully grown dog have?",
+    },
+    unit: {
+      de: "Zähne",
+      en: "teeth",
+      symbol: "",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "42",
+    definition:
+      "Number of permanent teeth in the complete adult dentition of a dog (incisors, canines, premolars and molars), baby teeth not counted.",
+    asOf: 2024,
+    sources: [
+      {
+        label: "Merck Veterinary Manual: Dental development of dogs",
+        url: "https://www.merckvetmanual.com/dog-owners/digestive-disorders-of-dogs/dental-development-of-dogs",
+        kind: "primary",
+      },
+      {
+        label: "VCA Animal Hospitals: Fun facts about your pet's teeth",
+        url: "https://vcahospitals.com/resources/preventive-dog/dental/fun-facts-about-your-pets-teeth",
+        kind: "secondary",
+      },
+      {
+        label: "American Kennel Club: How many teeth do dogs have?",
+        url: "https://www.akc.org/expert-advice/health/how-many-teeth-do-dogs-have/",
+        kind: "secondary",
+      },
+    ],
     verified: {
       by: "Claude (Agenten, blind geprüft)",
       on: "2026-10-09",

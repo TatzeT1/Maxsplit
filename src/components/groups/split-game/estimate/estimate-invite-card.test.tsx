@@ -59,6 +59,16 @@ describe("EstimateInviteCard", () => {
     expect(await screen.findByText("Link kopiert!")).toBeInTheDocument();
   });
 
+  it("clears the pending 'copied' reset when it unmounts", async () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    const { unmount } = card();
+    fireEvent.click(screen.getByRole("button", { name: "Link kopieren" }));
+    await screen.findByText("Link kopiert!");
+    const clear = vi.spyOn(globalThis, "clearTimeout");
+    unmount();
+    expect(clear).toHaveBeenCalled();
+  });
+
   it("names the one other player, or the group for several", () => {
     card({
       entrants: {

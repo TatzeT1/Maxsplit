@@ -13,6 +13,8 @@ import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import {
   isClaimableEstimateRound,
   isEqualSplitAmong,
+  isValidAmountMinor,
+  sameUidSet,
   splitPayerUids,
 } from "@/lib/money/game-expense";
 import { expensePushes } from "@/lib/push/messages";
@@ -125,7 +127,7 @@ const SPLIT_MODES: readonly SplitMode[] = ["equal", "shares", "percent", "exact"
  */
 function validateExpenseInput(input: ExpenseInput): string | null {
   if (!isValidDescription(input.description)) return "invalid-description";
-  if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) return "invalid-amount";
+  if (!isValidAmountMinor(input.amountMinor)) return "invalid-amount";
   if (!isIsoDate(input.date)) return "invalid-date";
   if (input.category !== null && !isCategoryId(input.category)) return "invalid-category";
   if (!isValidEmoji(input.emoji)) return "invalid-emoji";
@@ -162,6 +164,40 @@ interface EstimateClaim {
   summary: EstimateChatSummary;
 }
 
+/** The round the caller names is already claimed by a live expense: a replay or a second bill, never a new claim. */
+interface ClaimReplay {
+  replayOf: string | null;
+}
+
+/**
+ * A claiming request for a round that an expense has ALREADY claimed. The usual
+ * cause is a lost response and a retry; booking it again would charge the table
+ * twice (a second expense, a second chat card, a second push). So, for the
+ * caller's own one-phone round: the same bill answers the first expense's id
+ * (idempotent), a different bill is refused. A claimed expense that is gone or
+ * deleted frees the round's name again: the request is then treated as any
+ * unclaimable one (a plain game record). `null`: not this case.
+ */
+async function claimReplay(args: {
+  groupRef: FirebaseFirestore.DocumentReference;
+  round: Omit<EstimateRound, "id">;
+  input: ExpenseInput;
+  splits: Record<string, ExpenseSplit>;
+  uid: string;
+}): Promise<ClaimReplay | null> {
+  const { groupRef, round, input, splits, uid } = args;
+  if (round.mode !== "local" || round.createdBy !== uid || !round.expenseId) return null;
+  const existingSnap = await groupRef.collection("expenses").doc(round.expenseId).get();
+  if (!existingSnap.exists) return null;
+  const existing = existingSnap.data() as Omit<Expense, "id">;
+  if (existing.deletedAt) return null;
+  const same =
+    existing.amountMinor === input.amountMinor &&
+    existing.currency === input.currency &&
+    sameUidSet(splitPayerUids(existing.splits), splitPayerUids(splits));
+  return { replayOf: same ? existingSnap.id : null };
+}
+
 /**
  * Verifies that this expense really books a finished one-phone estimate round
  * (spec E.9), and returns the server-written audit and chat summary to store
@@ -184,11 +220,13 @@ async function verifyEstimateClaim(args: {
   game: ExpenseGame;
   uid: string;
   now: string;
-}): Promise<EstimateClaim | null> {
+}): Promise<EstimateClaim | ClaimReplay | null> {
   const { groupRef, group, roundId, input, splits, game, uid, now } = args;
   const roundSnap = await groupRef.collection("estimateRounds").doc(roundId).get();
   if (!roundSnap.exists || !roundSnap.updateTime) return null;
   const round = roundSnap.data() as Omit<EstimateRound, "id">;
+  const replay = await claimReplay({ groupRef, round, input, splits, uid });
+  if (replay) return replay;
   const claimable = isClaimableEstimateRound({
     round,
     uid,
@@ -296,7 +334,7 @@ export async function addExpense(
 
   // A finished one-phone estimate round this expense books: verified, then claimed in the
   // same batch. Unverified (or not an estimate game) -> the plain game record, no audit.
-  const claim =
+  const verified =
     game?.gameId === "estimate" && claimRoundId
       ? await verifyEstimateClaim({
           groupRef,
@@ -309,6 +347,13 @@ export async function addExpense(
           now,
         })
       : null;
+  if (verified && "replayOf" in verified) {
+    // Nothing is written: the round is already booked (see `claimReplay`).
+    return verified.replayOf
+      ? { ok: true, data: { expenseId: verified.replayOf } }
+      : { ok: false, error: "invalid-game" };
+  }
+  const claim = verified;
   const storedGame = game && claim ? { ...game, estimate: claim.audit } : game;
 
   const expense: Omit<Expense, "id"> = {

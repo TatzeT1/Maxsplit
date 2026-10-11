@@ -533,7 +533,9 @@ describe("localEstimateErrorKey", () => {
     expect(localEstimateErrorKey("round-running", "start")).toBe("expenses.estimateRoundRunning");
     expect(localEstimateErrorKey("rate-limited", "start")).toBe("expenses.estimateRateLimited");
     expect(localEstimateErrorKey("bank-empty", "start")).toBe("expenses.estimateBankEmpty");
-    expect(localEstimateErrorKey("invalid-pool", "start")).toBe(
+    // One phone: the pool changed under the form — never the "online needs accounts" text.
+    expect(localEstimateErrorKey("invalid-pool", "start")).toBe("expenses.estimateStartError");
+    expect(localEstimateErrorKey("invalid-pool", "start-online")).toBe(
       "expenses.estimatePlaceOnlinePlaceholderHint",
     );
     expect(localEstimateErrorKey("network", "start")).toBe("errors.notSaved");

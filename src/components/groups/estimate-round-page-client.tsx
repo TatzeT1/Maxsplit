@@ -90,7 +90,7 @@ export type EstimatePageView =
   | { kind: "ready" };
 
 /**
- * Rows 1-6 of the table; `ready` is rows 7-14, which the body tells apart from
+ * Rows 1-6 of the table; `ready` is rows 6b-14, which the page and its body tell apart from
  * the round itself. Pure, so the test can enumerate every combination.
  *
  * Offline is `NeedsConnection` for any offline state (no cached read-only
@@ -207,6 +207,9 @@ export function EstimateRoundPageClient({
   const groupState = useGroupDoc(groupId, !!user, (snapshot) => report("group", snapshot));
   const roundState = useEstimateRound(groupId, roundId, (snapshot) => report("round", snapshot));
   const closeHref = `/groups/${groupId}`;
+  // The typed-but-unlocked guess, kept here (in memory only) because the offline screen below
+  // unmounts the body and with it the panel: a blip must not eat a number while the clock runs.
+  const [draft, setDraft] = useState<{ key: string; text: string } | null>(null);
 
   const view = estimatePageView({
     signedIn: !!user,
@@ -260,6 +263,11 @@ export function EstimateRoundPageClient({
   }
 
   const meta = SPLIT_GAME_META.estimate;
+  const onlineRound = round.mode === "online";
+  // Row 6b: a one-phone round is played on that one phone (its guesses never leave it), so a
+  // running one has nothing to guess or close here — whoever opens it, say where it is. A
+  // finished or cancelled one is a plain record and falls through to the body.
+  const localRunning = round.mode === "local" && round.status === "running";
   return (
     <GamePageStage
       closeHref={closeHref}
@@ -267,14 +275,35 @@ export function EstimateRoundPageClient({
         <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-semibold">
           <span aria-hidden="true">{meta.emoji}</span>
           <span className="truncate">{t(meta.nameKey)}</span>
-          <span className="bg-primary/10 text-primary flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.08em] uppercase">
-            <Wifi aria-hidden="true" className="size-3" />
-            {t("expenses.luckOnlineBadge")}
-          </span>
+          {onlineRound && (
+            <span className="bg-primary/10 text-primary flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.08em] uppercase">
+              <Wifi aria-hidden="true" className="size-3" />
+              {t("expenses.luckOnlineBadge")}
+            </span>
+          )}
         </h1>
       }
     >
-      <EstimateRoundBody groupId={groupId} round={round} group={group} currentUid={user.uid} />
+      {localRunning ? (
+        <>
+          <p
+            role="status"
+            className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm"
+          >
+            {t("expenses.estimateLocalElsewhere")}
+          </p>
+          <BackLink href={closeHref} />
+        </>
+      ) : (
+        <EstimateRoundBody
+          groupId={groupId}
+          round={round}
+          group={group}
+          currentUid={user.uid}
+          draft={draft}
+          onDraft={setDraft}
+        />
+      )}
     </GamePageStage>
   );
 }
@@ -316,6 +345,12 @@ interface AnnounceMemo {
   lastStatus: EstimateStage["status"];
   submitted: readonly string[];
   text: string;
+  /**
+   * The stage whose truth `text` carries, until that reveal has played out
+   * (`onSettled`): the live region must not say the number before the animation
+   * shows it. `null` for text with no truth in it.
+   */
+  gate: number | null;
 }
 
 /**
@@ -338,16 +373,19 @@ function nextAnnouncement(
     lastStatus: last.status,
     submitted: last.submitted,
   };
-  if (!previous) return { ...current, text: "" };
+  if (!previous) return { ...current, text: "", gate: null };
 
   let text = previous.text;
+  let gate = previous.gate;
   const settled = round.stages[previous.stageCount - 1];
   if (
     round.stages.length > previous.stageCount ||
     (previous.lastStatus === "guessing" && settled?.status === "revealed")
   ) {
     const parts: string[] = [];
+    gate = null;
     if (settled?.reveal && previous.lastStatus === "guessing") {
+      gate = settled.index;
       parts.push(
         t("expenses.estimateAnnounceReveal", {
           truth: formatEstimateWithUnit(settled.reveal.truthMilli, settled.question, locale),
@@ -365,6 +403,7 @@ function nextAnnouncement(
   } else if (last.submitted.length > previous.submitted.length) {
     const fresh = last.submitted.filter((uid) => !previous.submitted.includes(uid));
     if (fresh.length > 0) {
+      gate = null;
       text = t("expenses.estimateAnnounceLocked", {
         name: nameOf(fresh[fresh.length - 1]),
         done: last.submitted.length,
@@ -375,13 +414,14 @@ function nextAnnouncement(
 
   if (
     text === previous.text &&
+    gate === previous.gate &&
     current.stageCount === previous.stageCount &&
     current.lastStatus === previous.lastStatus &&
     current.submitted.length === previous.submitted.length
   ) {
     return previous;
   }
-  return { ...current, text };
+  return { ...current, text, gate };
 }
 
 function EstimateRoundBody({
@@ -389,11 +429,15 @@ function EstimateRoundBody({
   round,
   group,
   currentUid,
+  draft,
+  onDraft,
 }: {
   groupId: string;
   round: EstimateRound;
   group: Group;
   currentUid: string;
+  draft: { key: string; text: string } | null;
+  onDraft: (draft: { key: string; text: string }) => void;
 }) {
   const t = useT();
   const { locale } = useLocale();
@@ -442,6 +486,13 @@ function EstimateRoundBody({
   for (const candidate of stages) {
     if (candidate.status === "revealed") revealStage = candidate;
   }
+  // The reveal's text waits for its animation: a gate on a stage that does not animate here never holds.
+  const announcement =
+    nextMemo.gate !== null &&
+    seenGuessing.includes(nextMemo.gate) &&
+    !settledStages.includes(nextMemo.gate)
+      ? ""
+      : nextMemo.text;
   const revealAnimates = !!revealStage && seenGuessing.includes(revealStage.index);
   const revealPending =
     !!revealStage && revealAnimates && running && !settledStages.includes(revealStage.index);
@@ -461,6 +512,7 @@ function EstimateRoundBody({
   const canGuessNow = guessing && mine && !lockedByMe && !timedOut;
   const canClose = isEntrant || canManage;
   const lastCall = stage.lastCallAt !== null;
+  const panelKey = `${round.id}:${stage.index}:${currentUid}`;
   const noticeHere = notice && notice.stage === stage.index ? notice : null;
 
   function fail(code: string, scope: "lock" | "close" | "cancel"): string {
@@ -623,7 +675,7 @@ function EstimateRoundBody({
                     data-slot="estimate-history"
                     className="bg-card ring-foreground/10 rounded-xl p-3 ring-1"
                   >
-                    <summary className="min-h-6 cursor-pointer text-sm font-medium">
+                    <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
                       {past.kind === "main"
                         ? t("expenses.estimateStageMain")
                         : t("expenses.estimateStageStechen", { count: past.index })}
@@ -649,7 +701,7 @@ function EstimateRoundBody({
               <>
                 {canGuessNow ? (
                   <EstimateGuessPanel
-                    key={`${round.id}:${stage.index}:${currentUid}`}
+                    key={panelKey}
                     question={stage.question}
                     stageIndex={stage.index}
                     stageKind={stage.kind}
@@ -658,6 +710,8 @@ function EstimateRoundBody({
                     disabledReason={online ? null : t("expenses.estimateNeedsConnection")}
                     error={noticeHere?.kind === "error" ? noticeHere.text : null}
                     keepOnError
+                    initialText={draft?.key === panelKey ? draft.text : ""}
+                    onTextChange={(text) => onDraft({ key: panelKey, text })}
                     onLock={(milli) => void lock(milli)}
                   />
                 ) : (
@@ -790,9 +844,9 @@ function EstimateRoundBody({
         )}
       </div>
 
-      {/* Counts, names and the truth after the reveal — never a value before it. */}
+      {/* Counts, names and the truth once the reveal has played out — never a value before it. */}
       <p role="status" aria-live="polite" className="sr-only">
-        {nextMemo.text}
+        {announcement}
       </p>
 
       {/* A direct child of the stage column, so the slip's containing block is the fixed stage frame. */}

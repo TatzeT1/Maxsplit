@@ -369,7 +369,7 @@ describe("SplitEstimateDialog", () => {
       ["round-running", de.expenses.estimateRoundRunning],
       ["rate-limited", de.expenses.estimateRateLimited],
       ["bank-empty", de.expenses.estimateBankEmpty],
-      ["invalid-pool", de.expenses.estimatePlaceOnlinePlaceholderHint],
+      ["invalid-pool", de.expenses.estimateStartError],
       ["something-else", de.expenses.estimateStartError],
     ])("shows %s and lets the table try again", async (code, message) => {
       mocks.create.mockResolvedValueOnce({ ok: false, error: code });
@@ -624,7 +624,7 @@ describe("SplitEstimateDialog", () => {
       const status = screen
         .getAllByRole("status")
         .find((element) => element.textContent?.includes("Stechfrage für"));
-      expect(status).toHaveTextContent("Gleichstand. Stechfrage für Max, Lea.");
+      expect(status).toHaveTextContent("Gleichstand. Stechfrage für Max und Lea.");
       expect(screen.getByText(RATIO_QUESTION.text.de)).toBeInTheDocument();
       expect(screen.getByText("Stechfrage 1")).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Übernehmen" })).toBeNull();

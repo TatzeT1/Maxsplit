@@ -148,10 +148,446 @@ function answerForms(value: string): string[] {
   return forms;
 }
 
-function containsAnswer(text: unknown, value: string): boolean {
+type TextLocale = "de" | "en";
+
+/** `canonical * 10^exponent` as a canonical decimal string ("3.1", 9 -> "3100000000"). */
+function shiftDecimal(canonical: string, exponent: number): string {
+  const [integer, fraction = ""] = canonical.split(".");
+  const digits = integer + fraction;
+  const point = integer.length + exponent;
+  if (point >= digits.length)
+    return canonicalDecimal(digits + "0".repeat(point - digits.length), "");
+  return canonicalDecimal(digits.slice(0, point), digits.slice(point));
+}
+
+/**
+ * A scale word right after a digit token ("3,1 Mrd.", "2.5 million"). Only the
+ * unambiguous ones: "m", "k" and "bn" also mean metre, kilo and billion in a
+ * unit. German "Billion" is 10^12, English "billion" 10^9.
+ */
+const SCALE_AFTER_DIGITS: Record<TextLocale, [string, number][]> = {
+  de: [
+    ["milliarden?", 9],
+    ["mrd", 9],
+    ["millionen?", 6],
+    ["mio", 6],
+    ["billionen?", 12],
+    ["tausend", 3],
+    ["tsd", 3],
+  ],
+  en: [
+    ["billions?", 9],
+    ["millions?", 6],
+    ["trillions?", 12],
+    ["thousand", 3],
+  ],
+};
+
+/** Every value a digit token followed by a scale word could stand for ("3,1 Mrd." -> 3100000000). */
+function scaledNumbersIn(text: string, locale: TextLocale): Set<string> {
+  const found = new Set<string>();
+  for (const [scale, exponent] of SCALE_AFTER_DIGITS[locale]) {
+    const pattern = new RegExp(
+      `(\\d+(?:[.,'’\\u00A0\\u202F ]\\d+)*)\\s*${scale}(?![\\p{L}])`,
+      "giu",
+    );
+    for (const match of text.matchAll(pattern)) {
+      const groups = match[1].split(/[^\d]+/).filter((group) => group !== "");
+      const forms = [canonicalDecimal(groups.join(""), "")];
+      if (groups.length > 1) {
+        forms.push(canonicalDecimal(groups.slice(0, -1).join(""), groups[groups.length - 1]));
+      }
+      for (const form of forms) found.add(shiftDecimal(form, exponent));
+    }
+  }
+  return found;
+}
+
+// A number spelled in words ("achthundertsechsundsiebzig", "eight hundred seventy-six").
+type NumberAtom =
+  | { kind: "unit" | "tens"; value: number }
+  | { kind: "hundred" }
+  | { kind: "scale"; value: number }
+  | { kind: "and" };
+
+const EN_ATOMS: Record<string, NumberAtom> = {
+  and: { kind: "and" },
+  hundred: { kind: "hundred" },
+  thousand: { kind: "scale", value: 1e3 },
+  million: { kind: "scale", value: 1e6 },
+  billion: { kind: "scale", value: 1e9 },
+  trillion: { kind: "scale", value: 1e12 },
+};
+[
+  "zero",
+  "one",
+  "two",
+  "three",
+  "four",
+  "five",
+  "six",
+  "seven",
+  "eight",
+  "nine",
+  "ten",
+  "eleven",
+  "twelve",
+  "thirteen",
+  "fourteen",
+  "fifteen",
+  "sixteen",
+  "seventeen",
+  "eighteen",
+  "nineteen",
+].forEach((word, value) => (EN_ATOMS[word] = { kind: "unit", value }));
+["twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"].forEach(
+  (word, index) => (EN_ATOMS[word] = { kind: "tens", value: 20 + 10 * index }),
+);
+
+const DE_ATOMS: Record<string, NumberAtom> = {
+  und: { kind: "and" },
+  hundert: { kind: "hundred" },
+  tausend: { kind: "scale", value: 1e3 },
+  million: { kind: "scale", value: 1e6 },
+  millionen: { kind: "scale", value: 1e6 },
+  mio: { kind: "scale", value: 1e6 },
+  milliarde: { kind: "scale", value: 1e9 },
+  milliarden: { kind: "scale", value: 1e9 },
+  mrd: { kind: "scale", value: 1e9 },
+  billion: { kind: "scale", value: 1e12 },
+  billionen: { kind: "scale", value: 1e12 },
+  eins: { kind: "unit", value: 1 },
+  eine: { kind: "unit", value: 1 },
+  zwo: { kind: "unit", value: 2 },
+  fuenf: { kind: "unit", value: 5 },
+  zwoelf: { kind: "unit", value: 12 },
+  fuenfzehn: { kind: "unit", value: 15 },
+  dreissig: { kind: "tens", value: 30 },
+  fuenfzig: { kind: "tens", value: 50 },
+};
+[
+  "null",
+  "ein",
+  "zwei",
+  "drei",
+  "vier",
+  "fünf",
+  "sechs",
+  "sieben",
+  "acht",
+  "neun",
+  "zehn",
+  "elf",
+  "zwölf",
+  "dreizehn",
+  "vierzehn",
+  "fünfzehn",
+  "sechzehn",
+  "siebzehn",
+  "achtzehn",
+  "neunzehn",
+].forEach((word, value) => (DE_ATOMS[word] = { kind: "unit", value }));
+["zwanzig", "dreißig", "vierzig", "fünfzig", "sechzig", "siebzig", "achtzig", "neunzig"].forEach(
+  (word, index) => (DE_ATOMS[word] = { kind: "tens", value: 20 + 10 * index }),
+);
+const DE_ATOM_WORDS = Object.keys(DE_ATOMS).sort((a, b) => b.length - a.length);
+
+/** A German compound ("sechsundsiebzig", "zweitausendvierhundert") as atoms, or `null` if any part is no number word. */
+function germanAtoms(word: string, from = 0): NumberAtom[] | null {
+  if (from === word.length) return [];
+  for (const candidate of DE_ATOM_WORDS) {
+    if (!word.startsWith(candidate, from)) continue;
+    const rest = germanAtoms(word, from + candidate.length);
+    if (rest) return [DE_ATOMS[candidate], ...rest];
+  }
+  return null;
+}
+
+function atomsOf(word: string, locale: TextLocale): NumberAtom[] | null {
+  if (locale === "en") return Object.hasOwn(EN_ATOMS, word) ? [EN_ATOMS[word]] : null;
+  return word.length <= 40 ? germanAtoms(word) : null;
+}
+
+/** `hundred`/`thousand`/... after a partial value, in the usual left-to-right reading. */
+function runValue(atoms: readonly NumberAtom[]): number {
+  let total = 0;
+  let current = 0;
+  for (const atom of atoms) {
+    if (atom.kind === "unit" || atom.kind === "tens") current += atom.value;
+    else if (atom.kind === "hundred") current = (current === 0 ? 1 : current) * 100;
+    else if (atom.kind === "scale") {
+      total += (current === 0 ? 1 : current) * atom.value;
+      current = 0;
+    }
+  }
+  return total + current;
+}
+
+/** The numbers a text spells in words: every maximal run of number words, read as one number. */
+function wordNumbersIn(text: string, locale: TextLocale): Set<string> {
+  const found = new Set<string>();
+  let run: NumberAtom[] = [];
+  const flush = () => {
+    const meaningful = run.filter((atom) => atom.kind !== "and");
+    // A lone "one"/"ein"/"eine" is an article or a pronoun far more often than an answer.
+    const lone = meaningful.length === 1 && runValue(meaningful) === 1;
+    if (meaningful.length > 0 && !lone) found.add(String(runValue(meaningful)));
+    run = [];
+  };
+  for (const word of text.toLowerCase().match(/\p{L}+/gu) ?? []) {
+    const atoms = atomsOf(word, locale);
+    if (atoms === null) {
+      flush();
+      continue;
+    }
+    for (const atom of atoms) {
+      const previous = run[run.length - 1];
+      const startsNewNumber =
+        atom.kind === "unit" && previous !== undefined && previous.kind === "unit";
+      const strayConnector = atom.kind === "and" && run.length === 0;
+      if (startsNewNumber) flush();
+      if (!strayConnector) run.push(atom);
+    }
+  }
+  flush();
+  return found;
+}
+
+/**
+ * True iff `text` gives away `value`: as digits (either locale's grouping), as
+ * digits plus a scale word ("3,1 Mrd."), or — for the question text — spelled in
+ * words. A reviewer still has to read it: this catches the plain cases.
+ */
+function containsAnswer(
+  text: unknown,
+  value: string,
+  locale: TextLocale,
+  options: { words: boolean },
+): boolean {
   if (typeof text !== "string") return false;
   const numbers = numbersIn(text);
+  for (const scaled of scaledNumbersIn(text, locale)) numbers.add(scaled);
+  if (options.words) for (const word of wordNumbersIn(text, locale)) numbers.add(word);
   return answerForms(value).some((form) => numbers.has(form));
+}
+
+// --- unit labels -------------------------------------------------------------
+
+const lower = (...labels: string[]) => labels;
+
+/**
+ * The labels (lower case) a symbol may carry, German and English: the symbol
+ * drives the bounds and the display, the label drives what the player reads,
+ * so "km" with "metres" is a content bug. "" (a counted noun, a year) is free.
+ * A new symbol in `ESTIMATE_UNIT_SYMBOLS` needs a line here (a test pins it).
+ */
+export const ESTIMATE_UNIT_LABELS: Record<string, { de: string[]; en: string[] }> = {
+  m: { de: lower("meter"), en: lower("metres", "meters", "metre", "meter") },
+  km: { de: lower("kilometer"), en: lower("kilometres", "kilometers", "kilometre", "kilometer") },
+  cm: {
+    de: lower("zentimeter"),
+    en: lower("centimetres", "centimeters", "centimetre", "centimeter"),
+  },
+  mm: {
+    de: lower("millimeter"),
+    en: lower("millimetres", "millimeters", "millimetre", "millimeter"),
+  },
+  µm: {
+    de: lower("mikrometer"),
+    en: lower("micrometres", "micrometers", "micrometre", "micrometer", "microns"),
+  },
+  nm: {
+    de: lower("nanometer"),
+    en: lower("nanometres", "nanometers", "nanometre", "nanometer"),
+  },
+  "m²": {
+    de: lower("quadratmeter"),
+    en: lower("square metres", "square meters", "square metre", "square meter"),
+  },
+  "km²": {
+    de: lower("quadratkilometer"),
+    en: lower("square kilometres", "square kilometers", "square kilometre", "square kilometer"),
+  },
+  ha: { de: lower("hektar"), en: lower("hectares", "hectare") },
+  "m³": {
+    de: lower("kubikmeter"),
+    en: lower("cubic metres", "cubic meters", "cubic metre", "cubic meter"),
+  },
+  l: { de: lower("liter"), en: lower("litres", "liters", "litre", "liter") },
+  ml: {
+    de: lower("milliliter"),
+    en: lower("millilitres", "milliliters", "millilitre", "milliliter"),
+  },
+  mg: { de: lower("milligramm"), en: lower("milligrams", "milligram") },
+  g: { de: lower("gramm"), en: lower("grams", "gram") },
+  kg: { de: lower("kilogramm"), en: lower("kilograms", "kilogram") },
+  t: { de: lower("tonne", "tonnen"), en: lower("tonnes", "tonne", "metric tons") },
+  s: { de: lower("sekunde", "sekunden"), en: lower("seconds", "second") },
+  min: { de: lower("minute", "minuten"), en: lower("minutes", "minute") },
+  h: {
+    de: lower("stunde", "stunden", "stunden pro tag"),
+    en: lower("hours", "hour", "hours per day"),
+  },
+  d: { de: lower("tag", "tage", "erdentage"), en: lower("days", "day", "earth days") },
+  Hz: { de: lower("hertz"), en: lower("hertz") },
+  kHz: { de: lower("kilohertz"), en: lower("kilohertz") },
+  MHz: { de: lower("megahertz"), en: lower("megahertz") },
+  W: { de: lower("watt"), en: lower("watts", "watt") },
+  kW: { de: lower("kilowatt"), en: lower("kilowatts", "kilowatt") },
+  MW: { de: lower("megawatt"), en: lower("megawatts", "megawatt") },
+  V: { de: lower("volt"), en: lower("volts", "volt") },
+  N: { de: lower("newton"), en: lower("newtons", "newton") },
+  J: { de: lower("joule"), en: lower("joules", "joule") },
+  kJ: { de: lower("kilojoule"), en: lower("kilojoules", "kilojoule") },
+  kcal: {
+    de: lower("kilokalorien", "kilokalorie", "kcal"),
+    en: lower("kilocalories", "kilocalorie", "kcal"),
+  },
+  Pa: { de: lower("pascal"), en: lower("pascals", "pascal") },
+  bar: { de: lower("bar"), en: lower("bar") },
+  "°C": { de: lower("grad celsius"), en: lower("degrees celsius", "degree celsius") },
+  K: { de: lower("kelvin"), en: lower("kelvin") },
+  "%": { de: lower("prozent"), en: lower("percent", "per cent") },
+  "m/s": {
+    de: lower("meter pro sekunde"),
+    en: lower("metres per second", "meters per second"),
+  },
+  "km/h": {
+    de: lower("kilometer pro stunde"),
+    en: lower("kilometres per hour", "kilometers per hour"),
+  },
+  "km/s": {
+    de: lower("kilometer pro sekunde"),
+    en: lower("kilometres per second", "kilometers per second"),
+  },
+  // "<thing> per minute" is any rate (beats, breaths, revolutions): the suffix is checked in `unitLabelProblem`.
+  "1/min": { de: lower("pro minute"), en: lower("per minute") },
+};
+
+/** Lower case, single spaces, a trailing explanation in brackets dropped: "Hertz (Flügelschläge pro Sekunde)" is "hertz". */
+function normalizeLabel(label: string): string {
+  return label
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/\s*\([^)]*\)\s*$/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Why `label` does not name `symbol` in `locale`, or `null`. Skips a symbol it knows nothing about (the symbol rule reports that). */
+function unitLabelProblem(symbol: string, locale: TextLocale, label: unknown): string | null {
+  if (!isNonEmptyString(label) || !Object.hasOwn(ESTIMATE_UNIT_LABELS, symbol)) return null;
+  const accepted = ESTIMATE_UNIT_LABELS[symbol][locale];
+  const normalized = normalizeLabel(label);
+  if (accepted.includes(normalized)) return null;
+  // A rate per minute names its thing first: "Schläge pro Minute", "beats per minute".
+  if (symbol === "1/min" && accepted.some((suffix) => normalized.endsWith(` ${suffix}`))) {
+    return null;
+  }
+  return `unit.${locale} ${JSON.stringify(label)} does not name the symbol ${JSON.stringify(symbol)} (expected e.g. ${JSON.stringify(accepted[0])})`;
+}
+
+// --- distinct sources: registrable domains -----------------------------------
+
+/** Public suffixes of two labels under which an organisation registers one label more ("bbc.co.uk"). A closed, small list of the common ones. */
+const TWO_LABEL_SUFFIXES = new Set([
+  "co.uk",
+  "org.uk",
+  "gov.uk",
+  "ac.uk",
+  "me.uk",
+  "ltd.uk",
+  "plc.uk",
+  "net.uk",
+  "sch.uk",
+  "com.au",
+  "net.au",
+  "org.au",
+  "gov.au",
+  "edu.au",
+  "co.nz",
+  "org.nz",
+  "govt.nz",
+  "ac.nz",
+  "co.jp",
+  "or.jp",
+  "go.jp",
+  "ac.jp",
+  "co.in",
+  "org.in",
+  "gov.in",
+  "ac.in",
+  "co.za",
+  "org.za",
+  "gov.za",
+  "ac.za",
+  "com.br",
+  "org.br",
+  "gov.br",
+  "com.cn",
+  "org.cn",
+  "gov.cn",
+  "edu.cn",
+  "co.kr",
+  "go.kr",
+  "ac.kr",
+  "com.tr",
+  "gov.tr",
+  "com.sg",
+  "gov.sg",
+  "edu.sg",
+  "com.hk",
+  "gov.hk",
+  "edu.hk",
+  "com.tw",
+  "gov.tw",
+  "edu.tw",
+  "com.mx",
+  "gob.mx",
+  "com.ar",
+  "gob.ar",
+  "co.il",
+  "org.il",
+  "gov.il",
+  "ac.il",
+  "co.at",
+  "or.at",
+  "gv.at",
+  "ac.at",
+]);
+
+/**
+ * Hosting domains whose subdomains belong to different, unrelated owners
+ * ("alice.github.io" and "bob.github.io" are two parties). The one place where
+ * distinct subdomains count as distinct sources; every other subdomain
+ * ("pmc.ncbi.nlm.nih.gov", "de.wikipedia.org") belongs to its parent's organisation.
+ */
+const TENANT_DOMAINS = new Set([
+  "github.io",
+  "gitlab.io",
+  "blogspot.com",
+  "wordpress.com",
+  "herokuapp.com",
+  "netlify.app",
+  "vercel.app",
+  "pages.dev",
+  "web.app",
+  "firebaseapp.com",
+]);
+
+/**
+ * An approximation of eTLD+1 without the public suffix list: the last two
+ * labels, three under a common two-label suffix ("bbc.co.uk", "ons.gov.uk") or
+ * a tenant domain ("alice.github.io"). Good enough for "are these two sources
+ * the same organisation"; a reviewer decides the rest.
+ */
+export function registrableDomain(hostname: string): string {
+  const host = hostname.toLowerCase().replace(/\.$/, "");
+  const labels = host.split(".");
+  if (labels.length <= 2 || /^[\d.]+$/.test(host) || host.startsWith("[")) return host;
+  const suffix = labels.slice(-2).join(".");
+  const take = TWO_LABEL_SUFFIXES.has(suffix) || TENANT_DOMAINS.has(suffix) ? 3 : 2;
+  return labels.slice(-take).join(".");
 }
 
 // --- one row ----------------------------------------------------------------
@@ -259,6 +695,14 @@ function validateRow(row: EstimateQuestion, ctx: RowContext): EstimateBankProble
   }
   if (row.format === "year" && unit.symbol !== "")
     fail("unit", 'a year row has the unit symbol ""');
+  for (const locale of ["de", "en"] as const) {
+    // A pound or a Zoll is reported once, by the non-metric rule.
+    const label = unit[locale];
+    const nonMetricPattern = locale === "de" ? DE_NON_METRIC : EN_NON_METRIC;
+    if (typeof label === "string" && nonMetricPattern.test(label)) continue;
+    const labelProblem = unitLabelProblem(unit.symbol, locale, label);
+    if (labelProblem) fail("unit", labelProblem);
+  }
 
   // non-metric
   const nonMetric: [string, unknown, RegExp][] = [
@@ -362,7 +806,7 @@ function validateRow(row: EstimateQuestion, ctx: RowContext): EstimateBankProble
   // answer-not-in-text
   if (valueMilli !== null && typeof row.value === "string") {
     for (const locale of ["de", "en"] as const) {
-      if (containsAnswer(text[locale], row.value)) {
+      if (containsAnswer(text[locale], row.value, locale, { words: true })) {
         fail("answer-not-in-text", `text.${locale} spells out the answer`);
       }
     }
@@ -371,7 +815,10 @@ function validateRow(row: EstimateQuestion, ctx: RowContext): EstimateBankProble
   // definition
   if (!isNonEmptyString(row.definition) || row.definition.trim().length < 20) {
     fail("definition", "definition must be at least 20 characters (what exactly is measured)");
-  } else if (valueMilli !== null && containsAnswer(row.definition, row.value)) {
+  } else if (
+    valueMilli !== null &&
+    containsAnswer(row.definition, row.value, "en", { words: false })
+  ) {
     fail("definition", "the definition spells out the answer");
   }
 
@@ -386,7 +833,7 @@ function validateRow(row: EstimateQuestion, ctx: RowContext): EstimateBankProble
   if (!sources.some((source) => source?.kind === "primary")) {
     fail("sources", "at least 1 primary source is required");
   }
-  const hostnames = new Set<string>();
+  const domains = new Set<string>();
   const urls = new Set<string>();
   sources.forEach((source, index) => {
     const label = `sources[${index}]`;
@@ -419,10 +866,13 @@ function validateRow(row: EstimateQuestion, ctx: RowContext): EstimateBankProble
     if (!parsed.hostname.includes(".")) fail("sources", `${label}.url needs a real hostname`);
     if (urls.has(source.url)) fail("sources", `${label}.url is listed twice: ${source.url}`);
     urls.add(source.url);
-    hostnames.add(parsed.hostname.toLowerCase().replace(/^www\./, ""));
+    domains.add(registrableDomain(parsed.hostname));
   });
-  if (sources.length >= 2 && hostnames.size < 2) {
-    fail("sources", "the sources must come from at least 2 distinct hostnames");
+  if (sources.length >= 2 && domains.size < 2) {
+    fail(
+      "sources",
+      "the sources must come from at least 2 distinct organisations (registrable domains: two hosts of nasa.gov are one)",
+    );
   }
 
   // verified
@@ -463,6 +913,79 @@ function validateRow(row: EstimateQuestion, ctx: RowContext): EstimateBankProble
   return problems;
 }
 
+// --- the same fact twice -----------------------------------------------------
+
+/** Lower case, letters and digits only, single spaces: "  Wie HOCH ist der Berg ?" and "wie hoch ist der berg" meet. */
+function normalizeQuestionText(text: unknown): string {
+  if (typeof text !== "string") return "";
+  return text
+    .normalize("NFC")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+/** A URL without scheme, "www.", fragment and trailing slashes, or the raw string if it does not parse. */
+function normalizeSourceUrl(url: unknown): string | null {
+  if (typeof url !== "string") return null;
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    return `${host}${parsed.pathname.replace(/\/+$/, "")}${parsed.search}`;
+  } catch {
+    return null;
+  }
+}
+
+function canonicalValue(value: unknown): string | null {
+  if (typeof value !== "string" || !VALUE_FORMAT.test(value)) return null;
+  const [integer, fraction = ""] = value.split(".");
+  return canonicalDecimal(integer, fraction);
+}
+
+interface FactKey {
+  text: string;
+  value: string | null;
+  symbol: string;
+  scale: string;
+  urls: Set<string>;
+}
+
+function factKey(row: EstimateQuestion): FactKey {
+  const urls = new Set<string>();
+  for (const source of Array.isArray(row.sources) ? row.sources : []) {
+    const url = normalizeSourceUrl(source?.url);
+    if (url !== null) urls.add(url);
+  }
+  return {
+    text: normalizeQuestionText(row.text?.de),
+    value: canonicalValue(row.value),
+    symbol: String(row.unit?.symbol),
+    scale: String(row.scale),
+    urls,
+  };
+}
+
+function sameFactKey(a: FactKey, b: FactKey): boolean {
+  if (a.text !== "" && a.text === b.text) return true;
+  if (a.value === null || a.value !== b.value || a.symbol !== b.symbol || a.scale !== b.scale) {
+    return false;
+  }
+  for (const url of a.urls) if (b.urls.has(url)) return true;
+  return false;
+}
+
+/**
+ * Two rows state the same fact: the same value in the same unit symbol and
+ * scale AND at least one source URL in common, or the same German question text
+ * (case and punctuation aside). The draw avoids such a pair within one round
+ * (a Stechfrage that is the twin of the question just answered re-ties for
+ * certain), the validator rejects it in the bank (`duplicate-fact`).
+ */
+export function isDuplicateFact(a: EstimateQuestion, b: EstimateQuestion): boolean {
+  return sameFactKey(factKey(a), factKey(b));
+}
+
 // --- the bank ----------------------------------------------------------------
 
 /** `[]` = fine. */
@@ -478,8 +1001,19 @@ export function validateEstimateBank(
   const problems: EstimateBankProblem[] = [];
 
   const seenIds = new Set<string>();
+  const keys: { id: string | null; key: FactKey }[] = [];
   for (const row of rows) {
     problems.push(...validateRow(row, ctx));
+    const key = factKey(row);
+    const twin = keys.find((earlier) => earlier.id !== row.id && sameFactKey(earlier.key, key));
+    if (twin) {
+      problems.push({
+        id: typeof row.id === "string" ? row.id : "(no id)",
+        rule: "duplicate-fact",
+        message: `the same fact as ${twin.id ?? "(no id)"}: equal value, unit and scale with a shared source, or the same German text`,
+      });
+    }
+    keys.push({ id: typeof row.id === "string" ? row.id : null, key });
     if (typeof row.id === "string") {
       if (seenIds.has(row.id)) {
         problems.push({

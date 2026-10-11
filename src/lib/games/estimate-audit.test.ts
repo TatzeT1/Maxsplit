@@ -726,6 +726,99 @@ describe("replayEstimateAudit", () => {
       ).toBeNull();
     });
 
+    it("uses one question twice in a round (the draw never repeats a question)", () => {
+      const audit = auditOf(stechenRound());
+      expect(replayEstimateAudit(audit)).not.toBeNull();
+      const twin = { ...audit.stages[1], questionId: audit.stages[0].questionId };
+      expect(replayEstimateAudit({ ...audit, stages: [audit.stages[0], twin] })).toBeNull();
+      expect(verifyEstimateAudit({ ...audit, stages: [audit.stages[0], twin] })).toBe(false);
+
+      // Also across non-adjacent stages of a long chain.
+      const lot = auditOf(lotRound());
+      expect(verifyEstimateAudit(lot)).toBe(true);
+      const stages = lot.stages.map((stage, index) =>
+        index === 3 ? { ...stage, questionId: lot.stages[1].questionId } : stage,
+      );
+      expect(verifyEstimateAudit({ ...lot, stages })).toBe(false);
+    });
+
+    describe("a lot before the third Stechfrage (spec C.8: only with nobody answering, or no question left)", () => {
+      /** The bank had no Stechfrage left after the main question: a tied stage 0 goes to the lot. */
+      const exhaustedRound = () =>
+        playRound({
+          entrants: ["A", "B"],
+          k: 1,
+          plans: [{ row: rowOf(0, "ratio", 100), guesses: { A: 50, B: 200 } }],
+        });
+      const withMarker = (audit: EstimateAudit): EstimateAudit => ({
+        ...audit,
+        stages: audit.stages.map((stage, index, all) =>
+          index === all.length - 1 ? { ...stage, noStechfrage: true } : stage,
+        ),
+      });
+
+      const withoutMarker = (audit: EstimateAudit): EstimateAudit => ({
+        ...audit,
+        stages: audit.stages.map((stage) => {
+          const copy: Record<string, unknown> = { ...stage };
+          delete copy.noStechfrage;
+          return copy as unknown as typeof stage;
+        }),
+      });
+
+      it("is flagged when answering players were contested and nothing says the bank was empty", () => {
+        const audit = withoutMarker(auditOf(exhaustedRound()));
+        expect(audit.stages).toHaveLength(1);
+        expect(audit.resolvedBy).toBe("shuffle");
+        expect(replayEstimateAudit(audit)).toBeNull();
+        expect(verifyEstimateAudit(audit)).toBe(false);
+      });
+
+      it("is marked by the builder from the round (the lot came early with answers still contested)", () => {
+        const built = auditOf(exhaustedRound());
+        expect(built.stages[0]).toMatchObject({ noStechfrage: true });
+        expect(verifyEstimateAudit(built)).toBe(true);
+        // No marker where none is needed: by distance, after the third Stechfrage, nobody answered.
+        for (const round of [distanceRound(), stechenRound(), lotRound(), absentRound()]) {
+          for (const stage of auditOf(round).stages)
+            expect(stage).not.toHaveProperty("noStechfrage");
+        }
+      });
+
+      it("is flagged after one and after two Stechfragen too", () => {
+        for (const stechen of [1, 2]) {
+          const full = auditOf(lotRound());
+          const cut = { ...full, stages: full.stages.slice(0, stechen + 1) };
+          // Same tie, same lot order, but the round could have gone on.
+          expect(verifyEstimateAudit(cut), `after ${stechen} Stechfragen`).toBe(false);
+          expect(verifyEstimateAudit(withMarker(cut)), `marked, after ${stechen}`).toBe(true);
+        }
+      });
+
+      it("passes with the exhausted-bank marker on the last stage", () => {
+        const marked = withMarker(withoutMarker(auditOf(exhaustedRound())));
+        expect(replayEstimateAudit(marked)).toEqual(["B"]);
+        expect(verifyEstimateAudit(marked)).toBe(true);
+        expect(verifyEstimateAudit(wire(marked))).toBe(true);
+      });
+
+      it("needs no marker when every contested player never answered", () => {
+        const audit = auditOf(absentRound());
+        expect(audit.stages).toHaveLength(1);
+        expect(verifyEstimateAudit(audit)).toBe(true);
+      });
+
+      it("needs no marker for the lot after the third Stechfrage", () => {
+        expect(verifyEstimateAudit(auditOf(lotRound()))).toBe(true);
+      });
+
+      it("ignores a marker that is not literally true", () => {
+        const audit = withoutMarker(auditOf(exhaustedRound()));
+        const stage = { ...audit.stages[0], noStechfrage: "yes" };
+        expect(verifyEstimateAudit({ ...audit, stages: [stage as never] })).toBe(false);
+      });
+    });
+
     it("holds numbers no player could have typed, without throwing", () => {
       const audit = auditOf(distanceRound());
       const stage = audit.stages[0];
@@ -1016,6 +1109,30 @@ describe("compareEstimateAuditToExpense", () => {
         payers: true,
         equalSplit: true,
       });
+    });
+
+    it("keeps every loser a payer when the bill is smaller than the number of losers", () => {
+      // 1 cent among two losers: splitEqual gives {B: 1, C: 0}; the zero entry is a real loser, not a bystander.
+      const audit = auditOf(placeholderRound()); // B, C
+      const tiny = expenseOf(audit, { amountMinor: 1 });
+      expect(
+        Object.values(tiny.splits)
+          .map((split) => split.amountMinor)
+          .sort(),
+      ).toEqual([0, 1]);
+      expect(compareEstimateAuditToExpense(audit, tiny)).toEqual({
+        payers: true,
+        equalSplit: true,
+        amountChanged: true,
+      });
+      // Still not a licence for a forged payer, a missing one or an extra one.
+      expect(compareEstimateAuditToExpense(audit, withSplits(tiny, { B: 1, Q: 0 })).payers).toBe(
+        false,
+      );
+      expect(compareEstimateAuditToExpense(audit, withSplits(tiny, { B: 1 })).payers).toBe(false);
+      expect(
+        compareEstimateAuditToExpense(audit, withSplits(tiny, { B: 1, C: 0, A: 0 })).payers,
+      ).toBe(false);
     });
 
     it("tolerates a placeholder claimed after booking (the uid swapped, `names[ph].placeholder`)", () => {

@@ -14,6 +14,7 @@ import { splitEqual } from "@/lib/money/split";
 import type { ChatMessage, EstimateRound, Expense } from "@/lib/types";
 import { makeEstimateRow } from "@/test/estimate-bank-fixture";
 import { placeholderMember, realMember, seedGroup } from "@/test/fixtures";
+import { clearSentPushes, sentPushes } from "@/test/push-mock";
 import { signInAs } from "@/test/session-mock";
 
 // One-phone estimate rounds meet the expense form: a finished round is CLAIMED
@@ -297,14 +298,84 @@ describe("addExpense claiming a finished one-phone round", () => {
     },
   );
 
-  it("does not let a second expense claim the same round", async () => {
+  it("does not let a second, different bill claim (or ride on) the same round", async () => {
     const round = await finishedLocalRound();
     const first = await book(bookingInput(round));
-    const second = await book(bookingInput(round));
-    expect(second).not.toBe(first);
-    expect((await readExpense(second)).game!.estimate).toBeUndefined();
+    const cards = (await messages()).filter((message) => message.gameResult).length;
+
+    // Another amount for a round that is already booked: refused, nothing written.
+    signInAs({ uid: "max" });
+    const other = 4000;
+    const second = await addExpense(
+      bookingInput(round, {
+        amountMinor: other,
+        paidBy: { max: other },
+        splitInputs: splitEqual(other, round.loserUids),
+      }),
+    );
+    expect(second).toEqual({ ok: false, error: "invalid-game" });
+    expect((await adminDb.collection("groups/g1/expenses").get()).size).toBe(1);
+    expect((await messages()).filter((message) => message.gameResult)).toHaveLength(cards);
     expect((await readExpense(first)).game!.estimate).toBeDefined();
     expect((await readRound(round.roundId)).expenseId).toBe(first);
+  });
+
+  it("answers a replay of the claiming request (a lost response) with the first expense, writing nothing", async () => {
+    const round = await finishedLocalRound();
+    const first = await book(bookingInput(round));
+    const cards = (await messages()).filter((message) => message.gameResult).length;
+    clearSentPushes();
+
+    // The same bill again, as a retry would send it.
+    expect(await book(bookingInput(round))).toBe(first);
+    expect((await adminDb.collection("groups/g1/expenses").get()).size).toBe(1);
+    expect((await messages()).filter((message) => message.gameResult)).toHaveLength(cards);
+    expect(sentPushes).toHaveLength(0);
+    expect((await readRound(round.roundId)).expenseId).toBe(first);
+  });
+
+  it("frees the round again when its expense was deleted (the replay guard is for live bills)", async () => {
+    const round = await finishedLocalRound();
+    const first = await book(bookingInput(round));
+    await adminDb
+      .doc(`groups/g1/expenses/${first}`)
+      .update({ deletedAt: new Date().toISOString() });
+    const second = await book(bookingInput(round));
+    expect(second).not.toBe(first);
+    // Still never a second audit for the same round.
+    expect((await readExpense(second)).game!.estimate).toBeUndefined();
+  });
+
+  it("never answers another member with the owner's expense", async () => {
+    const round = await finishedLocalRound();
+    await book(bookingInput(round));
+    // lea is not the round's owner: the request is the plain soft case, not an answer with max's expense.
+    const expenseId = await book(bookingInput(round, { paidBy: { lea: AMOUNT } }), "lea");
+    expect((await readExpense(expenseId)).createdBy).toBe("lea");
+  });
+
+  it.each([
+    ["an unsafe integer", 2 ** 53 + 2],
+    ["above the cap", 100_000_000_000],
+    ["1e300", 1e300],
+  ])("refuses a bill that is %s", async (_name, amount) => {
+    signInAs({ uid: "max" });
+    const result = await addExpense({
+      groupId: "g1",
+      description: "Big",
+      amountMinor: amount,
+      currency: "EUR",
+      date: "2026-10-03",
+      category: null,
+      emoji: null,
+      paidBy: { max: amount },
+      splitMode: "equal",
+      participantUids: ["max", "lea", "ben"],
+      splitInputs: {},
+      viaLottery: false,
+    });
+    expect(result).toEqual({ ok: false, error: "invalid-amount" });
+    expect((await adminDb.collection("groups/g1/expenses").get()).size).toBe(0);
   });
 
   it("drops a client-sent audit when the claim fails", async () => {

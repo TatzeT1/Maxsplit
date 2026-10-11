@@ -4,6 +4,8 @@ import {
   buildGameExpense,
   isClaimableEstimateRound,
   isEqualSplitAmong,
+  MAX_AMOUNT_MINOR,
+  isValidAmountMinor,
   sameUidSet,
   splitPayerUids,
   validateGameExpenseDraft,
@@ -38,6 +40,14 @@ describe("validateGameExpenseDraft", () => {
     [{ description: "  " }, "invalid-description"],
     [{ amountMinor: 0 }, "invalid-amount"],
     [{ amountMinor: 10.5 }, "invalid-amount"],
+    [{ amountMinor: Number.NaN }, "invalid-amount"],
+    [{ amountMinor: Infinity }, "invalid-amount"],
+    [{ amountMinor: 1e300, paidBy: { a: 1e300 } }, "invalid-amount"],
+    [{ amountMinor: 2 ** 53 + 2, paidBy: { a: 2 ** 53 + 2 } }, "invalid-amount"],
+    [{ amountMinor: MAX_AMOUNT_MINOR + 1, paidBy: { a: MAX_AMOUNT_MINOR + 1 } }, "invalid-amount"],
+    [{ amountMinor: "1000" as unknown as number }, "invalid-amount"],
+    [{ paidBy: { a: 1001, b: -1 } }, "invalid-payer"],
+    [{ paidBy: { a: 1000.5, b: -0.5 } }, "invalid-payer"],
     [{ date: "28.09.2026" }, "invalid-date"],
     [{ date: "2026-02-30" }, "invalid-date"],
     [{ description: "x".repeat(201) }, "invalid-description"],
@@ -71,6 +81,16 @@ describe("validateGameExpenseDraft", () => {
   it("still accepts a real member whose uid merely looks like trouble", () => {
     const odd = { ...members, constructor: member("Odd") };
     expect(validateGameExpenseDraft({ ...draft, paidBy: { constructor: 1000 } }, odd)).toBeNull();
+  });
+
+  it("accepts the largest bill, and no more", () => {
+    const biggest = { amountMinor: MAX_AMOUNT_MINOR, paidBy: { a: MAX_AMOUNT_MINOR } };
+    expect(validateGameExpenseDraft({ ...draft, ...biggest }, members)).toBeNull();
+    expect(isValidAmountMinor(MAX_AMOUNT_MINOR)).toBe(true);
+    expect(isValidAmountMinor(MAX_AMOUNT_MINOR + 1)).toBe(false);
+    expect(isValidAmountMinor(1)).toBe(true);
+    expect(isValidAmountMinor(0)).toBe(false);
+    expect(isValidAmountMinor(-5)).toBe(false);
   });
 
   it("accepts a payer that is a placeholder member", () => {

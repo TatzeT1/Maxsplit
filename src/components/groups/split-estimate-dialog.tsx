@@ -283,7 +283,7 @@ export const SplitEstimateDialog: FunctionComponent<SplitEstimateDialogProps> = 
     );
     setOnlineStarting(false);
     if (!result.ok) {
-      setOnlineError(t(localEstimateErrorKey(result.error, "start")));
+      setOnlineError(t(localEstimateErrorKey(result.error, "start-online")));
       return;
     }
     setup.remember();
@@ -360,9 +360,9 @@ export const SplitEstimateDialog: FunctionComponent<SplitEstimateDialogProps> = 
       if (reveal.next === "stechen") {
         parts.push(
           t("expenses.estimateAnnounceStechen", {
-            names: reveal.contested
-              .map((uid) => round.entrants[uid]?.displayName ?? nameOf(uid))
-              .join(", "),
+            names: new Intl.ListFormat(locale).format(
+              reveal.contested.map((uid) => round.entrants[uid]?.displayName ?? nameOf(uid)),
+            ),
           }),
         );
       }

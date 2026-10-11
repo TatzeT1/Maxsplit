@@ -488,6 +488,35 @@ describe("createEstimateRound", () => {
   });
 });
 
+describe("createEstimateRound amounts", () => {
+  it.each([
+    ["an unsafe integer", 2 ** 53 + 2],
+    ["above the cap", 100_000_000_000],
+    ["1e300", 1e300],
+    ["a float", 12.5],
+    ["zero", 0],
+  ])("refuses a stake that is %s", async (_name, amountMinor) => {
+    signInAs({ uid: "max" });
+    const result = await createEstimateRound({
+      groupId: "g1",
+      poolUids: ["max", "lea"],
+      targetLoserCount: 1,
+      includeFun: false,
+      answerWindowMs: 300_000,
+      autoBook: { ...pizza, amountMinor, paidBy: { max: amountMinor } },
+    });
+    expect(result).toEqual({ ok: false, error: "invalid-amount" });
+    expect(await roundCount()).toBe(0);
+  });
+
+  it("accepts the largest bill", async () => {
+    const roundId = await startOnline({
+      autoBook: { ...pizza, amountMinor: 99_999_999_999, paidBy: { max: 99_999_999_999 } },
+    });
+    expect((await readRound(roundId)).stake!.amountMinor).toBe(99_999_999_999);
+  });
+});
+
 describe("submitEstimateGuess", () => {
   it("stores a guess in the secrets only", async () => {
     const roundId = await startOnline();
@@ -668,6 +697,33 @@ describe("submitEstimateGuess", () => {
     expect((await readRound(roundId)).stages[0].submitted).toEqual([]);
   });
 
+  it("answers the retry of the guess that finished the round with success, and changes nothing", async () => {
+    const roundId = await startOnline();
+    await playStage(roundId, { lea: 90, ben: 150 });
+    expect(await guess("max", roundId, 99)).toEqual({ ok: true, data: { stageClosed: true } });
+    const before = await readRound(roundId);
+    expect(before.status).toBe("finished");
+    clearSentPushes();
+
+    // The response was lost; the phone asks again, even with another value.
+    expect(await guess("max", roundId, 99)).toEqual({ ok: true, data: { stageClosed: false } });
+    expect(await guess("max", roundId, 5)).toEqual({ ok: true, data: { stageClosed: false } });
+    expect(await readRound(roundId)).toEqual(before);
+    expect(await expenses()).toHaveLength(1);
+    expect((await messages()).filter((message) => message.gameResult)).toHaveLength(1);
+    expect(sentPushes).toHaveLength(0);
+  });
+
+  it("answers the retry of a locked guess from an earlier stage once a Stechfrage is open", async () => {
+    const roundId = await startOnline();
+    await playStage(roundId, { lea: 50, ben: 200, max: 100 });
+    expect((await readRound(roundId)).stages).toHaveLength(2);
+    // Stale for a NEW guess, but lea's own locked one of stage 0 is still a success.
+    expect(await guess("lea", roundId, 50, 0)).toEqual({ ok: true, data: { stageClosed: false } });
+    // max sat out the Stechfrage and has nothing locked there.
+    expect(await guess("max", roundId, 5, 1)).toEqual({ ok: false, error: "not-a-contender" });
+  });
+
   it("books exactly once, however often it is asked again", async () => {
     const roundId = await startOnline();
     await playStage(roundId, { lea: 90, ben: 150 });
@@ -677,7 +733,9 @@ describe("submitEstimateGuess", () => {
     expect(await expenses()).toHaveLength(1);
 
     expect(await close("lea", roundId)).toEqual({ ok: true, data: { closed: true } });
-    expect(await guess("lea", roundId, 5)).toMatchObject({ ok: false });
+    // A player who never locked a guess is refused on the finished round; lea's retry is not.
+    expect(await guess("kim", roundId, 5)).toEqual({ ok: false, error: "round-not-running" });
+    expect(await guess("lea", roundId, 5)).toEqual({ ok: true, data: { stageClosed: false } });
     expect(await expenses()).toHaveLength(1);
     expect((await messages()).filter((message) => message.gameResult)).toHaveLength(1);
   });
@@ -816,6 +874,27 @@ describe("submitEstimateGuess", () => {
     expect(round.resolvedBy).toBe("shuffle");
     expect(["lea", "ben"]).toContain(round.loserUids![0]);
     expect(await expenses()).toHaveLength(1);
+  });
+
+  it("does not book when the group's currency changed during the round, and tells the creator", async () => {
+    const roundId = await startOnline();
+    await playStage(roundId, { lea: 90, ben: 150 });
+    // The ledger is empty, so a manager may still switch the currency.
+    await adminDb.doc("groups/g1").update({ currency: "USD" });
+    clearSentPushes();
+    expect(await guess("max", roundId, 99)).toEqual({ ok: true, data: { stageClosed: true } });
+
+    const round = await readRound(roundId);
+    expect(round.status).toBe("finished");
+    expect(round.loserUids).toEqual(["ben"]);
+    expect(round.autoBookError).toBe("invalid-currency");
+    expect(round.expenseId).toBeNull();
+    expect(await expenses()).toHaveLength(0);
+    const card = (await messages()).find((message) => message.gameResult)!;
+    expect(card.gameResult!.amount).toBeNull();
+    const notBooked = sentPushes.filter((push) => push.tag.startsWith("estimate-notbooked"));
+    expect(notBooked.map((push) => push.uid)).toEqual(["max"]);
+    expect((await readGroup()).activeEstimateRound).toBeNull();
   });
 
   it("does not book when a payer has left, and tells the creator", async () => {

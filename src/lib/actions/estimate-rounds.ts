@@ -393,7 +393,11 @@ function finishStage(input: {
     // Already booked (can't happen for a stage still guessing): never book twice.
     autoBookError = round.autoBookError;
   } else {
-    const draftError = validateGameExpenseDraft(round.autoBook, group.members);
+    // The currency is checked again here: it can change while the ledger is empty (groups.ts),
+    // after the round started — a stake in another currency would be counted at face value.
+    const draftError =
+      validateGameExpenseDraft(round.autoBook, group.members) ??
+      (round.autoBook.currency !== group.currency ? "invalid-currency" : null);
     if (draftError || !decided.loserUids.every((uid) => hasMember(group, uid))) {
       autoBookError = draftError ?? "member-left";
     } else {
@@ -725,14 +729,19 @@ export async function submitEstimateGuess(input: {
     const round = roundSnap.data() as RoundDoc;
     const group = groupSnap.data() as GroupDoc;
     if (round.mode !== "online") return fail("wrong-mode");
+    // A locked guess is never overwritten, not even by a different value — and a retry of it
+    // (a lost response) answers success BEFORE the round-state errors below: the guess that
+    // completed the stage left the round finished or on the next stage, and its retry must
+    // not read "round-not-running" / "stale-stage" for something that is locked and booked.
+    const played = round.stages[input.stageIndex];
+    // `stageClosed` says whether THIS call closed the stage, so a retry never claims it.
+    if (played?.submitted.includes(uid)) return { ok: true, stageClosed: false, done: null };
     if (round.status !== "running") return fail("round-not-running");
     const stage = round.stages[round.stages.length - 1];
     if (input.stageIndex !== stage.index) return fail("stale-stage");
     if (stage.status !== "guessing") return fail("stage-closed");
     if (!secretsSnap.exists) return fail("not-found");
     if (!canGuess(round, uid)) return fail("not-a-contender");
-    // A locked guess is never overwritten, not even by a different value.
-    if (stage.submitted.includes(uid)) return { ok: true, stageClosed: false, done: null };
 
     const now = new Date().toISOString();
     const deadline = guessDeadlineMs(stage);

@@ -620,43 +620,6 @@ export const EVERYDAY_ROWS: readonly EstimateQuestion[] = [
     category: "everyday",
     tone: "fun",
     text: {
-      de: "Wie viele Erdentage braucht die Venus für eine einzige Drehung um die eigene Achse?",
-      en: "How many Earth days does Venus need to spin once around its own axis?",
-    },
-    unit: {
-      de: "Erdentage",
-      en: "Earth days",
-      symbol: "d",
-    },
-    scale: "ratio",
-    format: "quantity",
-    value: "243.02",
-    definition:
-      "Sidereal rotation period of Venus: time for one full turn relative to the distant stars, not the shorter sunrise-to-sunrise solar day.",
-    asOf: 2021,
-    sources: [
-      {
-        label: "NASA NSSDCA Venus Fact Sheet",
-        url: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/venusfact.html",
-        kind: "primary",
-      },
-      {
-        label: "NASA NTRS: Spin state and moment of inertia of Venus (Margot et al.)",
-        url: "https://ntrs.nasa.gov/citations/20220003058",
-        kind: "primary",
-      },
-    ],
-    note: "Venus spins backwards (retrograde) and its day is longer than its year. NASA fact sheet lists the period as 5832.6 hours (retrograde), i.e. about 243.03 days; the 2006-2020 radar study gives 243.0226 days. The solar day on Venus (about 117 Earth days) is a different quantity.",
-    verified: {
-      by: "Claude (Agenten, blind geprüft)",
-      on: "2026-10-09",
-    },
-  },
-  {
-    id: "est-evd-0018",
-    category: "everyday",
-    tone: "fun",
-    text: {
       de: "In welchem Jahr wurde die allererste SMS verschickt?",
       en: "In which year was the very first SMS text message sent?",
     },
@@ -690,7 +653,7 @@ export const EVERYDAY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-evd-0019",
+    id: "est-evd-0018",
     category: "everyday",
     tone: "fun",
     text: {
@@ -727,44 +690,7 @@ export const EVERYDAY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-evd-0020",
-    category: "everyday",
-    tone: "fun",
-    text: {
-      de: "Wie schnell rast die Erde im Durchschnitt auf ihrer Bahn um die Sonne?",
-      en: "How fast does Earth travel on average along its orbit around the Sun?",
-    },
-    unit: {
-      de: "Kilometer pro Sekunde",
-      en: "kilometres per second",
-      symbol: "km/s",
-    },
-    scale: "ratio",
-    format: "quantity",
-    value: "29.78",
-    definition:
-      "Mean orbital velocity of Earth around the Sun, averaged over the year (it varies between the aphelion and perihelion extremes).",
-    asOf: 2024,
-    sources: [
-      {
-        label: "NASA NSSDCA Earth Fact Sheet",
-        url: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/earthfact.html",
-        kind: "primary",
-      },
-      {
-        label: "Wikipedia: Earth's orbit",
-        url: "https://en.wikipedia.org/wiki/Earth%27s_orbit",
-        kind: "secondary",
-      },
-    ],
-    note: "About 107,200 km/h. Speed ranges from 29.29 km/s (aphelion) to 30.29 km/s (perihelion).",
-    verified: {
-      by: "Claude (Agenten, blind geprüft)",
-      on: "2026-10-09",
-    },
-  },
-  {
-    id: "est-evd-0021",
+    id: "est-evd-0019",
     category: "everyday",
     tone: "fun",
     text: {
@@ -801,7 +727,7 @@ export const EVERYDAY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-evd-0022",
+    id: "est-evd-0020",
     category: "everyday",
     tone: "fun",
     text: {
@@ -838,44 +764,7 @@ export const EVERYDAY_ROWS: readonly EstimateQuestion[] = [
     },
   },
   {
-    id: "est-evd-0023",
-    category: "everyday",
-    tone: "fun",
-    text: {
-      de: "Wie viele Stunden braucht der Jupiter für eine volle Drehung um die eigene Achse?",
-      en: "How many hours does Jupiter take to rotate once around its own axis?",
-    },
-    unit: {
-      de: "Stunden",
-      en: "hours",
-      symbol: "h",
-    },
-    scale: "ratio",
-    format: "quantity",
-    value: "9.925",
-    definition:
-      "Sidereal rotation period of Jupiter (one full turn relative to the stars, System III coordinates), i.e. the length of a Jupiter day in the rotation sense.",
-    asOf: 2024,
-    sources: [
-      {
-        label: "NASA NSSDCA Jupiter Fact Sheet",
-        url: "https://nssdc.gsfc.nasa.gov/planetary/factsheet/jupiterfact.html",
-        kind: "primary",
-      },
-      {
-        label: "ESA Solar System: Jupiter",
-        url: "https://sci.esa.int/web/solar-system/-/jupiter",
-        kind: "primary",
-      },
-    ],
-    note: "NASA lists a sidereal period of 9.9250 h and a sunrise-to-sunrise 'length of day' of 9.9259 h; the difference is under a minute. Commonly quoted as 9 h 55 min. Jupiter is a gas giant, so the period refers to the System III radio rotation.",
-    verified: {
-      by: "Claude (Agenten, blind geprüft)",
-      on: "2026-10-09",
-    },
-  },
-  {
-    id: "est-evd-0024",
+    id: "est-evd-0021",
     category: "everyday",
     tone: "fun",
     text: {
@@ -906,6 +795,43 @@ export const EVERYDAY_ROWS: readonly EstimateQuestion[] = [
       },
     ],
     note: "Smithsonian gives the issue date as 1 May 1840, The Postal Museum (London) says valid for use from 6 May 1840; the year is identical. Earlier stamp-like proposals or local systems are not counted.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-evd-0022",
+    category: "everyday",
+    tone: "fun",
+    text: {
+      de: "Wie viele Liter Trinkwasser verbraucht eine Person in Deutschland pro Tag zu Hause im Schnitt?",
+      en: "How many litres of tap water does one person in Germany use at home per day, on the mean?",
+    },
+    unit: {
+      de: "Liter",
+      en: "litres",
+      symbol: "l",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "126",
+    definition:
+      "Daily tap-water use per inhabitant in private households in Germany, small-business use included, for 2022 (washing, toilet, food, thirst).",
+    asOf: 2022,
+    sources: [
+      {
+        label: "Umweltbundesamt: Wassernutzung privater Haushalte",
+        url: "https://www.umweltbundesamt.de/daten/private-haushalte-konsum/wohnen/wassernutzung-privater-haushalte",
+        kind: "primary",
+      },
+      {
+        label: "Statistisches Bundesamt: Wasserwirtschaft",
+        url: "https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Umwelt/Wasserwirtschaft/_inhalt.html",
+        kind: "primary",
+      },
+    ],
+    note: "BDEW reports 121 litres for 2023 and 122 for 2024 on a slightly different basis; the Umweltbundesamt 2022 value is the reference.",
     verified: {
       by: "Claude (Agenten, blind geprüft)",
       on: "2026-10-09",

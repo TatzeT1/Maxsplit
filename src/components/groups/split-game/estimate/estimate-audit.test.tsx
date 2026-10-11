@@ -136,9 +136,17 @@ describe("EstimateAuditTable", () => {
       expect(container.textContent).not.toMatch(/verifiziert|verified/i);
     });
 
-    it("also confirms without an expense (the replay alone)", () => {
+    it("claims nothing without an expense: no 'stimmt' line when nothing was compared", () => {
       const { container } = renderAudit(decidedAudit());
-      expect(check(container)).toHaveAttribute("data-check", "ok");
+      expect(container.querySelector("[data-slot='estimate-audit-check']")).toBeNull();
+      expect(container.textContent).not.toContain("stimmt");
+    });
+
+    it("still flags a replay that fails when there is no expense to compare", () => {
+      const audit = decidedAudit();
+      audit.booked.loserUids = ["max"];
+      const { container } = renderAudit(audit);
+      expect(check(container)).toHaveAttribute("data-check", "bad");
     });
 
     it("flags a booking that names someone the replay does not", () => {
@@ -252,6 +260,7 @@ describe("EstimateAuditTable", () => {
           {
             ...base.stages[0],
             kind: "stechen",
+            questionId: `${base.stages[0].questionId}-stechen`,
             text: DEGREES_QUESTION.text,
             unit: DEGREES_QUESTION.unit,
             scale: "interval",
@@ -292,6 +301,8 @@ describe("EstimateAuditTable", () => {
             ...base.stages[0],
             guessesMilli: { lea: 1_000_000, max: 1_000_000, ben: 2_962_000 },
             slots: 1,
+            // The bank offered no further Stechfrage, so the lot decides at once.
+            noStechfrage: true,
           },
         ],
       };

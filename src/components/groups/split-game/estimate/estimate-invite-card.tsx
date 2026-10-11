@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Copy, MessageCircle, Send } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,14 @@ export function EstimateInviteCard({
     () => "",
   );
   const [copied, setCopied] = useState(false);
+  /** The pending "copied" reset, cleared on unmount and by a newer copy. */
+  const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (copiedTimer.current !== null) clearTimeout(copiedTimer.current);
+    },
+    [],
+  );
 
   if (currentUid !== round.createdBy) return null;
 
@@ -69,7 +77,8 @@ export function EstimateInviteCard({
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimer.current !== null) clearTimeout(copiedTimer.current);
+      copiedTimer.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard blocked (permissions, insecure context) — the WhatsApp
       // button and the chat message still work.

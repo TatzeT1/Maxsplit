@@ -491,6 +491,29 @@ describe("EstimateRoundPageClient", () => {
       expect(reveal.getAttribute("data-animated")).toBe("true");
     });
 
+    it("6b: a running one-phone round has nothing to guess here and says where it is played", () => {
+      renderPage();
+      pushAll(guessing({ closesAt: null }, { mode: "local", answerWindowMs: null, stake: null }));
+      expect(screen.getByText(/Diese Runde läuft an einem Handy am Tisch/)).toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Jetzt auswerten" })).toBeNull();
+      expect(screen.queryByText("Online")).toBeNull();
+      expect(backLink()).toHaveAttribute("href", "/groups/g1");
+    });
+
+    it("6b: a finished one-phone round is a plain record, without the Online badge", () => {
+      renderPage();
+      pushAll({ ...finished(), mode: "local" });
+      expect(document.querySelector('[data-slot="estimate-reveal"]')).not.toBeNull();
+      expect(screen.queryByText("Online")).toBeNull();
+    });
+
+    it("an online round carries the Online badge", () => {
+      renderPage();
+      pushAll(guessing());
+      expect(screen.getByText("Online")).toBeInTheDocument();
+    });
+
     it("14: a cancelled round says so, with a way back", () => {
       renderPage();
       pushAll(guessing({}, { status: "cancelled" }));
@@ -547,6 +570,23 @@ describe("EstimateRoundPageClient", () => {
       const alerts = screen.getAllByRole("alert").map((node) => node.textContent ?? "");
       expect(alerts.some((alert) => alert.includes(text))).toBe(true);
       expect(screen.getByRole("textbox")).toBeInTheDocument();
+    });
+
+    it("keeps what was typed across a connection blip (the offline screen unmounts the panel)", () => {
+      const { rerender } = renderPage();
+      pushAll(guessing());
+      type("2962");
+      const tree = () => (
+        <LocaleProvider initialLocale="de">
+          <EstimateRoundPageClient groupId="g1" roundId="r1" />
+        </LocaleProvider>
+      );
+      h.online = false;
+      rerender(tree());
+      expect(screen.queryByRole("textbox")).toBeNull();
+      h.online = true;
+      rerender(tree());
+      expect((field() as HTMLInputElement).value).toBe("2962");
     });
 
     it("keeps what was typed after a failed lock, so the retry needs no retyping", async () => {
@@ -657,17 +697,32 @@ describe("EstimateRoundPageClient", () => {
       expect(status().join(" ")).not.toMatch(/\d{4}/);
     });
 
-    it("announces the truth at the reveal, without repeating the payers", () => {
+    /** Plays the reveal out: each phase is an effect that arms the next timer, so step through them. */
+    const settle = () => {
+      for (let step = 0; step < 40; step += 1) act(() => void vi.advanceTimersByTime(500));
+    };
+
+    it("announces the truth only after the reveal animation has reached it", () => {
       renderPage();
       pushAll(guessing({ submitted: ["lea", "max"] }));
       push("round", finished());
+      expect(document.querySelector('[data-slot="estimate-reveal"]')).toHaveAttribute(
+        "data-animated",
+        "true",
+      );
+      // The animation is still dropping the pins: the live region says nothing yet.
+      expect(status().join(" ")).not.toContain("Auflösung");
+      expect(status().join(" ")).not.toMatch(/2\.962/);
+      settle();
       expect(status().join(" ")).toContain("Auflösung: richtig ist 2.962 m.");
     });
 
-    it("announces a Stechfrage with its contenders", () => {
+    it("announces a Stechfrage with its contenders, after the reveal", () => {
       renderPage();
       pushAll(guessing({ submitted: ["lea", "max"] }));
       push("round", stechenRound());
+      expect(status().join(" ")).not.toContain("Gleichstand");
+      settle();
       expect(status().join(" ")).toContain("Gleichstand. Stechfrage für Lea und Max.");
     });
 

@@ -1179,6 +1179,9 @@ export const de = {
     estimateAuditChecked: "Rechnung nachgeprüft — stimmt.",
     estimateAuditMismatch: "Das Protokoll passt nicht zur Aufteilung.",
     estimateAuditOpenRound: "Zur Runde",
+    estimateAuditUnavailable: "Das Protokoll lässt sich gerade nicht laden.",
+    estimateLocalElsewhere:
+      "Diese Runde läuft an einem Handy am Tisch — hier gibt es nichts zu tippen.",
     estimateWaitingOthers: "Dein Tipp ist gesperrt — warte auf die anderen …",
     estimateSpectator: "Du spielst nicht mit — schau zu.",
     estimateSeatDone: "getippt",

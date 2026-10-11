@@ -13,6 +13,24 @@ import type {
 } from "@/lib/types";
 
 /**
+ * The largest bill the server books, in minor units (999,999,999.99): the EPC QR
+ * cap (`epc-qr.ts`), and far below 2^53, above which `distributeByWeights` stops
+ * summing exactly (`splitEqual(2**53 + 2, three)` hands out shares that add up to
+ * one less than the amount) and the ledger would store shares that differ from it.
+ */
+export const MAX_AMOUNT_MINOR = 99_999_999_999;
+
+/** A positive whole number of minor units within `MAX_AMOUNT_MINOR` (never a float, a NaN or an unsafe integer). */
+export function isValidAmountMinor(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value > 0 &&
+    value <= MAX_AMOUNT_MINOR
+  );
+}
+
+/**
  * Checks an auto-book draft at game start, so a bad amount or a stranger as
  * payer is rejected while the person can still fix it — not discovered at the
  * end of a tournament, when nobody's looking at the form anymore. Same rules
@@ -23,7 +41,7 @@ export function validateGameExpenseDraft(
   members: Record<string, GroupMember>,
 ): string | null {
   if (!isValidDescription(draft.description)) return "invalid-description";
-  if (!Number.isInteger(draft.amountMinor) || draft.amountMinor <= 0) return "invalid-amount";
+  if (!isValidAmountMinor(draft.amountMinor)) return "invalid-amount";
   if (!isIsoDate(draft.date)) return "invalid-date";
   if (draft.category !== null && !isCategoryId(draft.category)) return "invalid-category";
   if (!isValidEmoji(draft.emoji)) return "invalid-emoji";
@@ -36,6 +54,14 @@ export function validateGameExpenseDraft(
   // Own keys only: `uid in members` follows the prototype chain and would
   // accept "constructor", "toString" or "__proto__" as a group member.
   if (!payerUids.every((uid) => Object.hasOwn(members, uid))) return "forbidden";
+  // Each payer's part is a whole, safe amount within the cap (validatePaidBy checks the sum).
+  if (
+    !Object.values(draft.paidBy).every(
+      (value) => Number.isSafeInteger(value) && value >= 0 && value <= MAX_AMOUNT_MINOR,
+    )
+  ) {
+    return "invalid-payer";
+  }
   try {
     validatePaidBy(draft.amountMinor, draft.paidBy);
   } catch {

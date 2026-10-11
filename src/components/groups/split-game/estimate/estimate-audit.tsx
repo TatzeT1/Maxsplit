@@ -142,7 +142,9 @@ export function EstimateAuditTable({
   // The check: the replay matches the booking, and the live expense still matches both.
   const replayOk = verifyEstimateAudit(audit);
   const comparison = expense ? compareEstimateAuditToExpense(audit, expense) : null;
-  let check: { tone: "ok" | "bad" | "note"; text: string };
+  // Without an expense there is nothing to compare the booking with: the replay may still fail
+  // loudly, but "stimmt" is never claimed — a check line only exists where something was checked.
+  let check: { tone: "ok" | "bad" | "note"; text: string } | null = null;
   if (!replayOk || (comparison && !comparison.payers)) {
     check = { tone: "bad", text: t("expenses.estimateAuditMismatch") };
   } else if (comparison && !comparison.equalSplit) {
@@ -155,7 +157,7 @@ export function EstimateAuditTable({
         to: formatMoney(expense.amountMinor, expense.currency),
       }),
     };
-  } else {
+  } else if (comparison) {
     check = { tone: "ok", text: t("expenses.estimateAuditChecked") };
   }
 
@@ -163,7 +165,7 @@ export function EstimateAuditTable({
 
   return (
     <details data-slot="estimate-audit" className="bg-muted/60 group rounded-xl px-3 py-2 text-sm">
-      <summary className="cursor-pointer py-1 text-sm font-medium select-none">
+      <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium select-none">
         {t("expenses.estimateAuditShow")}
       </summary>
       <div className="mt-2 flex flex-col gap-4">
@@ -270,7 +272,9 @@ export function EstimateAuditTable({
               {lotUids.length > 0 && (
                 <p className="text-muted-foreground text-xs">
                   {t("expenses.estimateAuditLot", {
-                    names: lotUids.map((uid) => nameOf(audit, uid)).join(", "),
+                    names: new Intl.ListFormat(locale).format(
+                      lotUids.map((uid) => nameOf(audit, uid)),
+                    ),
                   })}
                 </p>
               )}
@@ -278,21 +282,23 @@ export function EstimateAuditTable({
           );
         })}
 
-        <p
-          data-slot="estimate-audit-check"
-          data-check={check.tone}
-          className={cn(
-            "flex items-start gap-1.5 text-xs font-medium",
-            check.tone === "bad" ? "text-destructive" : "text-muted-foreground",
-          )}
-        >
-          {check.tone === "bad" ? (
-            <TriangleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-          ) : (
-            <Check aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-          )}
-          <span>{check.text}</span>
-        </p>
+        {check && (
+          <p
+            data-slot="estimate-audit-check"
+            data-check={check.tone}
+            className={cn(
+              "flex items-start gap-1.5 text-xs font-medium",
+              check.tone === "bad" ? "text-destructive" : "text-muted-foreground",
+            )}
+          >
+            {check.tone === "bad" ? (
+              <TriangleAlert aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+            ) : (
+              <Check aria-hidden="true" className="mt-px size-3.5 shrink-0" />
+            )}
+            <span>{check.text}</span>
+          </p>
+        )}
         {roundHref && (
           <Link
             href={roundHref}

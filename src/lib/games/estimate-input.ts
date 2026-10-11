@@ -76,8 +76,12 @@ export type EstimateParse = { ok: true; milli: Milli } | { ok: false; error: Est
 
 /** Everything a typed number may consist of: digits, the two marks and the neutral group separators. */
 const ALLOWED_CHARS = /^[0-9.,\u0020\u00A0\u202F'\u2019]+$/;
-/** A leading sign: hyphen-minus, U+2212, en dash — and a plus (the answer is non-negative, "no sign"). */
-const LEADING_SIGN = /^[-\u2212\u2013+]/;
+/**
+ * A leading minus: hyphen-minus, U+2212, en dash. A plus is deliberately not
+ * here: "+5" is no negative number, so it falls through to `"chars"` (the hint
+ * names what may be typed) instead of a misleading "never negative".
+ */
+const LEADING_SIGN = /^[-\u2212\u2013]/;
 /** Group separators that belong to no locale (space, NBSP, narrow NBSP, apostrophes): one kind among themselves. */
 const NEUTRAL_SEPARATORS = new Set(["\u0020", "\u00A0", "\u202F", "'", "\u2019"]);
 const DIGITS_ONLY = /^[0-9]*$/;
