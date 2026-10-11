@@ -848,4 +848,78 @@ export const ANIMALS_ROWS: readonly EstimateQuestion[] = [
       on: "2026-10-09",
     },
   },
+  {
+    id: "est-ani-0023",
+    category: "animals",
+    tone: "fun",
+    text: {
+      de: "Wie schnell war die schnellste per Flugzeug verfolgte Brasilianische Bulldogg-Fledermaus unterwegs, in km/h?",
+      en: "How fast, in km/h, did the speediest Brazilian free-tailed bat fly in a study that tracked bats with an airplane?",
+    },
+    unit: {
+      de: "Kilometer pro Stunde",
+      en: "kilometres per hour",
+      symbol: "km/h",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "160",
+    definition:
+      "Highest ground speed logged for a free-flying Brazilian free-tailed bat (Tadarida brasiliensis) carrying a radio transmitter that was followed by an airplane in Texas; a short peak burst, not a cruising speed.",
+    asOf: 2016,
+    sources: [
+      {
+        label: "University of Tennessee news: fastest flying mammal, McCracken study",
+        url: "https://news.utk.edu/2016/11/10/bird-plane-fastest-flying-mammal-ut-study",
+        kind: "primary",
+      },
+      {
+        label: "Guinness World Records: Fastest mammal in flight",
+        url: "https://guinnessworldrecords.com/world-records/549532-fastest-mammal-in-flight",
+        kind: "secondary",
+      },
+    ],
+    note: "Peak ground speed from seven tracked bats; some scientists caution that wind and diving may have contributed.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-ani-0024",
+    category: "animals",
+    tone: "fun",
+    text: {
+      de: "Wie viele Meter pro Sekunde schnell ist die Keule eines Bunten Fangschreckenkrebses beim schnellsten gemessenen Schlag?",
+      en: "How fast, in metres per second, does a peacock mantis shrimp swing its club at the fastest measured strike?",
+    },
+    unit: {
+      de: "Meter pro Sekunde",
+      en: "metres per second",
+      symbol: "m/s",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "23",
+    definition:
+      "Highest peak speed of the club-shaped striking appendage of the peacock mantis shrimp (Odontodactylus scyllarus) measured with high-speed video in water.",
+    asOf: 2004,
+    sources: [
+      {
+        label: "UC Berkeley News: mantis shrimp swiftest kick in the animal kingdom (2004)",
+        url: "https://newsarchive.berkeley.edu/news/media/releases/2004/04/21_shrimp.shtml",
+        kind: "primary",
+      },
+      {
+        label: "Patek Lab, Duke University: Mechanics of movement, mantis shrimp",
+        url: "https://pateklab.biology.duke.edu/research/mechanics-of-ultrafast-movement/mechanics-of-movement-mantis-shrimp/",
+        kind: "primary",
+      },
+    ],
+    note: "23 m/s is the top of the reported 12-23 m/s range; the question asks for the fastest measured strike.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
 ];

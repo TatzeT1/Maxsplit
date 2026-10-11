@@ -569,4 +569,41 @@ export const BODY_ROWS: readonly EstimateQuestion[] = [
       on: "2026-10-09",
     },
   },
+  {
+    id: "est-bod-0016",
+    category: "body",
+    tone: "fun",
+    text: {
+      de: "Wie viele Milliarden Nervenzellen hat ein erwachsenes menschliches Gehirn ungefähr?",
+      en: "Roughly how many billion neurons are in an adult human brain?",
+    },
+    unit: {
+      de: "Milliarden",
+      en: "billion",
+      symbol: "",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "86",
+    definition:
+      "Estimated number of neurons (NeuN-positive cells) in a whole adult human brain, counted with the isotropic fractionator method; billion means 10^9.",
+    asOf: 2009,
+    sources: [
+      {
+        label: "PubMed: Azevedo et al. 2009, equal numbers of neuronal and nonneuronal cells",
+        url: "https://pubmed.ncbi.nlm.nih.gov/19226510/",
+        kind: "primary",
+      },
+      {
+        label: "MIT Teach Me Something: How many neurons are there in human brain?",
+        url: "https://teachmesomething.mit.edu/tms/how-many-neurons-are-there-human-brain",
+        kind: "secondary",
+      },
+    ],
+    note: "86 billion replaced the old 100 billion guess; a 2025 critique argues the exact figure is not that precise, so treat as a round headline value.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
 ];

@@ -259,4 +259,151 @@ export const SCIENCE_ROWS: readonly EstimateQuestion[] = [
       on: "2026-10-09",
     },
   },
+  {
+    id: "est-sci-0008",
+    category: "science",
+    tone: "standard",
+    text: {
+      de: "Bei welcher Temperatur schmilzt reines Kupfer?",
+      en: "At what temperature does pure copper melt?",
+    },
+    unit: {
+      de: "Grad Celsius",
+      en: "degrees Celsius",
+      symbol: "°C",
+    },
+    scale: "interval",
+    format: "quantity",
+    value: "1084.62",
+    definition:
+      "Melting (equal to freezing) temperature of pure copper at standard pressure, as the ITS-90 temperature fixed point, in degrees Celsius.",
+    asOf: 1990,
+    sources: [
+      {
+        label: "NIST ITS-90 overview and fixed points",
+        url: "https://its90.nist.gov/Overview",
+        kind: "primary",
+      },
+      {
+        label: "ITS-90 fixed points table",
+        url: "https://its-90.com/fixed-points",
+        kind: "secondary",
+      },
+    ],
+    note: "Pure metals melt and freeze at the same temperature; ITS-90 lists it as the copper freezing point.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-sci-0009",
+    category: "science",
+    tone: "standard",
+    text: {
+      de: "In welchem Jahr verkündeten ATLAS und CMS am CERN die Entdeckung eines Higgs-artigen Teilchens?",
+      en: "In which year did ATLAS and CMS at CERN announce the discovery of a Higgs-like particle?",
+    },
+    unit: {
+      de: "Jahr",
+      en: "year",
+      symbol: "",
+    },
+    scale: "interval",
+    format: "year",
+    value: "2012",
+    definition:
+      "Calendar year in which the ATLAS and CMS experiments at CERN publicly announced the observation of a new particle consistent with the Higgs boson.",
+    asOf: 2012,
+    sources: [
+      {
+        label: "CERN: announcing the Higgs boson discovery",
+        url: "https://home.cern/news/series/cern70/cern70-announcing-higgs-boson-discovery",
+        kind: "primary",
+      },
+      {
+        label: "SLAC news: CERN experiments observe particle consistent with Higgs",
+        url: "https://www6.slac.stanford.edu/news/2012-07-05-cern-experiments-observe-particle-consistent-long-sought-higgs-boson",
+        kind: "secondary",
+      },
+    ],
+    note: "Formal papers followed in September 2012; the announcement itself was 4 July 2012.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-sci-0010",
+    category: "science",
+    tone: "standard",
+    text: {
+      de: "In welchem Jahr erschien die Veröffentlichung, die die Doppelhelix-Struktur der DNA beschrieb?",
+      en: "In which year was the paper describing the double-helix structure of DNA published in Nature?",
+    },
+    unit: {
+      de: "Jahr",
+      en: "year",
+      symbol: "",
+    },
+    scale: "interval",
+    format: "year",
+    value: "1953",
+    definition:
+      "Calendar year in which the journal Nature published the paper proposing the double-helix structure of deoxyribose nucleic acid.",
+    asOf: 1953,
+    sources: [
+      {
+        label: "NLM: Molecular Structure of Nucleic Acids (catalogue record)",
+        url: "https://profiles.nlm.nih.gov/spotlight/sc/catalog/nlm:nlmuid-101584582X381-doc",
+        kind: "primary",
+      },
+      {
+        label: "Wikipedia: Molecular Structure of Nucleic Acids paper",
+        url: "https://en.wikipedia.org/wiki/Molecular_Structure_of_Nucleic_Acids:_A_Structure_for_Deoxyribose_Nucleic_Acid",
+        kind: "secondary",
+      },
+    ],
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-sci-0011",
+    category: "science",
+    tone: "standard",
+    text: {
+      de: "Auf wie viel Hertz ist die Caesium-Frequenz festgelegt, auf der die Definition der Sekunde beruht?",
+      en: "At how many hertz is the caesium frequency fixed on which the definition of the second is based?",
+    },
+    unit: {
+      de: "Hertz",
+      en: "hertz",
+      symbol: "Hz",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "9192631770",
+    definition:
+      "Exact numerical value of the unperturbed ground-state hyperfine transition frequency of the caesium-133 atom that defines the SI second, in hertz.",
+    asOf: 2019,
+    sources: [
+      {
+        label: "BIPM: SI base unit second",
+        url: "https://www.bipm.org/en/si-base-units/second",
+        kind: "primary",
+      },
+      {
+        label: "Wikipedia: Caesium standard",
+        url: "https://en.wikipedia.org/wiki/Caesium_standard",
+        kind: "secondary",
+      },
+    ],
+    note: "Exact by definition since the 2019 SI revision (and numerically unchanged since 1967).",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
 ];

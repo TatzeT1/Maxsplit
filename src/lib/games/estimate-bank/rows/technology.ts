@@ -263,4 +263,189 @@ export const TECHNOLOGY_ROWS: readonly EstimateQuestion[] = [
       on: "2026-10-09",
     },
   },
+  {
+    id: "est-tec-0008",
+    category: "technology",
+    tone: "standard",
+    text: {
+      de: "Wie viel Megawatt installierte Leistung hat das Wasserkraftwerk Itaipu zwischen Brasilien und Paraguay?",
+      en: "How many megawatts of installed capacity does the Itaipu hydropower plant on the Brazil-Paraguay border have?",
+    },
+    unit: {
+      de: "Megawatt",
+      en: "megawatts",
+      symbol: "MW",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "14000",
+    definition:
+      "Total installed generating capacity of the Itaipu hydroelectric power station (all generating units combined), in megawatts, not annual output.",
+    asOf: 2007,
+    sources: [
+      {
+        label: "Itaipu Binacional: generating units",
+        url: "https://www.itaipu.gov.br/en/energy/generating-units",
+        kind: "primary",
+      },
+      {
+        label: "CNBC: South American giant of hydropower",
+        url: "https://www.cnbc.com/2017/02/16/this-south-american-giant-of-hydropower-is-smashing-records.html",
+        kind: "secondary",
+      },
+    ],
+    note: "Final units entered service by 2007; the figure has been stable since.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-tec-0009",
+    category: "technology",
+    tone: "standard",
+    text: {
+      de: "Mit welcher Frequenz arbeiten Haushalts-Mikrowellenherde üblicherweise?",
+      en: "At what frequency do ordinary household microwave ovens usually operate?",
+    },
+    unit: {
+      de: "Megahertz",
+      en: "megahertz",
+      symbol: "MHz",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "2450",
+    definition:
+      "Centre frequency of the ISM band designated internationally for industrial, scientific and medical equipment, which domestic microwave ovens use, in megahertz.",
+    asOf: 1995,
+    sources: [
+      {
+        label: "NTIA report TR-95-323 on 2400-2500 MHz emissions",
+        url: "https://its.ntia.gov/publications/download/95-323.pdf",
+        kind: "primary",
+      },
+      {
+        label: "IEEE 802.11 document archive 1994 (oven emissions)",
+        url: "https://www.ieee802.org/11/Documents/DocumentArchives/1994_docs/1194108_scan.pdf",
+        kind: "secondary",
+      },
+    ],
+    note: "Individual ovens drift within the 2400-2500 MHz band; 2450 MHz is the designated centre frequency.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-tec-0010",
+    category: "technology",
+    tone: "standard",
+    text: {
+      de: "In welchem Jahr ging das erste Telefonkabel durch den Atlantik in Betrieb?",
+      en: "In which year did the first transatlantic telephone cable enter public service?",
+    },
+    unit: {
+      de: "Jahr",
+      en: "year",
+      symbol: "",
+    },
+    scale: "interval",
+    format: "year",
+    value: "1956",
+    definition:
+      "Calendar year in which the first submarine transatlantic telephone cable system (TAT-1) was inaugurated and opened for public telephone service.",
+    asOf: 1956,
+    sources: [
+      {
+        label: "IEEE ETHW Milestone: TAT-1, 1956",
+        url: "https://ethw.org/Milestones:The_First_Submarine_Transatlantic_Telephone_Cable_System_(TAT-1),_1956",
+        kind: "primary",
+      },
+      {
+        label: "Guinness World Records: first transatlantic telephone call",
+        url: "https://www.guinnessworldrecords.com/world-records/112526-first-transatlantic-telephone-call",
+        kind: "secondary",
+      },
+    ],
+    note: "Distinct from the 1858 transatlantic telegraph cable; the question is about telephone service.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-tec-0011",
+    category: "technology",
+    tone: "standard",
+    text: {
+      de: "In welchem Jahr entstand am CERN der erste Vorschlag, aus dem das World Wide Web wurde?",
+      en: "In which year was the first proposal written at CERN from which the World Wide Web grew?",
+    },
+    unit: {
+      de: "Jahr",
+      en: "year",
+      symbol: "",
+    },
+    scale: "interval",
+    format: "year",
+    value: "1989",
+    definition:
+      "Calendar year in which the original 'Information Management: A Proposal' document that led to the World Wide Web was written at CERN (not the later public software release).",
+    asOf: 1989,
+    sources: [
+      {
+        label: "CERN: a short history of the Web",
+        url: "https://home.cern/science/computing/the-birth-of-the-web/short-history-web/",
+        kind: "primary",
+      },
+      {
+        label: "CERN70: where the Web was born",
+        url: "https://cern70.cern/where-the-web-was-born/",
+        kind: "primary",
+      },
+    ],
+    note: "Only the date of the original proposal is meant; a refined proposal followed in 1990 and the software was released into the public domain in 1993. Second source's evidence is from a search summary, not a page fetch.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-tec-0012",
+    category: "technology",
+    tone: "standard",
+    text: {
+      de: "Wie hoch ist das höchste Gebäude der Welt, gemessen bis zur architektonischen Spitze?",
+      en: "How tall is the world's tallest building, measured to its architectural top?",
+    },
+    unit: {
+      de: "Meter",
+      en: "metres",
+      symbol: "m",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "828",
+    definition:
+      "Official architectural height of the tallest completed building in the world, from the lowest significant open-air pedestrian entrance to the architectural top including spires but excluding antennae.",
+    asOf: 2010,
+    sources: [
+      {
+        label: "CTBUH Skyscraper Center: Burj Khalifa",
+        url: "https://www.skyscrapercenter.com/building/burj-khalifa/3",
+        kind: "primary",
+      },
+      {
+        label: "KHL: CTBUH ratifies height of Burj Khalifa",
+        url: "https://www.khl.com/news/ctbuh-ratifies-height-of-burj-khalifa/55351.article",
+        kind: "secondary",
+      },
+    ],
+    note: "Valid as long as no taller building is completed; re-check before use (taller towers under construction).",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
 ];

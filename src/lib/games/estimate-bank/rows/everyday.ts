@@ -837,4 +837,116 @@ export const EVERYDAY_ROWS: readonly EstimateQuestion[] = [
       on: "2026-10-09",
     },
   },
+  {
+    id: "est-evd-0023",
+    category: "everyday",
+    tone: "fun",
+    text: {
+      de: "Wie viele Pkw sind in Deutschland im Schnitt pro 1.000 Einwohner zugelassen?",
+      en: "How many passenger cars are registered per 1,000 inhabitants in Germany, on the mean?",
+    },
+    unit: {
+      de: "Pkw je 1.000 Einwohner",
+      en: "cars per 1,000 inhabitants",
+      symbol: "",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "593",
+    definition:
+      "Registered passenger cars (Pkw) per 1,000 inhabitants in Germany on 1 January 2026, as published by the Federal Statistical Office based on Federal Motor Transport Authority stock figures; trucks, motorcycles and trailers are excluded.",
+    asOf: 2026,
+    sources: [
+      {
+        label: "Destatis: Pkw-Dichte 2026 erneut gestiegen (N050, 22 July 2026)",
+        url: "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/07/PD26_N050_46_85.html",
+        kind: "primary",
+      },
+      {
+        label: "ZDFheute: So viele Autos in Deutschland zugelassen wie nie",
+        url: "https://www.zdfheute.de/wirtschaft/unternehmen/pkw-autos-menge-dichte-verkehr-statistisches-bundesamt-100.html",
+        kind: "secondary",
+      },
+    ],
+    note: "The Destatis page itself was not fetchable (no network); the figure was read from search results quoting it, and consistent in five independent outlets. KBA stock on 1 Jan 2026: about 49.5 million cars.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-evd-0024",
+    category: "everyday",
+    tone: "fun",
+    text: {
+      de: "Wie viele Millionen Fahrräder und E-Bikes gibt es in Deutschland, vom Kinderrad bis zum Pedelec?",
+      en: "How many million bicycles and e-bikes are there in Germany in total, children's bikes included?",
+    },
+    unit: {
+      de: "Millionen",
+      en: "million",
+      symbol: "",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "90.6",
+    tolerance: "1",
+    definition:
+      "Estimated stock of bicycles and e-bikes in Germany at the end of 2025 according to the bicycle industry association ZIV, as reported by the Federal Environment Agency; an industry estimate, not a registration count.",
+    asOf: 2025,
+    sources: [
+      {
+        label: "Umweltbundesamt: Mobilität privater Haushalte",
+        url: "https://www.umweltbundesamt.de/daten/umweltzustand-trends/private-haushalte-konsum/mobilitaet",
+        kind: "primary",
+      },
+      {
+        label: "ZIV: Marktdaten Fahrradwirtschaft 2025",
+        url: "https://www.ziv-zweirad.de/wp-content/uploads/2026/03/Marktdaten-Fahrradwirtschaft-2025.pdf",
+        kind: "primary",
+      },
+    ],
+    note: "LOWER CONFIDENCE: an industry-association estimate, hence the tolerance of 1 percent. Which of two UBA pages carried the quote was not certain from search results; the second source's own stock table was not read. The 2024 stock was about 89 million after a revision, so ZIV's stated growth of 2.1 percent should be checked against 90.6.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-evd-0025",
+    category: "everyday",
+    tone: "fun",
+    text: {
+      de: "Wie viel wiegt eine Ein-Cent-Münze?",
+      en: "How much does a one-cent euro coin weigh?",
+    },
+    unit: {
+      de: "Gramm",
+      en: "grams",
+      symbol: "g",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "2.3",
+    definition:
+      "Nominal mass of a standard circulating euro one-cent coin (copper-plated steel) according to the Eurosystem technical specification.",
+    asOf: 2026,
+    sources: [
+      {
+        label: "European Commission: Common sides of euro coins",
+        url: "https://economy-finance.ec.europa.eu/euro/euro-coins-and-notes/euro-coins/common-sides-euro-coins_en",
+        kind: "primary",
+      },
+      {
+        label: "Wikipedia: 1 euro cent coin",
+        url: "https://en.wikipedia.org/wiki/1_euro_cent_coin",
+        kind: "secondary",
+      },
+    ],
+    note: "LOWER CONFIDENCE on the primary source: the EC page was not read for the 1-cent row. A coin-guide site (oldcurrencyexchange.com) and a coin-image page also list 2.30 g. Reviewer should open the EC or ECB table.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
 ];

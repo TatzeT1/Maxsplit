@@ -268,4 +268,273 @@ export const FOOD_ROWS: readonly EstimateQuestion[] = [
       on: "2026-10-09",
     },
   },
+  {
+    id: "est-foo-0008",
+    category: "food",
+    tone: "standard",
+    text: {
+      de: "Wie viel Käse hat eine Person in Deutschland 2025 im Schnitt verbraucht?",
+      en: "How much cheese did a person in Germany consume on average in 2025?",
+    },
+    unit: {
+      de: "Kilogramm",
+      en: "kilograms",
+      symbol: "kg",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "26.4",
+    definition:
+      "Per-capita consumption of all cheese types (hard, semi-hard, soft, fresh and processed cheese) in Germany in calendar year 2025, from the preliminary BZL/BLE milk supply balance.",
+    asOf: 2025,
+    sources: [
+      {
+        label: "BLE press release: Versorgungsbilanz Milch 2025 (April 2026)",
+        url: "https://www.ble.de/SharedDocs/Pressemitteilungen/DE/2026/260415_Versorgungsbilanz_Milch.html",
+        kind: "primary",
+      },
+      {
+        label: "topagrar: Deutsche verbrauchen weniger Milch, dafür mehr Käse und Butter",
+        url: "https://www.topagrar.com/rind/news/deutsche-verbrauchen-weniger-milch-dafur-mehr-kase-und-butter-20024757.html",
+        kind: "secondary",
+      },
+      {
+        label: "Milchindustrie-Verband: Pro-Kopf-Verbrauch Milchprodukte 2019-2025",
+        url: "https://milchindustrie.de/wp-content/uploads/2026/04/ProkopfDeutschland_Mopro_2019-2025_Homepage.pdf",
+        kind: "secondary",
+      },
+    ],
+    note: "Preliminary BZL figure; per-capita values since 2022 are based on the 2022 census population and are not comparable with older years.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-foo-0009",
+    category: "food",
+    tone: "standard",
+    text: {
+      de: "Wie viel Fleisch aller Sorten hat eine Person in Deutschland 2025 im Schnitt verzehrt?",
+      en: "How much meat of all kinds did a person in Germany eat on average in 2025?",
+    },
+    unit: {
+      de: "Kilogramm",
+      en: "kilograms",
+      symbol: "kg",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "54.9",
+    definition:
+      "Per-capita meat consumption (Verzehr) of all meat types combined in Germany in calendar year 2025, from the preliminary BZL/BLE meat supply balance.",
+    asOf: 2025,
+    sources: [
+      {
+        label: "BLE press release: Fleischverzehr steigt um 1,4 Kilogramm pro Person",
+        url: "https://www.ble.de/SharedDocs/Pressemitteilungen/DE/2026/260407_Fleischbilanz.html",
+        kind: "primary",
+      },
+      {
+        label: "topagrar: Fast 55 kg pro Kopf",
+        url: "https://www.topagrar.com/markt/news/deutsche-essen-mehr-fleisch-heimische-produktion-sinkt-20024593.html",
+        kind: "secondary",
+      },
+      {
+        label: "Lebensmittel Praxis: BZL-Daten, Verbraucher essen mehr Fleisch",
+        url: "https://lebensmittelpraxis.de/handel-aktuell/48229-bundesinformationszentrum-landwirtschaft-verbraucher-in-deutschland-essen-mehr-fleisch.html",
+        kind: "secondary",
+      },
+    ],
+    note: "Preliminary BZL figure based on the census-2022 population; 2024 was earlier reported as 53.2 kg and later as 53.5 kg after a recalculation, so compare only within the same series.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-foo-0010",
+    category: "food",
+    tone: "standard",
+    text: {
+      de: "Wie viel Schweinefleisch hat eine Person in Deutschland 2025 im Schnitt verzehrt?",
+      en: "How much pork did a person in Germany eat on average in 2025?",
+    },
+    unit: {
+      de: "Kilogramm",
+      en: "kilograms",
+      symbol: "kg",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "28.3",
+    definition:
+      "Per-capita consumption (Verzehr) of pork in Germany in calendar year 2025, from the preliminary BZL/BLE meat supply balance.",
+    asOf: 2025,
+    sources: [
+      {
+        label: "BLE press release: Fleischverzehr steigt um 1,4 Kilogramm pro Person",
+        url: "https://www.ble.de/SharedDocs/Pressemitteilungen/DE/2026/260407_Fleischbilanz.html",
+        kind: "primary",
+      },
+      {
+        label: "Lebensmittel Praxis: BZL-Daten, Verbraucher essen mehr Fleisch",
+        url: "https://lebensmittelpraxis.de/handel-aktuell/48229-bundesinformationszentrum-landwirtschaft-verbraucher-in-deutschland-essen-mehr-fleisch.html",
+        kind: "secondary",
+      },
+    ],
+    note: "Preliminary BZL figure; pork is the most consumed meat in Germany.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-foo-0011",
+    category: "food",
+    tone: "standard",
+    text: {
+      de: "Wie viele Tonnen Spargel wurden 2025 in Deutschland geerntet?",
+      en: "How many tonnes of asparagus were harvested in Germany in 2025?",
+    },
+    unit: {
+      de: "Tonnen",
+      en: "tonnes",
+      symbol: "t",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "103900",
+    definition:
+      "Total harvest quantity of asparagus in Germany in 2025 as published by the federal statistical office.",
+    asOf: 2025,
+    sources: [
+      {
+        label: "Destatis press release 20 July 2026: Freiland-Erdbeeren und Spargel 2026",
+        url: "https://www.destatis.de/DE/Presse/Pressemitteilungen/2026/07/PD26_257_412.html",
+        kind: "primary",
+      },
+      {
+        label: "Statista: Spargel in Deutschland (Destatis figures)",
+        url: "https://de.statista.com/themen/3331/spargel/",
+        kind: "secondary",
+      },
+    ],
+    note: "Sources differ on the asparagus area (19,200 ha in production per Destatis vs 22,500 ha elsewhere), so this row asks for the harvest quantity only.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-foo-0012",
+    category: "food",
+    tone: "fun",
+    text: {
+      de: "Wie viel Prozent Wasser dürfen in Speisehonig nach deutschem Recht höchstens stecken?",
+      en: "What is the maximum water content, in percent, that ordinary table honey may have under German law?",
+    },
+    unit: {
+      de: "Prozent",
+      en: "percent",
+      symbol: "%",
+    },
+    scale: "interval",
+    format: "quantity",
+    value: "20",
+    definition:
+      "General maximum water content of table honey under Annex 2 of the German Honey Ordinance (Honigverordnung); heather honey and honey for industrial use have higher limits and are not meant.",
+    asOf: 2026,
+    sources: [
+      {
+        label: "LAVES Niedersachsen: Wassergehalt im Honig",
+        url: "https://www.laves.niedersachsen.de/download/42476/Wassergehalt_im_Honig.pdf",
+        kind: "primary",
+      },
+      {
+        label: "gesetze.legal: Anlage 2 HonigV (mirror of the ordinance)",
+        url: "https://gesetze.legal/bund/honigv/anlage_2",
+        kind: "secondary",
+      },
+    ],
+    note: "The official gesetze-im-internet.de page (honigv_2004/anlage_2.html) was returned by search but its table was not visible; the figure is confirmed by the state agency and the mirror. The German beekeepers' association quality seal uses a stricter 18 percent, which is a private rule and not meant.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-foo-0013",
+    category: "food",
+    tone: "fun",
+    text: {
+      de: "Wie viel Prozent Kakaotrockenmasse muss Milchschokolade nach deutschem Recht mindestens aufweisen?",
+      en: "What minimum percentage of total cocoa dry matter must plain milk chocolate have under German chocolate rules?",
+    },
+    unit: {
+      de: "Prozent",
+      en: "percent",
+      symbol: "%",
+    },
+    scale: "interval",
+    format: "quantity",
+    value: "25",
+    definition:
+      "Minimum total cocoa dry matter in plain milk chocolate under the German Cocoa Ordinance (KakaoV), which implements the EU chocolate directive; chocolate labelled 'Vollmilch' and plain dark chocolate have different limits.",
+    asOf: 2026,
+    sources: [
+      {
+        label: "Kakaoverordnung Anlage 1 (gesetze-im-internet.de)",
+        url: "https://www.gesetze-im-internet.de/kakaov_2003/anlage_1.html",
+        kind: "primary",
+      },
+      {
+        label: "Verbraucherzentrale NRW: Kakao- und Schokoladenerzeugnisse",
+        url: "https://www.verbraucherzentrale.nrw/sites/default/files/migration_files/media170711A.pdf",
+        kind: "secondary",
+      },
+    ],
+    note: "LOWER CONFIDENCE: the 25 percent for milk chocolate was seen only in the consumer-advice PDF and an Austrian source of the same EU directive, not in the German legal text itself. The reviewer should open Anlage 1 KakaoV and confirm the milk chocolate row.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
+  {
+    id: "est-foo-0014",
+    category: "food",
+    tone: "fun",
+    text: {
+      de: "Aus wie viel Gramm Früchten muss man mindestens 100 Gramm Erdbeer-Konfitüre extra herstellen?",
+      en: "How many grams of fruit must at least go into making 100 g of strawberry extra jam under German rules?",
+    },
+    unit: {
+      de: "Gramm",
+      en: "grams",
+      symbol: "g",
+    },
+    scale: "ratio",
+    format: "quantity",
+    value: "45",
+    definition:
+      "Minimum quantity of strawberries used per 100 g of finished product for a jam labelled 'Konfitüre extra' under the German Jam Ordinance (Konfitürenverordnung, EU jam rules); the quantity before cooking, as stated on the label 'hergestellt aus ... g Früchten je 100 g'.",
+    asOf: 2026,
+    sources: [
+      {
+        label: "Burgenlandkreis: Merkblatt Konfitüren 2022",
+        url: "https://www.burgenlandkreis.de/de/datei/anzeigen/id/88129,1069/merkblatt_konfitueren_2022.pdf",
+        kind: "primary",
+      },
+      {
+        label: "Landkreis Stade: Merkblatt Kennzeichnung Konfitüre",
+        url: "https://www.landkreis-stade.de/medien/dokumente/merkblatt_kennzeichnung_konfituere_av.pdf",
+        kind: "primary",
+      },
+    ],
+    note: "The figure was seen as a consistent value across several local-authority leaflets (Potsdam-Mittelmark, Stade, Burgenlandkreis) via search summaries, not in the ordinance text itself. Fruit-specific: other fruits (blackcurrant, quince) have lower minimums, hence the question names strawberries. Lower confidence on which leaflet carries which quote.",
+    verified: {
+      by: "Claude (Agenten, blind geprüft)",
+      on: "2026-10-09",
+    },
+  },
 ];
