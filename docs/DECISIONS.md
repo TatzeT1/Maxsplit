@@ -396,10 +396,14 @@ them, (c) a static bank written and verified by hand, shipped with the server co
   validator with the minimums on: at least 100 verified standard and 30 fun rows, at least
   8 standard rows in each of the twelve categories, at least a quarter each of ratio and interval
   rows, at most 15 % with a tolerance. The default `pnpm test` runs with the floors off, so the
-  guards could land before the content, and the bank is **empty until the first batch arrives**;
-  `createEstimateRound` answers `bank-empty` rather than starting a round without a question. The
-  game must not be merged to `main` until `pnpm check:bank-floors` is green. (Wiring that and
-  `check:bank-leak` into CI is a follow-up; today both are run by hand.)
+  guards could land before the content. The first batch (144 rows in all twelve categories, 2026-10)
+  was researched by agents: two sources per row and an independent blind re-check by a second
+  agent, **not yet approved by a human** (`docs/estimate-bank-review.md` lists every row with its
+  sources for a spot check). It still misses the floors (fun, science, technology, culture and
+  food are short), so the game must not be merged to `main` until `pnpm check:bank-floors` is
+  green and the owner has approved the first release batch. An empty bank makes
+  `createEstimateRound` answer `bank-empty` rather than start a round without a question. (Wiring
+  `check:bank-floors` and `check:bank-leak` into CI is a follow-up; today both are run by hand.)
 - **Licence rules.** We copy _facts_, not expression: question text, definition and labels are
   our own wording; we take single, hand-checked values and never extract a substantial part of
   a database or paste a table (EU database right, § 87a UrhG, concerns systematic extraction); no

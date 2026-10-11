@@ -22,8 +22,9 @@ import { TECHNOLOGY_ROWS } from "./rows/technology";
  *
  * Imported by `src/lib/actions/estimate-rounds.ts` and tests only (ESLint,
  * eslint.config.mjs). The rows arrive in `rows/*.ts`, one file per category,
- * each starting with `import "server-only"`; until the first batch lands the
- * bank is empty.
+ * each starting with `import "server-only"`. The rows are generated from
+ * researched and blind-checked material and are not yet human-approved
+ * (docs/estimate-bank-review.md).
  */
 export const ESTIMATE_BANK: readonly EstimateQuestion[] = Object.freeze<EstimateQuestion[]>([
   ...GEOGRAPHY_ROWS,

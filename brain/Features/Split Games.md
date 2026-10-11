@@ -1348,8 +1348,10 @@ estimateRoundId })`, the form builds the equal exact split, and `addExpense` may
   **online rounds are open-book** ("Ohne Googeln!" in the invite). Every row has two sources
   (distinct hostnames, one primary), own wording in both languages, `definition`, `asOf` and
   `verified`. `validateEstimateBank` (CI) enforces metric units, no persons, no death or disaster,
-  closed guess-range classes and a tolerance cap. `ESTIMATE_BANK` is **empty until the first batch**
-  (`estimate-bank/rows/*.ts`), and `createEstimateRound` answers `bank-empty` meanwhile.
+  closed guess-range classes and a tolerance cap. `ESTIMATE_BANK` holds a first batch of 144 rows
+  (`estimate-bank/rows/*.ts`, agent-researched and blind-checked, **not yet human-approved**, see
+  `docs/estimate-bank-review.md`); `check:bank-floors` still fails (fun, science, technology,
+  culture, food), and an empty bank would make `createEstimateRound` answer `bank-empty`.
   Questions come from a per-group seen-set (`estimateState/seen`), updated in the drawing
   transaction; "Auch freche Fun Facts" opts into `tone: "fun"` rows.
 - **Before this can ship.** (1) `pnpm exec firebase deploy --only firestore:rules` — the
