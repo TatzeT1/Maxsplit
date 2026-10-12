@@ -6,7 +6,7 @@
  * failure reads like a review comment.
  *
  * What it cannot do: prove that a human opened both sources. `verified` makes
- * the claim attributable, nothing more (docs/DECISIONS.md, ADR-006).
+ * the claim attributable, nothing more (docs/DECISIONS.md, ADR-007).
  */
 import {
   decimalToMilli,

@@ -334,7 +334,7 @@ describe("firestore.rules", () => {
     );
   });
 
-  // Estimate rounds (ADR-007): the round document is member-readable, its
+  // Estimate rounds (ADR-008): the round document is member-readable, its
   // secrets (the truth, the hidden guesses) and the seen set are server-only.
 
   it("allows a member to watch an estimate round, and nobody else", async () => {

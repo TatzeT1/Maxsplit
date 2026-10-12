@@ -47,7 +47,7 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 | Pech / Glück                      | "Bad luck" / "good luck"             | the luck index's two sides: paid more / less than expected — never meant as "the draw is unfair" — [[Split Games]]                           |
 | Finger drauf!                     | "Finger on it!"                      | the whole-table skill game: everyone rests a finger, lifts on „LOS!“; too early or slowest pays — [[Split Games]]                            |
 | Fehlstart                         | "False start"                        | lifting (or tapping) before „LOS!“ in Finger drauf! and the Reaktionsduell — it pays — [[Split Games]]                                       |
-| Schätzfragen                      | "Estimation questions"               | 🎯 the knowledge game: one numeric question, everyone guesses in secret, the furthest off pay — [[Split Games]], ADR-007                     |
+| Schätzfragen                      | "Estimation questions"               | 🎯 the knowledge game: one numeric question, everyone guesses in secret, the furthest off pay — [[Split Games]], ADR-008                     |
 | Stechfrage                        | "Tie-break question"                 | a fresh Schätzfragen question for only the players still contested on the paying line; at most three, then the lot — [[Split Games]]         |
 | Faktor                            | "Factor"                             | how far off a quantity guess is: "Faktor 2 zu niedrig" = half the truth; high and low by the same factor are equally far — [[Split Games]]   |
 | Letzte Chance                     | "Last call"                          | Schätzfragen online: the first "Jetzt auswerten" with absent players starts two more minutes and a push instead of scoring — [[Split Games]] |
@@ -79,7 +79,7 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 - **milli-units** — the integer thousandths of a question's unit in which every Schätzfragen guess,
   truth and tolerance is stored and compared (never a float). See [[Split Games]].
 - **bank** (Schätzfragen) — the plaintext, hand-verified question rows in a public repo, server-only
-  for clients; two sources per row. See [[Split Games]] and ADR-006.
+  for clients; two sources per row. See [[Split Games]] and ADR-007.
 - **backstop** — used specifically for `firestore.rules`' deny-all write rules: not the
   primary enforcement mechanism (that's Server Actions), just a safety net that should never
   actually be exercised. See [[Firestore Rules]].

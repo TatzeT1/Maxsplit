@@ -1244,7 +1244,7 @@ nobody waiting for the phone to come round, which is what the owner wanted from 
 
 ## Round five: Schätzfragen (🎯)
 
-ADR-006 (the bank) and ADR-007 (the rounds) in `docs/DECISIONS.md`. Rules:
+ADR-007 (the bank) and ADR-008 (the rounds) in `docs/DECISIONS.md`. Rules:
 `src/lib/games/estimate-input.ts` (everything a client may import: constants, the locale-aware
 parser, formatters, the exact distance comparison) and `estimate-rules.ts` (the classifier and the
 Stechen state machine, server and lazy audit table only), `estimate-axis.ts` (number-line display

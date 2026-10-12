@@ -1,7 +1,7 @@
 import "server-only";
 import type { EstimateQuestion } from "../types";
 
-/** Researched and blind-checked by agents, not yet approved by a human (docs/estimate-bank-review.md, ADR-006). */
+/** Researched and blind-checked by agents, not yet approved by a human (docs/estimate-bank-review.md, ADR-007). */
 export const SPORT_ROWS: readonly EstimateQuestion[] = [
   {
     id: "est-spo-0001",

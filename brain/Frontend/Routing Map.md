@@ -25,7 +25,7 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
                                       live tournament bracket / online duel board — watch/play from any device, see Split Games
   /groups/[groupId]/rounds/[roundId] online luck round (scratch cards on everyone's own phone) — see Split Games, ADR-005
   /groups/[groupId]/estimate/[roundId]
-                                      online Schätzfragen round (everyone guesses on their own phone) — see Split Games, ADR-007
+                                      online Schätzfragen round (everyone guesses on their own phone) — see Split Games, ADR-008
   /profile                           profile + payment details — see Onboarding and Payment Details
   /admin                             requireAdminSession() → notFound() if not admin
   /admin/groups/[groupId]            admin group moderation

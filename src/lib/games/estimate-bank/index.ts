@@ -16,7 +16,7 @@ import { TECHNOLOGY_ROWS } from "./rows/technology";
 /**
  * The Schätzfragen question bank — plaintext rows in a PUBLIC repository.
  * `server-only` keeps the truths out of client bundles and client-readable
- * documents, nothing more (docs/DECISIONS.md, ADR-006). This is the only file
+ * documents, nothing more (docs/DECISIONS.md, ADR-007). This is the only file
  * that would change if the owner ever wants a sealed bank: decrypt here, export
  * the same frozen array.
  *

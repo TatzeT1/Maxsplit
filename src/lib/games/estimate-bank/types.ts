@@ -2,7 +2,7 @@
  * Shapes and tiny constants of the Schätzfragen question bank. NO data and NO
  * `server-only` import here: client code may `import type` from this file (the
  * rows themselves live in `rows/*`, behind `index.ts`, which is server-only —
- * see docs/DECISIONS.md ADR-006 for what that does and does not protect).
+ * see docs/DECISIONS.md ADR-007 for what that does and does not protect).
  */
 import type {
   EstimateCategory,

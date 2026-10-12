@@ -4,7 +4,7 @@ import nextTs from "eslint-config-next/typescript";
 import prettierConfig from "eslint-config-prettier";
 
 // The Schätzfragen question bank holds the truths of its questions. It must
-// never reach a client bundle or an RSC payload (docs/DECISIONS.md, ADR-006):
+// never reach a client bundle or an RSC payload (docs/DECISIONS.md, ADR-007):
 //   - `estimate-bank/index` and `estimate-bank/rows/*` are server-only modules
 //     that carry data; only the estimate actions and tests may import them.
 //     `estimate-bank/types`, `public`, `draw` and `validate` are data-free and

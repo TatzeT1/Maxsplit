@@ -76,7 +76,7 @@ GiroCode on "owes you"; see [[Balances and Settlements]].
 
 ## Banner and toasts
 
-`EstimateRoundBanner` (Schätzfragen, ADR-007) sits right after the luck banner. The group
+`EstimateRoundBanner` (Schätzfragen, ADR-008) sits right after the luck banner. The group
 document says _that_ a round runs (`activeEstimateRound`), so a group without one costs no extra
 listener; only then does the banner read the round, to say what is wanted from _you_: "Gib deinen
 Tipp ab!" (primary ring), "Letzte Chance — jetzt tippen!", "Zeit abgelaufen — auswerten",

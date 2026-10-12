@@ -53,7 +53,7 @@ import type {
 } from "@/lib/types";
 import type { ActionResult } from "./groups";
 
-// Estimate rounds, "Schätzfragen" (ADR-007): one question, one numeric answer,
+// Estimate rounds, "Schätzfragen" (ADR-008): one question, one numeric answer,
 // the players furthest off pay. One phone or online. The rules are the pure
 // modules lib/games/estimate-*.ts; this layer runs them inside transactions.
 //

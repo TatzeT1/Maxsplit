@@ -3,6 +3,7 @@
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { isCategoryId } from "@/lib/categories";
+import { expenseCardMessage } from "@/lib/chat/cards";
 import { gameResultMessage } from "@/lib/chat/game-result";
 import { buildEstimateAudit, buildEstimateChatSummary } from "@/lib/games/estimate-audit";
 import { normalizeExpenseGame } from "@/lib/games/expense-game";
@@ -385,15 +386,32 @@ export async function addExpense(
       { lastUpdateTime: claim.updateTime },
     );
   }
-  if (game) {
+  const t = await getServerT();
+  const nameOf = (uid: string) => group.members[uid]?.displayName ?? "?";
+  if (!game) {
+    // The group chat sees what was entered, as a silent card in the same write
+    // (the expense push already reaches everyone it touches). A game-decided
+    // expense gets the result card below instead.
+    batch.set(
+      groupRef.collection("messages").doc(),
+      expenseCardMessage({
+        t,
+        senderUid: session.uid,
+        expenseId: expenseRef.id,
+        expense,
+        nameOf,
+        now,
+      }),
+    );
+  } else {
     // A game decided it: the group chat hears who pays, in the same write.
     // No chat push on top — the expense push already reaches everyone in it.
     batch.set(
       groupRef.collection("messages").doc(),
       gameResultMessage({
-        t: await getServerT(),
+        t,
         senderUid: session.uid,
-        nameOf: (uid) => group.members[uid]?.displayName ?? "?",
+        nameOf,
         now,
         result: {
           gameId: game.gameId,

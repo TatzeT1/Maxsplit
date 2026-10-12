@@ -65,7 +65,7 @@ cache is empty" (a round never opened here) is `NeedsConnection` too, never "not
 skeleton. A finished round stays readable offline from the cached expense and chat card.
 
 **🎯 Schätzfragen is the one game whose _one-phone_ mode needs a connection.** The question comes
-from the server-only bank (ADR-006), so `createLocalEstimateRound` is a Server Action; every other
+from the server-only bank (ADR-007), so `createLocalEstimateRound` is a Server Action; every other
 one-phone game works offline, this one cannot start. The tile stays in the picker (a game that
 vanished offline would read as a bug), and the explanation lives in the **preview**
 (`needsConnection` in the catalog): a `role="alert"` line, "Los geht's" disabled, no prefetch,
@@ -87,6 +87,12 @@ the add-expense dialog spinning forever (the rejected `await` skipped `setLoadin
 
 **New write button? Disable it on `!useOnline()` and call the action through
 `callAction`.**
+
+The chat follows it everywhere: send, reactions, delete and the mute bell are disabled
+offline, the composer says why ("Du bist offline …") and keeps the text (and a per-group
+draft), and a send that fails _after_ it started stays on screen as "Nicht gesendet" with
+"Erneut senden" — see [[Chat]]. The offline banner appears above the chat's pinned frame, so
+`useVisibleHeight` re-measures on `online`/`offline`.
 
 ## Sign-out wipes it
 

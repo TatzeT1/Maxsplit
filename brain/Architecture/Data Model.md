@@ -26,7 +26,7 @@ groups/{groupId}
   groups/{groupId}/tournaments/{tournamentId}/presence/{uid}          (server-only "watching" heartbeat)
   groups/{groupId}/tournaments/{tournamentId}/nudges/{matchId}        (server-only "Anstupsen" rate limit)
   groups/{groupId}/luckRounds/{roundId}                               (online luck round — ADR-005)
-  groups/{groupId}/estimateRounds/{roundId}                           (Schätzfragen round, one phone or online — ADR-007)
+  groups/{groupId}/estimateRounds/{roundId}                           (Schätzfragen round, one phone or online — ADR-008)
   groups/{groupId}/estimateRounds/{roundId}/secrets/{stageIndex}      (bank row as played + hidden guesses — no client reads)
   groups/{groupId}/estimateState/seen                                 (server-only: seen question ids, creation log)
 ```
@@ -165,7 +165,7 @@ so the group page's banner needs no extra listener.
 
 ## `EstimateRound` / `secrets` / `EstimateSeen`
 
-One Schätzfragen round (`groups/{groupId}/estimateRounds/{roundId}`, ADR-007), the same document
+One Schätzfragen round (`groups/{groupId}/estimateRounds/{roundId}`, ADR-008), the same document
 for `mode: "local"` (one phone) and `"online"`. Public, written only by
 `lib/actions/estimate-rounds.ts`, read live by members. `rulesVersion` is stamped at creation
 (the audit replay dispatches on it); `entrants` is a name snapshot (online: accounts only, local:
@@ -194,9 +194,18 @@ All numbers are integer **milli-units** (thousandths of the unit, `Milli`): neve
 
 ## `ChatMessage` / `ChatRead`
 
-Text-only chat, no attachments/edits/reactions in v1. `ChatRead` doc id equals the member's
-uid (one receipt per member, enforced by Firestore doc-id semantics rather than a query).
-See [[Chat]].
+Text chat with reactions, a quoted reply and @mentions; no attachments or edits. Optional
+fields (absent, not `null`, on a normal message): `reactions` (`Record<reactionId, uid[]>`,
+emptied lists stay), `replyTo` (`{ id, senderUid, text }`, copied by the server), `mentions`
+(`uid[]`, worked out by the server from the text), and the card payloads `gameInvite`,
+`luckInvite`, `gameResult`, **`expenseCard`** and **`settlementCard`** (a snapshot of the
+figures at that moment). A message's doc id is Firestore's auto id, or the sender's `clientId`
+(a UUID) when it came from the chat — what makes a retry safe. `ChatRead` doc id equals the
+member's uid (one receipt per member, enforced by Firestore doc-id semantics rather than a
+query). See [[Chat]].
+
+`users/{uid}.mutedChatGroupIds` (absent = none) lists the groups whose chat pushes the user
+silenced — server-only, read into `Session`.
 
 ## Related
 

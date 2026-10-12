@@ -3,7 +3,7 @@ import { ESLint } from "eslint";
 import { beforeAll, describe, expect, it } from "vitest";
 
 /**
- * The lint guard of docs/DECISIONS.md ADR-006 (spec D.7, layer 2): the real
+ * The lint guard of docs/DECISIONS.md ADR-007 (spec D.7, layer 2): the real
  * eslint.config.mjs, run over snippets that pretend to live at a given path.
  * If someone loosens the `no-restricted-imports` blocks, this fails.
  */

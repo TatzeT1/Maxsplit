@@ -333,14 +333,65 @@ straight from Firestore (ADR-001).
   together, say) would need a dealt secret after all — then a server-only secrets document
   next to the round, like `liveSecrets`.
 
-## ADR-006: The Schätzfragen bank — hand-verified, plaintext in a public repository, two sources per row
+## ADR-006: Chat grows reactions, replies and mentions — and sending becomes retry-safe
+
+**Status:** Accepted
+**Date:** 2026-10-07
+
+### Context
+
+The chat was kept "intentionally minimal (v1)" — text only, no reactions or edits. The group
+uses it regularly (it asked for it, see the group page note) and asked for it to be improved. Reading
+the code showed problems beyond missing features: every snapshot scrolled you to the bottom
+while you were reading history; deleting was a hover-only button (invisible on a phone, the
+primary surface); a send waited for the server round trip with no feedback, and a failed or
+repeated one could be lost or doubled; `markChatRead` fired on every snapshot, also while the
+app was in the background.
+
+### Decision
+
+- **Reactions and replies, still no attachments or edits.** A reaction is `reactions.<id>`
+  (a fixed set of five ids, `arrayUnion`/`arrayRemove` of the caller's uid) set by an
+  idempotent action that states the end state (`active`), not "toggle". A reply stores a
+  server-copied snapshot of the quote, so it survives the original's deletion. Neither needs
+  a rules change — messages are still written only by Server Actions (ADR-001).
+- **`clientId` makes a send retry-safe.** The client chooses the message id (a UUID) and the
+  server `create()`s it; an `ALREADY_EXISTS` from the same sender is a successful retry. That
+  lets the UI keep a failed send visible and resend it without risking a duplicate, and
+  show a message optimistically with its final id.
+- **Mentions are decided by the server** (whole-word match of `@displayName` against the
+  group's members) and stored as `mentions`; a mention push breaks through a per-group mute.
+  Muting is per user and group (`users/{uid}.mutedChatGroupIds`), checked in `deliverPushes`.
+- **Expense and payment cards are silent**, written in the same batch as the entry, and never
+  light the unread dot. They are a record of the moment, not a live view.
+- **Actions open inline under the bubble**, not in a portal: a popup would be positioned
+  against the layout viewport, which iOS gets wrong while the keyboard is up.
+
+### Consequences
+
+- No rules change and no new index; `sendMessage`'s signature gained two optional fields.
+- Chat documents grow optional fields (see [[Data Model]]); old messages are unaffected.
+- A card shows the figures as entered; if the expense is edited or deleted afterwards the
+  card says what was true when it was posted.
+- Read receipts remain private (rules), so there is no "gesehen von".
+- Not verified on a real iPhone: the new composer parts (suggestions, reply bar) inside the
+  keyboard-aware frame.
+
+### What would make us reverse this
+
+- Message editing or attachments are a separate step (editing needs a history rule,
+  attachments need Storage) — a new ADR.
+- If cards go stale often enough to confuse, make them live (a listener per card or a
+  denormalized status) instead of snapshots.
+
+## ADR-007: The Schätzfragen bank — hand-verified, plaintext in a public repository, two sources per row
 
 **Status:** Accepted
 **Date:** 2026-10-09
 
 ### Context
 
-"Schätzfragen" (🎯, ADR-007) asks one numeric question and decides who pays by who is furthest
+"Schätzfragen" (🎯, ADR-008) asks one numeric question and decides who pays by who is furthest
 off. The quality of the whole game is the quality of the numbers: one wrong "truth" turns a
 friendly game into an argument about money. Three ways to get questions were weighed: (a)
 generate them at runtime from an open dataset (Wikidata), (b) have an LLM write and answer
@@ -379,7 +430,7 @@ them, (c) a static bank written and verified by hand, shipped with the server co
   neither the bank nor the ranking code. `pnpm check:bank-leak` runs after `pnpm build`: it looks
   for per-row needles (id, start of the definition) in `.next/static` and demands them in
   `.next/server`, so the scan cannot pass vacuously. The true answer reaches a client **only
-  inside a revealed stage** of a round document (ADR-007). A row also lives, as a snapshot, in the
+  inside a revealed stage** of a round document (ADR-008). A row also lives, as a snapshot, in the
   round's server-only `secrets` document, so correcting a row later never rewrites a past game.
 - **Content rules, enforced by `validateEstimateBank`** (run over every row by `bank.test.ts`):
   metric units only (a closed symbol list); no rows about persons (stricter than "living
@@ -428,11 +479,11 @@ them, (c) a static bank written and verified by hand, shipped with the server co
 - **The answers are readable in the public repository.** Secrecy only stops a modified client
   from reading a truth out of the app; a player can look the answer up, and a member can read
   the whole bank by creating rounds and reading the reveals. There is therefore no mining
-  defence, only an anti-spam cap on round creation (ADR-007).
+  defence, only an anti-spam cap on round creation (ADR-008).
 - The bank must be re-reviewed periodically: rows with a moving truth (populations, records)
   carry `asOf`; a yearly bank review issue is part of the release routine.
 - The bank cannot be shown on a client at all, including offline: starting a one-phone round
-  needs a connection (ADR-007).
+  needs a connection (ADR-008).
 - Every finished round keeps `questionId`, the truth and its source label; the expense audit
   also keeps the definition and the source URL, so a wrong row can be found and fixed, and a
   future "report question" button needs no schema change.
@@ -447,7 +498,7 @@ them, (c) a static bank written and verified by hand, shipped with the server co
   `estimate-bank/index.ts`) or move to a private repository, and accept that rows can then no
   longer be reviewed in a public PR.
 
-## ADR-007: Estimate rounds — one server-held round model for one phone and online
+## ADR-008: Estimate rounds — one server-held round model for one phone and online
 
 **Status:** Accepted
 **Date:** 2026-10-09
@@ -456,7 +507,7 @@ them, (c) a static bank written and verified by hand, shipped with the server co
 
 The owner asked for a 17th split game, "Schätzfragen": one numeric question, everyone guesses
 in secret, the _k_ furthest off pay. It is to be played on one phone _or_ online with everyone
-on their own phone, with a question bank whose answers must not ship to a client (ADR-006). The
+on their own phone, with a question bank whose answers must not ship to a client (ADR-007). The
 truth therefore has to be held by the server until the reveal, even when the whole table shares
 one device. It is the first game that rewards knowledge instead of luck or reflexes.
 
@@ -471,7 +522,7 @@ one device. It is the first game that rewards knowledge instead of luck or refle
   the device owner submits every contender's guess in one action; an online round takes one
   guess per player. Neither mode stores a hidden guess anywhere a client can read, and the truth
   leaves `secrets` only inside the transaction that reveals its stage. (The rows themselves are
-  public in the repository, ADR-006: this is about what the _app_ hands a client, not secrecy
+  public in the repository, ADR-007: this is about what the _app_ hands a client, not secrecy
   from the world.) Every action reads round, secrets, group and seen first and writes last,
   because a stage that finishes may draw a Stechfrage.
 - **One phone: all-or-nothing, replay-safe.** `createLocalEstimateRound` returns the _public_
@@ -505,7 +556,7 @@ one device. It is the first game that rewards knowledge instead of luck or refle
   percentages are `interval` rows and compare `|guess − truth|`. Zero is allowed only as an
   interval guess. The mixed scoring is on purpose: a ratio rewards a rough sense of magnitude
   over trivia, and is meaningless for a year. The guess range is a function of the unit class,
-  not of the row (ADR-006).
+  not of the row (ADR-007).
 - **Ties exist only where they decide who pays, and strict facts are never reversed.** Two
   guesses are tied if they are the same, or if the truth's uncertainty band could flip their
   order: for intervals when the midpoint of the guesses lies within the tolerance of the truth,
@@ -587,7 +638,7 @@ firestore:rules`) before the first use, as with ADR-005; without them the round 
 ### What would make us reverse this
 
 - If offline one-phone play matters more than the rows staying out of the app, a public
-  offline pack with its own trust model (a new ADR, see ADR-006).
+  offline pack with its own trust model (a new ADR, see ADR-007).
 - If presence or rematches are added, they extend this collection (`rematchId`, a heartbeat
   document) rather than a new one.
 - If absence turns out to anger groups, replace "ranks furthest" with an excluded-and-restart

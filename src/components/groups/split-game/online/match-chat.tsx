@@ -1,17 +1,18 @@
 "use client";
 
 import { collection, limitToLast, onSnapshot, orderBy, query } from "firebase/firestore";
-import { MessageCircle, Send } from "lucide-react";
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { MessageCircle } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChatComposer } from "@/components/groups/chat-composer";
+import { RichText } from "@/components/groups/chat-message";
 import { useT } from "@/components/locale-provider";
-import { sendMessage, markChatRead } from "@/lib/actions/messages";
-import { callAction } from "@/lib/call-action";
-import { MAX_MESSAGE_LENGTH } from "@/lib/chat/constants";
+import { markChatRead } from "@/lib/actions/messages";
+import { useChatSender } from "@/lib/chat/use-chat-sender";
 import { db } from "@/lib/firebase/client";
 import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { useOnline } from "@/lib/use-online";
+import { usePageVisible } from "@/lib/use-page-visible";
 import { cn } from "@/lib/utils";
 import type { ChatMessage, GroupMember } from "@/lib/types";
 
@@ -21,7 +22,7 @@ const VISIBLE_MESSAGES = 40;
  * The group chat, pinned under a running online match so nobody has to leave
  * the game to trash-talk. Same `messages` collection as the chat screen — what
  * is written here shows up there and vice versa — just a compact view of the
- * latest messages with a composer.
+ * latest messages with the same composer (and the same safe, retryable send).
  */
 export function MatchChat({
   groupId,
@@ -35,13 +36,13 @@ export function MatchChat({
   const t = useT();
   const user = useCurrentUser();
   const online = useOnline();
+  const pageVisible = usePageVisible();
   const [messages, setMessages] = useState<ChatMessage[] | null>(null);
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [text, setText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const sender = useChatSender(groupId, messages);
 
   useEffect(() => {
     if (!user) return;
@@ -65,46 +66,28 @@ export function MatchChat({
   // messages you watched arrive mid-game. Best effort, like the chat screen.
   const newestId = messages?.at(-1)?.id ?? null;
   useEffect(() => {
-    if (!user || !newestId || !online) return;
+    if (!user || !newestId || !online || !pageVisible) return;
     markChatRead({ groupId }).catch(() => {});
-  }, [groupId, user, newestId, online]);
+  }, [groupId, user, newestId, online, pageVisible]);
 
   // Scroll the list itself — never the page, which would yank the board away.
+  const pendingCount = sender.pending.length;
   useEffect(() => {
     const list = listRef.current;
     if (list) list.scrollTop = list.scrollHeight;
-  }, [messages]);
+  }, [messages, pendingCount]);
 
-  async function submit() {
+  function handleSend() {
     const trimmed = text.trim();
-    if (!trimmed || sending || !online) return;
-    setSending(true);
-    setSendError(null);
-    const result = await callAction(() => sendMessage({ groupId, text: trimmed }));
-    setSending(false);
-    if (!result.ok) {
-      setSendError(
-        result.error === "text-too-long"
-          ? t("chat.errorTooLong", { count: MAX_MESSAGE_LENGTH })
-          : t("chat.sendError"),
-      );
-      return;
-    }
+    if (!trimmed || !online) return;
+    sender.send(trimmed, null);
     setText("");
     textareaRef.current?.focus();
   }
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    void submit();
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-      event.preventDefault();
-      void submit();
-    }
-  }
+  const mentionCandidates = Object.entries(members)
+    .filter(([uid, member]) => uid !== currentUid && member.isPlaceholder !== true)
+    .map(([uid, member]) => ({ uid, displayName: member.displayName }));
 
   return (
     <section aria-label={t("chat.title")} className="flex flex-col gap-2 rounded-xl border p-3">
@@ -128,67 +111,91 @@ export function MatchChat({
             <p aria-busy="true" className="text-muted-foreground text-xs">
               …
             </p>
-          ) : messages.length === 0 ? (
+          ) : messages.length === 0 && sender.pending.length === 0 ? (
             <p className="text-muted-foreground text-xs">{t("chat.empty")}</p>
           ) : (
-            messages.map((message) => {
-              const own = message.senderUid === currentUid;
-              return (
-                <div
-                  key={message.id}
-                  className={cn("flex max-w-full flex-col", own ? "items-end" : "items-start")}
-                >
-                  {!own && (
-                    <span className="text-muted-foreground px-1 text-[10px]">
-                      {members[message.senderUid]?.displayName ?? "?"}
-                    </span>
-                  )}
+            <>
+              {messages.map((message) => {
+                const own = message.senderUid === currentUid;
+                return (
+                  <div
+                    key={message.id}
+                    className={cn("flex max-w-full flex-col", own ? "items-end" : "items-start")}
+                  >
+                    {!own && (
+                      <span className="text-muted-foreground px-1 text-[10px]">
+                        {members[message.senderUid]?.displayName ?? "?"}
+                      </span>
+                    )}
+                    <div
+                      className={cn(
+                        "max-w-[85%] rounded-2xl px-3 py-1.5 text-sm break-words whitespace-pre-wrap",
+                        own
+                          ? "bg-primary text-primary-foreground rounded-br-md"
+                          : "bg-muted rounded-bl-md",
+                      )}
+                    >
+                      <RichText
+                        text={message.text}
+                        mentionNames={(message.mentions ?? []).map(
+                          (uid) => members[uid]?.displayName ?? "",
+                        )}
+                        isOwn={own}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {sender.pending.map((item) => (
+                <div key={item.id} className="flex max-w-full flex-col items-end">
                   <div
                     className={cn(
-                      "max-w-[85%] rounded-2xl px-3 py-1.5 text-sm break-words whitespace-pre-wrap",
-                      own
-                        ? "bg-primary text-primary-foreground rounded-br-md"
-                        : "bg-muted rounded-bl-md",
+                      "bg-primary text-primary-foreground max-w-[85%] rounded-2xl rounded-br-md px-3 py-1.5 text-sm break-words whitespace-pre-wrap",
+                      item.status === "sending" && "opacity-70",
+                      item.status === "failed" && "ring-destructive ring-2",
                     )}
                   >
-                    {message.text}
+                    <RichText text={item.text} isOwn />
                   </div>
+                  {item.status === "failed" && (
+                    <p
+                      role="alert"
+                      className="text-destructive flex items-center gap-2 px-1 text-xs"
+                    >
+                      <span className="font-medium">{t("chat.notSent")}</span>
+                      <button
+                        type="button"
+                        disabled={!online}
+                        onClick={() => sender.retry(item.id)}
+                        className="underline underline-offset-2 disabled:opacity-50"
+                      >
+                        {t("chat.retrySend")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => sender.discard(item.id)}
+                        className="underline underline-offset-2"
+                      >
+                        {t("chat.discard")}
+                      </button>
+                    </p>
+                  )}
                 </div>
-              );
-            })
+              ))}
+            </>
           )}
         </div>
       )}
 
-      {sendError && <p className="text-destructive px-1 text-xs">{sendError}</p>}
-      <form
-        onSubmit={handleSubmit}
-        className="border-input bg-card/70 focus-within:border-ring focus-within:ring-ring/50 flex items-end gap-1.5 rounded-3xl border p-1.5 pl-4 transition-colors focus-within:ring-3"
-      >
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={t("chat.placeholder")}
-          enterKeyHint="send"
-          rows={1}
-          maxLength={MAX_MESSAGE_LENGTH}
-          // text-base (16px) on mobile is load-bearing: below it iOS Safari
-          // zooms the page on focus (see AGENTS.md).
-          className="placeholder:text-muted-foreground max-h-24 min-h-9 flex-1 resize-none bg-transparent py-1.5 text-base outline-none md:text-sm"
-        />
-        <Button
-          type="submit"
-          size="icon"
-          className="shrink-0 rounded-full"
-          disabled={sending || !text.trim() || !online}
-          aria-label={t("chat.send")}
-          onMouseDown={(event) => event.preventDefault()}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </form>
+      <ChatComposer
+        value={text}
+        onChange={setText}
+        onSend={handleSend}
+        online={online}
+        mentionCandidates={mentionCandidates}
+        textareaRef={textareaRef}
+        compact
+      />
     </section>
   );
 }

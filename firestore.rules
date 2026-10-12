@@ -99,7 +99,7 @@ service cloud.firestore {
         allow write: if false;
       }
 
-      // Estimate rounds (ADR-007) — "Schätzfragen", one phone or online. Every
+      // Estimate rounds (ADR-008) — "Schätzfragen", one phone or online. Every
       // member watches a round live; only lib/actions/estimate-rounds.ts writes.
       // The truth and the still-hidden guesses live in secrets/ and reach this
       // (member-readable) document only when a stage is revealed, in the same

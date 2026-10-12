@@ -8,7 +8,7 @@
  * it is shown — inside the transaction that writes the round, so two
  * concurrent rounds cannot get the same question or lose each other's update.
  * It exists so a group is not shown the same question twice in a row, not to
- * hide anything: the bank is public (docs/DECISIONS.md, ADR-006).
+ * hide anything: the bank is public (docs/DECISIONS.md, ADR-007).
  */
 import type { EstimateQuestion } from "@/lib/games/estimate-bank/types";
 import { isDuplicateFact } from "@/lib/games/estimate-bank/validate";

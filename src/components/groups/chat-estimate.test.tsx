@@ -13,7 +13,7 @@ vi.mock("@/lib/actions/messages", () => ({
 import { LocaleProvider } from "@/components/locale-provider";
 import { estimateDistance } from "@/lib/games/estimate-input";
 import type { ChatGameResult, ChatMessage } from "@/lib/types";
-import { MessageBubble } from "./chat-client";
+import { MessageBubble } from "./chat-message";
 import { MEMBERS, RATIO_QUESTION } from "./split-game/estimate/estimate-test-data";
 
 function bubble(message: Partial<ChatMessage>) {
@@ -32,7 +32,16 @@ function bubble(message: Partial<ChatMessage>) {
         showSender
         groupId="g1"
         members={MEMBERS}
-        onDeleteError={vi.fn()}
+        currentUid="ben"
+        online
+        reactions={{}}
+        active={false}
+        highlighted={false}
+        onToggleActions={vi.fn()}
+        onReact={vi.fn()}
+        onReply={vi.fn()}
+        onJump={vi.fn()}
+        onActionError={vi.fn()}
       />
     </LocaleProvider>,
   );

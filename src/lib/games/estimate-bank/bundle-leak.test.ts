@@ -15,7 +15,7 @@ import { ESTIMATE_BANK } from "@/lib/games/estimate-bank";
  *    `.next/static`, and (so the scan is not vacuous) must appear under
  *    `.next/server`, where the estimate actions legitimately carry the bank.
  * 2. The group page's INITIAL JavaScript must not contain the classifier: it
- *    belongs to the dialog and audit chunks only (docs/DECISIONS.md ADR-006).
+ *    belongs to the dialog and audit chunks only (docs/DECISIONS.md ADR-007).
  *
  * It cannot see RSC props (ESLint covers them) and says nothing about the
  * repository itself, which is public. Skipped unless ESTIMATE_LEAK_CHECK=1:

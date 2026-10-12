@@ -94,12 +94,16 @@ describe("addExpense with a split game's record", () => {
     expect(messages[0].text).toMatch(/^🎡 Lea zahlt „Pizza“ \(30,00\s€\) — im 2\. Versuch$/);
   });
 
-  it("ignores the record on a split chosen by hand, and posts nothing", async () => {
+  it("ignores the record on a split chosen by hand, and posts no game result", async () => {
     const groupRef = await seedMaxAndLea();
     expect((await addExpense({ ...gameExpense, viaLottery: false })).ok).toBe(true);
     const [doc] = (await groupRef.collection("expenses").get()).docs;
     expect(doc.data()).not.toHaveProperty("game");
-    expect((await groupRef.collection("messages").get()).empty).toBe(true);
+    // Only the plain expense card — no result card, since no game decided it.
+    const messages = (await groupRef.collection("messages").get()).docs.map((doc) => doc.data());
+    expect(messages).toHaveLength(1);
+    expect(messages[0]).not.toHaveProperty("gameResult");
+    expect(messages[0]).toHaveProperty("expenseCard");
   });
 
   it.each([
