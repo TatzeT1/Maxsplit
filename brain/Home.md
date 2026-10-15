@@ -59,7 +59,7 @@ re-deriving it from scratch by reading every file.
 
 - [[i18n]] — the single German dictionary, `t()`, and why English exists too
 - [[Mobile iOS Quirks]] — the two rules that only show up on a real iPhone
-- [[Design System and Theming]] — fonts, dark mode, shadcn/ui, motion
+- [[Design System and Theming]] — fonts, dark mode, the seven styles and their preview gallery, shadcn/ui, motion
 - [[Routing Map]] — the App Router tree and what guards each segment
 - [[Group Page]] — the group screen: balance receipt, four tabs, sticky action bar, and why
 

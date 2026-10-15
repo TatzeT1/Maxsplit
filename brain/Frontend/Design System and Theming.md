@@ -50,7 +50,8 @@ If a new screen seems to need another color, it needs hierarchy instead.
 ## Seven styles, switchable like light/dark
 
 Next to light/dark/system the appearance menu (`theme-toggle.tsx`, sidebar footer and the
-public pages' header) offers a **style**: Graphit (default, the monochrome system above),
+public pages' header) has a **Styles** entry that opens the style gallery (see below) to pick a
+**style**: Graphit (default, the monochrome system above),
 Original (the first colorful version, restored), Fallblatt (split-flap departure board),
 Bierdeckel (the pub tab), Riso (two-color risograph), Schmetterling (lilac and pink with
 butterflies, hearts and sparkles; Nunito body, Fraunces with SOFT/WONK on, a violet-to-pink
@@ -83,6 +84,34 @@ drifting slowly up behind the content, a small ♥ after the hero figure). Every
   so the motif follows the theme without a second SVG per light/dark. Herzblatt's layer is one
   tile taller than the screen and drifts up one tile (transform only, off under reduced motion).
 - The split games keep their per-person colors in every style.
+
+### The style gallery: every style at once, whatever style is active
+
+`style-picker-dialog.tsx` shows each style as a small screen of the app (headline figure in
+the style's own form, two expenses, a chat bubble, the add button), laid out at phone size and
+shrunk with CSS `zoom` so fonts, radii and the motif keep their proportions. Tapping a card
+calls `setAppStyle` — the whole app, gallery included, switches at once; a light/dark/system
+switch sits at the top so both sides of a style can be compared.
+
+How a card shows a style that isn't the page's:
+
+- **Tokens:** every token set in `app-styles.css` matches `[data-style-preview="x"]`
+  (and `.dark [data-style-preview="x"]`) as well as `:root[data-style="x"]`. Graphit's base
+  sets in `globals.css` match `:where([data-style-preview])` — zero specificity, so a card
+  starts from Graphit (nothing inherited from the page's style) and its own style's set still
+  wins, in the same order as on `:root`.
+- **Hooks: never the page's own classes in a card.** `[data-style="y"] .display-figure`
+  follows `<html>`, so a `.display-figure` inside a card would be painted by the page's style
+  _and_ the card's and mix the two. Each hook rule therefore has a twin selector on a
+  `preview-*` class: `.preview-figure`, `.preview-heading`, `.preview-monogram`,
+  `.preview-bubble`, `.preview-brand(-glyph)`, `.preview-light`, `.preview-texture`,
+  `.preview-button`. A new hook rule for a style should get its twin in the same selector list;
+  `style-picker-dialog.test.tsx` fails if a page hook turns up inside a card. The hero pieces
+  (`.hero-board`/`.flap`, `.coaster`, `.hero-riso`) are not keyed on the style and are reused
+  as they are.
+- **No animation in a card.** An animated (composited) layer inside a zoomed, clipped card
+  escapes the clip in Chrome and paints a stray band over the card's corners, so the coaster
+  drop, the riso registration, the flap tiles and Herzblatt's drifting hearts hold still there.
 
 ## The hero figure
 
@@ -124,7 +153,7 @@ the touch target, roving arrow-key focus from Radix.
 
 Dark is the default theme (`theme-toggle.tsx`, `theme-provider.tsx`), with a light toggle.
 `THEME_INIT_SCRIPT` in `app/layout.tsx` runs via `<Script strategy="beforeInteractive">`
-*before* hydration — reads `localStorage`, resolves `"system"` against
+_before_ hydration — reads `localStorage`, resolves `"system"` against
 `prefers-color-scheme`, and adds the `dark` class to `<html>` synchronously. This exists purely
 to avoid a flash of the wrong theme; **keep it in sync with `theme-provider.tsx`** if you
 change how theme preference is stored or resolved — the two must agree on the same
@@ -150,4 +179,5 @@ session cookie was set correctly). See [[Deployment and Production Debugging]] f
 header list and reasoning.
 
 ## Related
+
 [[Mobile iOS Quirks]] · [[i18n]] · [[Deployment and Production Debugging]] · [[Group Page]]

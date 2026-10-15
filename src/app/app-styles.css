@@ -46,12 +46,42 @@
   background: radial-gradient(circle, #e11d48 40%, #ffe4e6 42% 62%, #e11d48 64%);
 }
 
+/* ── Style previews (style-picker-dialog.tsx) ──
+   A preview card carries `data-style-preview="x"`. Every token set in this
+   file matches it as well as `:root[data-style="x"]`, and Graphit's base set
+   in globals.css matches it through `:where()`, so a card shows its own style
+   whatever style the page is in. Each hook rule has a twin on a `preview-*`
+   class (`.preview-figure` for `.display-figure`, …) rather than reusing the
+   hook: the page's own `[data-style="y"] .display-figure` would otherwise
+   match inside every card too and mix two styles. */
+[data-style-preview] {
+  font-family: var(--app-font-sans);
+  color: var(--foreground);
+  background-color: var(--background);
+}
+.preview-heading {
+  font-family: var(--app-font-heading);
+}
+/* The beer mat is sized for a phone screen; in a card it shares the space. */
+[data-style-preview] .coaster {
+  width: 10rem;
+}
+/* In a card the hero pieces print at rest: an animated layer inside a zoomed,
+   clipped card escapes the clip in Chrome and paints a stray band over the
+   card's corners (Herzblatt's hearts are stilled after its own rules). */
+[data-style-preview] .coaster,
+[data-style-preview] .flap[data-kind],
+[data-style-preview] .hero-riso > span {
+  animation: none;
+}
+
 /* ════════════════════════════ ORIGINAL ════════════════════════════
    The first version, restored: warm receipt-paper light theme, deep
    teal-ink dark theme, orange primary with teal accent, gradient avatars,
    one color per category, the warm/teal wash with a dot-grid, and Fraunces
    with its wonky glyphs. */
-:root[data-style="original"] {
+:root[data-style="original"],
+[data-style-preview="original"] {
   --background: oklch(0.98 0.012 75);
   --foreground: oklch(0.24 0.035 250);
   --card: oklch(0.995 0.008 75);
@@ -84,7 +114,8 @@
   --grain-opacity: 0.035;
   --scrim: oklch(0.24 0.035 250 / 0.26);
 }
-:root[data-style="original"].dark {
+:root[data-style="original"].dark,
+.dark [data-style-preview="original"] {
   --background: oklch(0.19 0.028 235);
   --foreground: oklch(0.96 0.014 75);
   --card: oklch(0.24 0.032 235);
@@ -124,7 +155,8 @@
   --foreground: oklch(0.24 0.035 250);
   --muted-foreground: oklch(0.51 0.03 245);
 }
-[data-style="original"] .monogram {
+[data-style="original"] .monogram,
+[data-style-preview="original"] .preview-monogram {
   background-image: linear-gradient(
     135deg,
     var(--mono-from, color-mix(in oklch, var(--primary) 22%, transparent)),
@@ -135,19 +167,24 @@
   box-shadow: 0 0 0 2px var(--card);
 }
 /* A tile without a person behind it (chat, feature icons) tints in primary. */
-[data-style="original"] .monogram:not([style*="--mono-from"]) {
+[data-style="original"] .monogram:not([style*="--mono-from"]),
+[data-style-preview="original"] .preview-monogram:not([style*="--mono-from"]) {
   color: var(--primary);
   box-shadow: none;
 }
 [data-style="original"] .font-heading,
-[data-style="original"] .display-figure {
+[data-style="original"] .display-figure,
+[data-style-preview="original"] .preview-heading,
+[data-style-preview="original"] .preview-figure {
   font-variation-settings: normal;
 }
-[data-style="original"] .display-figure {
+[data-style="original"] .display-figure,
+[data-style-preview="original"] .preview-figure {
   font-weight: 600;
   letter-spacing: -0.02em;
 }
-[data-style="original"] .bubble-own {
+[data-style="original"] .bubble-own,
+[data-style-preview="original"] .preview-bubble {
   background-image: linear-gradient(
     135deg,
     var(--primary),
@@ -156,13 +193,16 @@
   background-color: var(--primary);
   color: var(--primary-foreground);
 }
-[data-style="original"] .brand-mark {
+[data-style="original"] .brand-mark,
+[data-style-preview="original"] .preview-brand {
   background-image: linear-gradient(135deg, #fb923c, #f43f5e);
 }
-[data-style="original"] .brand-mark-glyph {
+[data-style="original"] .brand-mark-glyph,
+[data-style-preview="original"] .preview-brand-glyph {
   fill: white;
 }
-[data-style="original"] .backdrop-light {
+[data-style="original"] .backdrop-light,
+[data-style-preview="original"] .preview-light {
   opacity: 0.7;
   background-image:
     radial-gradient(
@@ -176,7 +216,8 @@
       transparent 62%
     );
 }
-[data-style="original"] .backdrop-texture {
+[data-style="original"] .backdrop-texture,
+[data-style-preview="original"] .preview-texture {
   opacity: 0.25;
   background-image: radial-gradient(
     circle at 1px 1px,
@@ -262,7 +303,8 @@
 /* ════════════════════════════ FALLBLATT ════════════════════════════
    The split-flap departure board: platform-sign beige by day, board black
    by night, signal yellow for the one action, numbers in a narrow mono. */
-:root[data-style="fallblatt"] {
+:root[data-style="fallblatt"],
+[data-style-preview="fallblatt"] {
   --app-font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
   --app-font-heading: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
   --app-font-mono: var(--font-martian), ui-monospace, monospace;
@@ -297,7 +339,8 @@
   --flap-ink: oklch(0.95 0.012 90);
   --board: oklch(0.21 0.005 260);
 }
-:root[data-style="fallblatt"].dark {
+:root[data-style="fallblatt"].dark,
+.dark [data-style-preview="fallblatt"] {
   --background: oklch(0.19 0.004 260);
   --foreground: oklch(0.95 0.012 90);
   --card: oklch(0.235 0.005 260);
@@ -325,43 +368,52 @@
   --flap: oklch(0.27 0.005 260);
   --board: oklch(0.15 0.004 260);
 }
-[data-style="fallblatt"] .font-heading {
+[data-style="fallblatt"] .font-heading,
+[data-style-preview="fallblatt"] .preview-heading {
   font-weight: 700;
   letter-spacing: -0.015em;
 }
 [data-style="fallblatt"] .display-figure,
-[data-style="fallblatt"] .tabular-money {
+[data-style="fallblatt"] .tabular-money,
+[data-style-preview="fallblatt"] .preview-figure {
   font-family: var(--font-martian), ui-monospace, monospace;
   font-stretch: 75%;
   font-variation-settings: normal;
 }
-[data-style="fallblatt"] .display-figure {
+[data-style="fallblatt"] .display-figure,
+[data-style-preview="fallblatt"] .preview-figure {
   font-weight: 700;
   letter-spacing: -0.02em;
 }
-[data-style="fallblatt"] .monogram {
+[data-style="fallblatt"] .monogram,
+[data-style-preview="fallblatt"] .preview-monogram {
   font-family: var(--font-martian), ui-monospace, monospace;
   font-stretch: 75%;
   box-shadow: none;
 }
-[data-style="fallblatt"] .brand-mark {
+[data-style="fallblatt"] .brand-mark,
+[data-style-preview="fallblatt"] .preview-brand {
   background: oklch(0.21 0.005 260);
 }
-[data-style="fallblatt"] .brand-mark-glyph {
+[data-style="fallblatt"] .brand-mark-glyph,
+[data-style-preview="fallblatt"] .preview-brand-glyph {
   fill: oklch(0.86 0.17 92);
 }
-[data-style="fallblatt"] .bubble-own {
+[data-style="fallblatt"] .bubble-own,
+[data-style-preview="fallblatt"] .preview-bubble {
   background-color: var(--monogram);
   color: oklch(0.95 0.012 90);
 }
-[data-style="fallblatt"] .backdrop-light {
+[data-style="fallblatt"] .backdrop-light,
+[data-style-preview="fallblatt"] .preview-light {
   background-image: none;
 }
 
 /* ════════════════════════════ BIERDECKEL ════════════════════════════
    The tab at the pub: a light oak counter by day, dark wood by night,
    coaster-white surfaces, brewery blue for money in, red for the tab. */
-:root[data-style="bierdeckel"] {
+:root[data-style="bierdeckel"],
+[data-style-preview="bierdeckel"] {
   --app-font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --app-font-heading: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --background: oklch(0.9 0.028 72);
@@ -397,7 +449,8 @@
   --wood-grain: 0.12;
   --grain-opacity: 0.05;
 }
-:root[data-style="bierdeckel"].dark {
+:root[data-style="bierdeckel"].dark,
+.dark [data-style-preview="bierdeckel"] {
   --background: oklch(0.27 0.045 45);
   --foreground: oklch(0.95 0.015 80);
   --card: oklch(0.32 0.045 45);
@@ -428,47 +481,56 @@
   --wood-grain: 0.22;
   --grain-opacity: 0.06;
 }
-[data-style="bierdeckel"] .font-heading {
+[data-style="bierdeckel"] .font-heading,
+[data-style-preview="bierdeckel"] .preview-heading {
   font-weight: 800;
   font-stretch: 75%;
   letter-spacing: 0.005em;
 }
-[data-style="bierdeckel"] .display-figure {
+[data-style="bierdeckel"] .display-figure,
+[data-style-preview="bierdeckel"] .preview-figure {
   font-family: var(--font-archivo), ui-sans-serif, sans-serif;
   font-weight: 900;
   font-stretch: 62%;
   letter-spacing: -0.01em;
   font-variation-settings: normal;
 }
-[data-style="bierdeckel"] .monogram {
+[data-style="bierdeckel"] .monogram,
+[data-style-preview="bierdeckel"] .preview-monogram {
   font-weight: 800;
   box-shadow: none;
 }
-[data-style="bierdeckel"] .brand-mark {
+[data-style="bierdeckel"] .brand-mark,
+[data-style-preview="bierdeckel"] .preview-brand {
   background: oklch(0.42 0.15 265);
   border-radius: 999px;
 }
-[data-style="bierdeckel"] .brand-mark-glyph {
+[data-style="bierdeckel"] .brand-mark-glyph,
+[data-style-preview="bierdeckel"] .preview-brand-glyph {
   fill: oklch(0.975 0.008 85);
 }
-[data-style="bierdeckel"] .bubble-own {
+[data-style="bierdeckel"] .bubble-own,
+[data-style-preview="bierdeckel"] .preview-bubble {
   background-color: oklch(0.42 0.15 265);
   color: oklch(0.98 0.01 85);
 }
-[data-style="bierdeckel"] .backdrop-light {
+[data-style="bierdeckel"] .backdrop-light,
+[data-style-preview="bierdeckel"] .preview-light {
   background-image: radial-gradient(
     120% 60% at 50% 0%,
     color-mix(in oklch, white, transparent 88%),
     transparent 70%
   );
 }
-[data-style="bierdeckel"] .backdrop-texture {
+[data-style="bierdeckel"] .backdrop-texture,
+[data-style-preview="bierdeckel"] .preview-texture {
   opacity: var(--wood-grain);
   background-image:
     repeating-linear-gradient(92deg, oklch(0 0 0 / 0.25) 0 1px, transparent 1px 7px),
     repeating-linear-gradient(88deg, oklch(1 0 0 / 0.06) 0 2px, transparent 2px 19px);
 }
-[data-style="bierdeckel"] [data-slot="button"][data-variant="default"] {
+[data-style="bierdeckel"] [data-slot="button"][data-variant="default"],
+[data-style-preview="bierdeckel"] .preview-button {
   border-radius: 999px;
   background-image: none;
   box-shadow: 0 3px 0 oklch(0.38 0.15 30);
@@ -477,7 +539,8 @@
 /* ════════════════════════════ RISO ════════════════════════════
    Two-color risograph print: paper, riso blue and fluorescent pink, a
    halftone ground, figures printed slightly out of register. */
-:root[data-style="riso"] {
+:root[data-style="riso"],
+[data-style-preview="riso"] {
   --app-font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --app-font-heading: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
   --rs-pink: oklch(0.68 0.24 352);
@@ -511,7 +574,8 @@
   --monogram-foreground: oklch(0.45 0.2 266);
   --halftone: oklch(0.27 0.06 275 / 0.1);
 }
-:root[data-style="riso"].dark {
+:root[data-style="riso"].dark,
+.dark [data-style-preview="riso"] {
   --rs-pink: oklch(0.72 0.21 352);
   --background: oklch(0.2 0.04 275);
   --foreground: oklch(0.95 0.01 95);
@@ -542,12 +606,14 @@
   --monogram-foreground: oklch(0.9 0.07 350);
   --halftone: oklch(1 0 0 / 0.07);
 }
-[data-style="riso"] .font-heading {
+[data-style="riso"] .font-heading,
+[data-style-preview="riso"] .preview-heading {
   font-weight: 800;
   font-stretch: 78%;
   letter-spacing: -0.02em;
 }
-[data-style="riso"] .display-figure {
+[data-style="riso"] .display-figure,
+[data-style-preview="riso"] .preview-figure {
   font-family: var(--font-bricolage), ui-sans-serif, sans-serif;
   font-weight: 800;
   font-stretch: 75%;
@@ -556,30 +622,37 @@
   color: var(--primary);
   text-shadow: 0.05em 0.035em 0 color-mix(in oklch, var(--rs-pink) 80%, transparent);
 }
-[data-style="riso"] .monogram {
+[data-style="riso"] .monogram,
+[data-style-preview="riso"] .preview-monogram {
   font-weight: 800;
   box-shadow: none;
 }
-[data-style="riso"] .brand-mark {
+[data-style="riso"] .brand-mark,
+[data-style-preview="riso"] .preview-brand {
   background: var(--primary);
   box-shadow: 2px 2px 0 var(--rs-pink);
 }
-[data-style="riso"] .brand-mark-glyph {
+[data-style="riso"] .brand-mark-glyph,
+[data-style-preview="riso"] .preview-brand-glyph {
   fill: var(--primary-foreground);
 }
-[data-style="riso"] .bubble-own {
+[data-style="riso"] .bubble-own,
+[data-style-preview="riso"] .preview-bubble {
   background-color: var(--primary);
   color: var(--primary-foreground);
   box-shadow: 3px 3px 0 color-mix(in oklch, var(--rs-pink) 80%, transparent);
 }
-[data-style="riso"] .backdrop-light {
+[data-style="riso"] .backdrop-light,
+[data-style-preview="riso"] .preview-light {
   background-image: none;
 }
-[data-style="riso"] .backdrop-texture {
+[data-style="riso"] .backdrop-texture,
+[data-style-preview="riso"] .preview-texture {
   background-image: radial-gradient(var(--halftone) 0.8px, transparent 0.9px);
   background-size: 4px 4px;
 }
-[data-style="riso"] [data-slot="button"][data-variant="default"] {
+[data-style="riso"] [data-slot="button"][data-variant="default"],
+[data-style-preview="riso"] .preview-button {
   background-image: none;
   box-shadow: 3px 3px 0 var(--rs-pink);
 }
@@ -592,7 +665,8 @@
    Lilac and pink, a little extra: rounded Nunito, Fraunces with its soft
    wonky glyphs, a ground of butterflies, hearts and sparkles, and the hero
    figure in a violet-to-pink gradient. Green/red still mean money. */
-:root[data-style="schmetterling"] {
+:root[data-style="schmetterling"],
+[data-style-preview="schmetterling"] {
   --app-font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
   --sm-pink: oklch(0.7 0.19 350);
   --sm-violet: oklch(0.56 0.2 300);
@@ -630,7 +704,8 @@
   --grain-opacity: 0.02;
   --scrim: oklch(0.3 0.08 315 / 0.28);
 }
-:root[data-style="schmetterling"].dark {
+:root[data-style="schmetterling"].dark,
+.dark [data-style-preview="schmetterling"] {
   --sm-pink: oklch(0.76 0.16 350);
   --sm-violet: oklch(0.72 0.15 300);
   --background: oklch(0.2 0.05 310);
@@ -666,12 +741,14 @@
   --grain-opacity: 0.04;
   --scrim: oklch(0.1 0.04 310 / 0.55);
 }
-[data-style="schmetterling"] .font-heading {
+[data-style="schmetterling"] .font-heading,
+[data-style-preview="schmetterling"] .preview-heading {
   font-variation-settings:
     "SOFT" 100,
     "WONK" 1;
 }
-[data-style="schmetterling"] .display-figure {
+[data-style="schmetterling"] .display-figure,
+[data-style-preview="schmetterling"] .preview-figure {
   font-variation-settings:
     "SOFT" 100,
     "WONK" 1;
@@ -683,7 +760,8 @@
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
-[data-style="schmetterling"] .monogram {
+[data-style="schmetterling"] .monogram,
+[data-style-preview="schmetterling"] .preview-monogram {
   background-image: linear-gradient(
     135deg,
     color-mix(in oklch, var(--sm-violet) 22%, var(--card)),
@@ -698,18 +776,22 @@
   color: var(--primary);
   box-shadow: none;
 }
-[data-style="schmetterling"] .brand-mark {
+[data-style="schmetterling"] .brand-mark,
+[data-style-preview="schmetterling"] .preview-brand {
   background-image: linear-gradient(135deg, var(--sm-violet), var(--sm-pink));
 }
-[data-style="schmetterling"] .brand-mark-glyph {
+[data-style="schmetterling"] .brand-mark-glyph,
+[data-style-preview="schmetterling"] .preview-brand-glyph {
   fill: white;
 }
-[data-style="schmetterling"] .bubble-own {
+[data-style="schmetterling"] .bubble-own,
+[data-style-preview="schmetterling"] .preview-bubble {
   background-image: linear-gradient(135deg, var(--sm-violet), var(--sm-pink));
   background-color: var(--primary);
   color: white;
 }
-[data-style="schmetterling"] [data-slot="button"][data-variant="default"] {
+[data-style="schmetterling"] [data-slot="button"][data-variant="default"],
+[data-style-preview="schmetterling"] .preview-button {
   background-image: linear-gradient(110deg, var(--sm-violet), var(--sm-pink));
   color: white;
   border-radius: 999px;
@@ -717,13 +799,17 @@
 }
 /* At night the inks are lifted pastels: white on them washes out. */
 [data-style="schmetterling"].dark .bubble-own,
-[data-style="schmetterling"].dark [data-slot="button"][data-variant="default"] {
+[data-style="schmetterling"].dark [data-slot="button"][data-variant="default"],
+.dark [data-style-preview="schmetterling"] .preview-bubble,
+.dark [data-style-preview="schmetterling"] .preview-button {
   color: var(--primary-foreground);
 }
-[data-style="schmetterling"].dark .brand-mark-glyph {
+[data-style="schmetterling"].dark .brand-mark-glyph,
+.dark [data-style-preview="schmetterling"] .preview-brand-glyph {
   fill: var(--primary-foreground);
 }
-[data-style="schmetterling"] .backdrop-light {
+[data-style="schmetterling"] .backdrop-light,
+[data-style-preview="schmetterling"] .preview-light {
   background-image:
     radial-gradient(
       60rem 36rem at 90% -10%,
@@ -738,7 +824,8 @@
 }
 /* Butterflies, hearts and sparkles as a mask over a two-ink wash, so the
    motif takes the theme's colors in light and dark alike. */
-[data-style="schmetterling"] .backdrop-texture {
+[data-style="schmetterling"] .backdrop-texture,
+[data-style-preview="schmetterling"] .preview-texture {
   opacity: var(--flutter-opacity);
   background-image: linear-gradient(135deg, var(--sm-violet), var(--sm-pink));
   --flutter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg transform='translate(48 60) rotate(-18) scale(1.25)'%3E%3Cellipse cx='-7' cy='-5' rx='7' ry='10' transform='rotate(-35 -7 -5)'/%3E%3Cellipse cx='7' cy='-5' rx='7' ry='10' transform='rotate(35 7 -5)'/%3E%3Cellipse cx='-5' cy='7' rx='4.5' ry='6' transform='rotate(30 -5 7)'/%3E%3Cellipse cx='5' cy='7' rx='4.5' ry='6' transform='rotate(-30 5 7)'/%3E%3Cpath d='M-4-19Q-2-15 0-11M4-19Q2-15 0-11' stroke='black' stroke-width='1' fill='none'/%3E%3C/g%3E%3Cg transform='translate(178 170) rotate(22) scale(0.9)'%3E%3Cellipse cx='-7' cy='-5' rx='7' ry='10' transform='rotate(-35 -7 -5)'/%3E%3Cellipse cx='7' cy='-5' rx='7' ry='10' transform='rotate(35 7 -5)'/%3E%3Cellipse cx='-5' cy='7' rx='4.5' ry='6' transform='rotate(30 -5 7)'/%3E%3Cellipse cx='5' cy='7' rx='4.5' ry='6' transform='rotate(-30 5 7)'/%3E%3Cpath d='M-4-19Q-2-15 0-11M4-19Q2-15 0-11' stroke='black' stroke-width='1' fill='none'/%3E%3C/g%3E%3Cpath transform='translate(170 50) rotate(12) scale(0.9) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(60 190) rotate(-14) scale(0.6) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(125 118) rotate(8) scale(0.4) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(110 30) scale(0.9)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3Cpath transform='translate(215 105) scale(0.7)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3Cpath transform='translate(20 130) scale(0.6)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3Cpath transform='translate(120 215) scale(0.8)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3C/svg%3E");
@@ -753,7 +840,8 @@
    action that matters, pill buttons that press down, and a field of red
    hearts drifting slowly upward behind the content. Simpler than
    Schmetterling: one hue, no gradients on the surfaces. */
-:root[data-style="herzblatt"] {
+:root[data-style="herzblatt"],
+[data-style-preview="herzblatt"] {
   --hb-red: oklch(0.6 0.235 22);
   --hb-red-deep: oklch(0.44 0.19 20);
   --background: oklch(0.985 0.008 15);
@@ -787,7 +875,8 @@
   --monogram-foreground: oklch(0.5 0.21 22);
   --hearts-opacity: 0.45;
 }
-:root[data-style="herzblatt"].dark {
+:root[data-style="herzblatt"].dark,
+.dark [data-style-preview="herzblatt"] {
   --hb-red: oklch(0.66 0.22 22);
   --hb-red-deep: oklch(0.42 0.17 20);
   --background: oklch(0.18 0.02 15);
@@ -820,13 +909,15 @@
   --monogram-foreground: oklch(0.88 0.08 18);
   --hearts-opacity: 0.48;
 }
-[data-style="herzblatt"] .font-heading {
+[data-style="herzblatt"] .font-heading,
+[data-style-preview="herzblatt"] .preview-heading {
   font-variation-settings:
     "SOFT" 100,
     "WONK" 0;
   font-weight: 600;
 }
-[data-style="herzblatt"] .display-figure {
+[data-style="herzblatt"] .display-figure,
+[data-style-preview="herzblatt"] .preview-figure {
   font-variation-settings:
     "SOFT" 100,
     "WONK" 0;
@@ -834,7 +925,8 @@
 }
 /* A small red heart after the big figure. A text glyph, not a box: no line
    break is allowed between "€" and "♥", so it never wraps on its own. */
-[data-style="herzblatt"] .display-figure::after {
+[data-style="herzblatt"] .display-figure::after,
+[data-style-preview="herzblatt"] .preview-figure::after {
   content: "\2665\FE0E";
   margin-left: 0.08em;
   font-family: ui-sans-serif, system-ui, sans-serif;
@@ -842,7 +934,8 @@
   vertical-align: 1.35em;
   color: var(--hb-red);
 }
-[data-style="herzblatt"] .monogram {
+[data-style="herzblatt"] .monogram,
+[data-style-preview="herzblatt"] .preview-monogram {
   font-weight: 700;
   box-shadow: none;
 }
@@ -851,18 +944,22 @@
   color: var(--primary);
   box-shadow: none;
 }
-[data-style="herzblatt"] .brand-mark {
+[data-style="herzblatt"] .brand-mark,
+[data-style-preview="herzblatt"] .preview-brand {
   background-color: var(--hb-red);
   box-shadow: 0 2px 0 var(--hb-red-deep);
 }
-[data-style="herzblatt"] .brand-mark-glyph {
+[data-style="herzblatt"] .brand-mark-glyph,
+[data-style-preview="herzblatt"] .preview-brand-glyph {
   fill: white;
 }
-[data-style="herzblatt"] .bubble-own {
+[data-style="herzblatt"] .bubble-own,
+[data-style-preview="herzblatt"] .preview-bubble {
   background-color: var(--primary);
   color: var(--primary-foreground);
 }
-[data-style="herzblatt"] [data-slot="button"][data-variant="default"] {
+[data-style="herzblatt"] [data-slot="button"][data-variant="default"],
+[data-style-preview="herzblatt"] .preview-button {
   border-radius: 999px;
   background-image: none;
   font-weight: 700;
@@ -872,7 +969,8 @@
   box-shadow: 0 1px 0 var(--hb-red-deep);
   transform: translateY(2px);
 }
-[data-style="herzblatt"] .backdrop-light {
+[data-style="herzblatt"] .backdrop-light,
+[data-style-preview="herzblatt"] .preview-light {
   background-image:
     radial-gradient(
       44rem 26rem at 100% -6rem,
@@ -889,7 +987,8 @@
    drawn as an outline), so they follow the theme. The layer is one tile
    taller than the screen and drifts up by exactly one tile, so the loop is
    seamless; transform only, so it stays on the compositor. */
-[data-style="herzblatt"] .backdrop-texture {
+[data-style="herzblatt"] .backdrop-texture,
+[data-style-preview="herzblatt"] .preview-texture {
   inset: 0 0 -220px 0;
   opacity: var(--hearts-opacity);
   background-color: var(--hb-red);
@@ -910,6 +1009,12 @@
   [data-style="herzblatt"] .backdrop-texture {
     animation: none;
   }
+}
+/* In a style preview card the hearts hold still, for the same reason as the
+   hero pieces (see "Style previews" at the top). */
+[data-style-preview="herzblatt"] .preview-texture {
+  animation: none;
+  will-change: auto;
 }
 
 /* ════════════════════════════ HERO FIGURES ════════════════════════════
