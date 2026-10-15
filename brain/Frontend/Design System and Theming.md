@@ -39,13 +39,41 @@ backdrop wash) to a deliberately quiet system. The rules, in `globals.css`:
   `avatarGradient`/`memberColor` survive **only in the split games**, where telling players
   apart on a board is the point (`GameAvatar`, wheel wedges, duel marks). Don't bring them
   back into everyday screens.
-- **Category tiles are one neutral style** (`CATEGORY_TILE_CLASSES`): the icon already says
+- **Category tiles are one neutral style** (`categoryTileClasses`): the icon already says
   what the category is.
 - **The backdrop is neutral** (`AmbientBackdrop`): one soft fall of ink-colored light from
   the top plus grain. No per-group tint, no dot-grid.
 - **Own chat bubbles are ink** (`bg-foreground text-background`), not orange.
 
 If a new screen seems to need another color, it needs hierarchy instead.
+
+## Five styles, switchable like light/dark
+
+Next to light/dark/system the appearance menu (`theme-toggle.tsx`, sidebar footer and the
+public pages' header) offers a **style**: Graphit (default, the monochrome system above),
+Original (the first colorful version, restored), Fallblatt (split-flap departure board),
+Bierdeckel (the pub tab), Riso (two-color risograph). Every style has a light and a dark
+variant.
+
+- **Where it lives:** `<html data-style="…">`, stored in `localStorage["style"]`, applied
+  before first paint by `THEME_INIT_SCRIPT` in `app/layout.tsx` (keep its style list in sync
+  with `APP_STYLES` in `src/lib/app-style.ts`). `useAppStyle()` reads it via
+  `useSyncExternalStore`, server snapshot = default, so hydration never mismatches.
+- **How a style works:** `src/app/app-styles.css` redefines the token set on
+  `:root[data-style=x]` (light) and `:root[data-style=x].dark` (dark), swaps faces through
+  `--app-font-sans/-heading/-mono` (the `@theme inline` font tokens point at these, because
+  an inline theme value is baked into utilities and couldn't change at runtime), and restyles
+  a few hooks: `.monogram`, `.category-tile` (+ `category-<id>`), `.bubble-own`, `.brand-mark`,
+  `.backdrop-light`/`.backdrop-texture`, `.display-figure`, and the receipt's inks on
+  `.paper-tokens`. Those rules are unlayered on purpose so they beat utilities.
+- **Components don't branch on style for color.** Use tokens and the hooks above; a new
+  screen then works in all five. The one markup exception is the groups overview's headline
+  figure (`style-hero.tsx`): flap board, beer mat with a tally of your groups, two-ink print.
+- **Monograms carry the person's colors as CSS vars** (`monogramVars(seed)` from
+  `ui/monogram.tsx`) — only Original paints them; the other styles ignore them.
+- **Style fonts** (Hanken Grotesk, Martian Mono, Archivo, Bricolage Grotesque) are loaded
+  with `preload: false`: a device only downloads the faces its active style uses.
+- The split games keep their per-person colors in every style.
 
 ## The hero figure
 

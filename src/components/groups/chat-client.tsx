@@ -34,6 +34,7 @@ import { useLiveSources } from "@/lib/offline/use-live-sources";
 import { useOnline } from "@/lib/use-online";
 import { usePageVisible } from "@/lib/use-page-visible";
 import type { ChatMessage, ChatRead, Group } from "@/lib/types";
+import { monogramVars } from "@/components/ui/monogram";
 
 /** How many messages the chat loads, and how many more "Ältere laden" adds. */
 const PAGE_SIZE = 100;
@@ -434,7 +435,10 @@ export function ChatClient({ groupId, initialMuted }: { groupId: string; initial
           >
             <ArrowLeft className="h-4.5 w-4.5" />
           </Link>
-          <div className="monogram flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold">
+          <div
+            style={monogramVars(group.name)}
+            className="monogram flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold"
+          >
             {group.icon || group.name.charAt(0).toUpperCase() || "?"}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">

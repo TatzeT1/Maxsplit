@@ -1,15 +1,18 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "./app-styles.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-heading: var(--font-fraunces), Georgia, serif;
+  /* Indirect, so a style (app-styles.css) can swap faces at runtime: an
+     `@theme inline` value is baked into the utilities, a var() is not. */
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --font-heading: var(--app-font-heading);
   --color-monogram: var(--monogram);
   --color-monogram-foreground: var(--monogram-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -281,6 +284,12 @@
 }
 
 :root {
+  --app-font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --app-font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --app-font-heading: var(--font-fraunces), Georgia, serif;
+}
+
+:root {
   color-scheme: light;
   /*
    * Split's palette: near-neutral greys with a faint warm cast, and exactly
@@ -525,6 +534,36 @@
     box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 92%);
   }
 
+  /* Category icon tile: one neutral style; Original colors it per category. */
+  .category-tile {
+    background-color: var(--muted);
+    color: var(--muted-foreground);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 95%);
+  }
+
+  /* Your own chat bubble. */
+  .bubble-own {
+    background-color: var(--foreground);
+    color: var(--background);
+  }
+
+  /* The brand mark's tile and the split coin on it. */
+  .brand-mark {
+    background-color: var(--foreground);
+  }
+  .brand-mark-glyph {
+    fill: var(--background);
+  }
+
+  /* Backdrop layers (ambient-backdrop.tsx); each style decides what shows. */
+  .backdrop-light {
+    background-image: radial-gradient(
+      48rem 26rem at 50% -8rem,
+      color-mix(in oklch, var(--foreground), transparent 94%),
+      transparent 70%
+    );
+  }
+
   /*
    * Fraunces without its quirks: the WONK axis swaps in leaning n/m/h glyphs
    * and SOFT rounds the terminals — charming once, a costume across a whole
@@ -541,7 +580,7 @@
    * tracking and lining tabular figures so it reads as a single shape.
    */
   .display-figure {
-    font-family: var(--font-heading);
+    font-family: var(--app-font-heading);
     font-variation-settings:
       "SOFT" 0,
       "WONK" 0;

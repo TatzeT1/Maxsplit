@@ -24,7 +24,7 @@ import { useT } from "@/components/locale-provider";
 import { deleteExpense, restoreExpense } from "@/lib/actions/expenses";
 import { deleteSettlement, restoreSettlement } from "@/lib/actions/settlements";
 import { callAction } from "@/lib/call-action";
-import { CATEGORY_TILE_CLASSES, categoryIconElement, categoryLabel } from "@/lib/categories";
+import { categoryTileClasses, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDayMonth, formatMonthKey } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { SETTLEMENT_EMOJI } from "@/lib/emoji";
@@ -177,7 +177,7 @@ function ExpenseRow({
         <div
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-            CATEGORY_TILE_CLASSES,
+            categoryTileClasses(expense.category),
           )}
         >
           {expense.emoji ? (
@@ -497,7 +497,7 @@ function CategoryChips({
           <span
             className={cn(
               "flex h-5 w-5 items-center justify-center rounded-full",
-              CATEGORY_TILE_CLASSES,
+              categoryTileClasses(category),
             )}
           >
             {categoryIconElement(category, "h-3 w-3")}

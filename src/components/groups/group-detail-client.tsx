@@ -35,6 +35,7 @@ import { useLiveSources } from "@/lib/offline/use-live-sources";
 import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
+import { monogramVars } from "@/components/ui/monogram";
 
 const TABS = ["expenses", "balances", "games", "group"] as const;
 const LIVE_SOURCES = ["group", "expenses", "settlements", "activityLog", "recurring"] as const;
@@ -287,6 +288,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
             <ArrowLeft className="h-4.5 w-4.5" />
           </Link>
           <div
+            style={monogramVars(group.name)}
             className={cn(
               "monogram flex h-12 w-12 shrink-0 items-center justify-center rounded-[0.9rem] text-xl font-semibold",
             )}

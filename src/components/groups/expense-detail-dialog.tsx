@@ -3,16 +3,18 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GameRecordSummary } from "@/components/groups/split-game/game-record";
 import { useT } from "@/components/locale-provider";
-import { CATEGORY_TILE_CLASSES, categoryIconElement, categoryLabel } from "@/lib/categories";
+import { categoryTileClasses, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { cn } from "@/lib/utils";
 import type { Expense, GroupMember, SplitMode } from "@/lib/types";
+import { monogramVars } from "@/components/ui/monogram";
 
 function MemberChip({ name }: { name: string }) {
   return (
     <span
+      style={monogramVars(name)}
       className={cn(
         "monogram flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
       )}
@@ -56,7 +58,7 @@ export function ExpenseDetailDialog({
             <div
               className={cn(
                 "flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
-                CATEGORY_TILE_CLASSES,
+                categoryTileClasses(expense.category),
               )}
             >
               {expense.emoji ? (

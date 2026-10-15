@@ -13,6 +13,8 @@ import {
 } from "@/lib/groups/overview";
 import { cn } from "@/lib/utils";
 import type { Group } from "@/lib/types";
+import { monogramVars } from "@/components/ui/monogram";
+import { StyleHero } from "@/components/groups/style-hero";
 
 /**
  * Reads the cached `balancesMinor` (see types.ts) written by
@@ -61,7 +63,10 @@ function GroupRow({ group, uid, index }: { group: Group; uid: string; index: num
         href={`/groups/${group.id}`}
         className="group hover:bg-muted/60 active:bg-muted focus-visible:bg-muted flex min-h-16 items-center gap-3.5 px-4 py-3 transition-colors duration-(--duration-fast) outline-none"
       >
-        <div className="monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.8rem] text-lg font-medium">
+        <div
+          style={monogramVars(group.name)}
+          className="monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.8rem] text-lg font-medium"
+        >
           {group.icon || group.name.charAt(0).toUpperCase() || "?"}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -133,23 +138,12 @@ function GroupsTotals({ summary, groupCount }: { summary: BalanceSummary; groupC
             className="animate-rise flex flex-col gap-3"
             style={{ "--stagger": index + 1 } as CSSProperties}
           >
-            <div className="flex flex-col gap-2">
-              <dt className="flex items-center gap-2 text-sm">
-                <span
-                  aria-hidden="true"
-                  className={cn(
-                    "size-1.5 rounded-full bg-current",
-                    lead.minor > 0 ? lead.tone : "text-muted-foreground",
-                  )}
-                />
-                <span className="text-muted-foreground">{lead.label}</span>
-              </dt>
-              <dd className="overflow-hidden pb-1">
-                <span className="display-figure animate-figure-in block text-[clamp(3rem,15vw,4.5rem)]">
-                  {formatMoney(lead.minor, currency)}
-                </span>
-              </dd>
-            </div>
+            <StyleHero
+              label={lead.label}
+              figure={formatMoney(lead.minor, currency)}
+              dotClassName={lead.minor > 0 ? lead.tone : "text-muted-foreground"}
+              groupCount={groupCount}
+            />
             <div className="text-muted-foreground flex items-baseline gap-1.5 text-sm">
               <dt>{rest.label}</dt>
               <dd className={cn("tabular-money font-medium", rest.minor > 0 && rest.tone)}>

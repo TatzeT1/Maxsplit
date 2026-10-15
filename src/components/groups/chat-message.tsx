@@ -33,8 +33,9 @@ import { estimateRoundPath } from "@/lib/games/round-paths";
 import { SPLIT_GAME_META } from "@/lib/games/split-game-ids";
 import { cn } from "@/lib/utils";
 import type { ChatMessage, ChatReply, GroupMember } from "@/lib/types";
+import { monogramVars } from "@/components/ui/monogram";
 
-const OWN_BUBBLE = "bg-foreground text-background shadow-e1 rounded-br-md";
+const OWN_BUBBLE = "bubble-own shadow-e1 rounded-br-md";
 const OTHER_BUBBLE = "bg-card ring-foreground/10 shadow-e1 rounded-bl-md ring-1";
 
 /** A message's text with links tappable and the @mentions it really made highlighted. */
@@ -321,6 +322,7 @@ export function MessageBubble({
       {showSender && !isOwn && (
         <div className="flex items-center gap-1.5 pl-1">
           <div
+            style={monogramVars(senderName)}
             className={cn(
               "monogram flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold",
             )}

@@ -7,7 +7,7 @@ import { StartGameButton } from "@/components/groups/start-game-button";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { useT } from "@/components/locale-provider";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CATEGORY_TILE_CLASSES, categoryIconElement } from "@/lib/categories";
+import { categoryTileClasses, categoryIconElement } from "@/lib/categories";
 import { gameResultSentence } from "@/lib/chat/game-result";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
@@ -349,7 +349,7 @@ function RecentRound({ entry, group }: { entry: GameRoundEntry; group: Group }) 
       <span
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-          CATEGORY_TILE_CLASSES,
+          categoryTileClasses(expense.category),
         )}
       >
         {expense.emoji ? (

@@ -11,11 +11,11 @@ export function BrandMark({ className }: { className?: string }) {
     <span
       aria-hidden="true"
       className={cn(
-        "bg-foreground flex size-7 shrink-0 items-center justify-center rounded-[0.55rem]",
+        "brand-mark flex size-7 shrink-0 items-center justify-center rounded-[0.55rem]",
         className,
       )}
     >
-      <svg viewBox="0 0 24 24" className="fill-background size-[78%]">
+      <svg viewBox="0 0 24 24" className="brand-mark-glyph size-[78%]">
         <path d="M11 4.57A7.5 7.5 0 0 0 10.6 19.37V12.4L11 11.8Z" />
         <path d="M12.9 4.55A7.5 7.5 0 0 1 12.4 19.49V12.2L12.9 11.6Z" />
       </svg>

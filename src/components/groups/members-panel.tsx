@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
 import { useOnline } from "@/lib/use-online";
 import type { GroupMember, GroupRole } from "@/lib/types";
+import { monogramVars } from "@/components/ui/monogram";
 
 function CopyChip({ label, value }: { label: string; value: string }) {
   const { copied, copy } = useCopyToClipboard();
@@ -159,6 +160,7 @@ function MemberRow({
     <li className="flex flex-col gap-1 px-4 py-3">
       <div className="flex items-center gap-3">
         <div
+          style={monogramVars(member.displayName)}
           className={cn(
             "monogram flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium",
           )}

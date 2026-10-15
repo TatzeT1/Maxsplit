@@ -45,7 +45,7 @@ import { estimateRoundPath } from "@/lib/games/round-paths";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import {
   CATEGORY_IDS,
-  CATEGORY_TILE_CLASSES,
+  categoryTileClasses,
   categoryIconElement,
   categoryLabel,
 } from "@/lib/categories";
@@ -595,7 +595,7 @@ export function AddExpenseDialog({
                     onChange={setEmoji}
                     emojis={EXPENSE_EMOJIS}
                     fallback={categoryIconElement(category, "h-4 w-4")}
-                    colorClassName={CATEGORY_TILE_CLASSES}
+                    colorClassName={categoryTileClasses(category)}
                     ariaLabel={t("expenses.emojiPickerLabel")}
                     resetLabel={t("expenses.emojiReset")}
                   />

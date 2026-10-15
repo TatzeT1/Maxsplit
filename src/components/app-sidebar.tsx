@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand-mark";
+import { monogramVars } from "@/components/ui/monogram";
 
 export function AppSidebar({
   displayName,
@@ -141,6 +142,7 @@ function SidebarFooter({
       {displayName && (
         <div className="flex items-center gap-2 px-1">
           <div
+            style={monogramVars(displayName)}
             className={cn(
               "monogram flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
             )}

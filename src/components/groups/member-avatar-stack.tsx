@@ -3,6 +3,7 @@
 import { useT } from "@/components/locale-provider";
 import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
+import { monogramVars } from "@/components/ui/monogram";
 
 const MAX_VISIBLE_AVATARS = 4;
 
@@ -24,6 +25,7 @@ export function MemberAvatarStack({
       {visible.map((member, index) => (
         <div
           key={`${member.displayName}-${index}`}
+          style={monogramVars(member.displayName)}
           className="monogram ring-card flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ring-2"
         >
           {member.displayName.charAt(0).toUpperCase() || "?"}

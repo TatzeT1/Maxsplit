@@ -9,6 +9,7 @@ import { ProfileForm } from "@/components/profile-form";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
 import { getVapidConfig } from "@/lib/push/vapid";
+import { monogramVars } from "@/components/ui/monogram";
 
 export default async function ProfilePage() {
   const session = await getSession();
@@ -23,7 +24,10 @@ export default async function ProfilePage() {
     <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
       <h1 className="text-xl font-semibold">{t("profile.title")}</h1>
       <div className="animate-rise flex items-center gap-4">
-        <div className="monogram flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold">
+        <div
+          style={monogramVars(name)}
+          className="monogram flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-2xl font-semibold"
+        >
           {name.charAt(0).toUpperCase()}
         </div>
         <div className="flex min-w-0 flex-col">

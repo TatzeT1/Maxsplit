@@ -1,0 +1,800 @@
+/*
+ * The app's visual styles (lib/app-style.ts), keyed on <html data-style="…">.
+ *
+ * Graphit is the base in globals.css and needs nothing here. Every other style
+ * redefines the same token set twice — light on `:root[data-style=x]`, dark on
+ * `:root[data-style=x].dark` (the `dark` class sits on <html> too) — and then
+ * restyles the handful of hooks that carry its character: `.monogram`,
+ * `.category-tile`, `.bubble-own`, `.brand-mark`, the backdrop layers and
+ * `.display-figure`. Components never branch on the style for color; only the
+ * groups overview's hero figure differs in markup (style-hero.tsx).
+ *
+ * These rules are deliberately unlayered: they must beat the utility classes
+ * on the elements they restyle (`font-medium` on a heading, for one).
+ *
+ * The split games keep their per-person colors in every style.
+ */
+
+/* ── Swatches in the style menu: a fixed preview of each palette. ── */
+.style-swatch {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.15);
+}
+.style-swatch[data-swatch="graphit"] {
+  background: linear-gradient(135deg, #2a2927 50%, #d9824a 50%);
+}
+.style-swatch[data-swatch="original"] {
+  background: linear-gradient(135deg, #fb923c, #f43f5e 45%, #2dd4bf);
+}
+.style-swatch[data-swatch="fallblatt"] {
+  background: linear-gradient(135deg, #1c1d1f 50%, #ffcc00 50%);
+}
+.style-swatch[data-swatch="bierdeckel"] {
+  background: radial-gradient(circle, #f6f4ee 38%, #1f3a8a 40% 55%, #3b2318 57%);
+}
+.style-swatch[data-swatch="riso"] {
+  background: linear-gradient(135deg, #2f5bea 50%, #ff4fa3 50%);
+}
+
+/* ════════════════════════════ ORIGINAL ════════════════════════════
+   The first version, restored: warm receipt-paper light theme, deep
+   teal-ink dark theme, orange primary with teal accent, gradient avatars,
+   one color per category, the warm/teal wash with a dot-grid, and Fraunces
+   with its wonky glyphs. */
+:root[data-style="original"] {
+  --background: oklch(0.98 0.012 75);
+  --foreground: oklch(0.24 0.035 250);
+  --card: oklch(0.995 0.008 75);
+  --card-foreground: oklch(0.24 0.035 250);
+  --popover: oklch(0.995 0.008 75);
+  --popover-foreground: oklch(0.24 0.035 250);
+  --primary: oklch(0.62 0.19 42);
+  --primary-foreground: oklch(0.99 0.012 60);
+  --secondary: oklch(0.92 0.03 200);
+  --secondary-foreground: oklch(0.28 0.05 210);
+  --muted: oklch(0.95 0.014 75);
+  --muted-foreground: oklch(0.51 0.03 245);
+  --accent: oklch(0.9 0.06 190);
+  --accent-foreground: oklch(0.26 0.06 200);
+  --destructive: oklch(0.58 0.21 22);
+  --success: oklch(0.58 0.15 150);
+  --success-foreground: oklch(0.98 0.02 150);
+  --border: oklch(0.9 0.018 75);
+  --input: oklch(0.9 0.018 75);
+  --ring: oklch(0.62 0.19 42);
+  --sidebar: oklch(0.96 0.014 75);
+  --sidebar-foreground: oklch(0.24 0.035 250);
+  --sidebar-primary: oklch(0.62 0.19 42);
+  --sidebar-accent: oklch(0.9 0.06 190);
+  --sidebar-accent-foreground: oklch(0.26 0.06 200);
+  --sidebar-border: oklch(0.9 0.018 75);
+  --sidebar-ring: oklch(0.62 0.19 42);
+  --monogram: oklch(0.62 0.19 42);
+  --monogram-foreground: oklch(0.99 0.012 60);
+  --grain-opacity: 0.035;
+  --scrim: oklch(0.24 0.035 250 / 0.26);
+}
+:root[data-style="original"].dark {
+  --background: oklch(0.19 0.028 235);
+  --foreground: oklch(0.96 0.014 75);
+  --card: oklch(0.24 0.032 235);
+  --card-foreground: oklch(0.96 0.014 75);
+  --popover: oklch(0.24 0.032 235);
+  --popover-foreground: oklch(0.96 0.014 75);
+  --primary: oklch(0.72 0.18 45);
+  --primary-foreground: oklch(0.18 0.03 45);
+  --secondary: oklch(0.31 0.038 210);
+  --secondary-foreground: oklch(0.92 0.02 210);
+  --muted: oklch(0.27 0.03 235);
+  --muted-foreground: oklch(0.7 0.025 220);
+  --accent: oklch(0.33 0.06 195);
+  --accent-foreground: oklch(0.9 0.03 195);
+  --destructive: oklch(0.68 0.19 20);
+  --success: oklch(0.7 0.15 150);
+  --success-foreground: oklch(0.16 0.03 150);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.72 0.18 45);
+  --sidebar: oklch(0.22 0.03 235);
+  --sidebar-foreground: oklch(0.96 0.014 75);
+  --sidebar-primary: oklch(0.72 0.18 45);
+  --sidebar-accent: oklch(0.33 0.06 195);
+  --sidebar-accent-foreground: oklch(0.9 0.03 195);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.72 0.18 45);
+  --monogram: oklch(0.72 0.18 45);
+  --monogram-foreground: oklch(0.18 0.03 45);
+  --grain-opacity: 0.055;
+  --scrim: oklch(0.12 0.02 235 / 0.52);
+}
+[data-style="original"] .paper-tokens {
+  --card: oklch(0.995 0.008 75);
+  --muted: oklch(0.95 0.014 75);
+  --border: oklch(0.9 0.018 75);
+  --foreground: oklch(0.24 0.035 250);
+  --muted-foreground: oklch(0.51 0.03 245);
+}
+[data-style="original"] .monogram {
+  background-image: linear-gradient(
+    135deg,
+    var(--mono-from, color-mix(in oklch, var(--primary) 22%, transparent)),
+    var(--mono-to, color-mix(in oklch, var(--primary) 6%, transparent))
+  );
+  background-color: transparent;
+  color: white;
+  box-shadow: 0 0 0 2px var(--card);
+}
+/* A tile without a person behind it (chat, feature icons) tints in primary. */
+[data-style="original"] .monogram:not([style*="--mono-from"]) {
+  color: var(--primary);
+  box-shadow: none;
+}
+[data-style="original"] .font-heading,
+[data-style="original"] .display-figure {
+  font-variation-settings: normal;
+}
+[data-style="original"] .display-figure {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+[data-style="original"] .bubble-own {
+  background-image: linear-gradient(
+    135deg,
+    var(--primary),
+    color-mix(in oklch, var(--primary) 85%, transparent)
+  );
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+[data-style="original"] .brand-mark {
+  background-image: linear-gradient(135deg, #fb923c, #f43f5e);
+}
+[data-style="original"] .brand-mark-glyph {
+  fill: white;
+}
+[data-style="original"] .backdrop-light {
+  opacity: 0.7;
+  background-image:
+    radial-gradient(
+      70rem 40rem at 88% -10%,
+      color-mix(in oklch, var(--primary), transparent 88%),
+      transparent 60%
+    ),
+    radial-gradient(
+      60rem 38rem at -10% 45%,
+      color-mix(in oklch, var(--accent), transparent 82%),
+      transparent 62%
+    );
+}
+[data-style="original"] .backdrop-texture {
+  opacity: 0.25;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in oklch, var(--foreground), transparent 88%) 1px,
+    transparent 0
+  );
+  background-size: 22px 22px;
+}
+[data-style="original"] .category-tile {
+  box-shadow: none;
+}
+[data-style="original"] .category-groceries {
+  background: oklch(0.7 0.15 162 / 0.15);
+  color: oklch(0.6 0.13 163);
+}
+[data-style="original"] .category-restaurant {
+  background: oklch(0.7 0.19 48 / 0.15);
+  color: oklch(0.65 0.19 42);
+}
+[data-style="original"] .category-transport {
+  background: oklch(0.69 0.15 237 / 0.15);
+  color: oklch(0.59 0.14 242);
+}
+[data-style="original"] .category-housing {
+  background: oklch(0.61 0.22 293 / 0.15);
+  color: oklch(0.54 0.25 293);
+}
+[data-style="original"] .category-utilities {
+  background: oklch(0.77 0.16 70 / 0.15);
+  color: oklch(0.67 0.16 58);
+}
+[data-style="original"] .category-entertainment {
+  background: oklch(0.66 0.21 354 / 0.15);
+  color: oklch(0.59 0.22 1);
+}
+[data-style="original"] .category-travel {
+  background: oklch(0.72 0.13 215 / 0.15);
+  color: oklch(0.61 0.11 222);
+}
+[data-style="original"] .category-shopping {
+  background: oklch(0.67 0.26 322 / 0.15);
+  color: oklch(0.59 0.26 323);
+}
+[data-style="original"] .category-health {
+  background: oklch(0.65 0.22 16 / 0.15);
+  color: oklch(0.59 0.22 13);
+}
+[data-style="original"] .category-other {
+  background: oklch(0.55 0.04 257 / 0.15);
+  color: oklch(0.45 0.04 257);
+}
+[data-style="original"].dark .category-groceries {
+  color: oklch(0.77 0.15 163);
+}
+[data-style="original"].dark .category-restaurant {
+  color: oklch(0.75 0.18 55);
+}
+[data-style="original"].dark .category-transport {
+  color: oklch(0.75 0.14 233);
+}
+[data-style="original"].dark .category-housing {
+  color: oklch(0.7 0.18 293);
+}
+[data-style="original"].dark .category-utilities {
+  color: oklch(0.83 0.16 84);
+}
+[data-style="original"].dark .category-entertainment {
+  color: oklch(0.72 0.18 350);
+}
+[data-style="original"].dark .category-travel {
+  color: oklch(0.79 0.13 212);
+}
+[data-style="original"].dark .category-shopping {
+  color: oklch(0.74 0.2 322);
+}
+[data-style="original"].dark .category-health {
+  color: oklch(0.71 0.19 13);
+}
+[data-style="original"].dark .category-other {
+  color: oklch(0.71 0.04 257);
+}
+
+/* ════════════════════════════ FALLBLATT ════════════════════════════
+   The split-flap departure board: platform-sign beige by day, board black
+   by night, signal yellow for the one action, numbers in a narrow mono. */
+:root[data-style="fallblatt"] {
+  --app-font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --app-font-heading: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --app-font-mono: var(--font-martian), ui-monospace, monospace;
+  --background: oklch(0.925 0.008 85);
+  --foreground: oklch(0.2 0.004 90);
+  --card: oklch(0.965 0.005 85);
+  --card-foreground: oklch(0.2 0.004 90);
+  --popover: oklch(0.965 0.005 85);
+  --popover-foreground: oklch(0.2 0.004 90);
+  --primary: oklch(0.86 0.17 92);
+  --primary-foreground: oklch(0.2 0.004 90);
+  --secondary: oklch(0.895 0.008 85);
+  --secondary-foreground: oklch(0.2 0.004 90);
+  --muted: oklch(0.9 0.008 85);
+  --muted-foreground: oklch(0.47 0.012 85);
+  --accent: oklch(0.885 0.008 85);
+  --accent-foreground: oklch(0.2 0.004 90);
+  --destructive: oklch(0.56 0.19 32);
+  --success: oklch(0.52 0.13 150);
+  --border: oklch(0.84 0.01 85);
+  --input: oklch(0.8 0.01 85);
+  --ring: oklch(0.2 0.004 90);
+  --radius: 0.4rem;
+  --sidebar: oklch(0.905 0.008 85);
+  --sidebar-foreground: oklch(0.2 0.004 90);
+  --sidebar-accent: oklch(0.87 0.008 85);
+  --sidebar-accent-foreground: oklch(0.2 0.004 90);
+  --sidebar-border: oklch(0.84 0.01 85);
+  --monogram: oklch(0.23 0.005 260);
+  --monogram-foreground: oklch(0.86 0.17 92);
+  --flap: oklch(0.26 0.005 260);
+  --flap-ink: oklch(0.95 0.012 90);
+  --board: oklch(0.21 0.005 260);
+}
+:root[data-style="fallblatt"].dark {
+  --background: oklch(0.19 0.004 260);
+  --foreground: oklch(0.95 0.012 90);
+  --card: oklch(0.235 0.005 260);
+  --card-foreground: oklch(0.95 0.012 90);
+  --popover: oklch(0.25 0.005 260);
+  --popover-foreground: oklch(0.95 0.012 90);
+  --primary-foreground: oklch(0.19 0.004 260);
+  --secondary: oklch(0.27 0.005 260);
+  --secondary-foreground: oklch(0.95 0.012 90);
+  --muted: oklch(0.255 0.005 260);
+  --muted-foreground: oklch(0.7 0.012 90);
+  --accent: oklch(0.28 0.005 260);
+  --accent-foreground: oklch(0.95 0.012 90);
+  --destructive: oklch(0.7 0.16 35);
+  --success: oklch(0.74 0.15 150);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.86 0.17 92);
+  --sidebar: oklch(0.17 0.004 260);
+  --sidebar-foreground: oklch(0.95 0.012 90);
+  --sidebar-accent: oklch(0.26 0.005 260);
+  --sidebar-accent-foreground: oklch(0.95 0.012 90);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --monogram: oklch(0.29 0.005 260);
+  --flap: oklch(0.27 0.005 260);
+  --board: oklch(0.15 0.004 260);
+}
+[data-style="fallblatt"] .font-heading {
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+[data-style="fallblatt"] .display-figure,
+[data-style="fallblatt"] .tabular-money {
+  font-family: var(--font-martian), ui-monospace, monospace;
+  font-stretch: 75%;
+  font-variation-settings: normal;
+}
+[data-style="fallblatt"] .display-figure {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+[data-style="fallblatt"] .monogram {
+  font-family: var(--font-martian), ui-monospace, monospace;
+  font-stretch: 75%;
+  box-shadow: none;
+}
+[data-style="fallblatt"] .brand-mark {
+  background: oklch(0.21 0.005 260);
+}
+[data-style="fallblatt"] .brand-mark-glyph {
+  fill: oklch(0.86 0.17 92);
+}
+[data-style="fallblatt"] .bubble-own {
+  background-color: var(--monogram);
+  color: oklch(0.95 0.012 90);
+}
+[data-style="fallblatt"] .backdrop-light {
+  background-image: none;
+}
+
+/* ════════════════════════════ BIERDECKEL ════════════════════════════
+   The tab at the pub: a light oak counter by day, dark wood by night,
+   coaster-white surfaces, brewery blue for money in, red for the tab. */
+:root[data-style="bierdeckel"] {
+  --app-font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --app-font-heading: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --background: oklch(0.9 0.028 72);
+  --foreground: oklch(0.26 0.04 265);
+  --card: oklch(0.985 0.006 85);
+  --card-foreground: oklch(0.26 0.04 265);
+  --popover: oklch(0.985 0.006 85);
+  --popover-foreground: oklch(0.26 0.04 265);
+  --primary: oklch(0.55 0.19 30);
+  --primary-foreground: oklch(0.99 0.01 40);
+  --secondary: oklch(0.94 0.014 80);
+  --secondary-foreground: oklch(0.26 0.04 265);
+  --muted: oklch(0.93 0.014 80);
+  --muted-foreground: oklch(0.48 0.035 55);
+  --accent: oklch(0.92 0.016 80);
+  --accent-foreground: oklch(0.26 0.04 265);
+  --destructive: oklch(0.53 0.19 29);
+  --success: oklch(0.42 0.15 265);
+  --success-foreground: oklch(0.98 0.01 265);
+  --border: oklch(0.84 0.025 70);
+  --input: oklch(0.8 0.028 70);
+  --ring: oklch(0.42 0.15 265);
+  --radius: 1rem;
+  --sidebar: oklch(0.88 0.03 70);
+  --sidebar-foreground: oklch(0.26 0.04 265);
+  --sidebar-accent: oklch(0.85 0.03 70);
+  --sidebar-accent-foreground: oklch(0.26 0.04 265);
+  --sidebar-border: oklch(0.82 0.03 70);
+  --monogram: oklch(0.42 0.15 265);
+  --monogram-foreground: oklch(0.98 0.01 85);
+  --coaster: oklch(0.975 0.008 85);
+  --coaster-ink: oklch(0.42 0.15 265);
+  --wood-grain: 0.12;
+  --grain-opacity: 0.05;
+}
+:root[data-style="bierdeckel"].dark {
+  --background: oklch(0.27 0.045 45);
+  --foreground: oklch(0.95 0.015 80);
+  --card: oklch(0.32 0.045 45);
+  --card-foreground: oklch(0.95 0.015 80);
+  --popover: oklch(0.34 0.045 45);
+  --popover-foreground: oklch(0.95 0.015 80);
+  --primary: oklch(0.6 0.19 30);
+  --primary-foreground: oklch(0.99 0.01 40);
+  --secondary: oklch(0.36 0.045 45);
+  --secondary-foreground: oklch(0.95 0.015 80);
+  --muted: oklch(0.35 0.045 45);
+  --muted-foreground: oklch(0.77 0.04 65);
+  --accent: oklch(0.38 0.045 45);
+  --accent-foreground: oklch(0.95 0.015 80);
+  --destructive: oklch(0.72 0.16 30);
+  --success: oklch(0.78 0.1 255);
+  --success-foreground: oklch(0.2 0.05 265);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.78 0.1 255);
+  --sidebar: oklch(0.24 0.04 45);
+  --sidebar-foreground: oklch(0.95 0.015 80);
+  --sidebar-accent: oklch(0.32 0.045 45);
+  --sidebar-accent-foreground: oklch(0.95 0.015 80);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --monogram: oklch(0.95 0.012 85);
+  --monogram-foreground: oklch(0.42 0.15 265);
+  --wood-grain: 0.22;
+  --grain-opacity: 0.06;
+}
+[data-style="bierdeckel"] .font-heading {
+  font-weight: 800;
+  font-stretch: 75%;
+  letter-spacing: 0.005em;
+}
+[data-style="bierdeckel"] .display-figure {
+  font-family: var(--font-archivo), ui-sans-serif, sans-serif;
+  font-weight: 900;
+  font-stretch: 62%;
+  letter-spacing: -0.01em;
+  font-variation-settings: normal;
+}
+[data-style="bierdeckel"] .monogram {
+  font-weight: 800;
+  box-shadow: none;
+}
+[data-style="bierdeckel"] .brand-mark {
+  background: oklch(0.42 0.15 265);
+  border-radius: 999px;
+}
+[data-style="bierdeckel"] .brand-mark-glyph {
+  fill: oklch(0.975 0.008 85);
+}
+[data-style="bierdeckel"] .bubble-own {
+  background-color: oklch(0.42 0.15 265);
+  color: oklch(0.98 0.01 85);
+}
+[data-style="bierdeckel"] .backdrop-light {
+  background-image: radial-gradient(
+    120% 60% at 50% 0%,
+    color-mix(in oklch, white, transparent 88%),
+    transparent 70%
+  );
+}
+[data-style="bierdeckel"] .backdrop-texture {
+  opacity: var(--wood-grain);
+  background-image:
+    repeating-linear-gradient(92deg, oklch(0 0 0 / 0.25) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(88deg, oklch(1 0 0 / 0.06) 0 2px, transparent 2px 19px);
+}
+[data-style="bierdeckel"] [data-slot="button"][data-variant="default"] {
+  border-radius: 999px;
+  background-image: none;
+  box-shadow: 0 3px 0 oklch(0.38 0.15 30);
+}
+
+/* ════════════════════════════ RISO ════════════════════════════
+   Two-color risograph print: paper, riso blue and fluorescent pink, a
+   halftone ground, figures printed slightly out of register. */
+:root[data-style="riso"] {
+  --app-font-sans: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --app-font-heading: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --rs-pink: oklch(0.68 0.24 352);
+  --background: oklch(0.97 0.008 95);
+  --foreground: oklch(0.27 0.06 275);
+  --card: oklch(0.99 0.004 95);
+  --card-foreground: oklch(0.27 0.06 275);
+  --popover: oklch(0.99 0.004 95);
+  --popover-foreground: oklch(0.27 0.06 275);
+  --primary: oklch(0.53 0.22 266);
+  --primary-foreground: oklch(0.99 0.004 95);
+  --secondary: oklch(0.94 0.02 350);
+  --secondary-foreground: oklch(0.27 0.06 275);
+  --muted: oklch(0.945 0.01 95);
+  --muted-foreground: oklch(0.5 0.04 275);
+  --accent: oklch(0.94 0.025 350);
+  --accent-foreground: oklch(0.27 0.06 275);
+  --destructive: oklch(0.6 0.24 355);
+  --success: oklch(0.5 0.2 266);
+  --success-foreground: oklch(0.99 0.004 95);
+  --border: oklch(0.87 0.02 275);
+  --input: oklch(0.84 0.025 275);
+  --ring: oklch(0.53 0.22 266);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.955 0.01 95);
+  --sidebar-foreground: oklch(0.27 0.06 275);
+  --sidebar-accent: oklch(0.93 0.025 350);
+  --sidebar-accent-foreground: oklch(0.27 0.06 275);
+  --sidebar-border: oklch(0.87 0.02 275);
+  --monogram: oklch(0.92 0.05 350);
+  --monogram-foreground: oklch(0.45 0.2 266);
+  --halftone: oklch(0.27 0.06 275 / 0.1);
+}
+:root[data-style="riso"].dark {
+  --rs-pink: oklch(0.72 0.21 352);
+  --background: oklch(0.2 0.04 275);
+  --foreground: oklch(0.95 0.01 95);
+  --card: oklch(0.245 0.045 275);
+  --card-foreground: oklch(0.95 0.01 95);
+  --popover: oklch(0.26 0.045 275);
+  --popover-foreground: oklch(0.95 0.01 95);
+  --primary: oklch(0.68 0.17 266);
+  --primary-foreground: oklch(0.16 0.04 275);
+  --secondary: oklch(0.3 0.06 350);
+  --secondary-foreground: oklch(0.95 0.01 95);
+  --muted: oklch(0.27 0.045 275);
+  --muted-foreground: oklch(0.74 0.04 275);
+  --accent: oklch(0.3 0.06 350);
+  --accent-foreground: oklch(0.95 0.01 95);
+  --destructive: oklch(0.74 0.19 355);
+  --success: oklch(0.76 0.13 266);
+  --success-foreground: oklch(0.16 0.04 275);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.68 0.17 266);
+  --sidebar: oklch(0.18 0.04 275);
+  --sidebar-foreground: oklch(0.95 0.01 95);
+  --sidebar-accent: oklch(0.28 0.05 275);
+  --sidebar-accent-foreground: oklch(0.95 0.01 95);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --monogram: oklch(0.33 0.08 350);
+  --monogram-foreground: oklch(0.9 0.07 350);
+  --halftone: oklch(1 0 0 / 0.07);
+}
+[data-style="riso"] .font-heading {
+  font-weight: 800;
+  font-stretch: 78%;
+  letter-spacing: -0.02em;
+}
+[data-style="riso"] .display-figure {
+  font-family: var(--font-bricolage), ui-sans-serif, sans-serif;
+  font-weight: 800;
+  font-stretch: 75%;
+  letter-spacing: -0.045em;
+  font-variation-settings: normal;
+  color: var(--primary);
+  text-shadow: 0.05em 0.035em 0 color-mix(in oklch, var(--rs-pink) 80%, transparent);
+}
+[data-style="riso"] .monogram {
+  font-weight: 800;
+  box-shadow: none;
+}
+[data-style="riso"] .brand-mark {
+  background: var(--primary);
+  box-shadow: 2px 2px 0 var(--rs-pink);
+}
+[data-style="riso"] .brand-mark-glyph {
+  fill: var(--primary-foreground);
+}
+[data-style="riso"] .bubble-own {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: 3px 3px 0 color-mix(in oklch, var(--rs-pink) 80%, transparent);
+}
+[data-style="riso"] .backdrop-light {
+  background-image: none;
+}
+[data-style="riso"] .backdrop-texture {
+  background-image: radial-gradient(var(--halftone) 0.8px, transparent 0.9px);
+  background-size: 4px 4px;
+}
+[data-style="riso"] [data-slot="button"][data-variant="default"] {
+  background-image: none;
+  box-shadow: 3px 3px 0 var(--rs-pink);
+}
+[data-style="riso"] [data-slot="button"][data-variant="outline"] {
+  border-width: 1.5px;
+  border-color: var(--foreground);
+}
+
+/* ════════════════════════════ HERO FIGURES ════════════════════════════
+   The groups overview's headline figure in each style (style-hero.tsx). */
+
+/* Fallblatt: a departure board, one flap per character. */
+.hero-board {
+  background: var(--board, oklch(0.2 0.004 260));
+  color: var(--flap-ink, oklch(0.95 0.012 90));
+  border-radius: 0.6rem;
+  padding: 0.9rem 0.75rem 1rem;
+  box-shadow: var(--shadow-e2);
+}
+.hero-board-label {
+  font-family: var(--font-martian), ui-monospace, monospace;
+  font-stretch: 87.5%;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: oklch(0.86 0.17 92);
+}
+.flap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: 0 1 2.15rem;
+  min-width: 0;
+  height: 3.4rem;
+  border-radius: 0.3rem;
+  background: var(--flap, oklch(0.27 0.005 260));
+  font-family: var(--font-martian), ui-monospace, monospace;
+  font-stretch: 75%;
+  font-weight: 700;
+  font-size: 2.1rem;
+  line-height: 1;
+  overflow: hidden;
+}
+.flap::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1px;
+  background: oklch(0 0 0 / 0.55);
+}
+.flap[data-kind="mark"] {
+  flex-basis: 0.9rem;
+  background: transparent;
+}
+.flap[data-kind="space"] {
+  flex-basis: 0.35rem;
+  background: transparent;
+}
+.flap[data-kind="mark"]::after,
+.flap[data-kind="space"]::after {
+  display: none;
+}
+.flap[data-kind="digit"] {
+  animation: flap-in 70ms linear;
+}
+@keyframes flap-in {
+  from {
+    transform: scaleY(0.2);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+/* Bierdeckel: a round mat that drops onto the counter. */
+.coaster {
+  position: relative;
+  width: min(76vw, 18rem);
+  aspect-ratio: 1;
+  max-width: 100%;
+  border-radius: 999px;
+  background: var(--coaster, oklch(0.975 0.008 85));
+  color: var(--coaster-ink, oklch(0.42 0.15 265));
+  box-shadow:
+    0 2px 0 oklch(0.85 0.01 85),
+    0 22px 30px -14px oklch(0.15 0.03 45 / 0.6);
+  animation: coaster-drop 700ms cubic-bezier(0.2, 0.9, 0.25, 1.05) both;
+  transform: rotate(-4deg);
+}
+@keyframes coaster-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-2.5rem) rotate(-22deg) scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(-4deg) scale(1);
+  }
+}
+.coaster-rim {
+  position: absolute;
+  inset: 0;
+  stroke: currentColor;
+}
+.coaster-rim-text {
+  fill: currentColor;
+  stroke: none;
+  font-family: var(--font-archivo), ui-sans-serif, sans-serif;
+  font-stretch: 75%;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+.coaster-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+}
+.coaster-label {
+  font-family: var(--font-archivo), ui-sans-serif, sans-serif;
+  font-stretch: 80%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.coaster-figure {
+  font-size: clamp(2.6rem, 13vw, 3.6rem);
+  color: currentColor;
+}
+.coaster-tally {
+  margin-top: 0.35rem;
+  color: oklch(0.25 0.01 60);
+}
+
+/* Riso: two inks, printed separately, sliding into register. */
+.hero-riso {
+  position: relative;
+  display: grid;
+  font-family: var(--font-bricolage), ui-sans-serif, sans-serif;
+  font-weight: 800;
+  font-stretch: 75%;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  padding-bottom: 0.08em;
+}
+.hero-riso > span {
+  grid-area: 1 / 1;
+  white-space: nowrap;
+  mix-blend-mode: multiply;
+}
+/* On dark paper the inks print opaque: blending them would wash both out. */
+.dark .hero-riso > span {
+  mix-blend-mode: normal;
+}
+.hero-riso-pink {
+  color: var(--rs-pink, oklch(0.68 0.24 352));
+  transform: translate(0.045em, 0.03em);
+  animation: riso-pink 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.hero-riso-blue {
+  color: var(--primary);
+  animation: riso-blue 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes riso-pink {
+  from {
+    opacity: 0;
+    transform: translate(-0.3em, 0.15em);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0.045em, 0.03em);
+  }
+}
+@keyframes riso-blue {
+  from {
+    opacity: 0;
+    transform: translate(0.25em, -0.12em);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+/* The receipt (`.paper-tokens`) restates Graphit's light tokens so it stays
+   paper in every theme; each style puts its own inks back on it. */
+[data-style="fallblatt"] .paper-tokens {
+  --primary: oklch(0.86 0.17 92);
+  --primary-foreground: oklch(0.2 0.004 90);
+  --ring: oklch(0.2 0.004 90);
+}
+[data-style="bierdeckel"] .paper-tokens {
+  --primary: oklch(0.55 0.19 30);
+  --primary-foreground: oklch(0.99 0.01 40);
+  --success: oklch(0.42 0.15 265);
+  --destructive: oklch(0.53 0.19 29);
+  --ring: oklch(0.42 0.15 265);
+  --monogram: oklch(0.42 0.15 265);
+  --monogram-foreground: oklch(0.98 0.01 85);
+}
+[data-style="riso"] .paper-tokens {
+  --rs-pink: oklch(0.68 0.24 352);
+  --primary: oklch(0.53 0.22 266);
+  --primary-foreground: oklch(0.99 0.004 95);
+  --success: oklch(0.5 0.2 266);
+  --destructive: oklch(0.6 0.24 355);
+  --ring: oklch(0.53 0.22 266);
+  --monogram: oklch(0.92 0.05 350);
+  --monogram-foreground: oklch(0.45 0.2 266);
+}
+[data-style="original"] .paper-tokens {
+  --primary: oklch(0.62 0.19 42);
+  --primary-foreground: oklch(0.99 0.012 60);
+  --ring: oklch(0.62 0.19 42);
+  --success: oklch(0.58 0.15 150);
+  --destructive: oklch(0.58 0.21 22);
+}

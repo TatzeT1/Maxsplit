@@ -18,7 +18,7 @@ import { RowActions } from "@/components/groups/row-actions";
 import { SectionHeading } from "@/components/groups/section-heading";
 import { useT } from "@/components/locale-provider";
 import { deleteRecurringRule, setRecurringRuleActive } from "@/lib/actions/recurring";
-import { CATEGORY_TILE_CLASSES, categoryIconElement } from "@/lib/categories";
+import { categoryTileClasses, categoryIconElement } from "@/lib/categories";
 import { formatDayMonth } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { isGroupManager } from "@/lib/groups/permissions";
@@ -86,7 +86,7 @@ function RuleRow({
         <div
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-            rule.active ? CATEGORY_TILE_CLASSES : "bg-muted text-muted-foreground",
+            rule.active ? categoryTileClasses(rule.category) : "bg-muted text-muted-foreground",
           )}
         >
           {categoryIconElement(rule.category, "h-4 w-4")}

@@ -55,12 +55,13 @@ export function categoryIcon(category: CategoryId | null): LucideIcon {
 }
 
 /**
- * Classes for a category's icon tile. One neutral tile for all of them: the
- * icon already says what the category is, and ten hues in a ledger made the
- * list read as decoration. The amounts beside them are what should carry color.
+ * Classes for a category's icon tile. `.category-tile` is a neutral tile in
+ * most styles; the Original style colors it per category (`data-category`
+ * via the `category-<id>` class, see globals.css).
  */
-export const CATEGORY_TILE_CLASSES =
-  "bg-muted text-muted-foreground ring-1 ring-inset ring-foreground/5";
+export function categoryTileClasses(category: CategoryId | null): string {
+  return `category-tile category-${category ?? "other"}`;
+}
 
 /** Renders a category's icon as an element, avoiding a dynamic JSX tag reference. */
 export function categoryIconElement(category: CategoryId | null, className?: string): ReactElement {

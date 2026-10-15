@@ -1,5 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import {
+  Archivo,
+  Bricolage_Grotesque,
+  Fraunces,
+  Geist,
+  Geist_Mono,
+  Hanken_Grotesk,
+  Martian_Mono,
+} from "next/font/google";
 import Script from "next/script";
 import { LocaleProvider } from "@/components/locale-provider";
 import { OfflineBanner } from "@/components/offline-banner";
@@ -27,6 +35,33 @@ const fraunces = Fraunces({
   axes: ["opsz", "SOFT", "WONK"],
 });
 
+// Faces for the optional styles (see lib/app-style.ts). Not preloaded: only
+// the active style's CSS references them, so a device on the default style
+// never downloads them.
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken",
+  subsets: ["latin"],
+  preload: false,
+});
+const martianMono = Martian_Mono({
+  variable: "--font-martian",
+  subsets: ["latin"],
+  axes: ["wdth"],
+  preload: false,
+});
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin"],
+  axes: ["wdth"],
+  preload: false,
+});
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  axes: ["opsz", "wdth"],
+  preload: false,
+});
+
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
   return {
@@ -50,10 +85,17 @@ export const viewport: Viewport = {
   ],
 };
 
-// Runs before hydration to apply the stored theme to <html> and avoid a
-// flash of the wrong theme. Keep in sync with theme-provider.tsx.
+// Runs before hydration to apply the stored theme and style to <html> and
+// avoid a flash of the wrong look. Keep in sync with theme-provider.tsx and
+// lib/app-style.ts (storage keys and the list of styles).
 const THEME_INIT_SCRIPT = `
 (function() {
+  try {
+    var style = localStorage.getItem("style");
+    if (["graphit", "original", "fallblatt", "bierdeckel", "riso"].indexOf(style) !== -1) {
+      document.documentElement.setAttribute("data-style", style);
+    }
+  } catch (e) {}
   try {
     var stored = localStorage.getItem("theme");
     var theme = stored === "light" || stored === "dark" || stored === "system" ? stored : "dark";
@@ -72,7 +114,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${hankenGrotesk.variable} ${martianMono.variable} ${archivo.variable} ${bricolage.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <Script id="theme-init" strategy="beforeInteractive">
