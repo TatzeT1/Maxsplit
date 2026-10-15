@@ -125,6 +125,10 @@ export const en: Dictionary = {
     styleBierdeckelHint: "the tab at the pub",
     styleRiso: "Riso",
     styleRisoHint: "two-color copy-shop print",
+    styleSchmetterling: "Butterfly",
+    styleSchmetterlingHint: "lilac, pink, butterflies and hearts",
+    styleHerzblatt: "Sweetheart",
+    styleHerzblattHint: "simple, with red hearts",
   },
   language: {
     toggleLabel: "Change language",

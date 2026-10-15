@@ -22,6 +22,8 @@ const STYLE_COPY: Record<AppStyle, { name: TranslationKey; hint: TranslationKey 
   fallblatt: { name: "theme.styleFallblatt", hint: "theme.styleFallblattHint" },
   bierdeckel: { name: "theme.styleBierdeckel", hint: "theme.styleBierdeckelHint" },
   riso: { name: "theme.styleRiso", hint: "theme.styleRisoHint" },
+  schmetterling: { name: "theme.styleSchmetterling", hint: "theme.styleSchmetterlingHint" },
+  herzblatt: { name: "theme.styleHerzblatt", hint: "theme.styleHerzblattHint" },
 };
 
 /** Appearance menu: light/dark/system, and below it the app's visual style. */

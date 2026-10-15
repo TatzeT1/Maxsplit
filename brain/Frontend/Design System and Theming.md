@@ -47,13 +47,15 @@ backdrop wash) to a deliberately quiet system. The rules, in `globals.css`:
 
 If a new screen seems to need another color, it needs hierarchy instead.
 
-## Five styles, switchable like light/dark
+## Seven styles, switchable like light/dark
 
 Next to light/dark/system the appearance menu (`theme-toggle.tsx`, sidebar footer and the
 public pages' header) offers a **style**: Graphit (default, the monochrome system above),
 Original (the first colorful version, restored), Fallblatt (split-flap departure board),
-Bierdeckel (the pub tab), Riso (two-color risograph). Every style has a light and a dark
-variant.
+Bierdeckel (the pub tab), Riso (two-color risograph), Schmetterling (lilac and pink with
+butterflies, hearts and sparkles; Nunito body, Fraunces with SOFT/WONK on, a violet-to-pink
+hero figure) and Herzblatt (Graphit's calm with a rose blush, one red accent and a few red
+hearts in the ground). Every style has a light and a dark variant.
 
 - **Where it lives:** `<html data-style="…">`, stored in `localStorage["style"]`, applied
   before first paint by `THEME_INIT_SCRIPT` in `app/layout.tsx` (keep its style list in sync
@@ -67,14 +69,18 @@ variant.
   `.backdrop-light`/`.backdrop-texture`, `.display-figure`, and the receipt's inks on
   `.paper-tokens`. Those rules are unlayered on purpose so they beat utilities.
 - **Components don't branch on style for color.** Use tokens and the hooks above; a new
-  screen then works in all five. The one markup exception is the groups overview's headline
+  screen then works in all seven. The one markup exception is the groups overview's headline
   figure (`style-hero.tsx`): flap board, beer mat with a tally of your groups, two-ink print —
   and the group page's balance, which uses the same pieces instead of the receipt in those
-  three styles (see [[Group Page]]).
+  three styles (see [[Group Page]]). Schmetterling and Herzblatt use the default markup
+  (receipt) and differ in CSS only.
 - **Monograms carry the person's colors as CSS vars** (`monogramVars(seed)` from
   `ui/monogram.tsx`) — only Original paints them; the other styles ignore them.
-- **Style fonts** (Hanken Grotesk, Martian Mono, Archivo, Bricolage Grotesque) are loaded
+- **Style fonts** (Hanken Grotesk, Martian Mono, Archivo, Bricolage Grotesque, Nunito) are loaded
   with `preload: false`: a device only downloads the faces its active style uses.
+- **Motif grounds as masks.** Schmetterling's butterflies/hearts/sparkles and Herzblatt's
+  hearts are inline-SVG `mask-image` tiles on `.backdrop-texture` over a token-colored fill,
+  so the motif follows the theme without a second SVG per light/dark.
 - The split games keep their per-person colors in every style.
 
 ## The hero figure

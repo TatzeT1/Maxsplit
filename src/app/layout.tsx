@@ -7,6 +7,7 @@ import {
   Geist_Mono,
   Hanken_Grotesk,
   Martian_Mono,
+  Nunito,
 } from "next/font/google";
 import Script from "next/script";
 import { LocaleProvider } from "@/components/locale-provider";
@@ -61,6 +62,11 @@ const bricolage = Bricolage_Grotesque({
   axes: ["opsz", "wdth"],
   preload: false,
 });
+const nunito = Nunito({
+  variable: "--font-nunito",
+  subsets: ["latin"],
+  preload: false,
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getServerT();
@@ -92,7 +98,7 @@ const THEME_INIT_SCRIPT = `
 (function() {
   try {
     var style = localStorage.getItem("style");
-    if (["graphit", "original", "fallblatt", "bierdeckel", "riso"].indexOf(style) !== -1) {
+    if (["graphit", "original", "fallblatt", "bierdeckel", "riso", "schmetterling", "herzblatt"].indexOf(style) !== -1) {
       document.documentElement.setAttribute("data-style", style);
     }
   } catch (e) {}
@@ -114,7 +120,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang={locale}
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${hankenGrotesk.variable} ${martianMono.variable} ${archivo.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} ${hankenGrotesk.variable} ${martianMono.variable} ${archivo.variable} ${bricolage.variable} ${nunito.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
         <Script id="theme-init" strategy="beforeInteractive">

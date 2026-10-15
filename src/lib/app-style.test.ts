@@ -10,8 +10,16 @@ afterEach(() => {
 });
 
 describe("app styles", () => {
-  it("knows exactly the five styles, Graphit first and default", () => {
-    expect(APP_STYLES).toEqual(["graphit", "original", "fallblatt", "bierdeckel", "riso"]);
+  it("knows exactly the seven styles, Graphit first and default", () => {
+    expect(APP_STYLES).toEqual([
+      "graphit",
+      "original",
+      "fallblatt",
+      "bierdeckel",
+      "riso",
+      "schmetterling",
+      "herzblatt",
+    ]);
     expect(DEFAULT_APP_STYLE).toBe("graphit");
   });
 

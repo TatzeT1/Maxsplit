@@ -126,6 +126,10 @@ export const de = {
     styleBierdeckelHint: "der Deckel in der Kneipe",
     styleRiso: "Riso",
     styleRisoHint: "Zweifarbdruck vom Copyshop",
+    styleSchmetterling: "Schmetterling",
+    styleSchmetterlingHint: "lila, pink, Schmetterlinge und Herzchen",
+    styleHerzblatt: "Herzblatt",
+    styleHerzblattHint: "schlicht, mit roten Herzchen",
   },
   language: {
     toggleLabel: "Sprache wechseln",

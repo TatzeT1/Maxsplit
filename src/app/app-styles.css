@@ -39,6 +39,12 @@
 .style-swatch[data-swatch="riso"] {
   background: linear-gradient(135deg, #2f5bea 50%, #ff4fa3 50%);
 }
+.style-swatch[data-swatch="schmetterling"] {
+  background: linear-gradient(135deg, #a77bf3, #f472b6 60%, #fbcfe8);
+}
+.style-swatch[data-swatch="herzblatt"] {
+  background: radial-gradient(circle, #e11d48 34%, #fff1f2 36%);
+}
 
 /* ════════════════════════════ ORIGINAL ════════════════════════════
    The first version, restored: warm receipt-paper light theme, deep
@@ -582,6 +588,269 @@
   border-color: var(--foreground);
 }
 
+/* ════════════════════════════ SCHMETTERLING ════════════════════════════
+   Lilac and pink, a little extra: rounded Nunito, Fraunces with its soft
+   wonky glyphs, a ground of butterflies, hearts and sparkles, and the hero
+   figure in a violet-to-pink gradient. Green/red still mean money. */
+:root[data-style="schmetterling"] {
+  --app-font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --sm-pink: oklch(0.7 0.19 350);
+  --sm-violet: oklch(0.56 0.2 300);
+  --background: oklch(0.975 0.014 330);
+  --foreground: oklch(0.3 0.08 315);
+  --card: oklch(0.993 0.006 330);
+  --card-foreground: oklch(0.3 0.08 315);
+  --popover: oklch(0.993 0.006 330);
+  --popover-foreground: oklch(0.3 0.08 315);
+  --primary: oklch(0.6 0.2 330);
+  --primary-foreground: oklch(0.99 0.01 330);
+  --secondary: oklch(0.94 0.03 305);
+  --secondary-foreground: oklch(0.32 0.1 305);
+  --muted: oklch(0.955 0.018 320);
+  --muted-foreground: oklch(0.5 0.07 315);
+  --accent: oklch(0.93 0.04 335);
+  --accent-foreground: oklch(0.32 0.1 330);
+  --destructive: oklch(0.57 0.2 20);
+  --success: oklch(0.56 0.12 165);
+  --success-foreground: oklch(0.98 0.02 165);
+  --border: oklch(0.9 0.035 320);
+  --input: oklch(0.88 0.04 320);
+  --ring: oklch(0.6 0.2 330);
+  --radius: 1.1rem;
+  --sidebar: oklch(0.96 0.022 320);
+  --sidebar-foreground: oklch(0.3 0.08 315);
+  --sidebar-primary: oklch(0.6 0.2 330);
+  --sidebar-accent: oklch(0.93 0.04 320);
+  --sidebar-accent-foreground: oklch(0.32 0.1 315);
+  --sidebar-border: oklch(0.9 0.035 320);
+  --sidebar-ring: oklch(0.6 0.2 330);
+  --monogram: oklch(0.92 0.05 310);
+  --monogram-foreground: oklch(0.42 0.17 305);
+  --flutter-opacity: 0.11;
+  --grain-opacity: 0.02;
+  --scrim: oklch(0.3 0.08 315 / 0.28);
+}
+:root[data-style="schmetterling"].dark {
+  --sm-pink: oklch(0.76 0.16 350);
+  --sm-violet: oklch(0.72 0.15 300);
+  --background: oklch(0.2 0.05 310);
+  --foreground: oklch(0.95 0.02 330);
+  --card: oklch(0.25 0.06 310);
+  --card-foreground: oklch(0.95 0.02 330);
+  --popover: oklch(0.27 0.06 310);
+  --popover-foreground: oklch(0.95 0.02 330);
+  --primary: oklch(0.74 0.17 345);
+  --primary-foreground: oklch(0.2 0.05 330);
+  --secondary: oklch(0.31 0.07 305);
+  --secondary-foreground: oklch(0.94 0.03 305);
+  --muted: oklch(0.28 0.06 310);
+  --muted-foreground: oklch(0.76 0.05 320);
+  --accent: oklch(0.33 0.08 330);
+  --accent-foreground: oklch(0.95 0.02 330);
+  --destructive: oklch(0.7 0.17 20);
+  --success: oklch(0.74 0.13 165);
+  --success-foreground: oklch(0.18 0.03 165);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.74 0.17 345);
+  --sidebar: oklch(0.18 0.045 310);
+  --sidebar-foreground: oklch(0.95 0.02 330);
+  --sidebar-primary: oklch(0.74 0.17 345);
+  --sidebar-accent: oklch(0.29 0.07 310);
+  --sidebar-accent-foreground: oklch(0.95 0.02 330);
+  --sidebar-border: oklch(1 0 0 / 12%);
+  --sidebar-ring: oklch(0.74 0.17 345);
+  --monogram: oklch(0.34 0.09 305);
+  --monogram-foreground: oklch(0.9 0.06 330);
+  --flutter-opacity: 0.13;
+  --grain-opacity: 0.04;
+  --scrim: oklch(0.1 0.04 310 / 0.55);
+}
+[data-style="schmetterling"] .font-heading {
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 1;
+}
+[data-style="schmetterling"] .display-figure {
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 1;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: var(--sm-violet);
+  background-image: linear-gradient(100deg, var(--sm-violet), var(--sm-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+[data-style="schmetterling"] .monogram {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--sm-violet) 22%, var(--card)),
+    color-mix(in oklch, var(--sm-pink) 22%, var(--card))
+  );
+  color: var(--monogram-foreground);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px var(--card);
+}
+[data-style="schmetterling"] .category-tile {
+  background-color: color-mix(in oklch, var(--sm-pink) 14%, var(--card));
+  color: var(--primary);
+  box-shadow: none;
+}
+[data-style="schmetterling"] .brand-mark {
+  background-image: linear-gradient(135deg, var(--sm-violet), var(--sm-pink));
+}
+[data-style="schmetterling"] .brand-mark-glyph {
+  fill: white;
+}
+[data-style="schmetterling"] .bubble-own {
+  background-image: linear-gradient(135deg, var(--sm-violet), var(--sm-pink));
+  background-color: var(--primary);
+  color: white;
+}
+[data-style="schmetterling"] [data-slot="button"][data-variant="default"] {
+  background-image: linear-gradient(110deg, var(--sm-violet), var(--sm-pink));
+  color: white;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px -8px color-mix(in oklch, var(--sm-pink) 80%, transparent);
+}
+/* At night the inks are lifted pastels: white on them washes out. */
+[data-style="schmetterling"].dark .bubble-own,
+[data-style="schmetterling"].dark [data-slot="button"][data-variant="default"] {
+  color: var(--primary-foreground);
+}
+[data-style="schmetterling"].dark .brand-mark-glyph {
+  fill: var(--primary-foreground);
+}
+[data-style="schmetterling"] .backdrop-light {
+  background-image:
+    radial-gradient(
+      60rem 36rem at 90% -10%,
+      color-mix(in oklch, var(--sm-pink), transparent 82%),
+      transparent 62%
+    ),
+    radial-gradient(
+      56rem 36rem at -10% 55%,
+      color-mix(in oklch, var(--sm-violet), transparent 85%),
+      transparent 62%
+    );
+}
+/* Butterflies, hearts and sparkles as a mask over a two-ink wash, so the
+   motif takes the theme's colors in light and dark alike. */
+[data-style="schmetterling"] .backdrop-texture {
+  opacity: var(--flutter-opacity);
+  background-image: linear-gradient(135deg, var(--sm-violet), var(--sm-pink));
+  --flutter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg transform='translate(48 60) rotate(-18) scale(1.25)'%3E%3Cellipse cx='-7' cy='-5' rx='7' ry='10' transform='rotate(-35 -7 -5)'/%3E%3Cellipse cx='7' cy='-5' rx='7' ry='10' transform='rotate(35 7 -5)'/%3E%3Cellipse cx='-5' cy='7' rx='4.5' ry='6' transform='rotate(30 -5 7)'/%3E%3Cellipse cx='5' cy='7' rx='4.5' ry='6' transform='rotate(-30 5 7)'/%3E%3Cpath d='M-4-19Q-2-15 0-11M4-19Q2-15 0-11' stroke='black' stroke-width='1' fill='none'/%3E%3C/g%3E%3Cg transform='translate(178 170) rotate(22) scale(0.9)'%3E%3Cellipse cx='-7' cy='-5' rx='7' ry='10' transform='rotate(-35 -7 -5)'/%3E%3Cellipse cx='7' cy='-5' rx='7' ry='10' transform='rotate(35 7 -5)'/%3E%3Cellipse cx='-5' cy='7' rx='4.5' ry='6' transform='rotate(30 -5 7)'/%3E%3Cellipse cx='5' cy='7' rx='4.5' ry='6' transform='rotate(-30 5 7)'/%3E%3Cpath d='M-4-19Q-2-15 0-11M4-19Q2-15 0-11' stroke='black' stroke-width='1' fill='none'/%3E%3C/g%3E%3Cpath transform='translate(170 50) rotate(12) scale(0.9) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(60 190) rotate(-14) scale(0.6) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(125 118) rotate(8) scale(0.4) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(110 30) scale(0.9)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3Cpath transform='translate(215 105) scale(0.7)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3Cpath transform='translate(20 130) scale(0.6)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3Cpath transform='translate(120 215) scale(0.8)' d='M0-6Q1-1 6 0Q1 1 0 6Q-1 1-6 0Q-1-1 0-6z'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--flutter);
+  mask-image: var(--flutter);
+  -webkit-mask-size: 240px 240px;
+  mask-size: 240px 240px;
+}
+
+/* ════════════════════════════ HERZBLATT ════════════════════════════
+   The quieter sibling: Graphit's calm with a blush of rose in the ground,
+   one red for the action that matters, and a few red hearts scattered
+   behind the content. */
+:root[data-style="herzblatt"] {
+  --background: oklch(0.985 0.006 15);
+  --foreground: oklch(0.23 0.02 15);
+  --card: oklch(0.997 0.003 15);
+  --card-foreground: oklch(0.23 0.02 15);
+  --popover: oklch(0.997 0.003 15);
+  --popover-foreground: oklch(0.23 0.02 15);
+  --primary: oklch(0.56 0.21 22);
+  --primary-foreground: oklch(0.99 0.01 15);
+  --secondary: oklch(0.95 0.012 15);
+  --secondary-foreground: oklch(0.25 0.02 15);
+  --muted: oklch(0.955 0.01 15);
+  --muted-foreground: oklch(0.5 0.025 15);
+  --accent: oklch(0.945 0.016 15);
+  --accent-foreground: oklch(0.23 0.02 15);
+  --destructive: oklch(0.55 0.2 25);
+  --success: oklch(0.54 0.12 155);
+  --border: oklch(0.9 0.014 15);
+  --input: oklch(0.88 0.016 15);
+  --ring: oklch(0.56 0.21 22);
+  --sidebar: oklch(0.97 0.009 15);
+  --sidebar-foreground: oklch(0.23 0.02 15);
+  --sidebar-primary: oklch(0.56 0.21 22);
+  --sidebar-accent: oklch(0.94 0.014 15);
+  --sidebar-accent-foreground: oklch(0.23 0.02 15);
+  --sidebar-border: oklch(0.9 0.014 15);
+  --sidebar-ring: oklch(0.56 0.21 22);
+  --monogram: oklch(0.94 0.025 15);
+  --monogram-foreground: oklch(0.48 0.17 22);
+  --hearts-opacity: 0.1;
+}
+:root[data-style="herzblatt"].dark {
+  --background: oklch(0.18 0.012 15);
+  --foreground: oklch(0.95 0.008 15);
+  --card: oklch(0.225 0.016 15);
+  --card-foreground: oklch(0.95 0.008 15);
+  --popover: oklch(0.24 0.016 15);
+  --popover-foreground: oklch(0.95 0.008 15);
+  --primary: oklch(0.65 0.2 22);
+  --primary-foreground: oklch(0.99 0.01 15);
+  --secondary: oklch(0.27 0.018 15);
+  --secondary-foreground: oklch(0.95 0.008 15);
+  --muted: oklch(0.255 0.016 15);
+  --muted-foreground: oklch(0.72 0.02 15);
+  --accent: oklch(0.28 0.02 15);
+  --accent-foreground: oklch(0.95 0.008 15);
+  --destructive: oklch(0.7 0.17 25);
+  --success: oklch(0.73 0.14 155);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.65 0.2 22);
+  --sidebar: oklch(0.165 0.012 15);
+  --sidebar-foreground: oklch(0.95 0.008 15);
+  --sidebar-primary: oklch(0.65 0.2 22);
+  --sidebar-accent: oklch(0.26 0.018 15);
+  --sidebar-accent-foreground: oklch(0.95 0.008 15);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.65 0.2 22);
+  --monogram: oklch(0.3 0.04 15);
+  --monogram-foreground: oklch(0.85 0.07 20);
+  --hearts-opacity: 0.1;
+}
+[data-style="herzblatt"] .font-heading,
+[data-style="herzblatt"] .display-figure {
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 0;
+}
+[data-style="herzblatt"] .monogram {
+  box-shadow: none;
+}
+[data-style="herzblatt"] .brand-mark {
+  background-color: var(--primary);
+}
+[data-style="herzblatt"] .brand-mark-glyph {
+  fill: var(--primary-foreground);
+}
+[data-style="herzblatt"] .bubble-own {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+[data-style="herzblatt"] .backdrop-light {
+  background-image: radial-gradient(
+    52rem 28rem at 50% -8rem,
+    color-mix(in oklch, var(--primary), transparent 90%),
+    transparent 70%
+  );
+}
+/* A few hearts, far apart: a mask over the red, so it follows the theme. */
+[data-style="herzblatt"] .backdrop-texture {
+  opacity: var(--hearts-opacity);
+  background-color: var(--primary);
+  --hearts: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cpath transform='translate(60 70) rotate(-12) scale(0.8) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(205 200) rotate(14) scale(0.55) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(215 55) rotate(6) scale(0.35) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3C/svg%3E");
+  -webkit-mask-image: var(--hearts);
+  mask-image: var(--hearts);
+  -webkit-mask-size: 280px 280px;
+  mask-size: 280px 280px;
+}
+
 /* ════════════════════════════ HERO FIGURES ════════════════════════════
    The groups overview's headline figure in each style (style-hero.tsx). */
 
@@ -790,6 +1059,22 @@
   --ring: oklch(0.53 0.22 266);
   --monogram: oklch(0.92 0.05 350);
   --monogram-foreground: oklch(0.45 0.2 266);
+}
+[data-style="schmetterling"] .paper-tokens {
+  --sm-pink: oklch(0.7 0.19 350);
+  --sm-violet: oklch(0.56 0.2 300);
+  --primary: oklch(0.6 0.2 330);
+  --primary-foreground: oklch(0.99 0.01 330);
+  --ring: oklch(0.6 0.2 330);
+  --monogram: oklch(0.92 0.05 310);
+  --monogram-foreground: oklch(0.42 0.17 305);
+}
+[data-style="herzblatt"] .paper-tokens {
+  --primary: oklch(0.56 0.21 22);
+  --primary-foreground: oklch(0.99 0.01 15);
+  --ring: oklch(0.56 0.21 22);
+  --monogram: oklch(0.94 0.025 15);
+  --monogram-foreground: oklch(0.48 0.17 22);
 }
 [data-style="original"] .paper-tokens {
   --primary: oklch(0.62 0.19 42);

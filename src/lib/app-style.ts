@@ -11,7 +11,15 @@ import { useSyncExternalStore } from "react";
  * attribute); components only read it for the few signature pieces that
  * differ in markup, not just in color (the groups overview's hero figure).
  */
-export const APP_STYLES = ["graphit", "original", "fallblatt", "bierdeckel", "riso"] as const;
+export const APP_STYLES = [
+  "graphit",
+  "original",
+  "fallblatt",
+  "bierdeckel",
+  "riso",
+  "schmetterling",
+  "herzblatt",
+] as const;
 export type AppStyle = (typeof APP_STYLES)[number];
 
 export const DEFAULT_APP_STYLE: AppStyle = "graphit";
