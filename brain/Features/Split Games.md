@@ -848,16 +848,19 @@ laughing face is found, and only the last slip and the verdict carry an amount. 
 scratch round's banner gets `round.stake` too — same `splitEqual`, same order as
 `buildGameExpense`.
 
-**The lottery's catch.** Its own takeover is gone; a laughing face is now a `CatchFlash` over the
-whole dialog naming whoever tapped it, with the face itself peeking over the slip's corner
-(`CatchFlash`'s new `hero` slot, behind the slip, popping up on the impact frame). Its laugh
-images are preloaded at the hero's size (`HERO_SIZES`), the same `/_next/image` URL, so the
-face never arrives after the stamp. A repeat catch says "Schon wieder erwischt!". The slip is
-`pointer-events-none` — the old overlay doubled as the board lock — so `tapCell` checks
-`catches.isActive()` instead; "Neu mischen" now works mid-slip and cancels it. The lottery's
-hand-copied setup and verdict block became `GamePoolSetupStep` and `GameResultBanner`. An
-`aria-live` line announces who was caught ("Lea hat ein lachendes Gesicht erwischt."), which
-nothing did before.
+**The lottery's catch.** Its own takeover is gone; a laughing face used to be a `CatchFlash` over
+the whole dialog naming whoever tapped it, with the face peeking over the slip's corner. Since
+2026-10 the lottery has its own `CatchPortrait` instead (`split-game/catch-portrait.tsx`): the
+caught real photo (the lottery's cast is two real people, see [[Split Lottery]]) shown full-size
+over the dialog, landing on `STAMP_IMPACT_S`, with just avatar, name and `CatchCaption` below —
+no slip and no stamp. Everything else about the catch is the shared machinery: the same
+`useCatchFlashes` timing, sounds, shake and haptics, and the preload uses the portrait's own
+`sizes` (`CATCH_PORTRAIT_SIZES`) so it hits the same `/_next/image` URL. A repeat catch says
+"Schon wieder erwischt!". The overlay is `pointer-events-none` — the old overlay doubled as the
+board lock — so `tapCell` checks `catches.isActive()` instead; "Neu mischen" works mid-catch and
+cancels it. The lottery's hand-copied setup and verdict block became `GamePoolSetupStep` and
+`GameResultBanner`. An `aria-live` line announces who was caught ("Lea hat ein lachendes Gesicht
+erwischt."), which nothing did before.
 
 **Herzklopfen.** The lottery's twentieth tap used to feel like its first, although the odds had
 long since changed. `lotteryHeartbeat(payLeft, facesLeft)` (`lib/games/lottery-heartbeat.ts`)

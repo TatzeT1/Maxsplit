@@ -41,20 +41,30 @@ a loss).
 
 ## Characters and assets
 
-`public/lottery-faces/*.png` — calm/laughing pairs per character (`char1`, `char3`, `char4`,
-...; note the gaps in numbering, that's not a bug, just which assets exist), so tapping a face
-reads as "the same person, a different mood" rather than swapping to an unrelated image.
-Grid cells get a random cast member per game, mixed across the board rather than one face
-repeated. Sound effects (`playAppliedSound`, `playMissSound`, the shared catch's stamp and
-laugh, `playHeartbeatSound`) and motion (`motion/react` via `src/lib/motion.ts`'s `springs`)
-are purely cosmetic — no correctness surface there.
+`public/lottery-faces/` holds exactly two people, both **real, consented photos** (since
+2026-10; the generated cartoon portraits `char1`–`char6` are gone): `char7` (sunglasses, tongue
+out) and `char8` (smiling man; his "laughing" image is the monkey selfie). Each is a calm/laughing
+pair, so tapping a face reads as "the same person, a different mood". Grid cells get a random one
+of the two per game — a shuffled mix, not a fixed half/half. The photos are shown
+`object-cover` with rounded corners (the cartoons were transparent-ish `object-contain`). The
+small laugh icon in the setup step and the found-slots row is the monkey (`BADGE_CHARACTER`).
+Sound effects (`playAppliedSound`, `playMissSound`, the shared catch's stamp and laugh,
+`playHeartbeatSound`) and motion (`motion/react` via `src/lib/motion.ts`'s `springs`) are purely
+cosmetic — no correctness surface there.
 
 ## The catch and the heartbeat (2026-10)
 
-A laughing face is the shared `CatchFlash` since round four: a slip naming whoever tapped it,
-the laughing character peeking over its corner, stamp, shake and confetti; the last slip and
-the verdict carry what each payer owes. Between taps a heartbeat quickens as the safe faces
-run out ("Noch 2 von 5 Gesichtern lachen"). Why and how:
+A laughing face is shown **full-size** (`CatchPortrait`,
+`split-game/catch-portrait.tsx`): the photo fills the dialog as big as the screen allows
+(`min(88vw, 56dvh, 28rem)`), landing with a spring on the stamp's impact frame
+(`STAMP_IMPACT_S`, so `useCatchFlashes`' thump and laugh still read as one hit), with only a quiet
+line below it — avatar and name, then `CatchCaption` (what they owe once final, or the count).
+It replaced the shared `CatchFlash` slip (receipt, ink stamp, confetti, a 96px face peeking over
+its corner) _for the lottery only_; every other game still uses `CatchFlash`. The timing, sounds,
+shake, haptics and the board lock (`catches.isActive()`) are unchanged, since they live in
+`useCatchFlashes`. The full-size laugh images are preloaded with the same `sizes`
+(`CATCH_PORTRAIT_SIZES`) so the photo never arrives after the laugh. Between taps a heartbeat
+quickens as the safe faces run out ("Noch 2 von 5 Gesichtern lachen"). Why and how:
 [[Split Games#The catch moment, for every payer, with the amount]]. At most everyone but one can
 pay ([[Split Games#Everyone but one]]).
 

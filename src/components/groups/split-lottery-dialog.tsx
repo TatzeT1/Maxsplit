@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { CatchFlash } from "@/components/groups/split-game/celebration";
+import { CATCH_PORTRAIT_SIZES, CatchPortrait } from "@/components/groups/split-game/catch-portrait";
 import { CatchCaption } from "@/components/groups/split-game/catch-caption";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { GamePoolSetupStep } from "@/components/groups/split-game/game-pool-setup-step";
@@ -30,11 +30,10 @@ import { playAppliedSound, playHeartbeatSound, playMissSound } from "@/lib/sound
 import type { GroupMember } from "@/lib/types";
 
 /**
- * The cast: mostly generated character portraits plus a couple of real,
- * consented photos, each as a calm/laughing pair so tapping a face reads as
- * "the same person, a different mood". Each grid cell gets its own random
- * cast member at game start — a colourful mix across the board, not one
- * face repeated.
+ * The cast: the two real, consented photos, each as a calm/laughing pair so
+ * tapping a face reads as "the same person, a different mood". Each grid cell
+ * gets its own random cast member at game start, so the board is a shuffled
+ * mix of the two rather than one face repeated.
  */
 interface LotteryCharacter {
   id: string;
@@ -43,31 +42,6 @@ interface LotteryCharacter {
 }
 
 const CHARACTERS: LotteryCharacter[] = [
-  {
-    id: "char1",
-    calmSrc: "/lottery-faces/char1-calm.png",
-    laughSrc: "/lottery-faces/char1-laugh.png",
-  },
-  {
-    id: "char3",
-    calmSrc: "/lottery-faces/char3-calm.png",
-    laughSrc: "/lottery-faces/char3-laugh.png",
-  },
-  {
-    id: "char4",
-    calmSrc: "/lottery-faces/char4-calm.png",
-    laughSrc: "/lottery-faces/char4-laugh.png",
-  },
-  {
-    id: "char5",
-    calmSrc: "/lottery-faces/char5-calm.png",
-    laughSrc: "/lottery-faces/char5-laugh.png",
-  },
-  {
-    id: "char6",
-    calmSrc: "/lottery-faces/char6-calm.png",
-    laughSrc: "/lottery-faces/char6-laugh.png",
-  },
   {
     id: "char7",
     calmSrc: "/lottery-faces/char7-calm.png",
@@ -80,29 +54,29 @@ const CHARACTERS: LotteryCharacter[] = [
   },
 ];
 
+/** The small laughing face used as the icon in the setup step and the found-slots row: the monkey. */
+const BADGE_CHARACTER = CHARACTERS[1];
+
 function randomCharacter(): LotteryCharacter {
   const bytes = randomBytes(1);
   return CHARACTERS[bytes[0] % CHARACTERS.length];
 }
 
-/** The caught face peeking over the slip: `CatchFlash`'s `hero` slot is `size-24`. */
-const HERO_SIZES = "96px";
-
 /**
  * Every laugh variant fetched once, up front, at the same resolution the
- * catch slip's peeking face renders it at (`HERO_SIZES`, so the same
+ * full-size catch portrait renders it at (`CATCH_PORTRAIT_SIZES`, so the same
  * `/_next/image` URL). Without this, the first time any given character is
- * caught mid-session, the face behind the slip is a cold fetch racing the
- * stamp — on the phone-outdoors-cellular conditions this component is built
- * for, that's an empty corner under a laugh track. `sr-only` keeps the boxes
- * out of layout without skipping the fetch.
+ * caught mid-session, the big face is a cold fetch racing the laugh — on the
+ * phone-outdoors-cellular conditions this component is built for, that's an
+ * empty frame under a laugh track. `sr-only` keeps the boxes out of layout
+ * without skipping the fetch.
  */
 function LotteryFacePreload() {
   return (
     <div aria-hidden="true" className="sr-only">
       {CHARACTERS.map((character) => (
         <span key={character.id} className="relative block size-24">
-          <Image src={character.laughSrc} alt="" fill sizes={HERO_SIZES} />
+          <Image src={character.laughSrc} alt="" fill sizes={CATCH_PORTRAIT_SIZES} />
         </span>
       ))}
     </div>
@@ -254,7 +228,7 @@ function LotteryCard({
               fill
               sizes="120px"
               className={cn(
-                "object-contain transition-opacity duration-(--duration-fast)",
+                "rounded-md object-cover transition-opacity duration-(--duration-fast)",
                 laughing ? "opacity-0" : "opacity-100",
               )}
             />
@@ -264,7 +238,7 @@ function LotteryCard({
               fill
               sizes="120px"
               className={cn(
-                "object-contain transition-opacity duration-(--duration-fast)",
+                "rounded-md object-cover transition-opacity duration-(--duration-fast)",
                 laughing ? "opacity-100" : "opacity-0",
               )}
             />
@@ -307,8 +281,8 @@ type Step = "setup" | "playing";
  * nothing. It never touches `paidBy`: who actually fronted the money stays
  * a separate, manual choice, since the game only decides who owes it back.
  *
- * A laughing face is the shared `CatchFlash`: a slip naming whoever tapped
- * it, the face itself peeking over the slip, stamp, shake and confetti. In
+ * A laughing face is shown full-size (`CatchPortrait`) over the whole dialog
+ * with a quiet line naming whoever tapped it — no slip, no stamp. In
  * between, a heartbeat (`lottery-heartbeat.ts`) quickens as the safe faces
  * run out.
  */
@@ -498,27 +472,13 @@ export function SplitLotteryDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <GameDialogContent>
-        {/* Over the whole dialog, as the scratch cards' is: the board is taller than the slip. */}
+        {/* Over the whole dialog: the caught face is as big as the screen allows. */}
         <AnimatePresence>
           {flash && (
-            <CatchFlash
+            <CatchPortrait
               key={flash.id}
-              seed={flash.id}
               name={members[flash.uid].displayName}
-              stampLabel={t("expenses.gameCaughtStamp")}
-              finale={flash.finale}
-              className="inset-0 z-50 rounded-xl"
-              hero={
-                caughtCell && (
-                  <Image
-                    src={caughtCell.character.laughSrc}
-                    alt=""
-                    fill
-                    sizes={HERO_SIZES}
-                    className="object-contain drop-shadow-xl"
-                  />
-                )
-              }
+              className="inset-0 rounded-xl"
               caption={
                 <CatchCaption
                   share={flash.finale ? shares?.[flash.uid] : null}
@@ -533,7 +493,17 @@ export function SplitLotteryDialog({
                   }
                 />
               }
-            />
+            >
+              {caughtCell && (
+                <Image
+                  src={caughtCell.character.laughSrc}
+                  alt=""
+                  fill
+                  sizes={CATCH_PORTRAIT_SIZES}
+                  className="object-cover"
+                />
+              )}
+            </CatchPortrait>
           )}
         </AnimatePresence>
         <DialogHeader>
@@ -579,11 +549,11 @@ export function SplitLotteryDialog({
                   countHint={t("expenses.lotteryCountHint")}
                   countIcon={
                     <Image
-                      src={CHARACTERS[0].laughSrc}
+                      src={BADGE_CHARACTER.laughSrc}
                       alt=""
                       fill
                       sizes="28px"
-                      className="object-contain"
+                      className="rounded-md object-cover"
                     />
                   }
                 />
@@ -708,11 +678,11 @@ export function SplitLotteryDialog({
                                 style={{ "--stagger": 22 } as CSSProperties}
                               >
                                 <Image
-                                  src={CHARACTERS[0].laughSrc}
+                                  src={BADGE_CHARACTER.laughSrc}
                                   alt=""
                                   fill
                                   sizes="20px"
-                                  className="object-contain"
+                                  className="rounded-sm object-cover"
                                 />
                               </span>
                             </>
