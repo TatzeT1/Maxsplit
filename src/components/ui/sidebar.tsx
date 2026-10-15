@@ -106,8 +106,11 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
   const { open, setOpen } = useSidebar();
   return (
     <div
+      // No backdrop-filter (or transform/filter) on this bar: it would become
+      // the containing block for the `fixed inset-0` drawer below and shrink
+      // the open menu to the bar's 56px, with the page drawn over the rest.
       className={cn(
-        "bg-background/85 border-border/60 flex h-14 w-full flex-row items-center justify-between border-b px-2 backdrop-blur-md md:hidden",
+        "bg-background border-border/60 flex h-14 w-full flex-row items-center justify-between border-b px-2 md:hidden",
       )}
       style={{ paddingTop: "env(safe-area-inset-top)" }}
       {...props}
