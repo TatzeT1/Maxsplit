@@ -96,7 +96,7 @@ export function LuckIndexSection({
                     </span>
                     <span
                       className={cn(
-                        "font-heading tabular-money shrink-0 font-semibold",
+                        "font-heading tabular-money shrink-0 font-medium",
                         difference > 0
                           ? "text-destructive"
                           : difference < 0

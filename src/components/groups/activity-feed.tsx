@@ -24,7 +24,7 @@ import { useT } from "@/components/locale-provider";
 import { deleteExpense, restoreExpense } from "@/lib/actions/expenses";
 import { deleteSettlement, restoreSettlement } from "@/lib/actions/settlements";
 import { callAction } from "@/lib/call-action";
-import { categoryColorClasses, categoryIconElement, categoryLabel } from "@/lib/categories";
+import { CATEGORY_TILE_CLASSES, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDayMonth, formatMonthKey } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import { SETTLEMENT_EMOJI } from "@/lib/emoji";
@@ -177,7 +177,7 @@ function ExpenseRow({
         <div
           className={cn(
             "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-            categoryColorClasses(expense.category),
+            CATEGORY_TILE_CLASSES,
           )}
         >
           {expense.emoji ? (
@@ -197,7 +197,7 @@ function ExpenseRow({
             <span className="line-clamp-2 min-w-0 text-[0.95rem] leading-snug font-medium">
               {expense.description}
             </span>
-            <span className="font-heading tabular-money shrink-0 text-[0.95rem] font-semibold">
+            <span className="font-heading tabular-money shrink-0 text-[0.95rem] font-medium">
               {formatMoney(expense.amountMinor, expense.currency)}
             </span>
           </div>
@@ -497,7 +497,7 @@ function CategoryChips({
           <span
             className={cn(
               "flex h-5 w-5 items-center justify-center rounded-full",
-              categoryColorClasses(category),
+              CATEGORY_TILE_CLASSES,
             )}
           >
             {categoryIconElement(category, "h-3 w-3")}

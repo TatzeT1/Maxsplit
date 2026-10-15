@@ -124,7 +124,7 @@ export function PhotoFinishPrint({
         )}
       </div>
       <figcaption className="flex flex-col items-center gap-px px-1 pt-1.5 pb-2.5 text-center">
-        <span className="font-heading text-sm leading-tight font-semibold tracking-wide uppercase [font-variation-settings:'SOFT'_100,'WONK'_1]">
+        <span className="font-heading text-sm leading-tight font-medium tracking-wide uppercase [font-variation-settings:'SOFT'_100,'WONK'_1]">
           {t("expenses.duckRacePhotoTitle")}
         </span>
         <span className="text-muted-foreground max-w-full truncate text-xs leading-tight">

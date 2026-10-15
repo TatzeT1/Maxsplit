@@ -56,36 +56,50 @@ export default function GroupsPage() {
     return <NeedsConnection body={t("offline.groupsNotSynced")} />;
   }
 
+  const heading = (
+    <h1 className="text-muted-foreground animate-rise -mb-2 pt-4 text-xs font-medium tracking-[0.12em] uppercase">
+      {t("groups.title")}
+    </h1>
+  );
+  const actions = (
+    <div className="animate-rise grid grid-cols-2 gap-2 *:w-full">
+      <JoinGroupDialog />
+      <CreateGroupDialog />
+    </div>
+  );
+
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
       <AmbientBackdrop />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 p-4">
-        <div className="flex items-center justify-between gap-2">
-          <h1 className="font-heading text-xl font-semibold">{t("groups.title")}</h1>
-          <div className="flex gap-2">
-            <JoinGroupDialog />
-            <CreateGroupDialog />
-          </div>
-        </div>
-
+      <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-5 px-4 pt-6 pb-10">
         {user && errorCode ? (
-          <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
-            <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
-            <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
-          </div>
+          <>
+            {heading}
+            <div className="border-destructive/50 text-destructive flex flex-col gap-1 rounded-lg border p-4">
+              <p className="text-sm font-medium">{t("errors.dataLoadFailed")}</p>
+              <p className="text-xs">{t("errors.errorCode", { code: errorCode })}</p>
+            </div>
+          </>
         ) : groups === null ? (
-          <div className="flex flex-col gap-3">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
+          <div className="flex flex-col gap-5 pt-2">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-16 w-56" />
+            <Skeleton className="mt-4 h-48 w-full rounded-2xl" />
           </div>
         ) : groups.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed p-8 text-center">
-            <Users className="text-muted-foreground h-6 w-6" />
-            <p className="text-muted-foreground text-sm">{t("groups.empty")}</p>
-          </div>
+          <>
+            {heading}
+            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed p-10 text-center">
+              <Users className="text-muted-foreground h-6 w-6" />
+              <p className="text-muted-foreground text-sm">{t("groups.empty")}</p>
+            </div>
+            {actions}
+          </>
         ) : (
-          user && <GroupsOverview groups={groups} uid={user.uid} />
+          user && (
+            <GroupsOverview groups={groups} uid={user.uid} heading={heading} actions={actions} />
+          )
         )}
       </div>
     </div>

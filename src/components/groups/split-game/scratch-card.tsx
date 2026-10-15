@@ -191,7 +191,7 @@ export function ScratchCard({
         ) : (
           <span
             className={cn(
-              "font-heading text-muted-foreground text-sm font-semibold",
+              "font-heading text-muted-foreground text-sm font-medium",
               scratched && "animate-rise",
             )}
           >

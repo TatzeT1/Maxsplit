@@ -17,13 +17,50 @@ vendored black box — but keep changes consistent with the shadcn conventions (
 `cva`, `asChild` via Radix `Slot`) so future `shadcn add` runs don't fight your edits.
 
 Notable non-stock additions living alongside the generated primitives:
-`ambient-backdrop.tsx`, `animated-money.tsx`, `save-celebration.tsx`, `feature-pins.tsx`,
-`hero-10.tsx`/`hero-10-utils/` — bespoke marketing/celebration UI, not shadcn-generated.
+`ambient-backdrop.tsx`, `animated-money.tsx`, `save-celebration.tsx`, `monogram.tsx` — bespoke
+UI, not shadcn-generated. The brand mark is `src/components/brand-mark.tsx` (the app icon's
+split coin, drawn small).
+
+## Color: monochrome + one accent
+
+The 2026-10 redesign took the app from "several hues on every screen" (teal-tinted dark
+theme, orange primary, teal accent, eight gradient avatars, ten category colors, a colored
+backdrop wash) to a deliberately quiet system. The rules, in `globals.css`:
+
+- **Neutrals carry the UI.** Background, cards, borders, muted text are near-grey with a
+  faint warm cast (`oklch(L 0.002–0.006 70–85)`). Dark is graphite (`0.16`), not black and
+  not tinted. Hierarchy comes from ink strength and size, not from hue.
+- **One accent: muted orange (`--primary`).** For the one action that matters on a screen
+  (add expense, create group, sign in), focus rings, and "something waits for you"
+  (unread dot, a game round waiting for your turn). Not for decoration, not for icons.
+- **Green/red are money only.** `--success` = you get, `--destructive` = you owe. Never as
+  a decorative tint (a chat unread dot is orange, not red).
+- **Avatars are monograms** (`.monogram` / `<Monogram>`): a quiet tile with ink lettering.
+  `avatarGradient`/`memberColor` survive **only in the split games**, where telling players
+  apart on a board is the point (`GameAvatar`, wheel wedges, duel marks). Don't bring them
+  back into everyday screens.
+- **Category tiles are one neutral style** (`CATEGORY_TILE_CLASSES`): the icon already says
+  what the category is.
+- **The backdrop is neutral** (`AmbientBackdrop`): one soft fall of ink-colored light from
+  the top plus grain. No per-group tint, no dot-grid.
+- **Own chat bubbles are ink** (`bg-foreground text-background`), not orange.
+
+If a new screen seems to need another color, it needs hierarchy instead.
+
+## The hero figure
+
+`.display-figure` is the one big number on a screen — the groups overview total ("Du
+bekommst 529,45 €", the first thing seen when the app opens) and the group page's receipt.
+Fraunces at display size, tight tracking, tabular lining figures, in **ink**, with a small
+green/red dot next to its label carrying the direction. On the overview it rises into its
+line with `.animate-figure-in` (clipped by its parent, so it prints up from its baseline).
 
 ## Typography — three fonts, deliberately
 
 `app/layout.tsx` loads `Geist` (sans, body), `Geist_Mono` (mono), and **`Fraunces`** (serif,
-`axes: ["opsz", "SOFT", "WONK"]`) as CSS variables. Fraunces is used specifically for
+`axes: ["opsz", "SOFT", "WONK"]`) as CSS variables. `.font-heading` pins `SOFT 0, WONK 0`:
+the wonky leaning glyphs read as a costume across a whole app, so only optical size stays
+live. Headings use `font-medium` at most — Fraunces semibold is heavy. Fraunces is used specifically for
 headings, dialog titles, and **money amounts** — a deliberate departure in character from the
 neutral body font, per the inline comment: "the numbers that matter most (what you owe, what
 you're owed) carry weight." If you're building a new screen that displays a balance
@@ -35,7 +72,7 @@ Two screens print on till paper: the split games' verdict slip and the group pag
 receipt ([[Group Page]]). `.receipt-edges` masks the torn zig-zag edges (it clips
 box-shadow, so elevation goes on a wrapper as `drop-shadow`). `.paper-tokens` restates the
 light theme's ink, paper, status and control tokens on the slip's subtree, so a receipt stays
-cream in the dark theme — an object, not a surface — and anything printed or pressed on it
+paper-colored in the dark theme (dimmed a step under `.dark` so it doesn't glare) — an object, not a surface — and anything printed or pressed on it
 (signed amounts, settle-up buttons) keeps light-theme contrast. `InkStamp`
 (`split-game/celebration.tsx`) is the rubber stamp; `animateIn={false}` prints it at rest,
 `ink` overrides the person-colored ink when the color itself carries meaning.

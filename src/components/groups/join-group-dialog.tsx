@@ -92,7 +92,7 @@ export function JoinGroupDialog() {
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" disabled={!online}>
+        <Button variant="outline" size="lg" disabled={!online}>
           {t("groups.join")}
         </Button>
       </DialogTrigger>

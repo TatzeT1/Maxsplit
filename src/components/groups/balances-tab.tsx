@@ -12,7 +12,7 @@ import {
 import { type CSSProperties, useMemo, useState } from "react";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { SectionHeading } from "@/components/groups/section-heading";
-import { GameAvatar } from "@/components/groups/split-game/game-avatar";
+import { Monogram } from "@/components/ui/monogram";
 import { useT } from "@/components/locale-provider";
 import {
   AlertDialog,
@@ -81,7 +81,7 @@ function EveryoneChart({
             style={{ "--stagger": Math.min(index, 8) } as CSSProperties}
           >
             <div className="flex items-center gap-2 text-sm">
-              <GameAvatar name={row.name} className="size-6 text-[11px]" />
+              <Monogram name={row.name} className="size-6 text-[11px]" />
               <span
                 className={cn("min-w-0 flex-1 truncate", row.uid === currentUid && "font-semibold")}
               >
@@ -270,7 +270,7 @@ export function BalancesTab({
                   key={`${transfer.fromUid}-${transfer.toUid}`}
                   className={cn(
                     "flex flex-col gap-2 px-4 py-3 text-sm",
-                    involvesYou && "bg-primary/[0.06] first:rounded-t-xl last:rounded-b-xl",
+                    involvesYou && "bg-foreground/[0.035] first:rounded-t-xl last:rounded-b-xl",
                   )}
                 >
                   <span className="sr-only">
@@ -281,10 +281,10 @@ export function BalancesTab({
                     })}
                   </span>
                   <span aria-hidden="true" className="flex items-center gap-2">
-                    <GameAvatar name={fromName} className="size-6 text-[11px]" />
+                    <Monogram name={fromName} className="size-6 text-[11px]" />
                     <span className="min-w-0 truncate">{fromName}</span>
                     <ArrowRight className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
-                    <GameAvatar name={toName} className="size-6 text-[11px]" />
+                    <Monogram name={toName} className="size-6 text-[11px]" />
                     <span className="min-w-0 flex-1 truncate">{toName}</span>
                     <span className="tabular-money shrink-0 font-semibold">
                       {formatMoney(transfer.amountMinor, currency)}
@@ -346,7 +346,7 @@ export function BalancesTab({
                   <tr key={uid}>
                     <th scope="row" className="px-4 py-2.5 text-left font-normal">
                       <span className="flex min-w-0 items-center gap-2">
-                        <GameAvatar name={member.displayName} className="size-5 text-[10px]" />
+                        <Monogram name={member.displayName} className="size-5 text-[10px]" />
                         <span className="truncate">{member.displayName}</span>
                       </span>
                     </th>

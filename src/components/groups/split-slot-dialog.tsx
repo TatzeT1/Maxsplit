@@ -1173,13 +1173,13 @@ export function SplitSlotDialog({
       <span className="flex flex-col items-center gap-1.5">
         <FacesRow faces={slip.faces} />
         {slip.wild && <WildBadge />}
-        <span className="font-heading text-lg leading-tight font-semibold">
+        <span className="font-heading text-lg leading-tight font-medium">
           {t(OUTCOME_TITLE[slip.kind])}
         </span>
         {slip.amountMinor > 0 && (
           <span
             className={cn(
-              "font-heading leading-none font-semibold whitespace-nowrap",
+              "font-heading leading-none font-medium whitespace-nowrap",
               stakeSizeClass(money(slip.amountMinor)),
             )}
           >
@@ -1196,7 +1196,7 @@ export function SplitSlotDialog({
   }
 
   const bigGold =
-    "font-heading text-4xl leading-none font-bold text-[oklch(0.9_0.14_88)] drop-shadow-[0_0_12px_oklch(0.85_0.17_85/0.8)]";
+    "font-heading text-4xl leading-none font-semibold text-[oklch(0.9_0.14_88)] drop-shadow-[0_0_12px_oklch(0.85_0.17_85/0.8)]";
 
   /** A row per person on a banner: avatar, name, and an amount rolling up. */
   function chargeRows(charges: { uid: string; amountMinor: number }[], delay = 0.7) {
@@ -1535,7 +1535,7 @@ export function SplitSlotDialog({
                           {t("expenses.slotAtMachine")}
                         </span>
                         <span className="flex min-w-0 items-center gap-1">
-                          <span className="font-heading truncate text-lg leading-tight font-semibold">
+                          <span className="font-heading truncate text-lg leading-tight font-medium">
                             {name(spinner)}
                           </span>
                           <PlayerBadges game={game} uid={spinner} />
@@ -1594,7 +1594,7 @@ export function SplitSlotDialog({
                     <AnimatedMoney
                       amountMinor={remaining}
                       currency={currency}
-                      className="font-heading text-xl leading-none font-semibold"
+                      className="font-heading text-xl leading-none font-medium"
                     />
                   </span>
                   <span className="flex flex-col items-end">
@@ -1604,7 +1604,7 @@ export function SplitSlotDialog({
                     <AnimatedMoney
                       amountMinor={allocated}
                       currency={currency}
-                      className="font-heading text-xl leading-none font-semibold"
+                      className="font-heading text-xl leading-none font-medium"
                     />
                   </span>
                 </div>
@@ -1833,7 +1833,7 @@ export function SplitSlotDialog({
                     <span aria-hidden="true" className="text-5xl">
                       {choosing.type === "duel" ? "⚔️" : "🍀"}
                     </span>
-                    <span className="font-heading text-center text-2xl font-semibold">
+                    <span className="font-heading text-center text-2xl font-medium">
                       {t(
                         choosing.type === "duel"
                           ? "expenses.slotDuelPick"

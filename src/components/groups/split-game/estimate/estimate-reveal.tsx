@@ -338,7 +338,7 @@ function RevealBody({
           <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
             {t("expenses.estimateTruthLabel")}
           </span>
-          <span className="font-heading tabular-money text-3xl leading-tight font-semibold">
+          <span className="font-heading tabular-money text-3xl leading-tight font-medium">
             {formatEstimateWithUnit(reveal.truthMilli, question, locale)}
           </span>
           <span className="text-muted-foreground text-xs">

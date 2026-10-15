@@ -16,7 +16,7 @@
 // worker (and re-saves offline.html) when this file's bytes change, and
 // activate then drops every cache of an older version.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const PAGES_CACHE = `split-pages-${VERSION}`;
 const ASSETS_CACHE = `split-assets-${VERSION}`;
 const OFFLINE_PAGE = "/offline.html";

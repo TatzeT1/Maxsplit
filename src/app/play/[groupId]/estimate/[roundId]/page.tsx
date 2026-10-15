@@ -1,4 +1,4 @@
-import { Gamepad2, Wallet } from "lucide-react";
+import { Gamepad2 } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -8,6 +8,7 @@ import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
 import { estimateRoundPath } from "@/lib/games/round-paths";
+import { BrandMark } from "@/components/brand-mark";
 
 /**
  * The link an estimate round's invite shares (WhatsApp, "Link kopieren"). Signed
@@ -41,10 +42,8 @@ export default async function PlayEstimateInvitePage({
         className="relative z-10 flex items-center justify-between px-4 py-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
       >
-        <Link href="/" className="font-heading flex items-center gap-2 text-lg font-semibold">
-          <span className="shadow-primary/30 shadow-e1 flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 text-white">
-            <Wallet className="size-4" />
-          </span>
+        <Link href="/" className="font-heading flex items-center gap-2 text-lg font-medium">
+          <BrandMark />
           {t("app.name")}
         </Link>
         <div className="flex items-center gap-1">
@@ -60,7 +59,7 @@ export default async function PlayEstimateInvitePage({
           <span className="bg-primary/10 text-primary flex size-14 items-center justify-center rounded-2xl">
             <Gamepad2 aria-hidden="true" className="size-7" />
           </span>
-          <h1 className="font-heading text-2xl font-semibold">{t("play.title")}</h1>
+          <h1 className="font-heading text-2xl font-medium">{t("play.title")}</h1>
           <p className="text-muted-foreground max-w-xs text-sm">{t("play.body")}</p>
         </div>
         <SignInButton redirectTo={target} />

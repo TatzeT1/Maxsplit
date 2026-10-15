@@ -78,7 +78,9 @@ export function CreateGroupDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button disabled={!online}>{t("groups.create")}</Button>
+        <Button size="lg" disabled={!online}>
+          {t("groups.create")}
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <form onSubmit={handleSubmit}>

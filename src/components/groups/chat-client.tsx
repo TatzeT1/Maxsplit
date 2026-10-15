@@ -27,7 +27,7 @@ import { reportSnapshotError } from "@/lib/firebase/snapshot-error";
 import { useCurrentUser } from "@/lib/firebase/use-current-user";
 import { formatDate } from "@/lib/format/date";
 import { useVisibleHeight } from "@/lib/use-visible-height";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { callAction } from "@/lib/call-action";
 import { useScreenSync } from "@/lib/offline/sync-marks";
 import { useLiveSources } from "@/lib/offline/use-live-sources";
@@ -419,7 +419,7 @@ export function ChatClient({ groupId, initialMuted }: { groupId: string; initial
 
   return (
     <div {...frameProps}>
-      <AmbientBackdrop tint={avatarGradient(group.name)} />
+      <AmbientBackdrop />
 
       <div className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col overflow-hidden">
         {/* shrink-0 here and on the composer: the message list is flex-1, whose
@@ -434,13 +434,11 @@ export function ChatClient({ groupId, initialMuted }: { groupId: string; initial
           >
             <ArrowLeft className="h-4.5 w-4.5" />
           </Link>
-          <div
-            className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card shadow-e1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold text-white ring-2`}
-          >
+          <div className="monogram flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-semibold">
             {group.icon || group.name.charAt(0).toUpperCase() || "?"}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="font-heading truncate text-sm font-semibold">{group.name}</span>
+            <span className="font-heading truncate text-sm font-medium">{group.name}</span>
             <span className="text-muted-foreground text-xs">
               {memberCountLabel}
               {muted && ` · ${t("chat.mutedBadge")}`}

@@ -33,7 +33,7 @@ import { computeBalances, type BalanceExpense } from "@/lib/money/balances";
 import { useScreenSync } from "@/lib/offline/sync-marks";
 import { useLiveSources } from "@/lib/offline/use-live-sources";
 import { useOnline } from "@/lib/use-online";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
 
 const TABS = ["expenses", "balances", "games", "group"] as const;
@@ -275,7 +275,7 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
     // overflow clipping here: it would make this box the scroll container and
     // quietly turn every `sticky` inside it off.
     <div className="group/page relative flex flex-1 flex-col">
-      <AmbientBackdrop tint={avatarGradient(group.name)} />
+      <AmbientBackdrop />
 
       <div className="stagger-sections relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col gap-4 px-4 pt-4">
         <header className="flex items-center gap-3">
@@ -288,14 +288,13 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
           </Link>
           <div
             className={cn(
-              "ring-card shadow-e1 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br text-xl font-semibold text-white ring-2",
-              avatarGradient(group.name),
+              "monogram flex h-12 w-12 shrink-0 items-center justify-center rounded-[0.9rem] text-xl font-semibold",
             )}
           >
             {group.icon || group.name.charAt(0).toUpperCase() || "?"}
           </div>
           <div className="flex min-w-0 flex-col gap-1">
-            <h1 className="font-heading truncate text-2xl leading-tight font-semibold">
+            <h1 className="font-heading truncate text-2xl leading-tight font-medium">
               {group.name}
             </h1>
             <button

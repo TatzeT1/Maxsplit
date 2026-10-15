@@ -7,7 +7,7 @@ import { StartGameButton } from "@/components/groups/start-game-button";
 import { GameAvatar } from "@/components/groups/split-game/game-avatar";
 import { useT } from "@/components/locale-provider";
 import { Skeleton } from "@/components/ui/skeleton";
-import { categoryColorClasses, categoryIconElement } from "@/lib/categories";
+import { CATEGORY_TILE_CLASSES, categoryIconElement } from "@/lib/categories";
 import { gameResultSentence } from "@/lib/chat/game-result";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
@@ -98,7 +98,7 @@ function Podium({
             <span className="w-full truncate text-sm font-medium">{entry.name}</span>
             <span
               className={cn(
-                "font-heading tabular-money leading-none font-semibold",
+                "font-heading tabular-money leading-none font-medium",
                 rank === 0 ? "text-xl" : "text-base",
               )}
             >
@@ -112,7 +112,7 @@ function Podium({
             <span
               aria-hidden="true"
               className={cn(
-                "bg-muted ring-foreground/10 font-heading text-muted-foreground mt-1 flex w-full items-start justify-center rounded-t-lg pt-1.5 text-lg font-semibold ring-1",
+                "bg-muted ring-foreground/10 font-heading text-muted-foreground mt-1 flex w-full items-start justify-center rounded-t-lg pt-1.5 text-lg font-medium ring-1",
                 PODIUM_STEP[rank],
               )}
             >
@@ -217,7 +217,7 @@ function DuelSection({
                     {nameOf(record.uid)}
                     {record.uid === currentUid && t("groups.selfSuffix")}
                   </span>
-                  <span className="font-heading shrink-0 font-semibold tabular-nums">
+                  <span className="font-heading shrink-0 font-medium tabular-nums">
                     {record.wins} : {record.losses}
                   </span>
                 </div>
@@ -264,7 +264,7 @@ function DuelSection({
                   >
                     {nameOf(pair.uids[0])}
                   </span>
-                  <span className="font-heading font-semibold tabular-nums">
+                  <span className="font-heading font-medium tabular-nums">
                     {pair.wins[0]} : {pair.wins[1]}
                   </span>
                   <span className={cn("truncate", pair.wins[1] > pair.wins[0] && "font-semibold")}>
@@ -349,7 +349,7 @@ function RecentRound({ entry, group }: { entry: GameRoundEntry; group: Group }) 
       <span
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-          categoryColorClasses(expense.category),
+          CATEGORY_TILE_CLASSES,
         )}
       >
         {expense.emoji ? (

@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, ShieldCheck, User, Users, Wallet } from "lucide-react";
+import { LogOut, ShieldCheck, User, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
@@ -10,7 +10,8 @@ import { useSignOut } from "@/components/sign-out-button";
 import { useT } from "@/components/locale-provider";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Sidebar, SidebarBody, SidebarLink, useSidebar } from "@/components/ui/sidebar";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand-mark";
 
 export function AppSidebar({
   displayName,
@@ -72,15 +73,13 @@ function SidebarLogo() {
       aria-label={t("app.name")}
       className="relative z-20 flex items-center gap-2 px-2 py-1"
     >
-      <span className="shadow-primary/30 shadow-e1 flex size-7 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-orange-400 to-rose-500 text-white">
-        <Wallet className="size-4" />
-      </span>
+      <BrandMark />
       <motion.span
         animate={{
           display: animate ? (open ? "inline-block" : "none") : "inline-block",
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="font-heading text-sidebar-foreground !m-0 inline-block !p-0 text-lg font-semibold whitespace-pre"
+        className="font-heading text-sidebar-foreground !m-0 inline-block !p-0 text-lg font-medium whitespace-pre"
       >
         {t("app.name")}
       </motion.span>
@@ -143,8 +142,7 @@ function SidebarFooter({
         <div className="flex items-center gap-2 px-1">
           <div
             className={cn(
-              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-xs font-semibold text-white",
-              avatarGradient(displayName),
+              "monogram flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold",
             )}
           >
             {displayName.charAt(0).toUpperCase() || "?"}

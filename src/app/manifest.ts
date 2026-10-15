@@ -9,8 +9,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     description: t("app.tagline"),
     start_url: "/",
     display: "standalone",
-    background_color: "#0a0a0a",
-    theme_color: "#0a0a0a",
+    background_color: "#121110",
+    theme_color: "#121110",
     icons: [
       {
         src: "/icon",

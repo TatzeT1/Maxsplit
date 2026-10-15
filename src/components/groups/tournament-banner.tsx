@@ -111,7 +111,7 @@ export function TournamentBanner({ groupId, currentUid }: { groupId: string; cur
         hasReadyMatch && "bg-primary/5 ring-primary/50",
       )}
     >
-      <div className="from-primary/20 to-primary/5 text-primary relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br">
+      <div className="bg-primary/12 text-primary relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
         <Trophy className="h-4.5 w-4.5" />
         {hasReadyMatch && (
           <span className="absolute top-0 right-0 flex h-2.5 w-2.5">

@@ -174,7 +174,7 @@ export function OnboardingFlow({
             <span className="flex size-16 items-center justify-center rounded-full bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
               {push === "on" ? <BellRing className="size-8" /> : <Bell className="size-8" />}
             </span>
-            <h1 className="font-heading text-xl font-semibold">
+            <h1 className="font-heading text-xl font-medium">
               {t("onboarding.notificationsTitle")}
             </h1>
             <p className="text-muted-foreground text-sm">{t("onboarding.notificationsSubtitle")}</p>
@@ -228,7 +228,7 @@ export function OnboardingFlow({
                 ← {t("onboarding.backButton")}
               </button>
             )}
-            <h1 className="font-heading text-xl font-semibold">
+            <h1 className="font-heading text-xl font-medium">
               {t("onboarding.welcomeTitle", { name: displayName })}
             </h1>
             <p className="text-muted-foreground text-sm">{t("onboarding.welcomeSubtitle")}</p>
@@ -275,7 +275,7 @@ export function OnboardingFlow({
             >
               ← {t("onboarding.backButton")}
             </button>
-            <h1 className="font-heading text-xl font-semibold">{t("onboarding.paymentTitle")}</h1>
+            <h1 className="font-heading text-xl font-medium">{t("onboarding.paymentTitle")}</h1>
             <p className="text-muted-foreground text-sm">{t("onboarding.paymentSubtitle")}</p>
           </div>
           <PaymentMethodsGuide />

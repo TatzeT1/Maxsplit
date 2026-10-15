@@ -60,8 +60,8 @@ truncated.
 ## The balance receipt
 
 `BalanceHero` reuses the split games' receipt vocabulary (see [[Split Games]]): `.receipt-edges`
-torn edges, cream paper via `.paper-tokens` in **both** themes (a receipt is an object, not a
-surface), a mono eyebrow, the amount in Fraunces, and dotted leaders from name to amount like
+torn edges, paper via `.paper-tokens` in **both** themes (a receipt is an object, not a
+surface), a mono eyebrow with a green/red direction dot, the amount as `.display-figure` in ink, and dotted leaders from name to amount like
 item to price. Settled shows `InkStamp` "Quitt" — in success green (`ink` override), not the
 group's ink, since a group's own color can be rose and red means debt here. It slams down
 only if the group becomes square _while you watch_ (`animateIn`); opening an already-square
@@ -69,7 +69,7 @@ group shows it at rest.
 
 `.paper-tokens` was extended with the light theme's status and control tokens (`--success`,
 `--destructive`, `--secondary`, `--border`, `--input`, …): the dark theme's lifted greens and
-reds drop to ~2:1 on cream, and its control surfaces would put dark buttons on light paper.
+reds drop to ~2:1 on paper, and its control surfaces would put dark buttons on light paper.
 
 Each line carries its own actions — pay/GiroCode/record on "you owe", remind/show your
 GiroCode on "owes you"; see [[Balances and Settlements]].

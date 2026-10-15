@@ -5,7 +5,7 @@ import { type CSSProperties, useState, useSyncExternalStore } from "react";
 import { GiroCodeDialog } from "@/components/groups/girocode-dialog";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { InkStamp } from "@/components/groups/split-game/celebration";
-import { GameAvatar } from "@/components/groups/split-game/game-avatar";
+import { Monogram } from "@/components/ui/monogram";
 import { useT } from "@/components/locale-provider";
 import { AnimatedMoney } from "@/components/ui/animated-money";
 import { Button } from "@/components/ui/button";
@@ -283,15 +283,24 @@ export function BalanceHero({
       {/* The mask on the slip clips box-shadow, so elevation lives out here as
           a drop-shadow, which follows the torn edges. Fixed ink color rather
           than a theme token: in the dark theme `--foreground` is cream. */}
-      <div className="drop-shadow-[0_10px_16px_oklch(0.2_0.05_250/0.3)]">
+      <div className="drop-shadow-[0_8px_14px_oklch(0.15_0.006_70/0.22)]">
         <div className="receipt-edges bg-card flex flex-col px-5 pt-6 pb-7">
-          <p className="text-muted-foreground font-mono text-[11px] tracking-[0.16em] uppercase">
+          <p className="text-muted-foreground flex items-center gap-2 font-mono text-[11px] tracking-[0.16em] uppercase">
+            {!isEmpty && !isSettled && (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "size-1.5 rounded-full",
+                  totalNet > 0 ? "bg-success" : "bg-destructive",
+                )}
+              />
+            )}
             {eyebrow}
           </p>
 
           {isEmpty ? (
             <div className="flex flex-col gap-1 pt-1">
-              <p className="font-heading text-2xl leading-tight font-semibold">
+              <p className="font-heading text-2xl leading-tight font-medium">
                 {t("balances.heroEmptyTitle")}
               </p>
               <p className="text-muted-foreground text-sm text-pretty">
@@ -300,16 +309,7 @@ export function BalanceHero({
             </div>
           ) : (
             <>
-              <p
-                className={cn(
-                  "font-heading pt-1 text-[2.75rem] leading-none font-semibold tracking-tight",
-                  isSettled
-                    ? "text-foreground"
-                    : totalNet > 0
-                      ? "text-success"
-                      : "text-destructive",
-                )}
-              >
+              <p className="display-figure pt-1.5 text-[3.25rem]">
                 <AnimatedMoney amountMinor={Math.abs(totalNet)} currency={currency} />
               </p>
 
@@ -331,7 +331,7 @@ export function BalanceHero({
                         style={{ "--stagger": index + 3 } as CSSProperties}
                       >
                         <div className="flex items-baseline gap-2 text-[0.95rem]">
-                          <GameAvatar name={line.name} className="size-5 self-center text-[10px]" />
+                          <Monogram name={line.name} className="size-5 self-center text-[10px]" />
                           <span className="min-w-0 truncate">{line.label}</span>
                           {/* Dotted leader, item to price. */}
                           <span

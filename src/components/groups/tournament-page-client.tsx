@@ -109,7 +109,7 @@ export function TournamentPageClient({
     <GamePageStage
       closeHref={closeHref}
       title={
-        <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-semibold">
+        <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-medium">
           <span aria-hidden="true">{config.emoji}</span>
           <span className="truncate">{t(config.titleKey)}</span>
           <span className="bg-primary/10 text-primary flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold tracking-[0.08em] uppercase">

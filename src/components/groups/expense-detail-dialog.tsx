@@ -3,19 +3,18 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GameRecordSummary } from "@/components/groups/split-game/game-record";
 import { useT } from "@/components/locale-provider";
-import { categoryColorClasses, categoryIconElement, categoryLabel } from "@/lib/categories";
+import { CATEGORY_TILE_CLASSES, categoryIconElement, categoryLabel } from "@/lib/categories";
 import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { Expense, GroupMember, SplitMode } from "@/lib/types";
 
 function MemberChip({ name }: { name: string }) {
   return (
     <span
       className={cn(
-        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-[11px] font-semibold text-white",
-        avatarGradient(name),
+        "monogram flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
       )}
     >
       {name.charAt(0).toUpperCase() || "?"}
@@ -57,7 +56,7 @@ export function ExpenseDetailDialog({
             <div
               className={cn(
                 "flex h-12 w-12 shrink-0 items-center justify-center rounded-full",
-                categoryColorClasses(expense.category),
+                CATEGORY_TILE_CLASSES,
               )}
             >
               {expense.emoji ? (
@@ -67,7 +66,7 @@ export function ExpenseDetailDialog({
               )}
             </div>
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-heading tabular-money text-2xl font-semibold">
+              <span className="font-heading tabular-money text-2xl font-medium">
                 {formatMoney(expense.amountMinor, expense.currency)}
               </span>
               <span className="text-muted-foreground text-sm">

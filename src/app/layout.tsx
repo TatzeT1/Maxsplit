@@ -45,8 +45,8 @@ export const viewport: Viewport = {
   // dialogs can end up with their input fields hidden behind the keyboard.
   interactiveWidget: "resizes-content",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "oklch(0.98 0.012 75)" },
-    { media: "(prefers-color-scheme: dark)", color: "oklch(0.19 0.028 235)" },
+    { media: "(prefers-color-scheme: light)", color: "oklch(0.985 0.002 80)" },
+    { media: "(prefers-color-scheme: dark)", color: "oklch(0.16 0.003 70)" },
   ],
 };
 

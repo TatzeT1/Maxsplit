@@ -31,11 +31,10 @@ import { formatTime } from "@/lib/format/date";
 import { DUEL_GAME_META } from "@/lib/games/duel-game-ids";
 import { estimateRoundPath } from "@/lib/games/round-paths";
 import { SPLIT_GAME_META } from "@/lib/games/split-game-ids";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { ChatMessage, ChatReply, GroupMember } from "@/lib/types";
 
-const OWN_BUBBLE =
-  "from-primary to-primary/85 text-primary-foreground shadow-primary/20 shadow-e1 rounded-br-md bg-linear-to-br";
+const OWN_BUBBLE = "bg-foreground text-background shadow-e1 rounded-br-md";
 const OTHER_BUBBLE = "bg-card ring-foreground/10 shadow-e1 rounded-bl-md ring-1";
 
 /** A message's text with links tappable and the @mentions it really made highlighted. */
@@ -323,8 +322,7 @@ export function MessageBubble({
         <div className="flex items-center gap-1.5 pl-1">
           <div
             className={cn(
-              "flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-[9px] font-semibold text-white",
-              avatarGradient(senderName),
+              "monogram flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[9px] font-semibold",
             )}
           >
             {senderName.charAt(0).toUpperCase() || "?"}

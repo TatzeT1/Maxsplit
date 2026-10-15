@@ -107,7 +107,7 @@ export const MobileSidebar = ({ className, children, ...props }: React.Component
   return (
     <div
       className={cn(
-        "bg-sidebar border-sidebar-border flex h-14 w-full flex-row items-center justify-between border-b px-4 md:hidden",
+        "bg-background/85 border-border/60 flex h-14 w-full flex-row items-center justify-between border-b px-2 backdrop-blur-md md:hidden",
       )}
       style={{ paddingTop: "env(safe-area-inset-top)" }}
       {...props}

@@ -158,9 +158,10 @@ export const de = {
     heroDescription:
       "Behalte gemeinsame Kosten mit WG, Reisen und Freunden im Blick — fair aufteilen, schnell ausgleichen.",
     heroSocialProof: "Keine Werbung. Keine Gebühren. Einfach faire Aufteilung.",
-    heroImageAltGroceries: "Zwei Mitbewohner räumen gemeinsam Einkäufe in ihrer Küche ein",
-    heroImageAltBill: "Eine Gruppe Freunde lacht über die Rechnung in einem Café",
-    heroImageAltTravel: "Drei Freunde schauen gemeinsam auf ihr Handy während eines Roadtrips",
+    previewGroup: "WG Lindenstraße",
+    previewMembers: "4 Mitglieder · EUR",
+    previewNameA: "Lena",
+    previewNameB: "Jonas",
     featuresEyebrow: "Alles in einer App",
     featuresTitle: "Für jede geteilte Rechnung gemacht",
     featuresSubtitle: "Egal ob WG, Reise oder Freundeskreis — Split hat, was ihr braucht.",
@@ -217,6 +218,8 @@ export const de = {
     balanceOwedToYouLabel: "Du bekommst",
     balanceYouOweLabel: "Du schuldest",
     totalsTitle: "Insgesamt",
+    acrossGroups: "aus {{count}} Gruppen",
+    acrossOneGroup: "aus 1 Gruppe",
     totalsUnknown:
       "Gruppen ohne Saldo-Stand zählen noch nicht mit – sie füllen sich bei der nächsten Buchung.",
     allArchived: "Alle deine Gruppen sind archiviert.",

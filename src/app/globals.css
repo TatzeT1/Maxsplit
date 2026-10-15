@@ -10,6 +10,8 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-heading: var(--font-fraunces), Georgia, serif;
+  --color-monogram: var(--monogram);
+  --color-monogram-foreground: var(--monogram-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -117,6 +119,23 @@
     to {
       opacity: 1;
       transform: translate3d(0, 0, 0);
+    }
+  }
+  /*
+   * The hero figure rising into its line, as if printed from below. Its
+   * parent clips (`overflow-hidden`), so the number is revealed by its own
+   * baseline rather than fading in from nowhere.
+   */
+  @keyframes figure-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 70%, 0);
+      filter: blur(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+      filter: blur(0);
     }
   }
   /* For surfaces that genuinely emerge from a point — dialogs, popovers. */
@@ -263,120 +282,126 @@
 
 :root {
   color-scheme: light;
-  /* Warm "receipt paper" light theme — cream, not stark white. */
-  --background: oklch(0.98 0.012 75);
-  --foreground: oklch(0.24 0.035 250);
-  --card: oklch(0.995 0.008 75);
-  --card-foreground: oklch(0.24 0.035 250);
-  --popover: oklch(0.995 0.008 75);
-  --popover-foreground: oklch(0.24 0.035 250);
-  --primary: oklch(0.62 0.19 42);
-  --primary-foreground: oklch(0.99 0.012 60);
-  --secondary: oklch(0.92 0.03 200);
-  --secondary-foreground: oklch(0.28 0.05 210);
-  --muted: oklch(0.95 0.014 75);
-  --muted-foreground: oklch(0.51 0.03 245);
-  --accent: oklch(0.9 0.06 190);
-  --accent-foreground: oklch(0.26 0.06 200);
-  --destructive: oklch(0.58 0.21 22);
-  --success: oklch(0.58 0.15 150);
-  --success-foreground: oklch(0.98 0.02 150);
-  --border: oklch(0.9 0.018 75);
-  --input: oklch(0.9 0.018 75);
-  --ring: oklch(0.62 0.19 42);
-  --chart-1: oklch(0.62 0.19 42);
-  --chart-2: oklch(0.6 0.14 195);
-  --chart-3: oklch(0.75 0.16 90);
-  --chart-4: oklch(0.6 0.18 322);
-  --chart-5: oklch(0.55 0.16 264);
-  --radius: 0.875rem;
-  --sidebar: oklch(0.96 0.014 75);
-  --sidebar-foreground: oklch(0.24 0.035 250);
-  --sidebar-primary: oklch(0.62 0.19 42);
-  --sidebar-primary-foreground: oklch(0.99 0.012 60);
-  --sidebar-accent: oklch(0.9 0.06 190);
-  --sidebar-accent-foreground: oklch(0.26 0.06 200);
-  --sidebar-border: oklch(0.9 0.018 75);
-  --sidebar-ring: oklch(0.62 0.19 42);
-
-  /* On paper, a lit top edge is a near-white line. */
-  --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.85);
-  --elevation-1:
-    0 1px 1.5px -0.5px oklch(0.24 0.05 250 / 0.06), 0 3px 6px -1.5px oklch(0.24 0.05 250 / 0.045),
-    0 8px 16px -6px oklch(0.24 0.05 250 / 0.035);
-  --elevation-2:
-    0 1px 2px -0.5px oklch(0.24 0.05 250 / 0.07), 0 6px 12px -3px oklch(0.24 0.05 250 / 0.06),
-    0 16px 32px -10px oklch(0.24 0.05 250 / 0.055);
-  --elevation-3:
-    0 2px 4px -1px oklch(0.24 0.05 250 / 0.08), 0 12px 24px -6px oklch(0.24 0.05 250 / 0.09),
-    0 32px 64px -20px oklch(0.24 0.05 250 / 0.1);
-  /* Grain sits over light surfaces at a whisper; any more and it reads dirty. */
-  --grain-opacity: 0.035;
   /*
-   * The scrim is measured against this theme's actual background, not copied
-   * from a dark-theme default. `black/10` over a near-white cream page barely
-   * darkens it: the dialog then floats with nothing separating it from the
-   * content behind, which is the single clearest tell of an unfinished modal.
-   * Ink at 34% genuinely recedes the page while keeping it legible as context.
+   * Split's palette: near-neutral greys with a faint warm cast, and exactly
+   * one hue — a muted orange — for the action that matters on a screen.
+   * Green and red are reserved for money (you get / you owe) and never used
+   * as decoration. Everything else is ink at different strengths: if a new
+   * screen seems to need another color, it needs hierarchy instead.
    */
-  --scrim: oklch(0.24 0.035 250 / 0.26);
+  --background: oklch(0.985 0.002 80);
+  --foreground: oklch(0.21 0.006 70);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.006 70);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.006 70);
+  --primary: oklch(0.62 0.155 45);
+  --primary-foreground: oklch(0.99 0.005 70);
+  --secondary: oklch(0.955 0.003 80);
+  --secondary-foreground: oklch(0.25 0.006 70);
+  --muted: oklch(0.963 0.003 80);
+  --muted-foreground: oklch(0.52 0.008 70);
+  --accent: oklch(0.95 0.004 80);
+  --accent-foreground: oklch(0.21 0.006 70);
+  --destructive: oklch(0.56 0.18 25);
+  --success: oklch(0.54 0.12 155);
+  --success-foreground: oklch(0.99 0.01 155);
+  --border: oklch(0.915 0.004 80);
+  --input: oklch(0.9 0.004 80);
+  --ring: oklch(0.62 0.155 45);
+  --chart-1: oklch(0.62 0.155 45);
+  --chart-2: oklch(0.45 0.008 70);
+  --chart-3: oklch(0.6 0.008 70);
+  --chart-4: oklch(0.75 0.006 70);
+  --chart-5: oklch(0.85 0.004 70);
+  --radius: 0.875rem;
+  --sidebar: oklch(0.975 0.002 80);
+  --sidebar-foreground: oklch(0.21 0.006 70);
+  --sidebar-primary: oklch(0.62 0.155 45);
+  --sidebar-primary-foreground: oklch(0.99 0.005 70);
+  --sidebar-accent: oklch(0.945 0.004 80);
+  --sidebar-accent-foreground: oklch(0.21 0.006 70);
+  --sidebar-border: oklch(0.915 0.004 80);
+  --sidebar-ring: oklch(0.62 0.155 45);
+
+  /* Monogram avatars: a quiet tile with ink lettering, not a gradient. */
+  --monogram: oklch(0.935 0.004 80);
+  --monogram-foreground: oklch(0.32 0.006 70);
+
+  /* On a light surface, a lit top edge is a near-white line. */
+  --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.9);
+  --elevation-1:
+    0 0 0 1px oklch(0.21 0.006 70 / 0.05), 0 1px 2px -0.5px oklch(0.21 0.006 70 / 0.06),
+    0 4px 10px -4px oklch(0.21 0.006 70 / 0.05);
+  --elevation-2:
+    0 0 0 1px oklch(0.21 0.006 70 / 0.05), 0 2px 4px -1px oklch(0.21 0.006 70 / 0.06),
+    0 12px 28px -10px oklch(0.21 0.006 70 / 0.1);
+  --elevation-3:
+    0 0 0 1px oklch(0.21 0.006 70 / 0.05), 0 4px 8px -2px oklch(0.21 0.006 70 / 0.07),
+    0 28px 56px -18px oklch(0.21 0.006 70 / 0.18);
+  /* Grain sits over light surfaces at a whisper; any more and it reads dirty. */
+  --grain-opacity: 0.025;
+  /* Ink at 30%: the page recedes behind a dialog but stays legible as context. */
+  --scrim: oklch(0.21 0.006 70 / 0.3);
 }
 
 .dark {
   color-scheme: dark;
-  /* Deep teal-ink dark theme — not neutral black. */
-  --background: oklch(0.19 0.028 235);
-  --foreground: oklch(0.96 0.014 75);
-  --card: oklch(0.24 0.032 235);
-  --card-foreground: oklch(0.96 0.014 75);
-  --popover: oklch(0.24 0.032 235);
-  --popover-foreground: oklch(0.96 0.014 75);
-  --primary: oklch(0.72 0.18 45);
-  --primary-foreground: oklch(0.18 0.03 45);
-  --secondary: oklch(0.31 0.038 210);
-  --secondary-foreground: oklch(0.92 0.02 210);
-  --muted: oklch(0.27 0.03 235);
-  --muted-foreground: oklch(0.7 0.025 220);
-  --accent: oklch(0.33 0.06 195);
-  --accent-foreground: oklch(0.9 0.03 195);
-  --destructive: oklch(0.68 0.19 20);
-  --success: oklch(0.7 0.15 150);
-  --success-foreground: oklch(0.16 0.03 150);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.18 45);
-  --chart-1: oklch(0.72 0.18 45);
-  --chart-2: oklch(0.68 0.13 195);
-  --chart-3: oklch(0.8 0.15 90);
-  --chart-4: oklch(0.68 0.17 322);
-  --chart-5: oklch(0.66 0.16 264);
-  --sidebar: oklch(0.22 0.03 235);
-  --sidebar-foreground: oklch(0.96 0.014 75);
-  --sidebar-primary: oklch(0.72 0.18 45);
-  --sidebar-primary-foreground: oklch(0.18 0.03 45);
-  --sidebar-accent: oklch(0.33 0.06 195);
-  --sidebar-accent-foreground: oklch(0.9 0.03 195);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.72 0.18 45);
+  /* Graphite, not black and not tinted: the money is what carries color. */
+  --background: oklch(0.16 0.003 70);
+  --foreground: oklch(0.96 0.003 80);
+  --card: oklch(0.2 0.004 70);
+  --card-foreground: oklch(0.96 0.003 80);
+  --popover: oklch(0.215 0.004 70);
+  --popover-foreground: oklch(0.96 0.003 80);
+  --primary: oklch(0.7 0.145 48);
+  --primary-foreground: oklch(0.17 0.02 48);
+  --secondary: oklch(0.25 0.004 70);
+  --secondary-foreground: oklch(0.94 0.003 80);
+  --muted: oklch(0.235 0.004 70);
+  --muted-foreground: oklch(0.68 0.006 75);
+  --accent: oklch(0.26 0.004 70);
+  --accent-foreground: oklch(0.96 0.003 80);
+  --destructive: oklch(0.68 0.16 22);
+  --success: oklch(0.74 0.13 155);
+  --success-foreground: oklch(0.17 0.03 155);
+  --border: oklch(1 0 0 / 9%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.7 0.145 48);
+  --chart-1: oklch(0.7 0.145 48);
+  --chart-2: oklch(0.8 0.006 75);
+  --chart-3: oklch(0.65 0.006 75);
+  --chart-4: oklch(0.5 0.005 75);
+  --chart-5: oklch(0.38 0.004 75);
+  --sidebar: oklch(0.18 0.003 70);
+  --sidebar-foreground: oklch(0.96 0.003 80);
+  --sidebar-primary: oklch(0.7 0.145 48);
+  --sidebar-primary-foreground: oklch(0.17 0.02 48);
+  --sidebar-accent: oklch(0.25 0.004 70);
+  --sidebar-accent-foreground: oklch(0.96 0.003 80);
+  --sidebar-border: oklch(1 0 0 / 9%);
+  --sidebar-ring: oklch(0.7 0.145 48);
+
+  --monogram: oklch(0.29 0.005 70);
+  --monogram-foreground: oklch(0.9 0.004 80);
 
   /*
    * In the dark theme a shadow can barely be seen, so elevation is carried
    * mostly by the top edge catching light. The shadows stay — they anchor the
    * object — but the highlight is what actually reads.
    */
-  --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.07);
+  --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.06);
   --elevation-1:
-    0 1px 1.5px -0.5px oklch(0 0 0 / 0.3), 0 3px 6px -1.5px oklch(0 0 0 / 0.26),
-    0 8px 16px -6px oklch(0 0 0 / 0.22);
+    0 0 0 1px oklch(1 0 0 / 0.06), 0 1px 2px -0.5px oklch(0 0 0 / 0.4),
+    0 4px 10px -4px oklch(0 0 0 / 0.3);
   --elevation-2:
-    0 1px 2px -0.5px oklch(0 0 0 / 0.36), 0 6px 12px -3px oklch(0 0 0 / 0.34),
-    0 16px 32px -10px oklch(0 0 0 / 0.3);
+    0 0 0 1px oklch(1 0 0 / 0.07), 0 2px 4px -1px oklch(0 0 0 / 0.4),
+    0 12px 28px -10px oklch(0 0 0 / 0.45);
   --elevation-3:
-    0 2px 4px -1px oklch(0 0 0 / 0.42), 0 12px 24px -6px oklch(0 0 0 / 0.44),
-    0 32px 64px -20px oklch(0 0 0 / 0.5);
-  --grain-opacity: 0.055;
-  /* Already-dark content needs less to recede, but still more than black/10. */
-  --scrim: oklch(0.12 0.02 235 / 0.52);
+    0 0 0 1px oklch(1 0 0 / 0.08), 0 4px 8px -2px oklch(0 0 0 / 0.45),
+    0 28px 56px -18px oklch(0 0 0 / 0.6);
+  --grain-opacity: 0.04;
+  --scrim: oklch(0.08 0.003 70 / 0.6);
 }
 
 @layer base {
@@ -429,7 +454,7 @@
    * follows the teeth.
    */
   .receipt-edges {
-    --tooth: 12px;
+    --tooth: 10px;
     --receipt-mask:
       conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / var(--tooth) 51%
         repeat-x,
@@ -447,33 +472,83 @@
    * `color-mix` ink) the light values without a single per-element override.
    */
   .paper-tokens {
-    --card: oklch(0.995 0.008 75);
-    --foreground: oklch(0.24 0.035 250);
-    --muted-foreground: oklch(0.51 0.03 245);
+    /* Thermal paper: a hair warmer than the page, so it reads as an object. */
+    --card: oklch(0.982 0.006 85);
+    --foreground: oklch(0.21 0.006 70);
+    --muted-foreground: oklch(0.5 0.008 70);
     /*
      * Everything else that can be printed or pressed on a slip: signed
      * amounts and the settle-up buttons on the group page's balance receipt.
-     * The dark theme's success/destructive are lifted to glow on teal ink and
-     * drop to ~2:1 on cream, and its control surfaces would put dark buttons
+     * The dark theme's success/destructive are lifted to read on graphite and
+     * drop to ~2:1 on paper, and its control surfaces would put dark buttons
      * on light paper. Same values as `:root`, restated because inside `.dark`
      * those are no longer reachable under their own names.
      */
-    --background: oklch(0.98 0.012 75);
-    --muted: oklch(0.95 0.014 75);
-    --border: oklch(0.9 0.018 75);
-    --input: oklch(0.9 0.018 75);
-    --secondary: oklch(0.92 0.03 200);
-    --secondary-foreground: oklch(0.28 0.05 210);
-    --primary: oklch(0.62 0.19 42);
-    --primary-foreground: oklch(0.99 0.012 60);
-    --ring: oklch(0.62 0.19 42);
-    --success: oklch(0.58 0.15 150);
-    --destructive: oklch(0.58 0.21 22);
-    --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.85);
+    --background: oklch(0.985 0.002 80);
+    --muted: oklch(0.955 0.005 85);
+    --border: oklch(0.89 0.006 85);
+    --input: oklch(0.88 0.006 85);
+    --secondary: oklch(0.945 0.005 85);
+    --secondary-foreground: oklch(0.25 0.006 70);
+    --accent: oklch(0.94 0.005 85);
+    --accent-foreground: oklch(0.21 0.006 70);
+    --primary: oklch(0.62 0.155 45);
+    --primary-foreground: oklch(0.99 0.005 70);
+    --ring: oklch(0.62 0.155 45);
+    --success: oklch(0.54 0.12 155);
+    --destructive: oklch(0.56 0.18 25);
+    --monogram: oklch(0.92 0.006 85);
+    --monogram-foreground: oklch(0.32 0.006 70);
+    --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.9);
     --elevation-1:
-      0 1px 1.5px -0.5px oklch(0.24 0.05 250 / 0.06), 0 3px 6px -1.5px oklch(0.24 0.05 250 / 0.045),
-      0 8px 16px -6px oklch(0.24 0.05 250 / 0.035);
+      0 0 0 1px oklch(0.21 0.006 70 / 0.06), 0 1px 2px -0.5px oklch(0.21 0.006 70 / 0.08);
     color: var(--foreground);
+  }
+  /* At night a bright slip glares; dim the paper, keep the ink. */
+  .dark .paper-tokens {
+    --card: oklch(0.94 0.006 85);
+    --muted: oklch(0.89 0.006 85);
+    --secondary: oklch(0.885 0.006 85);
+    --border: oklch(0.83 0.006 85);
+    --input: oklch(0.82 0.006 85);
+    --monogram: oklch(0.86 0.006 85);
+  }
+
+  /*
+   * Monogram avatar for people and groups in the everyday UI: a quiet tile
+   * with ink lettering. Per-person color lives in the games only, where
+   * telling players apart at a glance is the point.
+   */
+  .monogram {
+    background-color: var(--monogram);
+    color: var(--monogram-foreground);
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground), transparent 92%);
+  }
+
+  /*
+   * Fraunces without its quirks: the WONK axis swaps in leaning n/m/h glyphs
+   * and SOFT rounds the terminals — charming once, a costume across a whole
+   * app. Optical size stays automatic, so big amounts get the display cut.
+   */
+  .font-heading {
+    font-variation-settings:
+      "SOFT" 0,
+      "WONK" 0;
+  }
+
+  /*
+   * The one hero figure on a screen (total balance, a group's balance): tight
+   * tracking and lining tabular figures so it reads as a single shape.
+   */
+  .display-figure {
+    font-family: var(--font-heading);
+    font-variation-settings:
+      "SOFT" 0,
+      "WONK" 0;
+    font-weight: 400;
+    letter-spacing: -0.035em;
+    line-height: 0.95;
+    font-variant-numeric: lining-nums tabular-nums;
   }
 
   /*
@@ -549,6 +624,10 @@
     animation-delay: 360ms;
   }
 
+  .animate-figure-in {
+    animation: figure-in var(--duration-deliberate) var(--ease-entrance) both;
+    animation-delay: 80ms;
+  }
   .animate-emerge {
     animation: emerge var(--duration-base) var(--ease-spring) both;
   }

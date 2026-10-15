@@ -22,7 +22,7 @@ import { useT } from "@/components/locale-provider";
 import { removeMember, renamePlaceholderMember, setMemberRole } from "@/lib/actions/groups";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { MAX_NAME_LENGTH } from "@/lib/ledger-input";
 import { useOnline } from "@/lib/use-online";
 import type { GroupMember, GroupRole } from "@/lib/types";
@@ -160,8 +160,7 @@ function MemberRow({
       <div className="flex items-center gap-3">
         <div
           className={cn(
-            "shadow-e1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-linear-to-br text-sm font-medium text-white",
-            avatarGradient(member.displayName),
+            "monogram flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-medium",
           )}
         >
           {member.displayName.charAt(0).toUpperCase() || "?"}

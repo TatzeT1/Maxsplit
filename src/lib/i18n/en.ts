@@ -157,9 +157,10 @@ export const en: Dictionary = {
     heroDescription:
       "Track shared costs with roommates, trips, and friends — split fairly and settle up in seconds.",
     heroSocialProof: "No ads. No fees. Just fair splits.",
-    heroImageAltGroceries: "Two roommates unpacking groceries together in their kitchen",
-    heroImageAltBill: "A group of friends laughing over the bill at a café",
-    heroImageAltTravel: "Three friends checking their phone together on a road trip",
+    previewGroup: "Linden St. flat",
+    previewMembers: "4 members · EUR",
+    previewNameA: "Lena",
+    previewNameB: "Jonas",
     featuresEyebrow: "Everything in one app",
     featuresTitle: "Built for every shared bill",
     featuresSubtitle: "Roommates, trips, or friends — Split has what you need.",
@@ -214,6 +215,8 @@ export const en: Dictionary = {
     balanceOwedToYouLabel: "You're owed",
     balanceYouOweLabel: "You owe",
     totalsTitle: "In total",
+    acrossGroups: "across {{count}} groups",
+    acrossOneGroup: "across 1 group",
     totalsUnknown:
       "Groups without a balance yet aren't counted — they fill in with the next booking.",
     allArchived: "All your groups are archived.",

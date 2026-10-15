@@ -1,7 +1,7 @@
 "use client";
 
 import { useT } from "@/components/locale-provider";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { GroupMember } from "@/lib/types";
 
 const MAX_VISIBLE_AVATARS = 4;
@@ -24,7 +24,7 @@ export function MemberAvatarStack({
       {visible.map((member, index) => (
         <div
           key={`${member.displayName}-${index}`}
-          className={`ring-card bg-linear-to-br ${avatarGradient(member.displayName)} flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2`}
+          className="monogram ring-card flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ring-2"
         >
           {member.displayName.charAt(0).toUpperCase() || "?"}
         </div>

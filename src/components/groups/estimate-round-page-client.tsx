@@ -272,7 +272,7 @@ export function EstimateRoundPageClient({
     <GamePageStage
       closeHref={closeHref}
       title={
-        <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-semibold">
+        <h1 className="font-heading flex min-w-0 items-center gap-2 text-lg font-medium">
           <span aria-hidden="true">{meta.emoji}</span>
           <span className="truncate">{t(meta.nameKey)}</span>
           {onlineRound && (

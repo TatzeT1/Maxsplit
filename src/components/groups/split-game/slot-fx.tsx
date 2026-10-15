@@ -534,7 +534,7 @@ export function SlotWinBanner({
           transition={{ delay: reduceMotion ? 0 : 0.45 }}
         >
           <GameAvatar name={name} className="size-8 text-sm ring-2 ring-white/80" />
-          <span className="font-heading max-w-48 truncate text-xl font-semibold">{name}</span>
+          <span className="font-heading max-w-48 truncate text-xl font-medium">{name}</span>
         </motion.span>
 
         <motion.div
@@ -907,7 +907,7 @@ export function BonusWheel({
         </motion.svg>
       </span>
       <motion.span
-        className="font-heading max-w-80 px-6 text-center text-2xl font-bold"
+        className="font-heading max-w-80 px-6 text-center text-2xl font-semibold"
         initial={{ opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: [0.6, 1.15, 1] }}
         transition={{ delay: reduceMotion ? 0 : WHEEL_SPIN_S + 0.1, duration: 0.45 }}
@@ -945,7 +945,7 @@ export function GiftPicker({
       exit={{ opacity: 0 }}
       className="absolute -inset-x-4 -inset-y-2 z-40 flex flex-col items-center justify-center gap-5 bg-[radial-gradient(circle_at_50%_40%,oklch(0.35_0.12_330/0.95),oklch(0.14_0.03_260/0.96)_70%)] px-4 text-white"
     >
-      <span className="font-heading text-center text-2xl font-semibold">{title}</span>
+      <span className="font-heading text-center text-2xl font-medium">{title}</span>
       <div className="grid w-full max-w-80 grid-cols-3 gap-3">
         {boxes.map((box, index) => {
           const open = picked !== null;
@@ -1093,7 +1093,7 @@ export function DuelReveal({
         })}
       </div>
       <motion.span
-        className="font-heading max-w-80 px-6 text-center text-xl font-bold"
+        className="font-heading max-w-80 px-6 text-center text-xl font-semibold"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: reduceMotion ? 0 : 2.3 }}

@@ -2,10 +2,8 @@
 
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { type CSSProperties, useMemo, useState } from "react";
-import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
+import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
 import { useT } from "@/components/locale-provider";
-import { formatDate } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import {
   type BalanceSummary,
@@ -13,7 +11,7 @@ import {
   sortGroupsForList,
   summarizeBalances,
 } from "@/lib/groups/overview";
-import { avatarGradient, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { Group } from "@/lib/types";
 
 /**
@@ -30,114 +28,144 @@ function GroupBalanceBadge({ group, uid }: { group: Group; uid: string }) {
 
   if (amountMinor === 0) {
     return (
-      <span className="text-success shrink-0 text-xs font-medium">
-        {t("groups.balanceSettled")}
-      </span>
+      <span className="text-muted-foreground shrink-0 text-xs">{t("groups.balanceSettled")}</span>
     );
   }
 
   const isOwedToYou = amountMinor > 0;
   return (
-    <div
-      className={cn(
-        "flex shrink-0 flex-col items-end gap-0.5",
-        isOwedToYou ? "text-success" : "text-destructive",
-      )}
-    >
-      <span className="font-heading tabular-money text-sm font-semibold">
+    <div className="flex shrink-0 flex-col items-end gap-0.5">
+      <span
+        className={cn(
+          "tabular-money text-[0.95rem] font-medium",
+          isOwedToYou ? "text-success" : "text-destructive",
+        )}
+      >
+        {isOwedToYou ? "+" : "−"}
         {formatMoney(Math.abs(amountMinor), group.currency)}
       </span>
-      <span className="text-[10px] font-medium tracking-wide uppercase opacity-80">
+      <span className="text-muted-foreground text-[11px]">
         {isOwedToYou ? t("groups.balanceOwedToYouLabel") : t("groups.balanceYouOweLabel")}
       </span>
     </div>
   );
 }
 
-function GroupCard({ group, uid, index }: { group: Group; uid: string; index: number }) {
+/** One row of the grouped list: a tile, the name, who's in it, and where you stand. */
+function GroupRow({ group, uid, index }: { group: Group; uid: string; index: number }) {
   const t = useT();
 
   return (
-    <li className="animate-rise" style={{ "--stagger": Math.min(index, 8) } as CSSProperties}>
+    <li className="animate-rise" style={{ "--stagger": Math.min(index, 8) + 2 } as CSSProperties}>
       <Link
         href={`/groups/${group.id}`}
-        className="group bg-card ring-foreground/10 hover:ring-primary/40 shadow-e1 hover:shadow-e2 active:shadow-e1 ease-spring relative flex items-center gap-4 overflow-hidden rounded-2xl p-4 ring-1 transition-[transform,box-shadow,--tw-ring-color] duration-(--duration-fast) hover:-translate-y-0.5 active:scale-[0.995]"
+        className="group hover:bg-muted/60 active:bg-muted focus-visible:bg-muted flex min-h-16 items-center gap-3.5 px-4 py-3 transition-colors duration-(--duration-fast) outline-none"
       >
-        <div
-          className={`absolute inset-0 bg-linear-to-br ${avatarGradient(group.name)} opacity-[0.06] transition-opacity duration-200 group-hover:opacity-[0.12]`}
-        />
-        <div
-          className={`bg-linear-to-br ${avatarGradient(group.name)} ring-card shadow-e1 relative flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-lg font-semibold text-white ring-2`}
-        >
+        <div className="monogram flex h-11 w-11 shrink-0 items-center justify-center rounded-[0.8rem] text-lg font-medium">
           {group.icon || group.name.charAt(0).toUpperCase() || "?"}
         </div>
-        <div className="relative flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="truncate font-medium">{group.name}</span>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <MemberAvatarStack members={group.members} />
-            <span className="text-muted-foreground text-xs">
-              {group.memberUids.length === 1
-                ? t("groups.memberCountSingular")
-                : t("groups.membersCount", { count: group.memberUids.length })}
-            </span>
-          </div>
-          <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
-            <span className="bg-accent text-accent-foreground rounded-full px-1.5 py-0.5 font-medium">
-              {group.currency}
-            </span>
-            <span>{t("groups.createdOn", { date: formatDate(new Date(group.createdAt)) })}</span>
-          </div>
+          <span className="text-muted-foreground truncate text-xs">
+            {group.memberUids.length === 1
+              ? t("groups.memberCountSingular")
+              : t("groups.membersCount", { count: group.memberUids.length })}
+            {" · "}
+            {group.currency}
+          </span>
         </div>
         <GroupBalanceBadge group={group} uid={uid} />
-        <ChevronRight className="text-muted-foreground group-hover:text-primary relative h-5 w-5 shrink-0 transition-transform duration-200 group-hover:translate-x-0.5" />
+        <ChevronRight className="text-muted-foreground/60 group-hover:text-foreground h-4 w-4 shrink-0 transition-[color,transform] duration-(--duration-fast) group-hover:translate-x-0.5" />
       </Link>
     </li>
   );
 }
 
+/** The grouped list: one surface, hairlines between rows. */
+function GroupList({ groups, uid, id }: { groups: Group[]; uid: string; id?: string }) {
+  return (
+    <ul
+      id={id}
+      className="bg-card shadow-e1 divide-border flex flex-col divide-y overflow-hidden rounded-2xl"
+    >
+      {groups.map((group, index) => (
+        <GroupRow key={group.id} group={group} uid={uid} index={index} />
+      ))}
+    </ul>
+  );
+}
+
 /**
- * Where you stand over every group, per currency. Credits and debts are two
- * figures, not one net one: the 40 € you're owed in one group doesn't pay the
- * 25 € you owe in another.
+ * Where you stand over every group, per currency — the first thing on screen
+ * when the app opens, so it is set as one large figure on the page itself,
+ * not a card. Credits and debts stay two figures, not one net one: the 40 €
+ * you're owed in one group doesn't pay the 25 € you owe in another. The
+ * larger of the two is the headline; the other sits beneath it.
  */
-function GroupsTotals({ summary }: { summary: BalanceSummary }) {
+function GroupsTotals({ summary, groupCount }: { summary: BalanceSummary; groupCount: number }) {
   const t = useT();
   if (summary.byCurrency.length === 0 && summary.unknownCount === 0) return null;
 
   return (
-    <section
-      aria-label={t("groups.totalsTitle")}
-      className="bg-card ring-foreground/10 shadow-e1 flex flex-col gap-3 rounded-2xl p-4 ring-1"
-    >
-      <h2 className="text-muted-foreground font-mono text-[11px] tracking-[0.14em] uppercase">
+    <section aria-label={t("groups.totalsTitle")} className="flex flex-col gap-6 pt-2 pb-1">
+      <h2 className="text-muted-foreground animate-rise text-xs font-medium tracking-[0.12em] uppercase">
         {t("groups.totalsTitle")}
       </h2>
-      {summary.byCurrency.map(({ currency, owedToYouMinor, youOweMinor }) => (
-        <dl key={currency} className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-0.5">
-            <dt className="text-muted-foreground text-xs">{t("groups.balanceOwedToYouLabel")}</dt>
-            <dd
-              className={cn(
-                "font-heading tabular-money text-lg font-semibold",
-                owedToYouMinor > 0 ? "text-success" : "text-muted-foreground",
+      {summary.byCurrency.map(({ currency, owedToYouMinor, youOweMinor }, index) => {
+        const leadIsOwed = owedToYouMinor >= youOweMinor;
+        const lead = leadIsOwed
+          ? {
+              label: t("groups.balanceOwedToYouLabel"),
+              minor: owedToYouMinor,
+              tone: "text-success",
+            }
+          : { label: t("groups.balanceYouOweLabel"), minor: youOweMinor, tone: "text-destructive" };
+        const rest = leadIsOwed
+          ? { label: t("groups.balanceYouOweLabel"), minor: youOweMinor, tone: "text-destructive" }
+          : {
+              label: t("groups.balanceOwedToYouLabel"),
+              minor: owedToYouMinor,
+              tone: "text-success",
+            };
+        return (
+          <dl
+            key={currency}
+            className="animate-rise flex flex-col gap-3"
+            style={{ "--stagger": index + 1 } as CSSProperties}
+          >
+            <div className="flex flex-col gap-2">
+              <dt className="flex items-center gap-2 text-sm">
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "size-1.5 rounded-full bg-current",
+                    lead.minor > 0 ? lead.tone : "text-muted-foreground",
+                  )}
+                />
+                <span className="text-muted-foreground">{lead.label}</span>
+              </dt>
+              <dd className="overflow-hidden pb-1">
+                <span className="display-figure animate-figure-in block text-[clamp(3rem,15vw,4.5rem)]">
+                  {formatMoney(lead.minor, currency)}
+                </span>
+              </dd>
+            </div>
+            <div className="text-muted-foreground flex items-baseline gap-1.5 text-sm">
+              <dt>{rest.label}</dt>
+              <dd className={cn("tabular-money font-medium", rest.minor > 0 && rest.tone)}>
+                {formatMoney(rest.minor, currency)}
+              </dd>
+              {summary.byCurrency.length === 1 && (
+                <span aria-hidden="true" className="before:mr-1.5 before:content-['·']">
+                  {groupCount === 1
+                    ? t("groups.acrossOneGroup")
+                    : t("groups.acrossGroups", { count: groupCount })}
+                </span>
               )}
-            >
-              {formatMoney(owedToYouMinor, currency)}
-            </dd>
-          </div>
-          <div className="flex flex-col items-end gap-0.5">
-            <dt className="text-muted-foreground text-xs">{t("groups.balanceYouOweLabel")}</dt>
-            <dd
-              className={cn(
-                "font-heading tabular-money text-lg font-semibold",
-                youOweMinor > 0 ? "text-destructive" : "text-muted-foreground",
-              )}
-            >
-              {formatMoney(youOweMinor, currency)}
-            </dd>
-          </div>
-        </dl>
-      ))}
+            </div>
+          </dl>
+        );
+      })}
       {summary.unknownCount > 0 && (
         <p className="text-muted-foreground text-xs">{t("groups.totalsUnknown")}</p>
       )}
@@ -173,13 +201,7 @@ function ArchivedSection({
         />
         {t("groups.archivedSection", { count: groups.length })}
       </button>
-      {open && (
-        <ul id="archived-groups" className="flex flex-col gap-3">
-          {groups.map((group, index) => (
-            <GroupCard key={group.id} group={group} uid={uid} index={index} />
-          ))}
-        </ul>
-      )}
+      {open && <GroupList id="archived-groups" groups={groups} uid={uid} />}
     </section>
   );
 }
@@ -189,7 +211,19 @@ function ArchivedSection({
  * those with something open first — and, folded below, the archived ones.
  * Pure display; `app/(app)/groups/page.tsx` owns the listener.
  */
-export function GroupsOverview({ groups, uid }: { groups: Group[]; uid: string }) {
+export function GroupsOverview({
+  groups,
+  uid,
+  heading,
+  actions,
+}: {
+  groups: Group[];
+  uid: string;
+  /** The list's heading, set between totals and list. */
+  heading?: ReactNode;
+  /** Create/join, set right under the list. */
+  actions?: ReactNode;
+}) {
   const t = useT();
   const summary = useMemo(() => summarizeBalances(groups, uid), [groups, uid]);
   const { active, archived } = useMemo(
@@ -199,13 +233,10 @@ export function GroupsOverview({ groups, uid }: { groups: Group[]; uid: string }
 
   return (
     <>
-      <GroupsTotals summary={summary} />
+      <GroupsTotals summary={summary} groupCount={groups.length} />
+      {heading}
       {active.length > 0 ? (
-        <ul className="flex flex-col gap-3">
-          {active.map((group, index) => (
-            <GroupCard key={group.id} group={group} uid={uid} index={index} />
-          ))}
-        </ul>
+        <GroupList groups={active} uid={uid} />
       ) : (
         archived.length > 0 && (
           <p className="text-muted-foreground rounded-xl border border-dashed p-4 text-center text-sm">
@@ -213,6 +244,7 @@ export function GroupsOverview({ groups, uid }: { groups: Group[]; uid: string }
           </p>
         )
       )}
+      {actions}
       {archived.length > 0 && (
         <ArchivedSection groups={archived} uid={uid} defaultOpen={active.length === 0} />
       )}

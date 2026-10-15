@@ -604,7 +604,7 @@ export function SplitFingerDialog({
                       </span>
                     ))}
                   {phase === "steady" && (
-                    <span className="font-heading text-lg font-semibold">
+                    <span className="font-heading text-lg font-medium">
                       {t("expenses.fingerSteady")}
                     </span>
                   )}

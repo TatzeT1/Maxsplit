@@ -108,7 +108,7 @@ export function InviteClient({
   return (
     <div className="animate-rise flex w-full max-w-sm flex-col gap-4 text-center">
       <div>
-        <h2 className="font-heading text-lg font-semibold">{t("groups.joinStep2Title")}</h2>
+        <h2 className="font-heading text-lg font-medium">{t("groups.joinStep2Title")}</h2>
         <p className="text-muted-foreground text-sm">{t("groups.joinStep2Hint")}</p>
       </div>
       <div className="flex flex-col gap-1.5 text-left">

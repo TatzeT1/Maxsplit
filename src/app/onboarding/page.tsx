@@ -1,4 +1,3 @@
-import { Wallet } from "lucide-react";
 import { redirect } from "next/navigation";
 import { LanguageToggle } from "@/components/language-toggle";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
@@ -7,6 +6,7 @@ import { AmbientBackdrop } from "@/components/ui/ambient-backdrop";
 import { getSession } from "@/lib/auth/session";
 import { getServerT } from "@/lib/i18n/server";
 import { getVapidConfig } from "@/lib/push/vapid";
+import { BrandMark } from "@/components/brand-mark";
 
 export default async function OnboardingPage({
   searchParams,
@@ -32,10 +32,8 @@ export default async function OnboardingPage({
         className="relative z-10 flex items-center justify-between px-4 py-3"
         style={{ paddingTop: "calc(env(safe-area-inset-top) + 0.75rem)" }}
       >
-        <span className="font-heading flex items-center gap-2 text-lg font-semibold">
-          <span className="shadow-primary/30 shadow-e1 flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-orange-400 to-rose-500 text-white">
-            <Wallet className="size-4" />
-          </span>
+        <span className="font-heading flex items-center gap-2 text-lg font-medium">
+          <BrandMark />
           {t("app.name")}
         </span>
         <div className="flex items-center gap-1">
