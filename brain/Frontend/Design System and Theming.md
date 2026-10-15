@@ -68,7 +68,9 @@ variant.
   `.paper-tokens`. Those rules are unlayered on purpose so they beat utilities.
 - **Components don't branch on style for color.** Use tokens and the hooks above; a new
   screen then works in all five. The one markup exception is the groups overview's headline
-  figure (`style-hero.tsx`): flap board, beer mat with a tally of your groups, two-ink print.
+  figure (`style-hero.tsx`): flap board, beer mat with a tally of your groups, two-ink print —
+  and the group page's balance, which uses the same pieces instead of the receipt in those
+  three styles (see [[Group Page]]).
 - **Monograms carry the person's colors as CSS vars** (`monogramVars(seed)` from
   `ui/monogram.tsx`) — only Original paints them; the other styles ignore them.
 - **Style fonts** (Hanken Grotesk, Martian Mono, Archivo, Bricolage Grotesque) are loaded

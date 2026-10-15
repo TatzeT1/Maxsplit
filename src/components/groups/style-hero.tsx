@@ -29,6 +29,7 @@ export function StyleHero({
   groupCount: number;
 }) {
   const style = useAppStyle();
+  const t = useT();
 
   const dt = (
     <dt className="flex items-center gap-2 text-sm">
@@ -50,18 +51,22 @@ export function StyleHero({
   }
 
   if (style === "bierdeckel") {
-    return <Coaster label={label} figure={figure} groupCount={groupCount} />;
+    return (
+      <div className="flex justify-center py-2">
+        <Coaster rim={t("groups.coasterRim", { count: groupCount })} tally={groupCount}>
+          <dt className="coaster-label">{label}</dt>
+          <dd className="display-figure coaster-figure">{figure}</dd>
+        </Coaster>
+      </div>
+    );
   }
 
   if (style === "riso") {
     return (
       <div className="flex flex-col gap-2">
         {dt}
-        <dd className="hero-riso text-[clamp(3.25rem,17vw,5rem)]">
-          <span className="hero-riso-pink" aria-hidden="true">
-            {figure}
-          </span>
-          <span className="hero-riso-blue">{figure}</span>
+        <dd>
+          <RisoPrint text={figure} className="text-[clamp(3.25rem,17vw,5rem)]" />
         </dd>
       </div>
     );
@@ -82,7 +87,7 @@ export function StyleHero({
 const FLAP_DIGITS = "0123456789";
 
 /** One tile per character; digits flip through a few values, then settle. */
-function FlapFigure({ text }: { text: string }) {
+export function FlapFigure({ text }: { text: string }) {
   const reduceMotion = useReducedMotion();
   const chars = Array.from(text);
   const lastTick = 6 + chars.length * 2;
@@ -124,7 +129,8 @@ function FlapFigure({ text }: { text: string }) {
   );
 }
 
-function Tally({ count }: { count: number }) {
+/** Tally marks, crossed in fives, the way a waiter counts on a beer mat. */
+export function Tally({ count }: { count: number }) {
   const strokes: ReactNode[] = [];
   let x = 4;
   for (let i = 0; i < Math.min(count, 15); i++) {
@@ -146,38 +152,55 @@ function Tally({ count }: { count: number }) {
   );
 }
 
-function Coaster({
-  label,
-  figure,
-  groupCount,
+/**
+ * A beer mat: printed rim text around the edge, whatever is written on it in
+ * the middle, and a tally underneath. Drops onto the counter on mount.
+ */
+export function Coaster({
+  rim,
+  tally,
+  children,
 }: {
-  label: string;
-  figure: string;
-  groupCount: number;
+  rim: string;
+  tally: number;
+  children: ReactNode;
 }) {
-  const t = useT();
   const ringId = useId();
   return (
-    <div className="flex justify-center py-2">
-      <div className="coaster">
-        <svg className="coaster-rim" viewBox="0 0 272 272" aria-hidden="true">
-          <defs>
-            <path id={ringId} d="M136,136 m-112,0 a112,112 0 1,1 224,0 a112,112 0 1,1 -224,0" />
-          </defs>
-          <circle cx="136" cy="136" r="128" fill="none" strokeWidth="3" />
-          <circle cx="136" cy="136" r="99" fill="none" strokeWidth="1.2" />
-          <text className="coaster-rim-text">
-            <textPath href={`#${ringId}`}>{t("groups.coasterRim", { count: groupCount })}</textPath>
-          </text>
-        </svg>
-        <div className="coaster-face">
-          <dt className="coaster-label">{label}</dt>
-          <dd className="display-figure coaster-figure">{figure}</dd>
+    <div className="coaster">
+      <svg className="coaster-rim" viewBox="0 0 272 272" aria-hidden="true">
+        <defs>
+          <path id={ringId} d="M136,136 m-112,0 a112,112 0 1,1 224,0 a112,112 0 1,1 -224,0" />
+        </defs>
+        <circle cx="136" cy="136" r="128" fill="none" strokeWidth="3" />
+        <circle cx="136" cy="136" r="99" fill="none" strokeWidth="1.2" />
+        <text className="coaster-rim-text">
+          <textPath href={`#${ringId}`}>{rim}</textPath>
+        </text>
+      </svg>
+      <div className="coaster-face">
+        {children}
+        {tally > 0 && (
           <span className="coaster-tally">
-            <Tally count={groupCount} />
+            <Tally count={tally} />
           </span>
-        </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/**
+ * A figure printed in two inks, slightly out of register; the pink copy is
+ * decoration, the blue one is the text.
+ */
+export function RisoPrint({ text, className }: { text: string; className?: string }) {
+  return (
+    <span className={cn("hero-riso", className)}>
+      <span className="hero-riso-pink" aria-hidden="true">
+        {text}
+      </span>
+      <span className="hero-riso-blue">{text}</span>
+    </span>
   );
 }

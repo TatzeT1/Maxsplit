@@ -1,10 +1,11 @@
 "use client";
 
 import { Check, ChevronRight, Copy, MessageCircle } from "lucide-react";
-import { type CSSProperties, useState, useSyncExternalStore } from "react";
+import { type CSSProperties, type ReactNode, useState, useSyncExternalStore } from "react";
 import { GiroCodeDialog } from "@/components/groups/girocode-dialog";
 import { RecordSettlementDialog } from "@/components/groups/record-settlement-dialog";
 import { InkStamp } from "@/components/groups/split-game/celebration";
+import { Coaster, FlapFigure, RisoPrint } from "@/components/groups/style-hero";
 import { Monogram } from "@/components/ui/monogram";
 import { useT } from "@/components/locale-provider";
 import { AnimatedMoney } from "@/components/ui/animated-money";
@@ -13,6 +14,7 @@ import { formatMoney, minorToMajor } from "@/lib/format/money";
 import { simplifyDebts } from "@/lib/money/balances";
 import { buildPaypalMeLink } from "@/lib/payment/paypal-me";
 import { buildReminderMessage, whatsAppShareUrl } from "@/lib/payment/reminder";
+import { useAppStyle } from "@/lib/app-style";
 import { useCopyToClipboard } from "@/lib/use-copy-to-clipboard";
 import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
@@ -243,6 +245,7 @@ export function BalanceHero({
   onShowAll: () => void;
 }) {
   const t = useT();
+  const style = useAppStyle();
   const [settleTarget, setSettleTarget] = useState<{ toUid: string; amountMinor: number } | null>(
     null,
   );
@@ -278,109 +281,192 @@ export function BalanceHero({
         ? t("balances.heroOwedToYou")
         : t("balances.heroYouOwe");
 
-  return (
-    <section aria-label={t("balances.heroLabel")} className="paper-tokens relative">
-      {/* The mask on the slip clips box-shadow, so elevation lives out here as
-          a drop-shadow, which follows the torn edges. Fixed ink color rather
-          than a theme token: in the dark theme `--foreground` is cream. */}
-      <div className="drop-shadow-[0_8px_14px_oklch(0.15_0.006_70/0.22)]">
-        <div className="receipt-edges bg-card flex flex-col px-5 pt-6 pb-7">
-          <p className="text-muted-foreground flex items-center gap-2 font-mono text-[11px] tracking-[0.16em] uppercase">
-            {!isEmpty && !isSettled && (
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "size-1.5 rounded-full",
-                  totalNet > 0 ? "bg-success" : "bg-destructive",
+  const amountText = formatMoney(Math.abs(totalNet), currency);
+  const direction = !isEmpty && !isSettled && (totalNet > 0 ? "bg-success" : "bg-destructive");
+
+  const eyebrowNode = (
+    <p
+      className={cn(
+        "flex items-center gap-2 font-mono text-[11px] tracking-[0.16em] uppercase",
+        style === "fallblatt" ? "hero-board-label" : "text-muted-foreground",
+      )}
+    >
+      {direction && <span aria-hidden="true" className={cn("size-1.5 rounded-full", direction)} />}
+      {eyebrow}
+    </p>
+  );
+
+  const emptyNode = (
+    <div className="flex flex-col gap-1 pt-1">
+      <p className="font-heading text-2xl leading-tight font-medium">
+        {t("balances.heroEmptyTitle")}
+      </p>
+      <p className="text-muted-foreground text-sm text-pretty">{t("balances.heroEmptyBody")}</p>
+    </div>
+  );
+
+  // Everything below the figure: who it's with and what to do about it.
+  const detailNode = (
+    <>
+      {isSettled ? (
+        <p className="text-muted-foreground pt-2 text-sm">
+          {everyoneSettled ? t("balances.heroSettledAll") : t("balances.heroSettledSelf")}
+        </p>
+      ) : (
+        <>
+          {style !== "bierdeckel" && (
+            <span
+              aria-hidden="true"
+              className="border-foreground/20 mt-4 mb-3 border-t-2 border-dashed"
+            />
+          )}
+          <ul className="flex flex-col gap-2.5">
+            {visibleLines.map((line, index) => (
+              <li
+                key={line.uid}
+                className="animate-rise flex flex-col"
+                style={{ "--stagger": index + 3 } as CSSProperties}
+              >
+                <div className="flex items-baseline gap-2 text-[0.95rem]">
+                  <Monogram name={line.name} className="size-5 self-center text-[10px]" />
+                  <span className="min-w-0 truncate">{line.label}</span>
+                  {/* Dotted leader, item to price. */}
+                  <span
+                    aria-hidden="true"
+                    className="border-foreground/30 min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted"
+                  />
+                  <span className="tabular-money shrink-0 font-semibold">
+                    {formatMoney(line.amountMinor, currency)}
+                  </span>
+                </div>
+                {line.youOwe ? (
+                  <PayActions
+                    member={members[line.uid]}
+                    amountMinor={line.amountMinor}
+                    currency={currency}
+                    groupName={groupName}
+                    onMarkPaid={() =>
+                      setSettleTarget({ toUid: line.uid, amountMinor: line.amountMinor })
+                    }
+                  />
+                ) : (
+                  <RemindActions
+                    debtorName={line.name}
+                    me={members[currentUid]}
+                    amountMinor={line.amountMinor}
+                    currency={currency}
+                    groupId={groupId}
+                    groupName={groupName}
+                  />
                 )}
-              />
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <button
+        type="button"
+        onClick={onShowAll}
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 mt-3 -mb-1 flex min-h-8 w-fit items-center gap-1 self-end rounded-md text-xs font-medium outline-none focus-visible:ring-3"
+      >
+        {hiddenCount > 0 && `${t("balances.moreLines", { count: hiddenCount })} · `}
+        {t("balances.showAll")}
+        <ChevronRight className="h-3.5 w-3.5" />
+      </button>
+    </>
+  );
+
+  let slip: ReactNode;
+  if (style === "fallblatt") {
+    // A departure board: the figure clatters in flap by flap.
+    slip = (
+      <div className="hero-board flex flex-col px-4 pt-4 pb-5">
+        {eyebrowNode}
+        {isEmpty ? (
+          emptyNode
+        ) : (
+          <>
+            <p className="pt-3">
+              <span className="sr-only">{amountText}</span>
+              <FlapFigure key={amountText} text={amountText} />
+            </p>
+            {detailNode}
+          </>
+        )}
+      </div>
+    );
+  } else if (style === "bierdeckel" && !isEmpty) {
+    // The beer mat carries the total and a tally of open lines; the people
+    // and their buttons go on a slip of paper next to it.
+    slip = (
+      <div className="flex flex-col items-center gap-5">
+        <Coaster rim={t("balances.coasterRim", { name: groupName })} tally={lines.length}>
+          <p className="coaster-label flex items-center gap-1.5">
+            {direction && (
+              <span aria-hidden="true" className={cn("size-1.5 rounded-full", direction)} />
             )}
             {eyebrow}
           </p>
-
+          <p className="display-figure coaster-figure">{amountText}</p>
+        </Coaster>
+        <div className="bg-card shadow-e1 flex w-full flex-col rounded-2xl px-4 pt-3 pb-4">
+          {detailNode}
+        </div>
+      </div>
+    );
+  } else if (style === "riso") {
+    // A print run: two inks on paper, the figure sliding into register.
+    slip = (
+      <div className="riso-sheet flex flex-col px-5 pt-6 pb-7">
+        {eyebrowNode}
+        {isEmpty ? (
+          emptyNode
+        ) : (
+          <>
+            <RisoPrint text={amountText} className="pt-2 text-[3.5rem]" />
+            {detailNode}
+          </>
+        )}
+      </div>
+    );
+  } else {
+    // Graphit and Original: a till receipt. The mask on the slip clips
+    // box-shadow, so elevation lives out here as a drop-shadow, which
+    // follows the torn edges. Fixed ink color rather than a theme token: in
+    // the dark theme `--foreground` is light.
+    slip = (
+      <div className="drop-shadow-[0_8px_14px_oklch(0.15_0.006_70/0.22)]">
+        <div className="receipt-edges bg-card flex flex-col px-5 pt-6 pb-7">
+          {eyebrowNode}
           {isEmpty ? (
-            <div className="flex flex-col gap-1 pt-1">
-              <p className="font-heading text-2xl leading-tight font-medium">
-                {t("balances.heroEmptyTitle")}
-              </p>
-              <p className="text-muted-foreground text-sm text-pretty">
-                {t("balances.heroEmptyBody")}
-              </p>
-            </div>
+            emptyNode
           ) : (
             <>
               <p className="display-figure pt-1.5 text-[3.25rem]">
                 <AnimatedMoney amountMinor={Math.abs(totalNet)} currency={currency} />
               </p>
-
-              {isSettled ? (
-                <p className="text-muted-foreground pt-2 text-sm">
-                  {everyoneSettled ? t("balances.heroSettledAll") : t("balances.heroSettledSelf")}
-                </p>
-              ) : (
-                <>
-                  <span
-                    aria-hidden="true"
-                    className="border-foreground/20 mt-4 mb-3 border-t-2 border-dashed"
-                  />
-                  <ul className="flex flex-col gap-2.5">
-                    {visibleLines.map((line, index) => (
-                      <li
-                        key={line.uid}
-                        className="animate-rise flex flex-col"
-                        style={{ "--stagger": index + 3 } as CSSProperties}
-                      >
-                        <div className="flex items-baseline gap-2 text-[0.95rem]">
-                          <Monogram name={line.name} className="size-5 self-center text-[10px]" />
-                          <span className="min-w-0 truncate">{line.label}</span>
-                          {/* Dotted leader, item to price. */}
-                          <span
-                            aria-hidden="true"
-                            className="border-foreground/30 min-w-3 flex-1 -translate-y-1 border-b-2 border-dotted"
-                          />
-                          <span className="tabular-money shrink-0 font-semibold">
-                            {formatMoney(line.amountMinor, currency)}
-                          </span>
-                        </div>
-                        {line.youOwe ? (
-                          <PayActions
-                            member={members[line.uid]}
-                            amountMinor={line.amountMinor}
-                            currency={currency}
-                            groupName={groupName}
-                            onMarkPaid={() =>
-                              setSettleTarget({ toUid: line.uid, amountMinor: line.amountMinor })
-                            }
-                          />
-                        ) : (
-                          <RemindActions
-                            debtorName={line.name}
-                            me={members[currentUid]}
-                            amountMinor={line.amountMinor}
-                            currency={currency}
-                            groupId={groupId}
-                            groupName={groupName}
-                          />
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-
-              <button
-                type="button"
-                onClick={onShowAll}
-                className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 mt-3 -mb-1 flex min-h-8 w-fit items-center gap-1 self-end rounded-md text-xs font-medium outline-none focus-visible:ring-3"
-              >
-                {hiddenCount > 0 && `${t("balances.moreLines", { count: hiddenCount })} · `}
-                {t("balances.showAll")}
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
+              {detailNode}
             </>
           )}
         </div>
       </div>
+    );
+  }
+
+  return (
+    <section
+      aria-label={t("balances.heroLabel")}
+      className={cn(
+        "relative",
+        style === "fallblatt"
+          ? "board-tokens"
+          : style === "bierdeckel" || style === "riso"
+            ? ""
+            : "paper-tokens",
+      )}
+    >
+      {slip}
 
       {!isEmpty && isSettled && (
         <InkStamp

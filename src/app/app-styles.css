@@ -798,3 +798,50 @@
   --success: oklch(0.58 0.15 150);
   --destructive: oklch(0.58 0.21 22);
 }
+
+/* ════════════════════════ GROUP PAGE BALANCE ════════════════════════
+   balance-hero.tsx wraps the same content per style: a receipt (Graphit,
+   Original), a departure board, a beer mat plus slip, or a print sheet. */
+
+/* The board is dark in both themes, like the receipt is paper in both:
+   restate Fallblatt's night tokens so text and buttons on it fit. */
+.board-tokens {
+  --foreground: oklch(0.95 0.012 90);
+  --muted-foreground: oklch(0.72 0.012 90);
+  --card: oklch(0.21 0.005 260);
+  --background: oklch(0.19 0.004 260);
+  --muted: oklch(0.27 0.005 260);
+  --secondary: oklch(0.27 0.005 260);
+  --secondary-foreground: oklch(0.95 0.012 90);
+  --accent: oklch(0.29 0.005 260);
+  --accent-foreground: oklch(0.95 0.012 90);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --primary: oklch(0.86 0.17 92);
+  --primary-foreground: oklch(0.19 0.004 260);
+  --ring: oklch(0.86 0.17 92);
+  --success: oklch(0.74 0.15 150);
+  --destructive: oklch(0.7 0.16 35);
+  --monogram: oklch(0.3 0.005 260);
+  --monogram-foreground: oklch(0.86 0.17 92);
+  --edge-highlight: inset 0 1px 0 oklch(1 0 0 / 0.06);
+  color: var(--foreground);
+}
+.board-tokens .hero-board-label {
+  font-size: 0.68rem;
+}
+.board-tokens .border-dotted,
+.board-tokens .border-dashed {
+  border-color: oklch(1 0 0 / 0.18);
+}
+
+/* Riso: the balance as one sheet off the press, with a pink shadow print. */
+.riso-sheet {
+  position: relative;
+  background-color: var(--card);
+  background-image: radial-gradient(var(--halftone, oklch(0 0 0 / 0.08)) 0.8px, transparent 0.9px);
+  background-size: 4px 4px;
+  border: 1.5px solid var(--foreground);
+  border-radius: calc(var(--radius) * 1.4);
+  box-shadow: 5px 5px 0 var(--rs-pink, oklch(0.68 0.24 352));
+}

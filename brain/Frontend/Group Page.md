@@ -71,6 +71,13 @@ group shows it at rest.
 `--destructive`, `--secondary`, `--border`, `--input`, …): the dark theme's lifted greens and
 reds drop to ~2:1 on paper, and its control surfaces would put dark buttons on light paper.
 
+**Per style** (see [[Design System and Theming]]) the content stays the same and only the
+wrapper changes: Graphit and Original print the receipt above; Fallblatt shows a departure
+board (`.board-tokens`, dark in both themes, figure as `FlapFigure`); Bierdeckel puts the
+total on a beer mat (`Coaster`, rim text with the group's name, a tally of open lines) with
+the lines on a slip under it; Riso prints a sheet (`.riso-sheet`) with the figure in two inks
+(`RisoPrint`). The pieces live in `style-hero.tsx` and are shared with the groups overview.
+
 Each line carries its own actions — pay/GiroCode/record on "you owe", remind/show your
 GiroCode on "owes you"; see [[Balances and Settlements]].
 

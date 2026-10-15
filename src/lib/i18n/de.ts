@@ -1357,6 +1357,7 @@ export const de = {
     moreLines: "+{{count}} weitere",
     showAll: "Alle Salden",
     stampSettled: "Quitt",
+    coasterRim: "Split · {{name}} · Dein Deckel · Prost ·",
     copyIban: "IBAN kopieren",
     ibanCopied: "IBAN kopiert",
     giroCode: "GiroCode",

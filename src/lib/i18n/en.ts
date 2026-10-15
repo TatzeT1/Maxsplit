@@ -1341,6 +1341,7 @@ export const en: Dictionary = {
     moreLines: "+{{count}} more",
     showAll: "All balances",
     stampSettled: "Square",
+    coasterRim: "Split · {{name}} · Your tab · Cheers ·",
     copyIban: "Copy IBAN",
     ibanCopied: "IBAN copied",
     giroCode: "GiroCode",
