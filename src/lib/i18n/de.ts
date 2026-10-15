@@ -129,7 +129,7 @@ export const de = {
     styleSchmetterling: "Schmetterling",
     styleSchmetterlingHint: "lila, pink, Schmetterlinge und Herzchen",
     styleHerzblatt: "Herzblatt",
-    styleHerzblattHint: "schlicht, mit roten Herzchen",
+    styleHerzblattHint: "rote Herzen, klar und peppig",
   },
   language: {
     toggleLabel: "Sprache wechseln",

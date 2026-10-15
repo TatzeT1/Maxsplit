@@ -128,7 +128,7 @@ export const en: Dictionary = {
     styleSchmetterling: "Butterfly",
     styleSchmetterlingHint: "lilac, pink, butterflies and hearts",
     styleHerzblatt: "Sweetheart",
-    styleHerzblattHint: "simple, with red hearts",
+    styleHerzblattHint: "red hearts, clean and peppy",
   },
   language: {
     toggleLabel: "Change language",

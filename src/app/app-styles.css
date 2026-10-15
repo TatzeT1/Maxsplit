@@ -43,7 +43,7 @@
   background: linear-gradient(135deg, #a77bf3, #f472b6 60%, #fbcfe8);
 }
 .style-swatch[data-swatch="herzblatt"] {
-  background: radial-gradient(circle, #e11d48 34%, #fff1f2 36%);
+  background: radial-gradient(circle, #e11d48 40%, #ffe4e6 42% 62%, #e11d48 64%);
 }
 
 /* ════════════════════════════ ORIGINAL ════════════════════════════
@@ -749,106 +749,167 @@
 }
 
 /* ════════════════════════════ HERZBLATT ════════════════════════════
-   The quieter sibling: Graphit's calm with a blush of rose in the ground,
-   one red for the action that matters, and a few red hearts scattered
-   behind the content. */
+   Red hearts with some pep, on a clean ground: a punchy cherry red for the
+   action that matters, pill buttons that press down, and a field of red
+   hearts drifting slowly upward behind the content. Simpler than
+   Schmetterling: one hue, no gradients on the surfaces. */
 :root[data-style="herzblatt"] {
-  --background: oklch(0.985 0.006 15);
-  --foreground: oklch(0.23 0.02 15);
-  --card: oklch(0.997 0.003 15);
-  --card-foreground: oklch(0.23 0.02 15);
-  --popover: oklch(0.997 0.003 15);
-  --popover-foreground: oklch(0.23 0.02 15);
-  --primary: oklch(0.56 0.21 22);
+  --hb-red: oklch(0.6 0.235 22);
+  --hb-red-deep: oklch(0.44 0.19 20);
+  --background: oklch(0.985 0.008 15);
+  --foreground: oklch(0.23 0.03 15);
+  --card: oklch(0.997 0.004 15);
+  --card-foreground: oklch(0.23 0.03 15);
+  --popover: oklch(0.997 0.004 15);
+  --popover-foreground: oklch(0.23 0.03 15);
+  --primary: oklch(0.58 0.235 22);
   --primary-foreground: oklch(0.99 0.01 15);
-  --secondary: oklch(0.95 0.012 15);
-  --secondary-foreground: oklch(0.25 0.02 15);
-  --muted: oklch(0.955 0.01 15);
-  --muted-foreground: oklch(0.5 0.025 15);
-  --accent: oklch(0.945 0.016 15);
-  --accent-foreground: oklch(0.23 0.02 15);
+  --secondary: oklch(0.95 0.025 15);
+  --secondary-foreground: oklch(0.38 0.15 20);
+  --muted: oklch(0.955 0.014 15);
+  --muted-foreground: oklch(0.5 0.035 15);
+  --accent: oklch(0.94 0.03 15);
+  --accent-foreground: oklch(0.38 0.15 20);
   --destructive: oklch(0.55 0.2 25);
   --success: oklch(0.54 0.12 155);
-  --border: oklch(0.9 0.014 15);
-  --input: oklch(0.88 0.016 15);
-  --ring: oklch(0.56 0.21 22);
-  --sidebar: oklch(0.97 0.009 15);
-  --sidebar-foreground: oklch(0.23 0.02 15);
-  --sidebar-primary: oklch(0.56 0.21 22);
-  --sidebar-accent: oklch(0.94 0.014 15);
-  --sidebar-accent-foreground: oklch(0.23 0.02 15);
-  --sidebar-border: oklch(0.9 0.014 15);
-  --sidebar-ring: oklch(0.56 0.21 22);
-  --monogram: oklch(0.94 0.025 15);
-  --monogram-foreground: oklch(0.48 0.17 22);
-  --hearts-opacity: 0.1;
+  --border: oklch(0.9 0.025 15);
+  --input: oklch(0.87 0.03 15);
+  --ring: oklch(0.58 0.235 22);
+  --radius: 0.9rem;
+  --sidebar: oklch(0.97 0.014 15);
+  --sidebar-foreground: oklch(0.23 0.03 15);
+  --sidebar-primary: oklch(0.58 0.235 22);
+  --sidebar-accent: oklch(0.935 0.03 15);
+  --sidebar-accent-foreground: oklch(0.38 0.15 20);
+  --sidebar-border: oklch(0.9 0.025 15);
+  --sidebar-ring: oklch(0.58 0.235 22);
+  --monogram: oklch(0.93 0.045 15);
+  --monogram-foreground: oklch(0.5 0.21 22);
+  --hearts-opacity: 0.45;
 }
 :root[data-style="herzblatt"].dark {
-  --background: oklch(0.18 0.012 15);
-  --foreground: oklch(0.95 0.008 15);
-  --card: oklch(0.225 0.016 15);
-  --card-foreground: oklch(0.95 0.008 15);
-  --popover: oklch(0.24 0.016 15);
-  --popover-foreground: oklch(0.95 0.008 15);
-  --primary: oklch(0.65 0.2 22);
+  --hb-red: oklch(0.66 0.22 22);
+  --hb-red-deep: oklch(0.42 0.17 20);
+  --background: oklch(0.18 0.02 15);
+  --foreground: oklch(0.96 0.01 15);
+  --card: oklch(0.225 0.026 15);
+  --card-foreground: oklch(0.96 0.01 15);
+  --popover: oklch(0.24 0.026 15);
+  --popover-foreground: oklch(0.96 0.01 15);
+  --primary: oklch(0.65 0.22 22);
   --primary-foreground: oklch(0.99 0.01 15);
-  --secondary: oklch(0.27 0.018 15);
-  --secondary-foreground: oklch(0.95 0.008 15);
-  --muted: oklch(0.255 0.016 15);
-  --muted-foreground: oklch(0.72 0.02 15);
-  --accent: oklch(0.28 0.02 15);
-  --accent-foreground: oklch(0.95 0.008 15);
+  --secondary: oklch(0.28 0.05 18);
+  --secondary-foreground: oklch(0.93 0.04 15);
+  --muted: oklch(0.255 0.026 15);
+  --muted-foreground: oklch(0.74 0.03 15);
+  --accent: oklch(0.3 0.06 18);
+  --accent-foreground: oklch(0.96 0.01 15);
   --destructive: oklch(0.7 0.17 25);
   --success: oklch(0.73 0.14 155);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.65 0.2 22);
-  --sidebar: oklch(0.165 0.012 15);
-  --sidebar-foreground: oklch(0.95 0.008 15);
-  --sidebar-primary: oklch(0.65 0.2 22);
-  --sidebar-accent: oklch(0.26 0.018 15);
-  --sidebar-accent-foreground: oklch(0.95 0.008 15);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.65 0.2 22);
-  --monogram: oklch(0.3 0.04 15);
-  --monogram-foreground: oklch(0.85 0.07 20);
-  --hearts-opacity: 0.1;
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.65 0.22 22);
+  --sidebar: oklch(0.165 0.02 15);
+  --sidebar-foreground: oklch(0.96 0.01 15);
+  --sidebar-primary: oklch(0.65 0.22 22);
+  --sidebar-accent: oklch(0.27 0.04 18);
+  --sidebar-accent-foreground: oklch(0.96 0.01 15);
+  --sidebar-border: oklch(1 0 0 / 11%);
+  --sidebar-ring: oklch(0.65 0.22 22);
+  --monogram: oklch(0.32 0.08 18);
+  --monogram-foreground: oklch(0.88 0.08 18);
+  --hearts-opacity: 0.48;
 }
-[data-style="herzblatt"] .font-heading,
+[data-style="herzblatt"] .font-heading {
+  font-variation-settings:
+    "SOFT" 100,
+    "WONK" 0;
+  font-weight: 600;
+}
 [data-style="herzblatt"] .display-figure {
   font-variation-settings:
     "SOFT" 100,
     "WONK" 0;
+  font-weight: 500;
+}
+/* A small red heart after the big figure. A text glyph, not a box: no line
+   break is allowed between "€" and "♥", so it never wraps on its own. */
+[data-style="herzblatt"] .display-figure::after {
+  content: "\2665\FE0E";
+  margin-left: 0.08em;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.32em;
+  vertical-align: 1.35em;
+  color: var(--hb-red);
 }
 [data-style="herzblatt"] .monogram {
+  font-weight: 700;
+  box-shadow: none;
+}
+[data-style="herzblatt"] .category-tile {
+  background-color: var(--secondary);
+  color: var(--primary);
   box-shadow: none;
 }
 [data-style="herzblatt"] .brand-mark {
-  background-color: var(--primary);
+  background-color: var(--hb-red);
+  box-shadow: 0 2px 0 var(--hb-red-deep);
 }
 [data-style="herzblatt"] .brand-mark-glyph {
-  fill: var(--primary-foreground);
+  fill: white;
 }
 [data-style="herzblatt"] .bubble-own {
   background-color: var(--primary);
   color: var(--primary-foreground);
 }
-[data-style="herzblatt"] .backdrop-light {
-  background-image: radial-gradient(
-    52rem 28rem at 50% -8rem,
-    color-mix(in oklch, var(--primary), transparent 90%),
-    transparent 70%
-  );
+[data-style="herzblatt"] [data-slot="button"][data-variant="default"] {
+  border-radius: 999px;
+  background-image: none;
+  font-weight: 700;
+  box-shadow: 0 3px 0 var(--hb-red-deep);
 }
-/* A few hearts, far apart: a mask over the red, so it follows the theme. */
+[data-style="herzblatt"] [data-slot="button"][data-variant="default"]:active {
+  box-shadow: 0 1px 0 var(--hb-red-deep);
+  transform: translateY(2px);
+}
+[data-style="herzblatt"] .backdrop-light {
+  background-image:
+    radial-gradient(
+      44rem 26rem at 100% -6rem,
+      color-mix(in oklch, var(--hb-red), transparent 86%),
+      transparent 68%
+    ),
+    radial-gradient(
+      36rem 24rem at 0% 100%,
+      color-mix(in oklch, var(--hb-red), transparent 90%),
+      transparent 70%
+    );
+}
+/* Red hearts as a mask over the red (small ones solid, big ones soft, one
+   drawn as an outline), so they follow the theme. The layer is one tile
+   taller than the screen and drifts up by exactly one tile, so the loop is
+   seamless; transform only, so it stays on the compositor. */
 [data-style="herzblatt"] .backdrop-texture {
+  inset: 0 0 -220px 0;
   opacity: var(--hearts-opacity);
-  background-color: var(--primary);
-  --hearts: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='280' height='280'%3E%3Cpath transform='translate(60 70) rotate(-12) scale(0.8) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(205 200) rotate(14) scale(0.55) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3Cpath transform='translate(215 55) rotate(6) scale(0.35) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z'/%3E%3C/svg%3E");
+  background-color: var(--hb-red);
+  --hearts: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cpath transform='translate(40 46) rotate(-14) scale(1.1) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z' fill-opacity='0.9'/%3E%3Cpath transform='translate(160 30) rotate(10) scale(0.55) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z' fill-opacity='1'/%3E%3Cpath transform='translate(190 128) rotate(16) scale(1.5) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z' fill-opacity='0.32'/%3E%3Cpath transform='translate(96 112) rotate(-6) scale(0.45) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z' fill-opacity='1'/%3E%3Cpath transform='translate(30 168) rotate(8) scale(0.8) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z' fill='none' stroke='black' stroke-width='2.00' stroke-opacity='0.85'/%3E%3Cpath transform='translate(122 196) rotate(-10) scale(0.7) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z' fill-opacity='0.9'/%3E%3Cpath transform='translate(205 210) rotate(4) scale(0.38) translate(-12 -13)' d='M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z' fill-opacity='1'/%3E%3C/svg%3E");
   -webkit-mask-image: var(--hearts);
   mask-image: var(--hearts);
-  -webkit-mask-size: 280px 280px;
-  mask-size: 280px 280px;
+  -webkit-mask-size: 220px 220px;
+  mask-size: 220px 220px;
+  animation: hearts-drift 40s linear infinite;
+  will-change: transform;
+}
+@keyframes hearts-drift {
+  to {
+    transform: translateY(-220px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-style="herzblatt"] .backdrop-texture {
+    animation: none;
+  }
 }
 
 /* ════════════════════════════ HERO FIGURES ════════════════════════════
@@ -1070,11 +1131,15 @@
   --monogram-foreground: oklch(0.42 0.17 305);
 }
 [data-style="herzblatt"] .paper-tokens {
-  --primary: oklch(0.56 0.21 22);
+  --hb-red: oklch(0.6 0.235 22);
+  --hb-red-deep: oklch(0.44 0.19 20);
+  --primary: oklch(0.58 0.235 22);
   --primary-foreground: oklch(0.99 0.01 15);
-  --ring: oklch(0.56 0.21 22);
-  --monogram: oklch(0.94 0.025 15);
-  --monogram-foreground: oklch(0.48 0.17 22);
+  --ring: oklch(0.58 0.235 22);
+  --secondary: oklch(0.95 0.025 15);
+  --secondary-foreground: oklch(0.38 0.15 20);
+  --monogram: oklch(0.93 0.045 15);
+  --monogram-foreground: oklch(0.5 0.21 22);
 }
 [data-style="original"] .paper-tokens {
   --primary: oklch(0.62 0.19 42);

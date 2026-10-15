@@ -54,8 +54,8 @@ public pages' header) offers a **style**: Graphit (default, the monochrome syste
 Original (the first colorful version, restored), Fallblatt (split-flap departure board),
 Bierdeckel (the pub tab), Riso (two-color risograph), Schmetterling (lilac and pink with
 butterflies, hearts and sparkles; Nunito body, Fraunces with SOFT/WONK on, a violet-to-pink
-hero figure) and Herzblatt (Graphit's calm with a rose blush, one red accent and a few red
-hearts in the ground). Every style has a light and a dark variant.
+hero figure) and Herzblatt (one cherry red, pill buttons that press down, a field of red hearts
+drifting slowly up behind the content, a small ♥ after the hero figure). Every style has a light and a dark variant.
 
 - **Where it lives:** `<html data-style="…">`, stored in `localStorage["style"]`, applied
   before first paint by `THEME_INIT_SCRIPT` in `app/layout.tsx` (keep its style list in sync
@@ -80,7 +80,8 @@ hearts in the ground). Every style has a light and a dark variant.
   with `preload: false`: a device only downloads the faces its active style uses.
 - **Motif grounds as masks.** Schmetterling's butterflies/hearts/sparkles and Herzblatt's
   hearts are inline-SVG `mask-image` tiles on `.backdrop-texture` over a token-colored fill,
-  so the motif follows the theme without a second SVG per light/dark.
+  so the motif follows the theme without a second SVG per light/dark. Herzblatt's layer is one
+  tile taller than the screen and drifts up one tile (transform only, off under reduced motion).
 - The split games keep their per-person colors in every style.
 
 ## The hero figure
