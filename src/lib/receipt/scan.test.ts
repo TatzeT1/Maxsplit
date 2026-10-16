@@ -27,7 +27,11 @@ describe("configuredProviders", () => {
     const names = configuredProviders({ GEMINI_API_KEY: "g", OPENROUTER_API_KEY: "o" }).map(
       (provider) => provider.name,
     );
-    expect(names).toEqual(["gemini:gemini-flash-latest", "openrouter:openrouter/free"]);
+    expect(names).toEqual([
+      "gemini:gemini-flash-latest",
+      "gemini:gemini-flash-lite-latest",
+      "openrouter:openrouter/free",
+    ]);
   });
 
   it("takes the model names from the environment", () => {
@@ -44,7 +48,13 @@ describe("configuredProviders", () => {
 describe("scanReceiptImage", () => {
   it("is unavailable without any key, and never calls out", async () => {
     const fetchImpl = vi.fn();
-    expect(await scanReceiptImage(IMAGE, { env: {}, fetchImpl })).toEqual({
+    expect(
+      await scanReceiptImage(IMAGE, {
+        retryDelayMs: 0,
+        env: {},
+        fetchImpl,
+      }),
+    ).toEqual({
       ok: false,
       error: "scan-unavailable",
     });
@@ -53,7 +63,11 @@ describe("scanReceiptImage", () => {
 
   it("sends the photo to Gemini with the key in a header, not the URL", async () => {
     const fetchImpl = vi.fn(async () => geminiAnswer(RECEIPT_JSON));
-    const outcome = await scanReceiptImage(IMAGE, { env: { GEMINI_API_KEY: "secret" }, fetchImpl });
+    const outcome = await scanReceiptImage(IMAGE, {
+      retryDelayMs: 0,
+      env: { GEMINI_API_KEY: "secret" },
+      fetchImpl,
+    });
 
     expect(outcome).toEqual({
       ok: true,
@@ -86,12 +100,15 @@ describe("scanReceiptImage", () => {
         : openRouterAnswer("```json\n" + RECEIPT_JSON + "\n```"),
     );
     const outcome = await scanReceiptImage(IMAGE, {
+      retryDelayMs: 0,
       env: { GEMINI_API_KEY: "g", OPENROUTER_API_KEY: "o", OPENROUTER_MODELS: "a:free,b:free" },
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
     expect(outcome.ok && outcome.provider).toBe("openrouter:a:free,b:free");
-    const [, init] = fetchImpl.mock.calls[1] as unknown as [string, RequestInit];
+    // Both Gemini models, each retried once, then OpenRouter.
+    expect(fetchImpl).toHaveBeenCalledTimes(5);
+    const [, init] = fetchImpl.mock.calls[4] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer o");
     const body = JSON.parse(init.body as string);
     expect(body.models).toEqual(["a:free", "b:free"]);
@@ -102,6 +119,56 @@ describe("scanReceiptImage", () => {
     );
   });
 
+  it("retries an overloaded model once, then falls back to Flash-Lite — the production failure", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const overloaded = JSON.stringify({
+      error: { code: 503, message: "This model is currently experiencing high demand." },
+    });
+    const fetchImpl = vi.fn(async (url: string) =>
+      url.includes("gemini-flash-latest")
+        ? new Response(overloaded, { status: 503 })
+        : geminiAnswer(RECEIPT_JSON),
+    );
+    const outcome = await scanReceiptImage(IMAGE, {
+      env: { GEMINI_API_KEY: "g" },
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      retryDelayMs: 0,
+    });
+
+    expect(outcome.ok && outcome.provider).toBe("gemini:gemini-flash-lite-latest");
+    const urls = fetchImpl.mock.calls.map(([url]) => url.split("/models/")[1]);
+    expect(urls).toEqual([
+      "gemini-flash-latest:generateContent",
+      "gemini-flash-latest:generateContent",
+      "gemini-flash-lite-latest:generateContent",
+    ]);
+  });
+
+  it("recovers when the retry succeeds, and never retries a bad key", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    let calls = 0;
+    const flaky = vi.fn(async () =>
+      ++calls === 1 ? new Response("busy", { status: 503 }) : geminiAnswer(RECEIPT_JSON),
+    );
+    const recovered = await scanReceiptImage(IMAGE, {
+      env: { GEMINI_API_KEY: "g", GEMINI_MODEL: "only-one" },
+      fetchImpl: flaky as unknown as typeof fetch,
+      retryDelayMs: 0,
+    });
+    expect(recovered.ok && recovered.provider).toBe("gemini:only-one");
+    expect(flaky).toHaveBeenCalledTimes(2);
+
+    const badKey = vi.fn(async () => new Response("API key not valid", { status: 400 }));
+    expect(
+      await scanReceiptImage(IMAGE, {
+        env: { GEMINI_API_KEY: "g", GEMINI_MODEL: "only-one" },
+        fetchImpl: badKey as unknown as typeof fetch,
+        retryDelayMs: 0,
+      }),
+    ).toEqual({ ok: false, error: "scan-failed" });
+    expect(badKey).toHaveBeenCalledTimes(1);
+  });
+
   it("tries the next provider when one answers with no items, keeping the empty read last", async () => {
     const empty = JSON.stringify({ merchant: null, items: [] });
     const both = vi.fn(async (url: string) =>
@@ -109,6 +176,7 @@ describe("scanReceiptImage", () => {
     );
     const env = { GEMINI_API_KEY: "g", OPENROUTER_API_KEY: "o" };
     const outcome = await scanReceiptImage(IMAGE, {
+      retryDelayMs: 0,
       env,
       fetchImpl: both as unknown as typeof fetch,
     });
@@ -118,6 +186,7 @@ describe("scanReceiptImage", () => {
       url.includes("googleapis") ? geminiAnswer(empty) : openRouterAnswer(empty),
     );
     const none = await scanReceiptImage(IMAGE, {
+      retryDelayMs: 0,
       env,
       fetchImpl: neither as unknown as typeof fetch,
     });
@@ -137,10 +206,12 @@ describe("scanReceiptImage", () => {
     );
     expect(
       await scanReceiptImage(IMAGE, {
+        retryDelayMs: 0,
         env: { GEMINI_API_KEY: "g", OPENROUTER_API_KEY: "o" },
         fetchImpl: fetchImpl as unknown as typeof fetch,
       }),
     ).toEqual({ ok: false, error: "scan-failed" });
-    expect(console.warn).toHaveBeenCalledTimes(2);
+    // Two Gemini models and OpenRouter; a network error is not retried.
+    expect(console.warn).toHaveBeenCalledTimes(3);
   });
 });

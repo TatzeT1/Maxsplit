@@ -9,14 +9,32 @@ import "server-only";
 
 import { parseScannedReceipt, RECEIPT_PROMPT, type ScannedReceipt } from "./parse";
 
-/** The Gemini model when GEMINI_MODEL is unset — the alias Google moves to each new Flash. */
-export const DEFAULT_GEMINI_MODEL = "gemini-flash-latest";
+/**
+ * The Gemini models when GEMINI_MODEL is unset, tried in order — the aliases
+ * Google moves to each new Flash and Flash-Lite. The newest Flash is often
+ * "experiencing high demand" (HTTP 503) on the free tier while Flash-Lite,
+ * on its own capacity, still answers; it reads a receipt nearly as well.
+ */
+export const DEFAULT_GEMINI_MODELS = ["gemini-flash-latest", "gemini-flash-lite-latest"];
 
 /** OpenRouter's router across its free models, limited to ones that can see the image. */
 export const DEFAULT_OPENROUTER_MODELS = ["openrouter/free"];
 
-/** Per provider. A receipt takes a vision model a few seconds; a stuck free endpoint takes forever. */
+/** Per request. A receipt takes a vision model a few seconds; a stuck free endpoint takes forever. */
 const PROVIDER_TIMEOUT_MS = 30_000;
+
+/**
+ * Overload and rate-limit answers: "try again later" usually means a second
+ * later. One retry per provider, then the next one — production saw a scan
+ * fail on two 503s from gemini-flash-latest in a row with no fallback set.
+ */
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
+const DEFAULT_RETRY_DELAY_MS = 1_500;
+
+interface Http {
+  fetchImpl: typeof fetch;
+  retryDelayMs: number;
+}
 
 /** The environment variables read here — `process.env` by default, a plain object in tests. */
 type ScanEnv = Record<string, string | undefined>;
@@ -33,38 +51,41 @@ export type ScanOutcome =
 
 interface Provider {
   name: string;
-  read(image: ReceiptImage, fetchImpl: typeof fetch): Promise<string>;
+  read(image: ReceiptImage, http: Http): Promise<string>;
 }
 
 class ProviderError extends Error {}
 
 async function postJson(
-  fetchImpl: typeof fetch,
+  http: Http,
   url: string,
   headers: Record<string, string>,
   body: unknown,
 ): Promise<unknown> {
-  const response = await fetchImpl(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...headers },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
-  });
-  if (!response.ok) {
+  for (let attempt = 1; ; attempt++) {
+    const response = await http.fetchImpl(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(PROVIDER_TIMEOUT_MS),
+    });
+    if (response.ok) return response.json();
     // The body names the reason (quota, unknown model, bad key) — log it, it
     // never reaches the client. Capped: an HTML error page is long.
     const detail = (await response.text().catch(() => "")).slice(0, 300);
-    throw new ProviderError(`HTTP ${response.status}: ${detail}`);
+    if (attempt >= 2 || !RETRYABLE_STATUSES.has(response.status)) {
+      throw new ProviderError(`HTTP ${response.status}: ${detail}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, http.retryDelayMs));
   }
-  return response.json();
 }
 
 function geminiProvider(apiKey: string, model: string): Provider {
   return {
     name: `gemini:${model}`,
-    async read(image, fetchImpl) {
+    async read(image, http) {
       const data = (await postJson(
-        fetchImpl,
+        http,
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
         { "x-goog-api-key": apiKey },
         {
@@ -89,9 +110,9 @@ function geminiProvider(apiKey: string, model: string): Provider {
 function openRouterProvider(apiKey: string, models: string[]): Provider {
   return {
     name: `openrouter:${models.join(",")}`,
-    async read(image, fetchImpl) {
+    async read(image, http) {
       const data = (await postJson(
-        fetchImpl,
+        http,
         "https://openrouter.ai/api/v1/chat/completions",
         {
           Authorization: `Bearer ${apiKey}`,
@@ -140,7 +161,11 @@ export function configuredProviders(env: ScanEnv = process.env): Provider[] {
   const providers: Provider[] = [];
   const geminiKey = env.GEMINI_API_KEY?.trim();
   if (geminiKey) {
-    providers.push(geminiProvider(geminiKey, env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL));
+    // One provider per model: Gemini has no server-side fallback list like OpenRouter's.
+    const models = listEnv(env.GEMINI_MODEL);
+    for (const model of models.length > 0 ? models : DEFAULT_GEMINI_MODELS) {
+      providers.push(geminiProvider(geminiKey, model));
+    }
   }
   const openRouterKey = env.OPENROUTER_API_KEY?.trim();
   if (openRouterKey) {
@@ -166,16 +191,19 @@ export function isReceiptScanConfigured(env: ScanEnv = process.env): boolean {
  */
 export async function scanReceiptImage(
   image: ReceiptImage,
-  options: { env?: ScanEnv; fetchImpl?: typeof fetch } = {},
+  options: { env?: ScanEnv; fetchImpl?: typeof fetch; retryDelayMs?: number } = {},
 ): Promise<ScanOutcome> {
   const providers = configuredProviders(options.env);
   if (providers.length === 0) return { ok: false, error: "scan-unavailable" };
-  const fetchImpl = options.fetchImpl ?? fetch;
+  const http: Http = {
+    fetchImpl: options.fetchImpl ?? fetch,
+    retryDelayMs: options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS,
+  };
 
   let empty: { receipt: ScannedReceipt; provider: string } | null = null;
   for (const provider of providers) {
     try {
-      const receipt = parseScannedReceipt(await provider.read(image, fetchImpl));
+      const receipt = parseScannedReceipt(await provider.read(image, http));
       if (!receipt) throw new ProviderError("answer was not JSON");
       if (receipt.items.length > 0) return { ok: true, receipt, provider: provider.name };
       empty ??= { receipt, provider: provider.name };

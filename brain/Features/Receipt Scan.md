@@ -64,14 +64,17 @@ In the form, picking a split mode or typing an exact amount by hand drops the re
 ## Providers and keys
 
 Tried in order; a failure (HTTP error, timeout of 30 s, prose instead of JSON) falls through
-to the next, and an answer with no items is tried on the next provider too:
+to the next, and an answer with no items is tried on the next provider too. An overload or
+rate-limit answer (429/5xx) is retried once after 1,5 s first — on 2026-10-16 production's
+first real scans failed on two `503 "experiencing high demand"` from `gemini-flash-latest`
+with no fallback configured, which is why Flash-Lite is now in the default chain:
 
-| Env var              | Default               | Notes                                                                                                          |
-| -------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `GEMINI_API_KEY`     | —                     | Google AI Studio key (free tier). Sent as `x-goog-api-key` header, never in the URL.                           |
-| `GEMINI_MODEL`       | `gemini-flash-latest` | Alias Google moves to each new Flash. Pin a model id here if the alias ever misbehaves.                        |
-| `OPENROUTER_API_KEY` | —                     | openrouter.ai key. Free models: 20 req/min, 50/day (1000/day after a one-off 10 $ top-up).                     |
-| `OPENROUTER_MODELS`  | `openrouter/free`     | Comma list → OpenRouter's own `models` fallback. `openrouter/free` routes to a free model that can see images. |
+| Env var              | Default                                        | Notes                                                                                                          |
+| -------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `GEMINI_API_KEY`     | —                                              | Google AI Studio key (free tier). Sent as `x-goog-api-key` header, never in the URL.                           |
+| `GEMINI_MODEL`       | `gemini-flash-latest,gemini-flash-lite-latest` | Comma list, tried in order. Flash is often overloaded (503) on the free tier; Flash-Lite has its own capacity. |
+| `OPENROUTER_API_KEY` | —                                              | openrouter.ai key. Free models: 20 req/min, 50/day (1000/day after a one-off 10 $ top-up).                     |
+| `OPENROUTER_MODELS`  | `openrouter/free`                              | Comma list → OpenRouter's own `models` fallback. `openrouter/free` routes to a free model that can see images. |
 
 None set → the scan button is hidden and `scanReceipt` answers `scan-unavailable`.
 
