@@ -126,6 +126,32 @@ export interface Expense {
    * once an edit replaced the game's split by hand.
    */
   game?: ExpenseGame | null;
+  /**
+   * The line items behind a receipt split (📷 Beleg): who had which unit of
+   * what. The split is then `exact`, and its amounts are what
+   * `allocateReceipt` computes from these items. Absent on expenses from
+   * before 2026-10, `null` once an edit replaced the split by hand.
+   */
+  receipt?: ExpenseReceipt | null;
+}
+
+/** See `Expense.receipt`. Tip or discount is the expense amount minus the line totals. */
+export interface ExpenseReceipt {
+  items: ReceiptItem[];
+}
+
+/** One line of a receipt: "4x Spätzle 34,00". */
+export interface ReceiptItem {
+  name: string;
+  quantity: number;
+  /** The line's total, all units together, in minor units. */
+  totalMinor: number;
+  /**
+   * One entry per unit (`length === quantity`): who shared that unit, split
+   * equally among them. An object, not a bare array — Firestore can't store
+   * an array of arrays.
+   */
+  units: { uids: string[] }[];
 }
 
 /** The game behind a game-decided expense — see `Expense.game`. */

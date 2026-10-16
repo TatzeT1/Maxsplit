@@ -56,6 +56,8 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
                        which questions are coming) and the creation log. Needs deploying.
 
 pushSubscriptions/{id} → read, write: false — devices' push endpoints and keys, server-only.
+receiptScans/{uid}     → read, write: false — the [[Receipt Scan]] daily counter; a client that
+                         could write it would reset its own limit on the shared free model quota.
 
 {document=**}        → deny-all backstop for anything unmatched.
 ```

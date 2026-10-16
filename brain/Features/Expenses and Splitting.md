@@ -99,6 +99,12 @@ grouped month cards and category chips — see [[Group Page]].) `category: null`
 a separate, optional **user override** shown instead of the category icon — unrelated to
 `category` itself.
 
+## Receipt splits
+
+An `exact` split can carry `receipt` — the line items it was assigned from (📷 Beleg).
+`resolveExpense` then requires the booked amounts to be exactly what `allocateReceipt`
+computes from the items, and refuses a receipt next to a game result. See [[Receipt Scan]].
+
 ## Related
 
-[[Money Invariants]] · [[Groups and Members]] · [[Split Games]] (alternate, gamified ways to pick a split) · [[Data Model]]
+[[Receipt Scan]] · [[Money Invariants]] · [[Groups and Members]] · [[Split Games]] (alternate, gamified ways to pick a split) · [[Data Model]]

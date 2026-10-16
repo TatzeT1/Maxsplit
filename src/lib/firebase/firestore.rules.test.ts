@@ -286,6 +286,16 @@ describe("firestore.rules", () => {
     );
   });
 
+  it("denies everyone, the user included, their receipt scan counter", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context.firestore().doc("receiptScans/alice").set({ day: "2026-10-16", count: 3 });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "receiptScans/alice")));
+    // Resetting your own count would lift the daily limit.
+    await assertFails(setDoc(doc(alice, "receiptScans/alice"), { day: "2026-10-16", count: 0 }));
+  });
+
   it("allows a member to watch an online luck round, and nobody else", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await context

@@ -13,6 +13,7 @@ duplicating every field here would just rot.
 ```
 users/{uid}                                (.notificationPrefs — see Push Notifications)
 pushSubscriptions/{sha256(endpoint)}       (server-only: one device's push subscription)
+receiptScans/{uid}                         (server-only: { day, count } — the Receipt Scan daily quota)
 groups/{groupId}
   groups/{groupId}/expenses/{expenseId}
   groups/{groupId}/settlements/{settlementId}

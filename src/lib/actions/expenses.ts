@@ -19,6 +19,7 @@ import {
   splitPayerUids,
 } from "@/lib/money/game-expense";
 import { expensePushes } from "@/lib/push/messages";
+import { allocateReceipt, normalizeReceipt, validateReceipt } from "@/lib/receipt/receipt";
 import { notifyAfterResponse } from "@/lib/push/notify";
 import {
   splitByPercent,
@@ -35,6 +36,7 @@ import type {
   EstimateRound,
   Expense,
   ExpenseGame,
+  ExpenseReceipt,
   ExpenseGameInput,
   ExpenseSplit,
   Group,
@@ -64,6 +66,12 @@ export interface ExpenseInput {
    * one-phone round this expense claims (verified by `addExpense`, never stored).
    */
   game?: ExpenseGameInput | null;
+  /**
+   * The line items a receipt split was assigned from (see Expense.receipt).
+   * Only with an `exact` split whose amounts are exactly what the items
+   * allocate to — checked by `resolveExpense`, which refuses anything else.
+   */
+  receipt?: ExpenseReceipt | null;
 }
 
 type MembershipResult =
@@ -136,6 +144,38 @@ function validateExpenseInput(input: ExpenseInput): string | null {
   if (Object.keys(input.paidBy).length === 0) return "invalid-payer";
   if (splitParticipantUids(input).length === 0) return "invalid-participants";
   return null;
+}
+
+/**
+ * A receipt sent with an expense must be well-formed, and the split must be
+ * the one its items allocate: the stored items are what the detail view
+ * shows as "who had what", so they can't be allowed to tell a different
+ * story than the amounts that are booked. Returns the receipt to store.
+ */
+function resolveReceipt(
+  input: ExpenseInput,
+  group: Pick<Group, "members">,
+  splits: Record<string, ExpenseSplit>,
+): { ok: true; receipt: ExpenseReceipt | null } | { ok: false; error: string } {
+  if (input.receipt === undefined || input.receipt === null) return { ok: true, receipt: null };
+  const invalid = validateReceipt(input.receipt, new Set(Object.keys(group.members)));
+  if (invalid) return { ok: false, error: invalid };
+  // A receipt split is never also a game's: one of the two would be a lie.
+  if (input.splitMode !== "exact" || input.viaLottery === true) {
+    return { ok: false, error: "invalid-receipt" };
+  }
+  let allocated: Record<string, number>;
+  try {
+    allocated = allocateReceipt(input.amountMinor, input.receipt.items);
+  } catch {
+    return { ok: false, error: "invalid-split" };
+  }
+  const booked = Object.entries(splits);
+  const matches =
+    booked.length === Object.keys(allocated).length &&
+    booked.every(([uid, split]) => allocated[uid] === split.amountMinor);
+  if (!matches) return { ok: false, error: "invalid-split" };
+  return { ok: true, receipt: normalizeReceipt(input.receipt) };
 }
 
 /** gRPC codes a batch commit fails with when its `lastUpdateTime` precondition no longer holds. */
@@ -271,6 +311,8 @@ async function resolveExpense(
        * `addExpense` reads it, and it is never stored.
        */
       claimRoundId: string | null;
+      /** The receipt's items to store, or null for a split entered without one. */
+      receipt: ExpenseReceipt | null;
     }
 > {
   const membership = await requireGroupMembership(input.groupId, session.uid);
@@ -310,6 +352,9 @@ async function resolveExpense(
       : ({ ok: true, game: null, estimateRoundId: undefined } as const);
   if (!gameCheck.ok) return { ok: false, error: gameCheck.error };
 
+  const receiptCheck = resolveReceipt(input, group, splits);
+  if (!receiptCheck.ok) return { ok: false, error: receiptCheck.error };
+
   return {
     ok: true,
     group,
@@ -317,6 +362,7 @@ async function resolveExpense(
     splits,
     game: gameCheck.game,
     claimRoundId: gameCheck.estimateRoundId ?? null,
+    receipt: receiptCheck.receipt,
   };
 }
 
@@ -328,7 +374,7 @@ export async function addExpense(
 
   const resolved = await resolveExpense(input, session);
   if (!resolved.ok) return { ok: false, error: resolved.error };
-  const { group, groupRef, splits, game, claimRoundId } = resolved;
+  const { group, groupRef, splits, game, claimRoundId, receipt } = resolved;
 
   const now = new Date().toISOString();
   const expenseRef = groupRef.collection("expenses").doc();
@@ -373,6 +419,7 @@ export async function addExpense(
     deletedAt: null,
     viaLottery: input.viaLottery === true,
     ...(storedGame ? { game: storedGame } : {}),
+    ...(receipt ? { receipt } : {}),
   };
 
   const batch = adminDb.batch();
@@ -458,7 +505,7 @@ export async function editExpense(
 
   const resolved = await resolveExpense(input, session);
   if (!resolved.ok) return { ok: false, error: resolved.error };
-  const { group, groupRef, splits, game: resolvedGame } = resolved;
+  const { group, groupRef, splits, game: resolvedGame, receipt } = resolved;
 
   const expenseRef = groupRef.collection("expenses").doc(input.expenseId);
   const expenseSnap = await expenseRef.get();
@@ -496,6 +543,7 @@ export async function editExpense(
     updatedAt: now,
     viaLottery: input.viaLottery === true,
     game,
+    receipt,
   });
 
   const logEntry: Omit<ActivityLogEntry, "id"> = {

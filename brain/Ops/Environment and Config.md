@@ -26,6 +26,10 @@ gate: `next.config.ts`.
 | `VAPID_PUBLIC_KEY`                         | no*     | Web Push key pair, read at **runtime** (\*the public half reaches the browser as a prop, never inlined). Both or neither — none means push is off. Format-checked at build. See [[Push Notifications]] |
 | `VAPID_PRIVATE_KEY`                        | no      | the private half of the pair — generate with `npx web-push generate-vapid-keys`                                                                                                                        |
 | `VAPID_SUBJECT`                            | no      | optional contact for push services; defaults to `https://$VERCEL_PROJECT_PRODUCTION_URL`                                                                                                               |
+| `GEMINI_API_KEY`                           | no      | Google AI Studio key for [[Receipt Scan]] — tried first. Runtime, server-only. Neither key set → scanning is off                                                                                       |
+| `GEMINI_MODEL`                             | no      | optional Gemini model id; default `gemini-flash-latest`                                                                                                                                                |
+| `OPENROUTER_API_KEY`                       | no      | openrouter.ai key for [[Receipt Scan]] — the fallback after Gemini                                                                                                                                     |
+| `OPENROUTER_MODELS`                        | no      | optional comma list of OpenRouter model ids; default `openrouter/free`                                                                                                                                 |
 | `PUSH_EXTRA_ENDPOINT_HOSTS`                | no      | **local tests only**: extra push-endpoint hosts (a fake push service); never set in production                                                                                                         |
 
 Only set the three `*_EMULATOR_HOST` vars **together with**

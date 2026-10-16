@@ -41,6 +41,8 @@ re-deriving it from scratch by reading every file.
 - [[Balances and Settlements]] — net balances, pairwise debts, debt simplification
 - [[Settlement PDF Export]] — the public, tokenized, on-demand PDF link
 - [[Recurring Expenses]] — cron-driven materialization with catch-up
+- [[Receipt Scan]] — 📷 photo of the bill → line items via a free vision model (Gemini, then
+  OpenRouter) → tap who had which unit → an exact split, tip spread proportionally
 - [[Chat]] — per-group chat: optimistic retry-safe sending, reactions, replies, @mentions, mute,
   unread line, silent expense/payment cards, read receipts
 - [[Split Games]] — the gamified split pickers: eight luck-based (🎲🎡🎰🎫🎈🦆🥃🎱), seven skill-based
@@ -89,13 +91,13 @@ units (cents); the largest-remainder method guarantees split sums are exact. See
 
 ## Quick facts
 
-|                 |                                                                                                                                                      |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework       | Next.js 16 (App Router), React 19, TypeScript strict                                                                                                 |
-| Styling         | Tailwind CSS v4 + shadcn/ui (`components.json`, `radix-ui`)                                                                                          |
-| Backend         | Firebase: Auth, Firestore. **Not** actively using Storage (receipts were never built — see [[Settlement PDF Export]] for why the PDF avoids it too). |
-| Package manager | pnpm (`packageManager` pinned in `package.json`)                                                                                                     |
-| Hosting         | Vercel, `vercel.json` defines one cron job                                                                                                           |
-| Tests           | Vitest (`pnpm test`), separate emulator-backed rules suite (`pnpm test:rules`, not in the default gate)                                              |
-| UI language     | German (`de-DE`) only, single dictionary at `src/lib/i18n/de.ts`                                                                                     |
-| Admin           | One hardcoded email in `src/lib/auth/admin.ts`, gated on `emailVerified`                                                                             |
+|                 |                                                                                                                                                                                                                         |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework       | Next.js 16 (App Router), React 19, TypeScript strict                                                                                                                                                                    |
+| Styling         | Tailwind CSS v4 + shadcn/ui (`components.json`, `radix-ui`)                                                                                                                                                             |
+| Backend         | Firebase: Auth, Firestore. **Not** actively using Storage (receipt _photos_ are never stored — [[Receipt Scan]] reads them and keeps only the items; see [[Settlement PDF Export]] for why the PDF avoids Storage too). |
+| Package manager | pnpm (`packageManager` pinned in `package.json`)                                                                                                                                                                        |
+| Hosting         | Vercel, `vercel.json` defines one cron job                                                                                                                                                                              |
+| Tests           | Vitest (`pnpm test`), separate emulator-backed rules suite (`pnpm test:rules`, not in the default gate)                                                                                                                 |
+| UI language     | German (`de-DE`) only, single dictionary at `src/lib/i18n/de.ts`                                                                                                                                                        |
+| Admin           | One hardcoded email in `src/lib/auth/admin.ts`, gated on `emailVerified`                                                                                                                                                |

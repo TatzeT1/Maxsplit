@@ -139,6 +139,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Receipt scans counted per user per day (lib/actions/receipts.ts). Only
+    // the server reads or writes them — a client that could would reset its
+    // own count and lift the daily limit on the shared free model quota.
+    match /receiptScans/{uid} {
+      allow read, write: if false;
+    }
+
     // Deny-all backstop for anything not explicitly matched above.
     match /{document=**} {
       allow read, write: if false;

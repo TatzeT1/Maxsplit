@@ -1,7 +1,8 @@
 "use client";
 
+import { Camera } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { type FormEvent, useMemo, useState } from "react";
+import { type ChangeEvent, type FormEvent, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +18,12 @@ import { Select } from "@/components/ui/select";
 import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
+import { useReceiptScanEnabled } from "@/components/groups/receipt-scan-context";
+import {
+  type AppliedReceipt,
+  type ReceiptDraft,
+  ReceiptSplitDialog,
+} from "@/components/groups/receipt-split-dialog";
 import type { SplitGameId } from "@/components/groups/split-game/game-catalog";
 import { GameRecordSummary } from "@/components/groups/split-game/game-record";
 import { GameRoundProvider } from "@/components/groups/split-game/game-round";
@@ -43,6 +50,9 @@ import {
 import { recordRecentGame } from "@/lib/games/game-memory";
 import { estimateRoundPath } from "@/lib/games/round-paths";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
+import { scanReceipt } from "@/lib/actions/receipts";
+import { prepareReceiptImage } from "@/lib/receipt/prepare-image";
+import { allocateReceipt } from "@/lib/receipt/receipt";
 import {
   CATEGORY_IDS,
   categoryTileClasses,
@@ -61,6 +71,7 @@ import type {
   CategoryId,
   Expense,
   ExpenseGame,
+  ExpenseReceipt,
   ExpenseGameInput,
   GameExpenseDraft,
   GroupMember,
@@ -107,6 +118,8 @@ function expenseErrorMessage(code: string, t: ReturnType<typeof useT>): string {
       return t("expenses.errorInvalidParticipants");
     case "invalid-split":
       return t("expenses.amountMismatch");
+    case "invalid-receipt":
+      return t("receipt.errorInvalid");
     case "not-owner":
       return t("expenses.errorNotOwner");
     case "forbidden":
@@ -117,6 +130,24 @@ function expenseErrorMessage(code: string, t: ReturnType<typeof useT>): string {
       return t("errors.notSaved");
     default:
       return t("expenses.saveError");
+  }
+}
+
+/** A failed scan, said so the user knows whether to retry, retake or type it in. */
+function scanErrorMessage(code: string, t: ReturnType<typeof useT>): string {
+  switch (code) {
+    case "invalid-image":
+      return t("receipt.errorImage");
+    case "scan-unavailable":
+      return t("receipt.errorUnavailable");
+    case "scan-limit":
+      return t("receipt.errorLimit");
+    case "forbidden":
+      return t("errors.forbidden");
+    case "network":
+      return t("errors.notSaved");
+    default:
+      return t("receipt.errorFailed");
   }
 }
 
@@ -254,6 +285,24 @@ export function AddExpenseDialog({
       : {},
   );
 
+  // The line items behind a receipt split (📷), or null for a split entered
+  // without one. Only booked while the split is still "exact": picking a mode
+  // or typing an amount by hand drops it, since the items no longer match.
+  const [receipt, setReceipt] = useState<ExpenseReceipt | null>(prefill?.receipt ?? null);
+  const [receiptDraft, setReceiptDraft] = useState<ReceiptDraft | null>(null);
+  // A fresh key per draft remounts the editor, so it starts from that draft.
+  const [receiptEditorKey, setReceiptEditorKey] = useState(0);
+  const [receiptEditorOpen, setReceiptEditorOpen] = useState(false);
+  // What a scan read beyond the items, applied with them if the form is still empty there.
+  const [scannedMeta, setScannedMeta] = useState<{ merchant: string | null; date: string | null }>({
+    merchant: null,
+    date: null,
+  });
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const receiptFileRef = useRef<HTMLInputElement>(null);
+  const scanEnabled = useReceiptScanEnabled();
+
   const [loading, setLoading] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -334,6 +383,7 @@ export function AddExpenseDialog({
     );
     setSplitMode("exact");
     setViaLottery(true);
+    setReceipt(null);
     recordGame(playerUids, meta?.estimateRoundId);
   }
 
@@ -355,6 +405,7 @@ export function AddExpenseDialog({
     );
     setSplitMode("exact");
     setViaLottery(true);
+    setReceipt(null);
     recordGame(playerUids);
   }
 
@@ -364,8 +415,87 @@ export function AddExpenseDialog({
     );
   }
 
+  function openReceiptEditor(draft: ReceiptDraft) {
+    setReceiptDraft(draft);
+    setReceiptEditorKey((key) => key + 1);
+    setReceiptEditorOpen(true);
+  }
+
+  async function handleReceiptFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    // Cleared so picking the same photo again still fires a change.
+    event.target.value = "";
+    if (!file) return;
+    setScanError(null);
+    setScanning(true);
+    const image = await prepareReceiptImage(file);
+    if (!image) {
+      setScanning(false);
+      setScanError(t("receipt.errorImage"));
+      return;
+    }
+    const result = await callAction(() => scanReceipt({ groupId, image }));
+    setScanning(false);
+    if (!result.ok) {
+      setScanError(scanErrorMessage(result.error, t));
+      return;
+    }
+    if (result.data.items.length === 0) {
+      setScanError(t("receipt.errorEmpty"));
+      return;
+    }
+    setScannedMeta({ merchant: result.data.merchant, date: result.data.date });
+    openReceiptEditor({ items: result.data.items, totalMinor: result.data.totalMinor });
+  }
+
+  function openManualReceipt() {
+    setScanError(null);
+    setScannedMeta({ merchant: null, date: null });
+    openReceiptEditor(
+      receipt
+        ? { items: receipt.items, totalMinor: amountMinor > 0 ? amountMinor : null }
+        : { items: [], totalMinor: amountMinor > 0 ? amountMinor : null },
+    );
+  }
+
+  function handleApplyReceipt(applied: AppliedReceipt) {
+    setReceipt(applied.receipt);
+    setAmountInput(moneyToInput(applied.amountMinor));
+    setExactInputs(
+      Object.fromEntries(
+        Object.entries(applied.allocation).map(([uid, amount]) => [uid, moneyToInput(amount)]),
+      ),
+    );
+    setSplitMode("exact");
+    setViaLottery(false);
+    setGameRecord(null);
+    if (!description.trim() && scannedMeta.merchant) setDescription(scannedMeta.merchant);
+    if (!expenseToEdit && scannedMeta.date) setDate(scannedMeta.date);
+    setReceiptEditorOpen(false);
+  }
+
+  /** A receipt split follows the amount: a corrected total re-spreads the tip. */
+  function handleAmountChange(value: string) {
+    setAmountInput(value);
+    if (!receipt) return;
+    const next = parseMoneyInput(value);
+    if (next === null || next <= 0) return;
+    try {
+      const allocation = allocateReceipt(next, receipt.items);
+      setExactInputs(
+        Object.fromEntries(
+          Object.entries(allocation).map(([uid, amount]) => [uid, moneyToInput(amount)]),
+        ),
+      );
+    } catch {
+      // A total at or below the discount: nothing fair to show. The save
+      // reports it (invalid-split) rather than booking a wrong split.
+    }
+  }
+
   function handleSelectSplitMode(mode: SplitMode) {
     setSplitMode(mode);
+    setReceipt(null);
     // Picking a mode by hand, even "exact" again, means the split is no
     // longer (only) what the lottery decided.
     setViaLottery(false);
@@ -447,6 +577,8 @@ export function AddExpenseDialog({
     setViaLottery(false);
     setGameRecord(null);
     setGameRounds(0);
+    setReceipt(null);
+    setScanError(null);
   }
 
   /** A self-booking game started: this bill is now the game's — clear the form so it can't be saved twice, and go watch it. */
@@ -510,6 +642,7 @@ export function AddExpenseDialog({
       splitInputs,
       viaLottery,
       game: viaLottery && gameRecord ? toGameInput(gameRecord) : null,
+      receipt: splitMode === "exact" ? receipt : null,
     };
 
     const result = await callAction(() =>
@@ -555,6 +688,46 @@ export function AddExpenseDialog({
             </DialogHeader>
             <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto py-4">
               <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {scanEnabled && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!online || scanning}
+                      onClick={() => receiptFileRef.current?.click()}
+                    >
+                      <Camera className="size-4" />
+                      {scanning ? t("receipt.scanning") : t("receipt.scan")}
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={scanning}
+                    onClick={openManualReceipt}
+                  >
+                    🧾 {t("receipt.manual")}
+                  </Button>
+                  {/* No `capture`: the phone then offers both the camera and the photo library. */}
+                  <input
+                    ref={receiptFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    data-testid="receipt-file"
+                    onChange={handleReceiptFile}
+                  />
+                </div>
+                {scanEnabled && !scanError && !receipt && (
+                  <p className="text-muted-foreground text-xs">{t("receipt.scanHint")}</p>
+                )}
+                {scanError && (
+                  <p className="text-destructive text-sm" role="alert">
+                    {scanError}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
                 <Label htmlFor="expense-description">{t("expenses.descriptionLabel")}</Label>
                 <Input
                   id="expense-description"
@@ -571,7 +744,7 @@ export function AddExpenseDialog({
                 <Input
                   id="expense-amount"
                   value={amountInput}
-                  onChange={(event) => setAmountInput(event.target.value)}
+                  onChange={(event) => handleAmountChange(event.target.value)}
                   placeholder={`0,00 ${currency}`}
                   inputMode="decimal"
                   required
@@ -777,6 +950,18 @@ export function AddExpenseDialog({
                 {splitMode === "exact" && (
                   <div className="flex flex-col gap-2">
                     {viaLottery && <GameRecordSummary game={gameRecord} />}
+                    {receipt && (
+                      <div className="bg-muted/50 flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm">
+                        <span>{t("receipt.summary", { count: receipt.items.length })}</span>
+                        <button
+                          type="button"
+                          onClick={openManualReceipt}
+                          className="text-primary shrink-0 font-medium underline-offset-2 hover:underline"
+                        >
+                          {t("receipt.summaryEdit")}
+                        </button>
+                      </div>
+                    )}
                     <p className="text-muted-foreground text-sm">{t("expenses.splitExactHint")}</p>
                     {memberUids.map((uid) => (
                       <div key={uid} className="flex items-center gap-2">
@@ -791,6 +976,7 @@ export function AddExpenseDialog({
                               [uid]: event.target.value,
                             }));
                             setViaLottery(false);
+                            setReceipt(null);
                           }}
                           placeholder={`0,00 ${currency}`}
                           inputMode="decimal"
@@ -816,6 +1002,18 @@ export function AddExpenseDialog({
           </form>
         )}
       </DialogContent>
+      {receiptDraft && (
+        <ReceiptSplitDialog
+          key={receiptEditorKey}
+          open={receiptEditorOpen}
+          onOpenChange={setReceiptEditorOpen}
+          members={members}
+          memberUids={memberUids}
+          currency={currency}
+          initial={receiptDraft}
+          onApply={handleApplyReceipt}
+        />
+      )}
       <GameRoundProvider value={gameRound}>
         {pickerMounted && (
           <SplitGamePickerDialog
