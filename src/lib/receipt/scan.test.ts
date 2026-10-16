@@ -144,6 +144,31 @@ describe("scanReceiptImage", () => {
     ]);
   });
 
+  it("moves straight on when a model's daily free quota is spent", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const spent = JSON.stringify({
+      error: {
+        code: 429,
+        status: "RESOURCE_EXHAUSTED",
+        details: [
+          { violations: [{ quotaId: "GenerateRequestsPerDayPerProjectPerModel-FreeTier" }] },
+        ],
+      },
+    });
+    const fetchImpl = vi.fn(async (url: string) =>
+      url.includes("gemini-flash-latest")
+        ? new Response(spent, { status: 429 })
+        : geminiAnswer(RECEIPT_JSON),
+    );
+    const outcome = await scanReceiptImage(IMAGE, {
+      env: { GEMINI_API_KEY: "g" },
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      retryDelayMs: 0,
+    });
+    expect(outcome.ok && outcome.provider).toBe("gemini:gemini-flash-lite-latest");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   it("recovers when the retry succeeds, and never retries a bad key", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     let calls = 0;

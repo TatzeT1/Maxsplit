@@ -41,6 +41,17 @@ detail view can show who had what.
    `allocateReceipt`, description = merchant (if empty), date = receipt date (add mode only).
 6. Save → `addExpense` with `receipt`.
 
+## The wait: `ReceiptScanOverlay`
+
+A model gives no progress, so the wait is staged (`receipt-scan-overlay.tsx`): the photo
+printed on a till slip (`.receipt-edges` + `.paper-tokens`), viewfinder corners breathing, a
+scanner beam (`animate-scan-sweep`, globals.css) sweeping down and back, lines glinting as if
+read (`animate-scan-glint`), and a status line moving on every 1,6 s ("Positionen suchen …",
+"Preise lesen …"). After 9 s it says why ("die KI ist gerade gut beschäftigt" — retries and the
+Flash-Lite fallback take time). On success an `InkStamp` ("2 erkannt", success ink) lands on
+the slip and the editor opens 1,1 s later. **Abbrechen** bumps a run id, so a late answer is
+ignored. Reduced motion: no beam or glints; the status line still changes.
+
 ## The money: `allocateReceipt`
 
 Line total → units (`splitEqual`, odd cents to the first units) → each unit among its sharers
@@ -81,6 +92,15 @@ None set → the scan button is hidden and `scanReceipt` answers `scan-unavailab
 Free quotas are **per key**, shared by every user, so `receiptScans/{uid}` (`{ day, count }`,
 server-only, rules deny all) caps each user at `RECEIPT_SCANS_PER_DAY` (25, UTC day), counted
 before the model is asked.
+
+### How far the free tier goes
+
+Google no longer publishes free-tier numbers (only the AI Studio quota page shows them).
+Measured in 2026-09 by third parties: Flash ≈ 20 requests/day and 5/min, Flash-Lite ≈ 500/day
+and 15/min, per Google Cloud project (not per key). A spent daily quota (429 with a
+`…PerDay…` quotaId) is not retried; the chain moves straight to the next model. So a group of
+friends realistically gets ~20 scans on Flash plus ~500 on Flash-Lite a day — the per-user cap
+(25) keeps one person from using it all.
 
 Error codes → UI copy: `invalid-image`, `scan-unavailable`, `scan-limit`, `scan-failed`; an
 empty read is a success with `items: []`, shown as "keine Positionen erkannt". All go through

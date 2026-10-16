@@ -72,8 +72,12 @@ async function postJson(
     if (response.ok) return response.json();
     // The body names the reason (quota, unknown model, bad key) — log it, it
     // never reaches the client. Capped: an HTML error page is long.
-    const detail = (await response.text().catch(() => "")).slice(0, 300);
-    if (attempt >= 2 || !RETRYABLE_STATUSES.has(response.status)) {
+    const answer = await response.text().catch(() => "");
+    const detail = answer.slice(0, 300);
+    // A spent daily quota (Gemini's quotaId "…PerDay…") won't come back in a
+    // second: straight on to the next model, which has its own quota.
+    const dailyQuotaSpent = response.status === 429 && /PerDay/i.test(answer);
+    if (attempt >= 2 || !RETRYABLE_STATUSES.has(response.status) || dailyQuotaSpent) {
       throw new ProviderError(`HTTP ${response.status}: ${detail}`);
     }
     await new Promise((resolve) => setTimeout(resolve, http.retryDelayMs));

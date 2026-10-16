@@ -1,6 +1,7 @@
 "use client";
 
 import { Camera } from "lucide-react";
+import { useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, type FormEvent, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
 import { useReceiptScanEnabled } from "@/components/groups/receipt-scan-context";
+import { ReceiptScanOverlay } from "@/components/groups/receipt-scan-overlay";
 import {
   type AppliedReceipt,
   type ReceiptDraft,
@@ -150,6 +152,9 @@ function scanErrorMessage(code: string, t: ReturnType<typeof useT>): string {
       return t("receipt.errorFailed");
   }
 }
+
+/** How long the "erkannt" stamp stays on the slip before the editor opens: the stamp's slam plus a beat to read it. */
+const SCAN_STAMP_HOLD_MS = 1_100;
 
 function sumMoneyInputs(map: Record<string, string>): number {
   return Object.values(map).reduce((total, raw) => total + (parseMoneyInput(raw) ?? 0), 0);
@@ -301,6 +306,11 @@ export function AddExpenseDialog({
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState<string | null>(null);
   const receiptFileRef = useRef<HTMLInputElement>(null);
+  const scanRunRef = useRef(0);
+  const [scanImage, setScanImage] = useState<string | null>(null);
+  const [scanFound, setScanFound] = useState<number | null>(null);
+  const [scanOverlayKey, setScanOverlayKey] = useState(0);
+  const reduceMotion = useReducedMotion();
   const scanEnabled = useReceiptScanEnabled();
 
   const [loading, setLoading] = useState(false);
@@ -426,26 +436,46 @@ export function AddExpenseDialog({
     // Cleared so picking the same photo again still fires a change.
     event.target.value = "";
     if (!file) return;
+    // Every scan gets an id; a cancelled (or superseded) one is ignored when it answers.
+    const run = ++scanRunRef.current;
+    const stillCurrent = () => scanRunRef.current === run;
     setScanError(null);
+    setScanImage(null);
+    setScanFound(null);
+    setScanOverlayKey(run);
     setScanning(true);
     const image = await prepareReceiptImage(file);
+    if (!stillCurrent()) return;
     if (!image) {
       setScanning(false);
       setScanError(t("receipt.errorImage"));
       return;
     }
+    setScanImage(image);
     const result = await callAction(() => scanReceipt({ groupId, image }));
+    if (!stillCurrent()) return;
+    if (!result.ok || result.data.items.length === 0) {
+      setScanning(false);
+      setScanError(result.ok ? t("receipt.errorEmpty") : scanErrorMessage(result.error, t));
+      return;
+    }
+    const { items, totalMinor, merchant, date } = result.data;
+    // The stamp lands on the slip, then the editor takes over.
+    setScanFound(items.length);
+    setTimeout(
+      () => {
+        if (!stillCurrent()) return;
+        setScanning(false);
+        setScannedMeta({ merchant, date });
+        openReceiptEditor({ items, totalMinor });
+      },
+      reduceMotion ? 400 : SCAN_STAMP_HOLD_MS,
+    );
+  }
+
+  function cancelScan() {
+    scanRunRef.current++;
     setScanning(false);
-    if (!result.ok) {
-      setScanError(scanErrorMessage(result.error, t));
-      return;
-    }
-    if (result.data.items.length === 0) {
-      setScanError(t("receipt.errorEmpty"));
-      return;
-    }
-    setScannedMeta({ merchant: result.data.merchant, date: result.data.date });
-    openReceiptEditor({ items: result.data.items, totalMinor: result.data.totalMinor });
   }
 
   function openManualReceipt() {
@@ -1002,6 +1032,14 @@ export function AddExpenseDialog({
           </form>
         )}
       </DialogContent>
+      <ReceiptScanOverlay
+        // A fresh one per scan: its status line starts from the first step.
+        key={scanOverlayKey}
+        open={scanning}
+        image={scanImage}
+        itemCount={scanFound}
+        onCancel={cancelScan}
+      />
       {receiptDraft && (
         <ReceiptSplitDialog
           key={receiptEditorKey}

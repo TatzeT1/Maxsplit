@@ -249,6 +249,34 @@
    * more reads as the toy bounce `--ease-spring` is deliberately built to fall
    * short of.
    */
+  /*
+   * The receipt scanner's beam (receipt-scan-overlay.tsx): down the slip and
+   * back, easing at the ends the way a flatbed head slows to turn around.
+   * `top` rather than a transform: the beam's travel is a share of the slip's
+   * height, which a translate can only express relative to the beam itself.
+   */
+  @keyframes scan-sweep {
+    0% {
+      top: 4%;
+    }
+    50% {
+      top: 92%;
+    }
+    100% {
+      top: 4%;
+    }
+  }
+  /* A line the scanner just "read" lighting up and fading back into the paper. */
+  @keyframes scan-glint {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    20%,
+    45% {
+      opacity: 1;
+    }
+  }
   @keyframes laugh-land {
     0% {
       transform: scale(1) rotate(0deg);
@@ -704,6 +732,12 @@
   }
   .animate-laugh-land {
     animation: laugh-land var(--duration-slow) var(--ease-spring) both;
+  }
+  .animate-scan-sweep {
+    animation: scan-sweep 2.4s var(--ease-standard) infinite;
+  }
+  .animate-scan-glint {
+    animation: scan-glint 2.4s var(--ease-standard) infinite both;
   }
   .animate-shimmer {
     background-size: 200% 100%;
