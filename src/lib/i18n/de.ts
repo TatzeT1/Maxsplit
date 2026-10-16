@@ -1339,7 +1339,7 @@ export const de = {
       "Foto vom Beleg machen – die Positionen werden erkannt und du ordnest zu, wer was hatte.",
     editorTitle: "Wer hatte was?",
     editorIntro:
-      "Tippe bei jeder Position an, wer sie hatte. Mehrere Personen teilen sich die Position.",
+      "Erst mal teilen sich alle jede Position. Tipp auf einen Namen, wenn sie nur einer Person gehört – weitere Namen kommen dazu.",
     itemName: "Position",
     itemNamePlaceholder: "z. B. Spätzle",
     itemQuantity: "Menge",
@@ -1348,7 +1348,8 @@ export const de = {
     removeItem: "Position entfernen",
     addItem: "Position hinzufügen",
     assignAll: "Alle",
-    sameForAll: "Alle Einheiten wie die erste",
+    sameForAll: "Alle Stück gleich aufteilen",
+    splitPerUnit: "Stückweise aufteilen",
     unassigned: "{{count}} noch niemandem zugeordnet",
     itemsTotal: "Summe der Positionen",
     totalLabel: "Gesamtbetrag laut Beleg",

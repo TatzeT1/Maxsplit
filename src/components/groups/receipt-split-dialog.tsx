@@ -46,6 +46,11 @@ interface DraftItem {
   total: string;
   /** One list of uids per unit; resized when the quantity changes. */
   units: string[][];
+  /**
+   * Whether each unit is assigned on its own row. Off, one row of names
+   * stands for every unit — "6x Joghurt" for the whole flat is one tap, not six.
+   */
+  perUnit: boolean;
 }
 
 function parseQuantity(input: string): number | null {
@@ -54,24 +59,55 @@ function parseQuantity(input: string): number | null {
   return value >= 1 && value <= MAX_ITEM_QUANTITY ? value : null;
 }
 
-function resizeUnits(units: string[][], quantity: number): string[][] {
-  return Array.from({ length: quantity }, (_, index) => units[index] ?? []);
+/** New units copy `fill` — everyone, or what the item's one shared row says. */
+function resizeUnits(units: string[][], quantity: number, fill: string[] = []): string[][] {
+  return Array.from({ length: quantity }, (_, index) => units[index] ?? [...fill]);
+}
+
+function sameUnits(units: string[][]): boolean {
+  const key = (uids: string[]) => [...uids].sort().join("|");
+  return units.every((uids) => key(uids) === key(units[0] ?? []));
+}
+
+/**
+ * The next selection after tapping `uid` on a unit. While everyone shares it
+ * (the default), a tap means "only this person" — the common correction, one
+ * tap instead of deselecting everybody else; from there taps add and remove.
+ */
+export function nextSelection(current: string[], uid: string, memberUids: string[]): string[] {
+  const everyone = memberUids.length > 1 && memberUids.every((id) => current.includes(id));
+  if (everyone) return [uid];
+  return current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid];
 }
 
 let nextKey = 0;
 
-function toDraftItem(item: ReceiptDraft["items"][number]): DraftItem {
+/** A scanned or typed line starts shared by everyone; a stored one keeps who had what. */
+function toDraftItem(item: ReceiptDraft["items"][number], memberUids: string[]): DraftItem {
+  const units = resizeUnits(
+    item.units?.map((unit) => [...unit.uids]) ?? [],
+    item.quantity,
+    memberUids,
+  );
   return {
     key: nextKey++,
     name: item.name,
     quantity: String(item.quantity),
     total: moneyToInput(item.totalMinor),
-    units: resizeUnits(item.units?.map((unit) => [...unit.uids]) ?? [], item.quantity),
+    units,
+    perUnit: !sameUnits(units),
   };
 }
 
-function emptyItem(): DraftItem {
-  return { key: nextKey++, name: "", quantity: "1", total: "", units: [[]] };
+function emptyItem(memberUids: string[]): DraftItem {
+  return {
+    key: nextKey++,
+    name: "",
+    quantity: "1",
+    total: "",
+    units: [[...memberUids]],
+    perUnit: false,
+  };
 }
 
 /** A line's validated form, or `null` while something in it is still missing or malformed. */
@@ -84,7 +120,7 @@ function toReceiptItem(item: DraftItem): ReceiptItem | null {
     name,
     quantity,
     totalMinor,
-    units: resizeUnits(item.units, quantity).map((uids) => ({ uids })),
+    units: resizeUnits(item.units, quantity, item.units[0] ?? []).map((uids) => ({ uids })),
   };
 }
 
@@ -142,7 +178,9 @@ export function ReceiptSplitDialog({
 }) {
   const t = useT();
   const [items, setItems] = useState<DraftItem[]>(() =>
-    initial.items.length > 0 ? initial.items.map(toDraftItem) : [emptyItem()],
+    initial.items.length > 0
+      ? initial.items.map((item) => toDraftItem(item, memberUids))
+      : [emptyItem(memberUids)],
   );
   const [totalInput, setTotalInput] = useState(() =>
     initial.totalMinor !== null ? moneyToInput(initial.totalMinor) : "",
@@ -179,35 +217,35 @@ export function ReceiptSplitDialog({
       return {
         ...item,
         quantity: value,
-        units: quantity ? resizeUnits(item.units, quantity) : item.units,
+        // New units follow the shared row, or start with everyone when split per unit.
+        units: quantity
+          ? resizeUnits(item.units, quantity, item.perUnit ? memberUids : item.units[0])
+          : item.units,
       };
     });
   }
 
-  function toggleUnit(key: number, unitIndex: number, uid: string) {
-    updateItem(key, (item) => ({
-      ...item,
-      units: item.units.map((uids, index) =>
-        index !== unitIndex
-          ? uids
-          : uids.includes(uid)
-            ? uids.filter((id) => id !== uid)
-            : [...uids, uid],
-      ),
-    }));
+  /** Sets who had unit `unitIndex` — or every unit, while the item isn't split per unit. */
+  function assign(key: number, unitIndex: number, change: (uids: string[]) => string[]) {
+    updateItem(key, (item) => {
+      if (!item.perUnit) {
+        const next = change(item.units[0] ?? []);
+        return { ...item, units: item.units.map(() => [...next]) };
+      }
+      return {
+        ...item,
+        units: item.units.map((uids, index) => (index === unitIndex ? change(uids) : uids)),
+      };
+    });
   }
 
-  function toggleUnitAll(key: number, unitIndex: number) {
+  function setPerUnit(key: number, perUnit: boolean) {
     updateItem(key, (item) => ({
       ...item,
-      units: item.units.map((uids, index) =>
-        index !== unitIndex ? uids : uids.length === memberUids.length ? [] : [...memberUids],
-      ),
+      perUnit,
+      // Back to one row: every unit takes the first one's people.
+      units: perUnit ? item.units : item.units.map(() => [...(item.units[0] ?? [])]),
     }));
-  }
-
-  function copyFirstUnit(key: number) {
-    updateItem(key, (item) => ({ ...item, units: item.units.map(() => [...item.units[0]]) }));
   }
 
   function handleApply() {
@@ -296,9 +334,9 @@ export function ReceiptSplitDialog({
                     />
                   </div>
                 </div>
-                {units.map((uids, unitIndex) => (
+                {(item.perUnit ? units : units.slice(0, 1)).map((uids, unitIndex) => (
                   <div key={unitIndex} className="flex flex-col gap-1">
-                    {units.length > 1 && (
+                    {item.perUnit && (
                       <span className="text-muted-foreground text-xs">
                         {t("receipt.unitLabel", { index: unitIndex + 1, count: units.length })}
                       </span>
@@ -308,7 +346,7 @@ export function ReceiptSplitDialog({
                         <MemberToggle
                           label={t("receipt.assignAll")}
                           selected={uids.length === memberUids.length}
-                          onToggle={() => toggleUnitAll(item.key, unitIndex)}
+                          onToggle={() => assign(item.key, unitIndex, () => [...memberUids])}
                         />
                       )}
                       {memberUids.map((uid) => (
@@ -316,19 +354,23 @@ export function ReceiptSplitDialog({
                           key={uid}
                           label={nameOf(uid)}
                           selected={uids.includes(uid)}
-                          onToggle={() => toggleUnit(item.key, unitIndex, uid)}
+                          onToggle={() =>
+                            assign(item.key, unitIndex, (current) =>
+                              nextSelection(current, uid, memberUids),
+                            )
+                          }
                         />
                       ))}
                     </div>
                   </div>
                 ))}
-                {units.length > 1 && units[0].length > 0 && (
+                {units.length > 1 && (
                   <button
                     type="button"
-                    onClick={() => copyFirstUnit(item.key)}
+                    onClick={() => setPerUnit(item.key, !item.perUnit)}
                     className="text-primary self-start text-xs font-medium underline-offset-2 hover:underline"
                   >
-                    {t("receipt.sameForAll")}
+                    {item.perUnit ? t("receipt.sameForAll") : t("receipt.splitPerUnit")}
                   </button>
                 )}
               </div>
@@ -338,7 +380,7 @@ export function ReceiptSplitDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setItems((current) => [...current, emptyItem()])}
+              onClick={() => setItems((current) => [...current, emptyItem(memberUids)])}
             >
               {t("receipt.addItem")}
             </Button>
@@ -386,12 +428,17 @@ export function ReceiptSplitDialog({
               <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                 {t("receipt.perPerson")}
               </h3>
-              {Object.entries(allocation).map(([uid, amount]) => (
-                <div key={uid} className="flex items-center justify-between text-sm">
-                  <span>{nameOf(uid)}</span>
-                  <span className="tabular-money font-medium">{formatMoney(amount, currency)}</span>
-                </div>
-              ))}
+              {memberUids
+                .filter((uid) => allocation[uid] !== undefined)
+                .map((uid) => [uid, allocation[uid]] as const)
+                .map(([uid, amount]) => (
+                  <div key={uid} className="flex items-center justify-between text-sm">
+                    <span>{nameOf(uid)}</span>
+                    <span className="tabular-money font-medium">
+                      {formatMoney(amount, currency)}
+                    </span>
+                  </div>
+                ))}
             </div>
           )}
         </div>

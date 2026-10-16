@@ -42,71 +42,108 @@ function unitButtons(itemIndex: number, unitIndex: number) {
 }
 
 describe("ReceiptSplitDialog", () => {
-  it("assigns each unit, shares one, spreads the tip and hands back the exact split", async () => {
+  it("starts with everyone sharing everything — a flat's shopping is bookable at once", async () => {
     const { onApply, user } = renderEditor({
       items: [
-        { name: "Cola", quantity: 3, totalMinor: 1050 },
-        { name: "Käsespätzle", quantity: 4, totalMinor: 3400 },
+        { name: "Milch", quantity: 1, totalMinor: 120 },
+        { name: "Joghurt", quantity: 6, totalMinor: 300 },
       ],
-      totalMinor: 4450,
+      totalMinor: null,
     });
-    const apply = screen.getByRole("button", { name: "Übernehmen" });
-    expect(apply).toBeDisabled();
-    expect(screen.getByText("7 noch niemandem zugeordnet")).toBeInTheDocument();
+    expect(screen.queryByText(/niemandem zugeordnet/)).not.toBeInTheDocument();
+    // One row of names per line, however many units it has.
+    expect(within(unitButtons(1, 0).item).getAllByRole("button", { name: "Anna" })).toHaveLength(1);
+    expect(unitButtons(1, 0).person("Carl")).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(unitButtons(0, 0).person("Anna"));
-    await user.click(unitButtons(0, 1).person("Ben"));
-    await user.click(unitButtons(0, 2).person("Carl"));
-
-    // All four Spätzle to Anna, then the third to Ben and the fourth shared by Ben and Carl.
-    await user.click(unitButtons(1, 0).person("Anna"));
-    await user.click(
-      within(unitButtons(1, 0).item).getByRole("button", { name: "Alle Einheiten wie die erste" }),
+    await user.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ amountMinor: 420, allocation: { anna: 140, ben: 140, carl: 140 } }),
     );
-    await user.click(unitButtons(1, 2).person("Anna"));
-    await user.click(unitButtons(1, 2).person("Ben"));
-    await user.click(unitButtons(1, 3).person("Anna"));
-    await user.click(unitButtons(1, 3).person("Ben"));
-    await user.click(unitButtons(1, 3).person("Carl"));
-    expect(unitButtons(1, 3).person("Carl")).toHaveAttribute("aria-pressed", "true");
+  });
 
+  it("takes one tap for 'only hers', then splits single units of a line", async () => {
+    const { onApply, user } = renderEditor({
+      items: [
+        { name: "Milch", quantity: 1, totalMinor: 120 },
+        { name: "Joghurt", quantity: 6, totalMinor: 300 },
+        { name: "Bier", quantity: 3, totalMinor: 450 },
+      ],
+      totalMinor: null,
+    });
+
+    // Anna bought the beer for herself: from "everyone", a tap means "only Anna" — all three.
+    await user.click(unitButtons(2, 0).person("Anna"));
+    expect(unitButtons(2, 0).person("Anna")).toHaveAttribute("aria-pressed", "true");
+    expect(unitButtons(2, 0).person("Ben")).toHaveAttribute("aria-pressed", "false");
+
+    // Two of the six yoghurts were Ben's, the last one he shared with Carl.
+    const yoghurt = unitButtons(1, 0).item;
+    await user.click(within(yoghurt).getByRole("button", { name: "Stückweise aufteilen" }));
+    expect(within(yoghurt).getAllByRole("button", { name: "Anna" })).toHaveLength(6);
+    await user.click(unitButtons(1, 4).person("Ben"));
+    await user.click(unitButtons(1, 5).person("Ben"));
+    await user.click(unitButtons(1, 5).person("Carl"));
+
+    // Milk 40 each. Yoghurt (3,00) by how much each had: four shared by three (4/3 each),
+    // one Ben's, one Ben's and Carl's → Anna 4/3, Ben 17/6, Carl 11/6 of 6 units: 66,67 /
+    // 141,67 / 91,67 cents, rounded once for the whole line (the odd cents by largest remainder).
     const allocation = screen.getByTestId("receipt-allocation");
-    expect(allocation).toHaveTextContent(/Anna\s*20,50/);
-    expect(allocation).toHaveTextContent(/Ben\s*16,25/);
-    expect(allocation).toHaveTextContent(/Carl\s*7,75/);
+    expect(allocation).toHaveTextContent(/Anna\s*5,57/);
+    expect(allocation).toHaveTextContent(/Ben\s*1,81/);
+    expect(allocation).toHaveTextContent(/Carl\s*1,32/);
 
-    const total = screen.getByLabelText("Gesamtbetrag laut Beleg");
-    await user.clear(total);
-    await user.type(total, "50");
-    expect(screen.getByText(/Trinkgeld 5,50/)).toBeInTheDocument();
-
-    expect(apply).toBeEnabled();
-    await user.click(apply);
+    await user.click(screen.getByRole("button", { name: "Übernehmen" }));
+    const everyone = { uids: ["anna", "ben", "carl"] };
     expect(onApply).toHaveBeenCalledWith({
-      amountMinor: 5000,
-      allocation: { anna: 2303, ben: 1826, carl: 871 },
+      amountMinor: 870,
+      allocation: { anna: 557, ben: 181, carl: 132 },
       receipt: {
         items: [
+          { name: "Milch", quantity: 1, totalMinor: 120, units: [everyone] },
           {
-            name: "Cola",
-            quantity: 3,
-            totalMinor: 1050,
-            units: [{ uids: ["anna"] }, { uids: ["ben"] }, { uids: ["carl"] }],
-          },
-          {
-            name: "Käsespätzle",
-            quantity: 4,
-            totalMinor: 3400,
+            name: "Joghurt",
+            quantity: 6,
+            totalMinor: 300,
             units: [
-              { uids: ["anna"] },
-              { uids: ["anna"] },
+              everyone,
+              everyone,
+              everyone,
+              everyone,
               { uids: ["ben"] },
               { uids: ["ben", "carl"] },
             ],
           },
+          {
+            name: "Bier",
+            quantity: 3,
+            totalMinor: 450,
+            units: [{ uids: ["anna"] }, { uids: ["anna"] }, { uids: ["anna"] }],
+          },
         ],
       },
     });
+  });
+
+  it("brings everyone back with 'Alle', and folds a split line back into one row", async () => {
+    const { user } = renderEditor({
+      items: [{ name: "Joghurt", quantity: 2, totalMinor: 100 }],
+      totalMinor: null,
+    });
+    await user.click(unitButtons(0, 0).person("Ben"));
+    // Taking the last name off leaves the line with nobody — said so, and not bookable.
+    await user.click(unitButtons(0, 0).person("Ben"));
+    expect(screen.getByText("2 noch niemandem zugeordnet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Übernehmen" })).toBeDisabled();
+    await user.click(unitButtons(0, 0).person("Alle"));
+    expect(screen.getByTestId("receipt-allocation")).toHaveTextContent(/Anna\s*0,34/);
+
+    const item = unitButtons(0, 0).item;
+    await user.click(within(item).getByRole("button", { name: "Stückweise aufteilen" }));
+    await user.click(unitButtons(0, 1).person("Carl"));
+    await user.click(within(item).getByRole("button", { name: "Alle Stück gleich aufteilen" }));
+    // Every unit takes the first one's people again: everyone.
+    expect(within(item).getAllByRole("button", { name: "Carl" })).toHaveLength(1);
+    expect(screen.getByTestId("receipt-allocation")).toHaveTextContent(/Carl\s*0,33/);
   });
 
   it("lets a misread line be corrected, removed or typed in from scratch", async () => {
@@ -134,9 +171,8 @@ describe("ReceiptSplitDialog", () => {
     await user.click(screen.getByRole("button", { name: "Position hinzufügen" }));
     const names = screen.getAllByLabelText("Position");
     await user.type(names[1], "Brezel");
+    // A new line is shared by the whole table, like a scanned one.
     await user.type(screen.getAllByLabelText("Preis gesamt")[1], "2");
-    // "Alle" shares the pretzel among the whole table.
-    await user.click(unitButtons(1, 0).person("Alle"));
 
     await user.click(screen.getByRole("button", { name: "Übernehmen" }));
     // No total typed: the items' sum, 5,50. 2,00 among three: 67 + 67 + 66.

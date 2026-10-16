@@ -4,7 +4,7 @@
 // Action (which recomputes them and refuses a booking that disagrees) —
 // "define once, used by both sides that must agree".
 
-import { distributeByWeights, splitEqual } from "@/lib/money/split";
+import { distributeByWeights } from "@/lib/money/split";
 import type { ExpenseReceipt, ReceiptItem } from "@/lib/types";
 
 /** Line items on one receipt. A long supermarket receipt fits; a pasted novel doesn't. */
@@ -29,6 +29,14 @@ export const RECEIPT_SCANS_PER_DAY = 25;
 /** The image types the client sends (it re-encodes every photo as JPEG). */
 export const RECEIPT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
+function gcd(a: number, b: number): number {
+  return b === 0 ? a : gcd(b, a % b);
+}
+
+function lcm(a: number, b: number): number {
+  return (a / gcd(a, b)) * b;
+}
+
 /** Sum of the line totals: what the receipt costs before tip, discount or rounding. */
 export function receiptItemsTotal(items: readonly Pick<ReceiptItem, "totalMinor">[]): number {
   return items.reduce((sum, item) => sum + item.totalMinor, 0);
@@ -37,12 +45,17 @@ export function receiptItemsTotal(items: readonly Pick<ReceiptItem, "totalMinor"
 /**
  * What each person owes for a receipt booked at `amountMinor`.
  *
- * Each line's total is split into its units (4x Spätzle for 34,00 → 8,50
- * each, any odd cent to the first units), each unit equally among the
- * people who shared it. The difference between `amountMinor` and the line
- * totals — a tip when positive, a discount when negative — is then spread
- * in proportion to what each person had. Every step is the largest-
- * remainder method, so the result always sums to `amountMinor` exactly.
+ * Each line is split by how much of it each person had: a unit counts in
+ * full for whoever had it alone, by half for each of two who shared it,
+ * and so on (4x Spätzle, two Anna's, one Ben's, one shared by Ben and
+ * Carl → 4 : 3 : 1 of 34,00). The line is rounded once, as a whole — not
+ * unit by unit, which handed every unit's odd cent to the same people
+ * (6 yoghurts at 0,50 for three: 17/17/16 cents six times over left the
+ * third person 6 cents short). The difference between `amountMinor` and
+ * the line totals — a tip when positive, a discount when negative — is
+ * then spread in proportion to what each person had. Every step is the
+ * largest-remainder method, so the result always sums to `amountMinor`
+ * exactly.
  *
  * Throws when a unit has nobody, the lines add up to nothing, or the
  * discount would be the whole bill: there is no fair split to compute.
@@ -53,16 +66,23 @@ export function allocateReceipt(
 ): Record<string, number> {
   const subtotals: Record<string, number> = {};
   for (const item of items) {
-    const unitKeys = item.units.map((_, index) => String(index));
-    if (unitKeys.length === 0) throw new Error("A receipt item needs at least one unit");
-    const unitAmounts = splitEqual(item.totalMinor, unitKeys);
-    item.units.forEach((unit, index) => {
-      if (unit.uids.length === 0) throw new Error("Every unit needs at least one person");
-      const shares = splitEqual(unitAmounts[String(index)], unit.uids);
-      for (const [uid, share] of Object.entries(shares)) {
-        subtotals[uid] = (subtotals[uid] ?? 0) + share;
+    if (item.units.length === 0) throw new Error("A receipt item needs at least one unit");
+    if (item.units.some((unit) => unit.uids.length === 0)) {
+      throw new Error("Every unit needs at least one person");
+    }
+    // Integer weights: a unit shared by n people is worth `common / n` to
+    // each, where `common` is a multiple of every n on the line (n ≤ the
+    // group's size, so this stays small).
+    const common = item.units.reduce((acc, unit) => lcm(acc, unit.uids.length), 1);
+    const weights: Record<string, number> = {};
+    for (const unit of item.units) {
+      for (const uid of unit.uids) {
+        weights[uid] = (weights[uid] ?? 0) + common / unit.uids.length;
       }
-    });
+    }
+    for (const [uid, share] of Object.entries(distributeByWeights(item.totalMinor, weights))) {
+      subtotals[uid] = (subtotals[uid] ?? 0) + share;
+    }
   }
 
   const itemsTotal = receiptItemsTotal(items);

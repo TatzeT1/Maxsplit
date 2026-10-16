@@ -33,7 +33,12 @@ detail view can show who had what.
    several MB. EXIF rotation is applied by `createImageBitmap`.
 3. `scanReceipt` — session, membership, image shape, quota — then `scanReceiptImage`. Nothing
    is stored: not the photo, not the items.
-4. The editor opens with the items. Every line can be corrected, removed or added (the whole
+4. The editor opens with the items, **every unit shared by everyone** (a flat's shopping is
+   bookable as is; only the exceptions need taps). While a unit is shared by everyone, tapping a
+   name means "only this person" (`nextSelection`); further taps add and remove, "Alle" restores
+   everyone. A line with several units shows one row for all of them until **Stückweise
+   aufteilen**; **Alle Stück gleich aufteilen** folds it back (every unit takes the first one's
+   people). Then: Every line can be corrected, removed or added (the whole
    editor also works without any scan: **Positionen eintippen**). Each **unit** gets its own row
    of member toggles; several people on one unit share it equally. "Alle" (3+ members) and
    "Alle Einheiten wie die erste" are shortcuts.
@@ -54,8 +59,12 @@ ignored. Reduced motion: no beam or glints; the status line still changes.
 
 ## The money: `allocateReceipt`
 
-Line total → units (`splitEqual`, odd cents to the first units) → each unit among its sharers
-(`splitEqual`) → per-person subtotals. The difference to the booked amount (tip if positive,
+Each line is split by how much of it each person had — a unit counts 1/n for each of its n
+sharers, as integer weights over the lcm of the n's — and **rounded once per line** with
+`distributeByWeights`. (Until 2026-10-16 it rounded unit by unit, which handed every unit's odd
+cent to the same people: 6 yoghurts at 0,50 for three came out 102/102/96. The edit form
+recomputes a stored receipt's split from its items, so one booked before the change still
+saves.) The difference to the booked amount (tip if positive,
 discount if negative) is spread **in proportion to the subtotals** with
 `distributeByWeights`. Every step is largest-remainder, so the result sums to the amount
 exactly ([[Money Invariants]]). A discount `≥` the items total throws (nothing fair to split);

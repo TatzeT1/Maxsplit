@@ -38,6 +38,17 @@ describe("allocateReceipt", () => {
     expect(allocation).toEqual({ a: 334, b: 333, c: 333 });
   });
 
+  it("rounds a line once, not unit by unit — the odd cents don't pile up on the same people", () => {
+    // 6 yoghurts at 0,50 for three: unit by unit was 17/17/16 six times (102/102/96).
+    const everyone = ["a", "b", "c"];
+    const yoghurt = item(
+      "Joghurt",
+      300,
+      Array.from({ length: 6 }, () => everyone),
+    );
+    expect(allocateReceipt(300, [yoghurt])).toEqual({ a: 100, b: 100, c: 100 });
+  });
+
   it("spreads a tip in proportion to what each person had", () => {
     // 44,50 of items, 50,00 paid: 5,50 tip, Anna had 20,50 of 44,50.
     const allocation = allocateReceipt(5000, dinner);

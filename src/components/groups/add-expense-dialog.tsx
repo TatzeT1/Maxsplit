@@ -153,6 +153,25 @@ function scanErrorMessage(code: string, t: ReturnType<typeof useT>): string {
   }
 }
 
+/**
+ * The exact inputs a receipt split books, recomputed from its items rather
+ * than read from the stored split: the server checks them against
+ * `allocateReceipt`, and one stored before its rounding changed (2026-10)
+ * can be a cent off. Falls back to nothing if the items no longer allocate.
+ */
+function receiptExactInputs(amountMinor: number, receipt: ExpenseReceipt): Record<string, string> {
+  try {
+    return Object.fromEntries(
+      Object.entries(allocateReceipt(amountMinor, receipt.items)).map(([uid, amount]) => [
+        uid,
+        moneyToInput(amount),
+      ]),
+    );
+  } catch {
+    return {};
+  }
+}
+
 /** How long the "erkannt" stamp stays on the slip before the editor opens: the stamp's slam plus a beat to read it. */
 const SCAN_STAMP_HOLD_MS = 1_100;
 
@@ -283,11 +302,13 @@ export function AddExpenseDialog({
       : {},
   );
   const [exactInputs, setExactInputs] = useState<Record<string, string>>(() =>
-    prefill?.splitMode === "exact"
-      ? Object.fromEntries(
-          Object.entries(prefill.splits).map(([uid, s]) => [uid, moneyToInput(s.amountMinor)]),
-        )
-      : {},
+    prefill?.splitMode === "exact" && prefill.receipt
+      ? receiptExactInputs(prefill.amountMinor, prefill.receipt)
+      : prefill?.splitMode === "exact"
+        ? Object.fromEntries(
+            Object.entries(prefill.splits).map(([uid, s]) => [uid, moneyToInput(s.amountMinor)]),
+          )
+        : {},
   );
 
   // The line items behind a receipt split (📷), or null for a split entered
@@ -1034,7 +1055,7 @@ export function AddExpenseDialog({
       </DialogContent>
       <ReceiptScanOverlay
         // A fresh one per scan: its status line starts from the first step.
-        key={scanOverlayKey}
+        key={`scan-${scanOverlayKey}`}
         open={scanning}
         image={scanImage}
         itemCount={scanFound}
@@ -1042,7 +1063,7 @@ export function AddExpenseDialog({
       />
       {receiptDraft && (
         <ReceiptSplitDialog
-          key={receiptEditorKey}
+          key={`editor-${receiptEditorKey}`}
           open={receiptEditorOpen}
           onOpenChange={setReceiptEditorOpen}
           members={members}
