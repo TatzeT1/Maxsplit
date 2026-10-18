@@ -76,7 +76,7 @@ describe("scanReceiptImage", () => {
         merchant: "Krone",
         date: null,
         totalMinor: 1050,
-        items: [{ name: "Cola", quantity: 3, totalMinor: 1050 }],
+        items: [{ name: "Cola", quantity: 3, totalMinor: 1050, product: null }],
       },
     });
     const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];

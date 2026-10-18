@@ -1,6 +1,7 @@
 import "server-only";
 
-// Reads a receipt photo with whichever free vision model is configured:
+// Asks whichever free model is configured — for a receipt photo (below) or a
+// plain text question (askModels, used by lib/products to classify):
 // Google's Gemini API first (GEMINI_API_KEY), then OpenRouter's free models
 // (OPENROUTER_API_KEY). Free tiers are rate limited and their models come
 // and go, so a failure of one provider — an HTTP error, a timeout, an answer
@@ -49,9 +50,15 @@ export type ScanOutcome =
   | { ok: true; receipt: ScannedReceipt; provider: string }
   | { ok: false; error: "scan-unavailable" | "scan-failed" };
 
+/** One question to a model: a prompt, and a photo for the vision ones. */
+export interface ModelRequest {
+  prompt: string;
+  image?: ReceiptImage;
+}
+
 interface Provider {
   name: string;
-  read(image: ReceiptImage, http: Http): Promise<string>;
+  ask(request: ModelRequest, http: Http): Promise<string>;
 }
 
 class ProviderError extends Error {}
@@ -87,7 +94,7 @@ async function postJson(
 function geminiProvider(apiKey: string, model: string): Provider {
   return {
     name: `gemini:${model}`,
-    async read(image, http) {
+    async ask({ prompt, image }, http) {
       const data = (await postJson(
         http,
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -96,8 +103,10 @@ function geminiProvider(apiKey: string, model: string): Provider {
           contents: [
             {
               parts: [
-                { inline_data: { mime_type: image.mimeType, data: image.base64 } },
-                { text: RECEIPT_PROMPT },
+                ...(image
+                  ? [{ inline_data: { mime_type: image.mimeType, data: image.base64 } }]
+                  : []),
+                { text: prompt },
               ],
             },
           ],
@@ -114,7 +123,7 @@ function geminiProvider(apiKey: string, model: string): Provider {
 function openRouterProvider(apiKey: string, models: string[]): Provider {
   return {
     name: `openrouter:${models.join(",")}`,
-    async read(image, http) {
+    async ask({ prompt, image }, http) {
       const data = (await postJson(
         http,
         "https://openrouter.ai/api/v1/chat/completions",
@@ -136,11 +145,15 @@ function openRouterProvider(apiKey: string, models: string[]): Provider {
             {
               role: "user",
               content: [
-                { type: "text", text: RECEIPT_PROMPT },
-                {
-                  type: "image_url",
-                  image_url: { url: `data:${image.mimeType};base64,${image.base64}` },
-                },
+                { type: "text", text: prompt },
+                ...(image
+                  ? [
+                      {
+                        type: "image_url",
+                        image_url: { url: `data:${image.mimeType};base64,${image.base64}` },
+                      },
+                    ]
+                  : []),
               ],
             },
           ],
@@ -181,6 +194,45 @@ export function configuredProviders(env: ScanEnv = process.env): Provider[] {
   return providers;
 }
 
+/** Options shared by every call into the chain; tests pass a fake `fetch` and env. */
+export interface AskOptions {
+  env?: ScanEnv;
+  fetchImpl?: typeof fetch;
+  retryDelayMs?: number;
+}
+
+function httpFrom(options: AskOptions): Http {
+  return {
+    fetchImpl: options.fetchImpl ?? fetch,
+    retryDelayMs: options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS,
+  };
+}
+
+/**
+ * Asks the providers in order and returns the first answer `accept` takes
+ * (non-null), or `null` when none does or none is configured. A provider
+ * that fails — HTTP error, timeout, an answer `accept` refuses — is logged
+ * under `label` and the next one asked.
+ */
+export async function askModels<T>(
+  request: ModelRequest,
+  accept: (answer: string) => T | null,
+  label: string,
+  options: AskOptions = {},
+): Promise<T | null> {
+  const http = httpFrom(options);
+  for (const provider of configuredProviders(options.env)) {
+    try {
+      const result = accept(await provider.ask(request, http));
+      if (result !== null) return result;
+      throw new ProviderError("unusable answer");
+    } catch (error) {
+      console.warn(`[${label}] ${provider.name} failed:`, (error as Error).message);
+    }
+  }
+  return null;
+}
+
 /** Whether any provider is configured — the UI hides the scan button otherwise. */
 export function isReceiptScanConfigured(env: ScanEnv = process.env): boolean {
   return configuredProviders(env).length > 0;
@@ -195,19 +247,18 @@ export function isReceiptScanConfigured(env: ScanEnv = process.env): boolean {
  */
 export async function scanReceiptImage(
   image: ReceiptImage,
-  options: { env?: ScanEnv; fetchImpl?: typeof fetch; retryDelayMs?: number } = {},
+  options: AskOptions = {},
 ): Promise<ScanOutcome> {
   const providers = configuredProviders(options.env);
   if (providers.length === 0) return { ok: false, error: "scan-unavailable" };
-  const http: Http = {
-    fetchImpl: options.fetchImpl ?? fetch,
-    retryDelayMs: options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS,
-  };
+  const http = httpFrom(options);
 
   let empty: { receipt: ScannedReceipt; provider: string } | null = null;
   for (const provider of providers) {
     try {
-      const receipt = parseScannedReceipt(await provider.read(image, http));
+      const receipt = parseScannedReceipt(
+        await provider.ask({ prompt: RECEIPT_PROMPT, image }, http),
+      );
       if (!receipt) throw new ProviderError("answer was not JSON");
       if (receipt.items.length > 0) return { ok: true, receipt, provider: provider.name };
       empty ??= { receipt, provider: provider.name };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseScannedReceipt, toMinor } from "./parse";
+import { parseScannedReceipt, RECEIPT_PROMPT, toMinor } from "./parse";
 
 describe("toMinor", () => {
   it.each([
@@ -37,8 +37,8 @@ describe("parseScannedReceipt", () => {
       date: "2026-10-15",
       totalMinor: 4450,
       items: [
-        { name: "Cola 0,33l", quantity: 3, totalMinor: 1050 },
-        { name: "Käsespätzle", quantity: 4, totalMinor: 3400 },
+        { name: "Cola 0,33l", quantity: 3, totalMinor: 1050, product: null },
+        { name: "Käsespätzle", quantity: 4, totalMinor: 3400, product: null },
       ],
     });
   });
@@ -47,7 +47,7 @@ describe("parseScannedReceipt", () => {
     const text =
       'Here you go:\n```json\n{"merchant": null, "items": [{"name": "Bier", "total": "4,20"}]}\n```';
     expect(parseScannedReceipt(text)?.items).toEqual([
-      { name: "Bier", quantity: 1, totalMinor: 420 },
+      { name: "Bier", quantity: 1, totalMinor: 420, product: null },
     ]);
   });
 
@@ -60,9 +60,9 @@ describe("parseScannedReceipt", () => {
       ],
     });
     expect(parseScannedReceipt(text)?.items).toEqual([
-      { name: "Spätzle", quantity: 4, totalMinor: 3400 },
-      { name: "Wein 0,5", quantity: 1, totalMinor: 600 },
-      { name: "Wasser", quantity: 30, totalMinor: 200 },
+      { name: "Spätzle", quantity: 4, totalMinor: 3400, product: null },
+      { name: "Wein 0,5", quantity: 1, totalMinor: 600, product: null },
+      { name: "Wasser", quantity: 30, totalMinor: 200, product: null },
     ]);
   });
 
@@ -76,8 +76,31 @@ describe("parseScannedReceipt", () => {
       ],
     });
     expect(parseScannedReceipt(text)?.items).toEqual([
-      { name: "Salat gemischt", quantity: 1, totalMinor: 590 },
+      { name: "Salat gemischt", quantity: 1, totalMinor: 590, product: null },
     ]);
+  });
+
+  it("reads what each line is, normalized, and drops an unknown family", () => {
+    const text = JSON.stringify({
+      items: [
+        { name: "Schweinemett", total: 3.2, family: "meat", kind: "mett" },
+        { name: "Teewurst", total: 1.99, family: " Meat ", kind: "  Teewurst  " },
+        { name: "Bon-Rabattmarke", total: 0.5, family: "coupons", kind: "Marke" },
+        { name: "Brot", total: 2.5, family: "bakery", kind: "" },
+      ],
+    });
+    expect(parseScannedReceipt(text)?.items.map((item) => item.product)).toEqual([
+      { family: "meat", kind: "Mett" },
+      { family: "meat", kind: "Teewurst" },
+      null,
+      null,
+    ]);
+  });
+
+  it("asks the model for a family out of the fixed list, and a generic kind", () => {
+    expect(RECEIPT_PROMPT).toContain('"family": string, "kind": string');
+    expect(RECEIPT_PROMPT).toContain("- meat:");
+    expect(RECEIPT_PROMPT).toContain('"Schweinemett" -> "Mett"');
   });
 
   it("ignores an impossible date and a non-positive total", () => {

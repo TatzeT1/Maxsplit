@@ -1,5 +1,6 @@
 "use server";
 
+import { FieldValue } from "firebase-admin/firestore";
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { isCategoryId } from "@/lib/categories";
@@ -18,6 +19,8 @@ import {
   sameUidSet,
   splitPayerUids,
 } from "@/lib/money/game-expense";
+import { classifyAfterResponse } from "@/lib/products/classify-after";
+import { needsProductClass } from "@/lib/products/products";
 import { expensePushes } from "@/lib/push/messages";
 import { allocateReceipt, normalizeReceipt, validateReceipt } from "@/lib/receipt/receipt";
 import { notifyAfterResponse } from "@/lib/push/notify";
@@ -494,6 +497,7 @@ export async function addExpense(
       actorUid: session.uid,
     }),
   );
+  if (needsProductClass(expense)) classifyAfterResponse(input.groupId, expenseRef.id);
   return { ok: true, data: { expenseId: expenseRef.id } };
 }
 
@@ -529,9 +533,15 @@ export async function editExpense(
       ? stored.game
       : resolvedGame;
 
+  // What the expense is (📊) follows what it says: a receipt's lines carry
+  // their own, a changed description is classified anew. A description
+  // left as it was keeps its class — also one a member corrected by hand.
+  const description = input.description.trim();
+  const keepsProduct = !receipt && !!stored.product && stored.description === description;
+
   const now = new Date().toISOString();
   await expenseRef.update({
-    description: input.description.trim(),
+    description,
     amountMinor: input.amountMinor,
     currency: input.currency,
     date: input.date,
@@ -544,6 +554,7 @@ export async function editExpense(
     viaLottery: input.viaLottery === true,
     game,
     receipt,
+    ...(keepsProduct ? {} : { product: FieldValue.delete() }),
   });
 
   const logEntry: Omit<ActivityLogEntry, "id"> = {
@@ -554,6 +565,12 @@ export async function editExpense(
   };
   await groupRef.collection("activityLog").add(logEntry);
   await recomputeGroupBalances(groupRef);
+  const edited = {
+    product: keepsProduct ? stored.product : undefined,
+    receipt,
+    deletedAt: stored.deletedAt,
+  };
+  if (needsProductClass(edited)) classifyAfterResponse(input.groupId, input.expenseId);
 
   return { ok: true, data: { expenseId: input.expenseId } };
 }

@@ -198,4 +198,52 @@ describe("ReceiptSplitDialog", () => {
     await user.clear(screen.getByLabelText("Preis gesamt"));
     expect(apply).toBeDisabled();
   });
+
+  it("keeps what the scan said each line is, and lets it be corrected", async () => {
+    const { onApply, user } = renderEditor({
+      items: [
+        {
+          name: "Schweinemett",
+          quantity: 1,
+          totalMinor: 320,
+          product: { family: "meat", kind: "Mett" },
+        },
+        { name: "Brot", quantity: 1, totalMinor: 250, product: null },
+      ],
+      totalMinor: null,
+    });
+    const [mett, bread] = screen.getAllByTestId("receipt-item");
+    expect(within(mett).getByRole("button", { name: /Mett/ })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    // No class yet: it says what happens, rather than looking empty.
+    const pending = within(bread).getByRole("button", { name: /nach dem Speichern eingeordnet/ });
+
+    // The model called it Mett; it was Hackfleisch.
+    await user.click(within(mett).getByRole("button", { name: /Mett/ }));
+    const kind = within(mett).getByLabelText("Produktart");
+    await user.clear(kind);
+    await user.type(kind, "hackfleisch");
+
+    await user.click(pending);
+    await user.selectOptions(within(bread).getByLabelText("Obergruppe"), "bakery");
+    await user.type(within(bread).getByLabelText("Produktart"), "Brot");
+
+    await user.click(screen.getByRole("button", { name: "Übernehmen" }));
+    const { receipt } = onApply.mock.calls[0][0];
+    expect(receipt.items.map((item: { product?: unknown }) => item.product)).toEqual([
+      { family: "meat", kind: "Hackfleisch" },
+      { family: "bakery", kind: "Brot" },
+    ]);
+  });
+
+  it("leaves a line without a class for the server when nothing is set", async () => {
+    const { onApply, user } = renderEditor({
+      items: [{ name: "Brot", quantity: 1, totalMinor: 250 }],
+      totalMinor: null,
+    });
+    await user.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(onApply.mock.calls[0][0].receipt.items[0]).not.toHaveProperty("product");
+  });
 });

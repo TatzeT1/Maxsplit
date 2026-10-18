@@ -5,6 +5,7 @@
 // "define once, used by both sides that must agree".
 
 import { distributeByWeights } from "@/lib/money/split";
+import { isValidProductClass } from "@/lib/products/products";
 import type { ExpenseReceipt, ReceiptItem } from "@/lib/types";
 
 /** Line items on one receipt. A long supermarket receipt fits; a pasted novel doesn't. */
@@ -42,6 +43,27 @@ export function receiptItemsTotal(items: readonly Pick<ReceiptItem, "totalMinor"
   return items.reduce((sum, item) => sum + item.totalMinor, 0);
 }
 
+/** Each line's total split by who had how much of it, before tip or discount. */
+function lineSubtotals(items: readonly ReceiptItem[]): Record<string, number>[] {
+  return items.map((item) => {
+    if (item.units.length === 0) throw new Error("A receipt item needs at least one unit");
+    if (item.units.some((unit) => unit.uids.length === 0)) {
+      throw new Error("Every unit needs at least one person");
+    }
+    // Integer weights: a unit shared by n people is worth `common / n` to
+    // each, where `common` is a multiple of every n on the line (n ≤ the
+    // group's size, so this stays small).
+    const common = item.units.reduce((acc, unit) => lcm(acc, unit.uids.length), 1);
+    const weights: Record<string, number> = {};
+    for (const unit of item.units) {
+      for (const uid of unit.uids) {
+        weights[uid] = (weights[uid] ?? 0) + common / unit.uids.length;
+      }
+    }
+    return distributeByWeights(item.totalMinor, weights);
+  });
+}
+
 /**
  * What each person owes for a receipt booked at `amountMinor`.
  *
@@ -65,22 +87,8 @@ export function allocateReceipt(
   items: readonly ReceiptItem[],
 ): Record<string, number> {
   const subtotals: Record<string, number> = {};
-  for (const item of items) {
-    if (item.units.length === 0) throw new Error("A receipt item needs at least one unit");
-    if (item.units.some((unit) => unit.uids.length === 0)) {
-      throw new Error("Every unit needs at least one person");
-    }
-    // Integer weights: a unit shared by n people is worth `common / n` to
-    // each, where `common` is a multiple of every n on the line (n ≤ the
-    // group's size, so this stays small).
-    const common = item.units.reduce((acc, unit) => lcm(acc, unit.uids.length), 1);
-    const weights: Record<string, number> = {};
-    for (const unit of item.units) {
-      for (const uid of unit.uids) {
-        weights[uid] = (weights[uid] ?? 0) + common / unit.uids.length;
-      }
-    }
-    for (const [uid, share] of Object.entries(distributeByWeights(item.totalMinor, weights))) {
+  for (const line of lineSubtotals(items)) {
+    for (const [uid, share] of Object.entries(line)) {
       subtotals[uid] = (subtotals[uid] ?? 0) + share;
     }
   }
@@ -101,6 +109,34 @@ export function allocateReceipt(
     }
   }
   return Object.fromEntries(Object.entries(result).filter(([, amount]) => amount > 0));
+}
+
+/**
+ * Each line's part of the booked amount, per person — the Auswertung's view
+ * of a receipt: "Mett 6,40, Anna 3,20 of it". Each person's
+ * `allocateReceipt` amount (tip or discount included) is spread over their
+ * lines in proportion to what they had of each, so a person's lines add up
+ * to exactly what they were booked, and all lines to `amountMinor`.
+ *
+ * Throws where `allocateReceipt` does.
+ */
+export function receiptLineShares(
+  amountMinor: number,
+  items: readonly ReceiptItem[],
+): Record<string, number>[] {
+  const lines = lineSubtotals(items);
+  const booked = allocateReceipt(amountMinor, items);
+  const shares: Record<string, number>[] = items.map(() => ({}));
+  for (const [uid, amount] of Object.entries(booked)) {
+    const weights: Record<string, number> = {};
+    lines.forEach((line, index) => {
+      if (line[uid]) weights[String(index)] = line[uid];
+    });
+    for (const [index, share] of Object.entries(distributeByWeights(amount, weights))) {
+      if (share > 0) shares[Number(index)][uid] = share;
+    }
+  }
+  return shares;
 }
 
 /**
@@ -126,7 +162,8 @@ export function validateReceipt(
 
 function isValidItem(value: unknown, memberIds: ReadonlySet<string>): boolean {
   if (typeof value !== "object" || value === null) return false;
-  const { name, quantity, totalMinor, units } = value as Partial<ReceiptItem>;
+  const { name, quantity, totalMinor, units, product } = value as Partial<ReceiptItem>;
+  if (product !== undefined && !isValidProductClass(product)) return false;
   if (typeof name !== "string" || !name.trim() || name.length > MAX_ITEM_NAME_LENGTH) return false;
   if (!Number.isInteger(quantity) || quantity! < 1 || quantity! > MAX_ITEM_QUANTITY) return false;
   if (!Number.isSafeInteger(totalMinor) || totalMinor! < 0) return false;
@@ -150,6 +187,9 @@ export function normalizeReceipt(receipt: ExpenseReceipt): ExpenseReceipt {
       quantity: item.quantity,
       totalMinor: item.totalMinor,
       units: item.units.map((unit) => ({ uids: [...unit.uids] })),
+      ...(item.product
+        ? { product: { family: item.product.family, kind: item.product.kind } }
+        : {}),
     })),
   };
 }

@@ -296,6 +296,20 @@ describe("firestore.rules", () => {
     await assertFails(setDoc(doc(alice, "receiptScans/alice"), { day: "2026-10-16", count: 0 }));
   });
 
+  it("denies everyone, the user included, their product classification counter", async () => {
+    await testEnv.withSecurityRulesDisabled(async (context) => {
+      await context
+        .firestore()
+        .doc("productClassifyRuns/alice")
+        .set({ day: "2026-10-18", count: 3 });
+    });
+    const alice = testEnv.authenticatedContext("alice").firestore();
+    await assertFails(getDoc(doc(alice, "productClassifyRuns/alice")));
+    await assertFails(
+      setDoc(doc(alice, "productClassifyRuns/alice"), { day: "2026-10-18", count: 0 }),
+    );
+  });
+
   it("allows a member to watch an online luck round, and nobody else", async () => {
     await testEnv.withSecurityRulesDisabled(async (context) => {
       await context

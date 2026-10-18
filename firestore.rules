@@ -146,6 +146,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // "Jetzt einordnen" runs counted per user per day (lib/actions/products.ts),
+    // server-only for the same reason as receiptScans: the quota is shared.
+    match /productClassifyRuns/{uid} {
+      allow read, write: if false;
+    }
+
     // Deny-all backstop for anything not explicitly matched above.
     match /{document=**} {
       allow read, write: if false;

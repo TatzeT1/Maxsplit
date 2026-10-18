@@ -13,7 +13,7 @@ detail view can show who had what.
 | ----------------------------------------------------- | -------------------------------------------- |
 | Allocation, validation, limits (shared client/server) | `src/lib/receipt/receipt.ts`                 |
 | Model answer → line items (tolerant parser), prompt   | `src/lib/receipt/parse.ts`                   |
-| Provider chain (Gemini → OpenRouter), server-only     | `src/lib/receipt/scan.ts`                    |
+| Provider chain (Gemini → OpenRouter), server-only     | `src/lib/receipt/scan.ts` (`askModels` too)  |
 | Photo → JPEG data URL under 1 MB (client)             | `src/lib/receipt/prepare-image.ts`           |
 | `scanReceipt` Server Action, daily quota              | `src/lib/actions/receipts.ts`                |
 | Booking with items                                    | `addExpense`/`editExpense` (`receipt` field) |
@@ -45,6 +45,12 @@ detail view can show who had what.
 5. **Übernehmen** fills the form: amount = receipt total, `exact` inputs from
    `allocateReceipt`, description = merchant (if empty), date = receipt date (add mode only).
 6. Save → `addExpense` with `receipt`.
+
+Each line also carries what it **is** — `product: { family, kind }` ("🥩 Mett"), read by the same
+request (the prompt lists the fixed families and asks for a generic German kind). The editor
+shows it as a chip under the name; tapping it opens Obergruppe + Produktart to correct it. A
+line without one (typed by hand, or an unusable answer) says "Wird nach dem Speichern
+eingeordnet" and is classified after the response. See [[Product Insights]].
 
 ## The wait: `ReceiptScanOverlay`
 
@@ -128,4 +134,4 @@ empty read is a success with `items: []`, shown as "keine Positionen erkannt". A
 
 ## Related
 
-[[Expenses and Splitting]] · [[Money Invariants]] · [[Environment and Config]] · [[Data Model]]
+[[Product Insights]] · [[Expenses and Splitting]] · [[Money Invariants]] · [[Environment and Config]] · [[Data Model]]

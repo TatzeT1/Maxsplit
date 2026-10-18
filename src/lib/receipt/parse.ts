@@ -5,6 +5,8 @@
 // and drops what it can't make sense of rather than guessing.
 
 import { isIsoDate } from "@/lib/ledger-input";
+import { PRODUCT_FAMILY_GUIDE, toProductClass } from "@/lib/products/products";
+import type { ProductClass } from "@/lib/types";
 import { MAX_ITEM_NAME_LENGTH, MAX_ITEM_QUANTITY, MAX_RECEIPT_ITEMS } from "./receipt";
 
 /** A line the model read. Not yet assigned to anyone. */
@@ -12,6 +14,8 @@ export interface ScannedItem {
   name: string;
   quantity: number;
   totalMinor: number;
+  /** What the model says the line is; `null` when its answer for it was unusable. */
+  product: ProductClass | null;
 }
 
 /** What a scan returns to the client: a starting point the user corrects and assigns. */
@@ -26,10 +30,13 @@ export interface ScannedReceipt {
 
 /** The instruction every provider sends with the photo. */
 export const RECEIPT_PROMPT = `You read restaurant and shop receipts. Look at the photo and answer with JSON only, no prose, in exactly this shape:
-{"merchant": string | null, "date": "YYYY-MM-DD" | null, "total": number | null, "items": [{"name": string, "quantity": integer, "total": number}]}
+{"merchant": string | null, "date": "YYYY-MM-DD" | null, "total": number | null, "items": [{"name": string, "quantity": integer, "total": number, "family": string, "kind": string}]}
 Rules:
 - One entry per printed line item. "quantity" is how many units the line covers (1 if not printed). "total" is the line's price for all its units together, as a decimal number in the receipt's currency (e.g. 34.0 for "4x Spätzle 8,50 = 34,00").
 - Keep item names as printed, in the receipt's language, without the quantity prefix.
+- "kind" is what the product generically is, in German, singular, without brand, size, weight, variety or packaging, so that the same product on different receipts gets the same kind: "Kalbsleberwurst fein 125g" -> "Leberwurst", "Schweinemett" -> "Mett", "Rügenwalder Teewurst" -> "Teewurst", "Coca-Cola 0,5l" -> "Cola", "Vollkornbrot geschn." -> "Brot", "4x Käsespätzle" -> "Käsespätzle". Expand abbreviations you can read ("H-MILCH 1,5%" -> "Milch").
+- "family" is exactly one of these ids:
+${PRODUCT_FAMILY_GUIDE}
 - Leave out subtotals, taxes/VAT summaries, payment lines, change, tips, and deposit returns. Discounts are not items.
 - "total" at the top level is the final amount due printed on the receipt.
 - If the image is not a receipt, answer {"merchant": null, "date": null, "total": null, "items": []}.`;
@@ -104,7 +111,8 @@ export function parseScannedReceipt(text: string): ScannedReceipt | null {
     // A negative line is a deposit return or a discount: the receipt's
     // total already accounts for it, and the editor spreads the difference.
     if (!name || totalMinor === null || totalMinor < 0) continue;
-    items.push({ name, quantity, totalMinor });
+    const product = toProductClass(item.family ?? item.category, item.kind ?? item.type);
+    items.push({ name, quantity, totalMinor, product });
   }
 
   const totalMinor = toMinor(raw.total);

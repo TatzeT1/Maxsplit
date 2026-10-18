@@ -5,6 +5,7 @@ import {
   MAX_ITEM_QUANTITY,
   normalizeReceipt,
   receiptItemsTotal,
+  receiptLineShares,
   validateReceipt,
 } from "./receipt";
 
@@ -130,5 +131,80 @@ describe("normalizeReceipt", () => {
     expect(normalizeReceipt(sent)).toEqual({
       items: [{ name: "Cola", quantity: 1, totalMinor: 350, units: [{ uids: ["anna"] }] }],
     });
+  });
+});
+
+describe("receiptLineShares", () => {
+  it("gives each line its part of the bill, per person, tip spread like the split", () => {
+    // 44,50 of items, paid 50,00: the 5,50 tip goes by what each person had.
+    const shares = receiptLineShares(5000, dinner);
+    const booked = allocateReceipt(5000, dinner);
+    for (const uid of Object.keys(booked)) {
+      expect(shares.reduce((total, line) => total + (line[uid] ?? 0), 0)).toBe(booked[uid]);
+    }
+    expect(shares.reduce((total, line) => total + sum(line), 0)).toBe(5000);
+    // Without a tip a line is exactly what its people had of it.
+    expect(receiptLineShares(4450, dinner)).toEqual([
+      { anna: 350, ben: 350, carl: 350 },
+      { anna: 1700, ben: 850, carl: 850 },
+    ]);
+  });
+
+  it("spreads a discount too, and leaves nobody a negative line", () => {
+    const shares = receiptLineShares(4000, dinner);
+    expect(shares.reduce((total, line) => total + sum(line), 0)).toBe(4000);
+    expect(shares.every((line) => Object.values(line).every((amount) => amount > 0))).toBe(true);
+  });
+
+  it("sums exactly over random receipts", () => {
+    const people = ["a", "b", "c", "d"];
+    for (let run = 0; run < 200; run++) {
+      const items = Array.from({ length: 1 + (run % 5) }, (_, index) =>
+        item(
+          `x${index}`,
+          1 + ((run * 37 + index * 101) % 2000),
+          Array.from({ length: 1 + ((run + index) % 3) }, (_, unit) =>
+            people.slice(0, 1 + ((run + unit) % people.length)),
+          ),
+        ),
+      );
+      const itemsTotal = receiptItemsTotal(items);
+      const amount = itemsTotal + ((run % 7) - 3) * 13;
+      if (amount <= 0) continue;
+      let shares: Record<string, number>[];
+      try {
+        shares = receiptLineShares(amount, items);
+      } catch {
+        continue;
+      }
+      expect(shares.reduce((total, line) => total + sum(line), 0)).toBe(amount);
+    }
+  });
+});
+
+describe("a receipt line's product class", () => {
+  const members = new Set(["anna", "ben", "carl"]);
+
+  it("is optional, and stored as given when well-formed", () => {
+    const withProduct = {
+      items: [{ ...dinner[0], product: { family: "drinks" as const, kind: "Cola" } }, dinner[1]],
+    };
+    expect(validateReceipt(withProduct, members)).toBeNull();
+    const normalized = normalizeReceipt({
+      items: [{ ...withProduct.items[0], extra: 1 } as ReceiptItem, dinner[1]],
+    });
+    expect(normalized.items[0].product).toEqual({ family: "drinks", kind: "Cola" });
+    expect(normalized.items[1]).not.toHaveProperty("product");
+  });
+
+  it.each([
+    [{ family: "drinks", kind: "cola" }],
+    [{ family: "beverages", kind: "Cola" }],
+    [{ family: "drinks" }],
+    [null],
+  ])("refuses %j", (product) => {
+    expect(validateReceipt({ items: [{ ...dinner[0], product }] }, members)).toBe(
+      "invalid-receipt",
+    );
   });
 });

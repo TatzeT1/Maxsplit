@@ -273,6 +273,7 @@ function ExpenseRow({
         onOpenChange={setDuplicateOpen}
       />
       <ExpenseDetailDialog
+        groupId={groupId}
         expense={expense}
         members={members}
         open={detailOpen}

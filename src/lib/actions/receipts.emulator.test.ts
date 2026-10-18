@@ -213,8 +213,8 @@ describe("scanReceipt", () => {
         date: "2026-10-15",
         totalMinor: 4450,
         items: [
-          { name: "Cola", quantity: 3, totalMinor: 1050 },
-          { name: "Käsespätzle", quantity: 4, totalMinor: 3400 },
+          { name: "Cola", quantity: 3, totalMinor: 1050, product: null },
+          { name: "Käsespätzle", quantity: 4, totalMinor: 3400, product: null },
         ],
       },
     });

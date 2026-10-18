@@ -57,7 +57,9 @@ Google anmelden") — no real Google account needed.
   `src/components/groups/chat-{composer,message}.test.tsx` (see [[Chat]]),
   `src/lib/sound/game-sounds.test.ts`,
   `src/lib/receipt/{receipt,parse,scan}.test.ts` and
-  `src/components/groups/receipt-split-dialog.test.tsx` (see [[Receipt Scan]])
+  `src/components/groups/receipt-split-dialog.test.tsx` (see [[Receipt Scan]]),
+  `src/lib/products/{products,classify,totals}.test.ts` and
+  `src/components/groups/insights-tab.test.tsx` (see [[Product Insights]])
   (see [[Split Games]] for what each pure module encodes). This is where [[Money Invariants]]'
   guarantees (rounding remainders, multi-payer attribution, zero-sum) are actually pinned down —
   read these before changing split/balance logic, they encode the invariants as concrete cases,

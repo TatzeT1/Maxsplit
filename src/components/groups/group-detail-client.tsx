@@ -12,6 +12,7 @@ import { BalanceHero } from "@/components/groups/balance-hero";
 import { BalancesTab } from "@/components/groups/balances-tab";
 import { ChatEntryCard } from "@/components/groups/chat-entry-card";
 import { GamesTab } from "@/components/groups/games-tab";
+import { InsightsTab } from "@/components/groups/insights-tab";
 import { StartGameButton } from "@/components/groups/start-game-button";
 import { GroupSettingsTab } from "@/components/groups/group-settings-tab";
 import { MemberAvatarStack } from "@/components/groups/member-avatar-stack";
@@ -37,10 +38,18 @@ import { cn } from "@/lib/utils";
 import type { ActivityLogEntry, Expense, Group, RecurringRule, Settlement } from "@/lib/types";
 import { monogramVars } from "@/components/ui/monogram";
 
-const TABS = ["expenses", "balances", "games", "group"] as const;
+const TABS = ["expenses", "balances", "insights", "games", "group"] as const;
 const LIVE_SOURCES = ["group", "expenses", "settlements", "activityLog", "recurring"] as const;
 type GroupTab = (typeof TABS)[number];
 const DEFAULT_TAB: GroupTab = "expenses";
+
+/**
+ * Five tabs on a phone: each as wide as its label rather than a fifth of the
+ * bar — "Auswertung" needs ~75 px, a fifth of a 375 px screen is 65 — and a
+ * notch smaller below 375 px (measured: Geist and Bricolage fit at 360 with
+ * 12 px, at 320 with 11 px).
+ */
+const TAB_TRIGGER = "flex-auto px-1.5 max-[374px]:px-1 max-[374px]:text-xs max-[359px]:text-[11px]";
 
 function parseTab(value: string | null): GroupTab {
   return TABS.includes(value as GroupTab) ? (value as GroupTab) : DEFAULT_TAB;
@@ -81,7 +90,7 @@ function useIsPinned(sentinel: HTMLElement | null) {
  *   header        who and how many
  *   BalanceHero   where you stand, and the actions that settle it
  *   banner/chat   the two live things: a running tournament, new messages
- *   tabs          Ausgaben (default) · Salden · Spiele · Gruppe
+ *   tabs          Ausgaben (default) · Salden · Auswertung · Spiele · Gruppe
  *   action bar    "Ausgabe hinzufügen", pinned under the thumb
  *
  * The tab lives in `?tab=` (replaced, not pushed — switching tabs isn't a
@@ -346,10 +355,21 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
             className="data-[pinned=true]:bg-background/85 sticky top-0 z-20 -mx-4 px-4 py-2 transition-[background-color,box-shadow] duration-(--duration-fast) data-[pinned=true]:shadow-[0_1px_0_var(--border)] data-[pinned=true]:backdrop-blur-md"
           >
             <TabsList>
-              <TabsTrigger value="expenses">{t("groups.tabExpenses")}</TabsTrigger>
-              <TabsTrigger value="balances">{t("groups.tabBalances")}</TabsTrigger>
-              <TabsTrigger value="games">{t("groups.tabGames")}</TabsTrigger>
-              <TabsTrigger value="group">{t("groups.tabGroup")}</TabsTrigger>
+              <TabsTrigger value="expenses" className={TAB_TRIGGER}>
+                {t("groups.tabExpenses")}
+              </TabsTrigger>
+              <TabsTrigger value="balances" className={TAB_TRIGGER}>
+                {t("groups.tabBalances")}
+              </TabsTrigger>
+              <TabsTrigger value="insights" className={TAB_TRIGGER}>
+                {t("groups.tabInsights")}
+              </TabsTrigger>
+              <TabsTrigger value="games" className={TAB_TRIGGER}>
+                {t("groups.tabGames")}
+              </TabsTrigger>
+              <TabsTrigger value="group" className={TAB_TRIGGER}>
+                {t("groups.tabGroup")}
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -386,6 +406,18 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
               currency={group.currency}
               hasShareLink={!!group.settlementShareToken}
               canManage={isGroupManager(group.members[user.uid]?.role)}
+            />
+          </TabsContent>
+          <TabsContent
+            value="insights"
+            forceMount
+            className="animate-rise pt-2 data-[state=inactive]:hidden"
+          >
+            <InsightsTab
+              groupId={groupId}
+              expenses={expenses}
+              group={group}
+              currentUid={user.uid}
             />
           </TabsContent>
           <TabsContent

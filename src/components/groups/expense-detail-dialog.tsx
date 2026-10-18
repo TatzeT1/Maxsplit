@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { ProductChip, ProductClassFields } from "@/components/groups/product-class-fields";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GameRecordSummary } from "@/components/groups/split-game/game-record";
 import { useT } from "@/components/locale-provider";
@@ -9,7 +12,18 @@ import { formatMoney } from "@/lib/format/money";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { cn } from "@/lib/utils";
 import { receiptItemsTotal } from "@/lib/receipt/receipt";
-import type { Expense, GroupMember, ReceiptItem, SplitMode } from "@/lib/types";
+import { setExpenseProduct } from "@/lib/actions/products";
+import { callAction } from "@/lib/call-action";
+import { normalizeProductKind, productFamilyEmoji } from "@/lib/products/products";
+import { useOnline } from "@/lib/use-online";
+import type {
+  Expense,
+  GroupMember,
+  ProductClass,
+  ProductFamilyId,
+  ReceiptItem,
+  SplitMode,
+} from "@/lib/types";
 import { monogramVars } from "@/components/ui/monogram";
 
 function MemberChip({ name }: { name: string }) {
@@ -49,13 +63,108 @@ const SPLIT_MODE_LABEL_KEYS: Record<SplitMode, TranslationKey> = {
   exact: "expenses.splitExact",
 };
 
+/**
+ * What an expense without a receipt is (📊), and the one place to correct
+ * it: any member may, it moves no money. Saved on its own, through
+ * setExpenseProduct — not a reason to open the whole edit form.
+ */
+function ExpenseProductSection({ groupId, expense }: { groupId: string; expense: Expense }) {
+  const t = useT();
+  const online = useOnline();
+  const [open, setOpen] = useState(false);
+  const [family, setFamily] = useState<ProductFamilyId | null>(expense.product?.family ?? null);
+  const [kind, setKind] = useState(expense.product?.kind ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const draftKind = normalizeProductKind(kind);
+
+  function toggle() {
+    // Opening starts from what is stored now, which may have arrived since.
+    if (!open) {
+      setFamily(expense.product?.family ?? null);
+      setKind(expense.product?.kind ?? "");
+      setError(null);
+    }
+    setOpen(!open);
+  }
+
+  async function save() {
+    if (!family || !draftKind) {
+      setError(t("products.invalid"));
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    const result = await callAction(() =>
+      setExpenseProduct({ groupId, expenseId: expense.id, family, kind: draftKind }),
+    );
+    setSaving(false);
+    if (result.ok) setOpen(false);
+    else
+      setError(result.error === "network" ? t("errors.notSaved") : t("common.somethingWentWrong"));
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+        📊 {t("products.detailTitle")}
+      </h3>
+      <ProductChip
+        product={expense.product ?? null}
+        pendingLabel={t("products.detailPending")}
+        expanded={open}
+        onClick={toggle}
+      />
+      {open && (
+        <div className="flex flex-col gap-2">
+          <ProductClassFields
+            idPrefix={`expense-product-${expense.id}`}
+            family={family}
+            kind={kind}
+            disabled={saving}
+            onChange={(next) => {
+              setFamily(next.family);
+              setKind(next.kind);
+            }}
+          />
+          {error && (
+            <p className="text-destructive text-sm" role="alert">
+              {error}
+            </p>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            className="self-end"
+            disabled={!online || saving || !family || !draftKind}
+            onClick={save}
+          >
+            {t("common.save")}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LineProduct({ product }: { product: ProductClass | undefined }) {
+  if (!product) return null;
+  return (
+    <span className="text-muted-foreground shrink-0 text-xs">
+      <span aria-hidden="true">{productFamilyEmoji(product.family)}</span> {product.kind}
+    </span>
+  );
+}
+
 /** Read-only breakdown opened by tapping an expense row — the only place the app shows who paid what and who owes what without entering the edit form. */
 export function ExpenseDetailDialog({
+  groupId,
   expense,
   members,
   open,
   onOpenChange,
 }: {
+  groupId: string;
   expense: Expense;
   members: Record<string, GroupMember>;
   open: boolean;
@@ -159,8 +268,11 @@ export function ExpenseDetailDialog({
                         {formatMoney(item.totalMinor, expense.currency)}
                       </span>
                     </span>
-                    <span className="text-muted-foreground text-xs">
-                      {describeUnits(item, nameOf)}
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-muted-foreground min-w-0 text-xs">
+                        {describeUnits(item, nameOf)}
+                      </span>
+                      <LineProduct product={item.product} />
                     </span>
                   </li>
                 ))}
@@ -176,6 +288,10 @@ export function ExpenseDetailDialog({
                 )}
               </ul>
             </div>
+          )}
+
+          {!expense.receipt?.items?.length && (
+            <ExpenseProductSection key={expense.id} groupId={groupId} expense={expense} />
           )}
         </div>
       </DialogContent>

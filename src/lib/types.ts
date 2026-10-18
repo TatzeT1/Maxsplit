@@ -133,6 +133,52 @@ export interface Expense {
    * before 2026-10, `null` once an edit replaced the split by hand.
    */
   receipt?: ExpenseReceipt | null;
+  /**
+   * What the expense was spent on (📊 Auswertung) — for an expense without a
+   * receipt; a receipt's lines each carry their own. Written by the server
+   * after the response, from the description (see lib/products), or by a
+   * member correcting it. Absent while nobody has classified it yet, which
+   * the Auswertung tab shows as "Noch nicht eingeordnet".
+   */
+  product?: ProductClass;
+}
+
+/** See `ProductClass.family`. */
+export type ProductFamilyId =
+  | "meat"
+  | "fish"
+  | "dairy"
+  | "bakery"
+  | "produce"
+  | "staples"
+  | "frozen"
+  | "sweets"
+  | "drinks"
+  | "alcohol"
+  | "groceries"
+  | "meals"
+  | "household"
+  | "drugstore"
+  | "health"
+  | "housing"
+  | "utilities"
+  | "transport"
+  | "travel"
+  | "leisure"
+  | "clothing"
+  | "electronics"
+  | "fees"
+  | "other";
+
+/** What something is, for the Auswertung: "Fleisch & Wurst · Mett". */
+export interface ProductClass {
+  /** A fixed group (Obergruppe) — see PRODUCT_FAMILY_IDS. */
+  family: ProductFamilyId;
+  /**
+   * The generic product type, German, singular, no brand or size: "Mett",
+   * "Leberwurst", "Brot". Free text, normalized by `normalizeProductKind`.
+   */
+  kind: string;
 }
 
 /** See `Expense.receipt`. Tip or discount is the expense amount minus the line totals. */
@@ -152,6 +198,8 @@ export interface ReceiptItem {
    * an array of arrays.
    */
   units: { uids: string[] }[];
+  /** What the line is (see ProductClass). Absent until a scan or a member says. */
+  product?: ProductClass;
 }
 
 /** The game behind a game-decided expense — see `Expense.game`. */

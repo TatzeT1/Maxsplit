@@ -14,6 +14,7 @@ duplicating every field here would just rot.
 users/{uid}                                (.notificationPrefs — see Push Notifications)
 pushSubscriptions/{sha256(endpoint)}       (server-only: one device's push subscription)
 receiptScans/{uid}                         (server-only: { day, count } — the Receipt Scan daily quota)
+productClassifyRuns/{uid}                  (server-only: { day, count } — the Auswertung's "Jetzt einordnen" daily quota)
 groups/{groupId}
   groups/{groupId}/expenses/{expenseId}
   groups/{groupId}/settlements/{settlementId}
@@ -94,6 +95,14 @@ ExpenseSplit>` where `ExpenseSplit = { rawValue, amountMinor }` — `rawValue` i
   `addExpense`): what the client sends never contains it, `normalizeExpenseGame` drops it, and
   `editExpense` preserves it only while the split is still the equal split among the game's
   payers. The one-phone claim id (`estimateRoundId`) travels beside the record and is never stored.
+- `product?: { family, kind }` (a `ProductClass`) — since 2026-10, what an expense **without a
+  receipt** was spent on, for the 📊 Auswertung tab: `family` one of the fixed
+  `PRODUCT_FAMILY_IDS`, `kind` a normalized German noun ("Miete", "Mett"). Written by the
+  server only — after the response (`classifyAfterResponse`), by "Jetzt einordnen", or by a
+  member's correction (`setExpenseProduct`, any member). **Absent = not classified yet**; an
+  edit that changes the description deletes it. A receipt's expense never carries one: each
+  `receipt.items[i].product?` does instead (set by the scan, the editor or the server). See
+  [[Product Insights]].
 
 ## `Settlement`
 

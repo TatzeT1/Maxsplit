@@ -58,6 +58,7 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
 pushSubscriptions/{id} → read, write: false — devices' push endpoints and keys, server-only.
 receiptScans/{uid}     → read, write: false — the [[Receipt Scan]] daily counter; a client that
                          could write it would reset its own limit on the shared free model quota.
+productClassifyRuns/{uid} → read, write: false — the [[Product Insights]] catch-up counter, same reason.
 
 {document=**}        → deny-all backstop for anything unmatched.
 ```

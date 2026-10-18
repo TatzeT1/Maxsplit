@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ProductChip, ProductClassFields } from "@/components/groups/product-class-fields";
 import { useT } from "@/components/locale-provider";
 import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
 import {
@@ -22,12 +23,26 @@ import {
   MAX_RECEIPT_ITEMS,
   receiptItemsTotal,
 } from "@/lib/receipt/receipt";
-import type { ExpenseReceipt, GroupMember, ReceiptItem } from "@/lib/types";
+import { normalizeProductKind } from "@/lib/products/products";
+import type {
+  ExpenseReceipt,
+  GroupMember,
+  ProductClass,
+  ProductFamilyId,
+  ReceiptItem,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 /** What the editor opens with: a scan's result, a stored receipt, or nothing (typed by hand). */
 export interface ReceiptDraft {
-  items: { name: string; quantity: number; totalMinor: number; units?: { uids: string[] }[] }[];
+  items: {
+    name: string;
+    quantity: number;
+    totalMinor: number;
+    units?: { uids: string[] }[];
+    /** What the scan (or a member, earlier) said the line is. */
+    product?: ProductClass | null;
+  }[];
   /** The receipt's total; `null` starts it at the items' sum. */
   totalMinor: number | null;
 }
@@ -51,6 +66,10 @@ interface DraftItem {
    * stands for every unit — "6x Joghurt" for the whole flat is one tap, not six.
    */
   perUnit: boolean;
+  /** What the line is (📊), as typed: a class only once both are set. */
+  family: ProductFamilyId | null;
+  kind: string;
+  productOpen: boolean;
 }
 
 function parseQuantity(input: string): number | null {
@@ -96,6 +115,9 @@ function toDraftItem(item: ReceiptDraft["items"][number], memberUids: string[]):
     total: moneyToInput(item.totalMinor),
     units,
     perUnit: !sameUnits(units),
+    family: item.product?.family ?? null,
+    kind: item.product?.kind ?? "",
+    productOpen: false,
   };
 }
 
@@ -107,7 +129,16 @@ function emptyItem(memberUids: string[]): DraftItem {
     total: "",
     units: [[...memberUids]],
     perUnit: false,
+    family: null,
+    kind: "",
+    productOpen: false,
   };
+}
+
+/** The line's class, or `null` while it has none (the server classifies it after saving). */
+function draftProduct(item: Pick<DraftItem, "family" | "kind">): ProductClass | null {
+  const kind = normalizeProductKind(item.kind);
+  return item.family && kind ? { family: item.family, kind } : null;
 }
 
 /** A line's validated form, or `null` while something in it is still missing or malformed. */
@@ -116,11 +147,13 @@ function toReceiptItem(item: DraftItem): ReceiptItem | null {
   const quantity = parseQuantity(item.quantity);
   const totalMinor = parseMoneyInput(item.total);
   if (!name || quantity === null || totalMinor === null || totalMinor < 0) return null;
+  const product = draftProduct(item);
   return {
     name,
     quantity,
     totalMinor,
     units: resizeUnits(item.units, quantity, item.units[0] ?? []).map((uids) => ({ uids })),
+    ...(product ? { product } : {}),
   };
 }
 
@@ -334,6 +367,27 @@ export function ReceiptSplitDialog({
                     />
                   </div>
                 </div>
+                <ProductChip
+                  product={draftProduct(item)}
+                  pendingLabel={t("products.pending")}
+                  expanded={item.productOpen}
+                  onClick={() =>
+                    updateItem(item.key, (current) => ({
+                      ...current,
+                      productOpen: !current.productOpen,
+                    }))
+                  }
+                />
+                {item.productOpen && (
+                  <ProductClassFields
+                    idPrefix={`receipt-product-${item.key}`}
+                    family={item.family}
+                    kind={item.kind}
+                    onChange={(next) =>
+                      updateItem(item.key, (current) => ({ ...current, ...next }))
+                    }
+                  />
+                )}
                 {(item.perUnit ? units : units.slice(0, 1)).map((uids, unitIndex) => (
                   <div key={unitIndex} className="flex flex-col gap-1">
                     {item.perUnit && (
