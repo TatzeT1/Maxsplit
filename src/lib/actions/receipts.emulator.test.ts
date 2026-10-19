@@ -319,6 +319,27 @@ describe("scanReceipt", () => {
     expect(providers.data()?.counts).toEqual({ "gemini:gemini-flash-latest": 1 });
   });
 
+  it("charges the group one prompt when Flash is overloaded twice and Flash-Lite answers", async () => {
+    const groupRef = await seedDinnerTable();
+    process.env.GEMINI_API_KEY = "test-key";
+    const answer = vi.mocked(globalThis.fetch).getMockImplementation()!;
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (url.includes("gemini-flash-latest:")) return new Response("busy", { status: 503 });
+      return answer(input, init);
+    });
+    signInAs({ uid: "lea" });
+    expect((await scanReceipt({ groupId: "g1", image })).ok).toBe(true);
+
+    expect((await groupRef.collection("aiUsage").doc(aiUsageMonth()).get()).data()?.count).toBe(1);
+    const providers = (await adminDb.collection("aiProviderUsage").doc(aiUsageDay()).get()).data();
+    expect(providers?.counts).toEqual({
+      "gemini:gemini-flash-latest": 2,
+      "gemini:gemini-flash-lite-latest": 1,
+    });
+    expect(providers?.failed).toEqual({ "gemini:gemini-flash-latest": 2 });
+  });
+
   it("stops a group at its monthly limit, and a blocked group at once, sparing the daily scans", async () => {
     const groupRef = await seedDinnerTable();
     process.env.GEMINI_API_KEY = "test-key";

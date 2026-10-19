@@ -20,11 +20,20 @@ export default async function AdminAiPage() {
   const groupNames = Object.fromEntries(
     overview.groups.map((group) => [group.groupId, group.name]),
   );
-  const requestsToday = overview.providers.reduce((sum, provider) => sum + provider.today, 0);
-
-  const tiles: { label: string; value: number }[] = [
-    { label: `Prompts ${overview.month}`, value: overview.promptsThisMonth },
-    { label: "Requests today", value: requestsToday },
+  // Same month for both, so they compare: a prompt is what a group is charged
+  // for, a request is what a model sees — one prompt can take several when
+  // Flash is overloaded (retry, then Flash-Lite).
+  const tiles: { label: string; value: number; hint: string }[] = [
+    {
+      label: `Prompts ${overview.month}`,
+      value: overview.promptsThisMonth,
+      hint: "what groups are charged",
+    },
+    {
+      label: `Model requests ${overview.month}`,
+      value: overview.requestsThisMonth,
+      hint: `incl. retries & fallbacks · ${overview.requestsToday} today`,
+    },
   ];
 
   return (
@@ -46,6 +55,7 @@ export default async function AdminAiPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-2xl font-semibold tabular-nums">{tile.value.toLocaleString()}</p>
+                <p className="text-muted-foreground mt-1 text-xs">{tile.hint}</p>
               </CardContent>
             </Card>
           ))}
@@ -54,6 +64,10 @@ export default async function AdminAiPage() {
 
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-medium">Free-tier budget per model (UTC day)</h2>
+        <p className="text-muted-foreground text-xs">
+          One prompt can cost several requests: an overloaded model (503) is retried once, then the
+          next model is asked. Failed requests are listed separately below.
+        </p>
         <p className="text-muted-foreground text-xs">
           Counted by this app — every HTTP request, retries included. Google offers no API for
           what&apos;s left; the budgets are the 2026-09 measurements, per Google Cloud project. The
@@ -96,6 +110,12 @@ export default async function AdminAiPage() {
                   <span className="text-muted-foreground text-xs">
                     {left !== null ? `~${left} left today · ` : "budget unknown · "}
                     {provider.month} this month
+                    {provider.failedMonth > 0 && (
+                      <span className="text-destructive">
+                        {" "}
+                        · {provider.failedToday} failed today, {provider.failedMonth} this month
+                      </span>
+                    )}
                   </span>
                 </li>
               );

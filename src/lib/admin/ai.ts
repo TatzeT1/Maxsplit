@@ -15,6 +15,9 @@ export interface AdminProviderUsage {
   provider: string;
   today: number;
   month: number;
+  /** Of those, requests that brought no answer (overloaded, retried, given up on). */
+  failedToday: number;
+  failedMonth: number;
   /** Free-tier requests per day, if known (dailyRequestBudget). */
   dailyBudget: number | null;
 }
@@ -33,6 +36,8 @@ export interface AdminAiOverview {
   month: string;
   today: string;
   promptsThisMonth: number;
+  requestsThisMonth: number;
+  requestsToday: number;
   providers: AdminProviderUsage[];
   groups: AdminGroupAiUsage[];
   /** Null when the query failed — the aiCalls collection-group index isn't deployed yet. */
@@ -121,24 +126,35 @@ export async function getAiOverview(now: Date = new Date()): Promise<AdminAiOver
   const byProvider = new Map<string, AdminProviderUsage>();
   for (const snap of daySnaps) {
     const counts = (snap.data()?.counts ?? {}) as Record<string, number>;
+    const failed = (snap.data()?.failed ?? {}) as Record<string, number>;
     for (const [provider, requests] of Object.entries(counts)) {
       const entry = byProvider.get(provider) ?? {
         provider,
         today: 0,
         month: 0,
+        failedToday: 0,
+        failedMonth: 0,
         dailyBudget: dailyRequestBudget(provider),
       };
+      const lost = failed[provider] ?? 0;
       entry.month += requests;
-      if (snap.id === today) entry.today += requests;
+      entry.failedMonth += lost;
+      if (snap.id === today) {
+        entry.today += requests;
+        entry.failedToday += lost;
+      }
       byProvider.set(provider, entry);
     }
   }
 
+  const providers = [...byProvider.values()];
   return {
     month,
     today,
     promptsThisMonth: groups.reduce((sum, group) => sum + group.used, 0),
-    providers: [...byProvider.values()].sort((a, b) => b.month - a.month),
+    requestsThisMonth: providers.reduce((sum, provider) => sum + provider.month, 0),
+    requestsToday: providers.reduce((sum, provider) => sum + provider.today, 0),
+    providers: providers.sort((a, b) => b.month - a.month),
     groups,
     recentCalls,
   };

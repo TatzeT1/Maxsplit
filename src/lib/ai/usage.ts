@@ -83,13 +83,22 @@ export function groupAiMeter(groupId: string, uid: string | null, kind: AiCallKi
         expiresAt: Timestamp.fromMillis(now.getTime() + LOG_RETENTION_DAYS * 86_400_000),
       });
       // set() takes the keys literally — a model name with a dot is no field path here.
+      // `failed`: requests that brought no answer — a 503 retried, a provider
+      // given up on — so one prompt costing three requests reads as such.
       const counts: Record<string, FieldValue> = {};
+      const failed: Record<string, FieldValue> = {};
       for (const entry of attempts) {
         if (entry.requests > 0) counts[entry.provider] = FieldValue.increment(entry.requests);
+        const lost = entry.ok ? entry.requests - 1 : entry.requests;
+        if (lost > 0) failed[entry.provider] = FieldValue.increment(lost);
       }
       if (Object.keys(counts).length > 0) {
         const day = aiUsageDay(now);
-        batch.set(adminDb.collection("aiProviderUsage").doc(day), { day, counts }, { merge: true });
+        batch.set(
+          adminDb.collection("aiProviderUsage").doc(day),
+          { day, counts, failed },
+          { merge: true },
+        );
       }
       await batch.commit();
     },

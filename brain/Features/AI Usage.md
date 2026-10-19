@@ -67,7 +67,7 @@ A failed log write is logged and swallowed — it never fails the scan it descri
 
 **Gemini has no API for remaining free-tier quota** (only the AI Studio quota page shows it), so
 the admin page shows the app's **own count**: `aiProviderUsage/{yyyy-mm-dd}` (server-only),
-`counts[provider]` = HTTP requests incl. retries, against `dailyRequestBudget` — the 2026-09
+`counts[provider]` = HTTP requests incl. retries (`failed[provider]`: those that brought no answer — a prompt whose Flash attempt hit two 503s before Flash-Lite answered is 1 prompt, 3 requests, 2 failed), against `dailyRequestBudget` — the 2026-09
 measurements (Flash ≈ 20/day, Flash-Lite ≈ 500/day, OpenRouter free 50/day). These are
 estimates per Google Cloud project; other apps on the same project are invisible here.
 OpenRouter does have `/api/v1/key` — deliberately not called (decision 2026-10-19: own counters
