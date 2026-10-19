@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { configuredProviders, scanReceiptImage } from "./scan";
+import { askModels, configuredProviders, type ModelMeter, scanReceiptImage } from "./scan";
 
 const IMAGE = { mimeType: "image/jpeg", base64: "AAAA" };
 const RECEIPT_JSON = JSON.stringify({
@@ -238,5 +238,87 @@ describe("scanReceiptImage", () => {
     ).toEqual({ ok: false, error: "scan-failed" });
     // Two Gemini models and OpenRouter; a network error is not retried.
     expect(console.warn).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("the meter (lib/ai/usage.ts)", () => {
+  function fakeMeter(allow: boolean) {
+    const records: Parameters<ModelMeter["record"]>[0][] = [];
+    const meter: ModelMeter = {
+      take: vi.fn(async () => allow),
+      record: async (call) => {
+        records.push(call);
+      },
+    };
+    return { meter, records };
+  }
+
+  it("sends nothing when the group's allowance is spent", async () => {
+    const fetchImpl = vi.fn();
+    const { meter, records } = fakeMeter(false);
+    expect(
+      await scanReceiptImage(IMAGE, { env: { GEMINI_API_KEY: "g" }, fetchImpl, meter }),
+    ).toEqual({ ok: false, error: "ai-limit" });
+    await expect(
+      askModels({ prompt: "?" }, (text) => text, "test", {
+        env: { GEMINI_API_KEY: "g" },
+        fetchImpl,
+        meter,
+      }),
+    ).rejects.toThrow();
+    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(records).toEqual([]);
+  });
+
+  it("records every provider tried, retries counted, and what was read — not the photo", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("busy", { status: 503 }))
+      .mockResolvedValueOnce(new Response("busy", { status: 503 }))
+      .mockResolvedValueOnce(geminiAnswer(RECEIPT_JSON));
+    const { meter, records } = fakeMeter(true);
+    const outcome = await scanReceiptImage(IMAGE, {
+      retryDelayMs: 0,
+      env: { GEMINI_API_KEY: "g" },
+      fetchImpl,
+      meter,
+    });
+    expect(outcome.ok).toBe(true);
+    expect(meter.take).toHaveBeenCalledTimes(1);
+    expect(records).toHaveLength(1);
+    expect(records[0].answeredBy).toBe("gemini:gemini-flash-lite-latest");
+    expect(records[0].summary).toEqual(["Krone", "Cola"]);
+    expect(
+      records[0].attempts.map(({ provider, ok, requests }) => ({ provider, ok, requests })),
+    ).toEqual([
+      { provider: "gemini:gemini-flash-latest", ok: false, requests: 2 },
+      { provider: "gemini:gemini-flash-lite-latest", ok: true, requests: 1 },
+    ]);
+    expect(JSON.stringify(records)).not.toContain(IMAGE.base64);
+  });
+
+  it("records a prompt nobody answered as failed", async () => {
+    const fetchImpl = vi.fn(async () => new Response("bad key", { status: 400 }));
+    const { meter, records } = fakeMeter(true);
+    expect(
+      await askModels(
+        { prompt: "?" },
+        (text) => text,
+        "test",
+        {
+          env: { GEMINI_API_KEY: "g", GEMINI_MODEL: "m" },
+          fetchImpl,
+          meter,
+        },
+        ["Miete"],
+      ),
+    ).toBeNull();
+    expect(records).toEqual([
+      {
+        answeredBy: null,
+        summary: ["Miete"],
+        attempts: [expect.objectContaining({ provider: "gemini:m", ok: false, requests: 1 })],
+      },
+    ]);
   });
 });

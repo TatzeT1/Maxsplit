@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import { classifyGroupExpenses, setExpenseProduct } from "@/lib/actions/products";
+import { aiUsageMonth } from "@/lib/ai/limits";
 import { adminDb } from "@/lib/firebase/admin";
 import { classifyExpenseSnapshots } from "@/lib/products/classify-expenses";
 import { CLASSIFY_RUNS_PER_DAY } from "@/lib/products/products";
@@ -103,7 +104,9 @@ describe("saving an expense", () => {
     const added = await addExpense(plain);
     expect(added.ok).toBe(true);
     if (!added.ok) return;
-    expect(scheduledClassifications).toEqual([{ groupId: "g1", expenseId: added.data.expenseId }]);
+    expect(scheduledClassifications).toEqual([
+      { groupId: "g1", expenseId: added.data.expenseId, uid: "max" },
+    ]);
     expect(await readExpense(added.data.expenseId)).not.toHaveProperty("product");
   });
 
@@ -164,7 +167,7 @@ describe("saving an expense", () => {
 
     expect((await editExpense({ ...plain, expenseId, description: "Strom" })).ok).toBe(true);
     expect(await readExpense(expenseId)).not.toHaveProperty("product");
-    expect(scheduledClassifications).toEqual([{ groupId: "g1", expenseId }]);
+    expect(scheduledClassifications).toEqual([{ groupId: "g1", expenseId, uid: "max" }]);
   });
 });
 
@@ -277,6 +280,32 @@ describe("classifyGroupExpenses", () => {
     expect(await classifyGroupExpenses({ groupId: "g1" })).toEqual({
       ok: false,
       error: "classify-limit",
+    });
+  });
+
+  it("counts against the group's AI allowance, and stops a blocked group before any run", async () => {
+    fakeModel();
+    const groupRef = await seedFlat();
+    await seedExpense(groupRef, "max", { max: 100 }, { description: "Miete" });
+    signInAs({ uid: "max" });
+
+    await groupRef.update({ aiRequestLimit: 0 });
+    expect(await classifyGroupExpenses({ groupId: "g1" })).toEqual({
+      ok: false,
+      error: "ai-limit",
+    });
+    expect((await adminDb.collection("productClassifyRuns").doc("max").get()).exists).toBe(false);
+
+    await groupRef.update({ aiRequestLimit: null });
+    expect((await classifyGroupExpenses({ groupId: "g1" })).ok).toBe(true);
+    const usage = await groupRef.collection("aiUsage").doc(aiUsageMonth()).get();
+    expect(usage.data()?.count).toBe(1);
+    const [call] = (await groupRef.collection("aiCalls").get()).docs;
+    expect(call.data()).toMatchObject({
+      kind: "classify",
+      uid: "max",
+      ok: true,
+      summary: ["Miete"],
     });
   });
 });

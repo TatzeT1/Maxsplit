@@ -47,6 +47,9 @@ check a third way if you add a new admin surface.
   owner-only checks normal group deletion/editing requires. `archived` is the same flag
   owners/admins set with `setGroupArchived` (see [[Groups and Members]]), so a manager can
   bring an admin-archived group back.
+- `adminSetGroupAiLimit` — a group's monthly AI prompts: default (50), its own number, or 0 =
+  blocked. `/admin/ai` shows every group's count, the provider counts against the free tiers and
+  the latest prompts. See [[AI Usage]].
 - `adminSetUserBanned` — see below.
 - `adminResetOnboarding` — clears `onboardingCompletedAt` so the setup guide auto-shows again
   on next sign-in (support / testing the first-run flow against a real account).

@@ -106,7 +106,9 @@ None set → the scan button is hidden and `scanReceipt` answers `scan-unavailab
 
 Free quotas are **per key**, shared by every user, so `receiptScans/{uid}` (`{ day, count }`,
 server-only, rules deny all) caps each user at `RECEIPT_SCANS_PER_DAY` (25, UTC day), counted
-before the model is asked.
+before the model is asked. On top, every scan counts against the group's monthly AI allowance
+(default 50, admin-set, 0 = blocked → `ai-limit`) and is logged without the photo — see
+[[AI Usage]].
 
 ### How far the free tier goes
 

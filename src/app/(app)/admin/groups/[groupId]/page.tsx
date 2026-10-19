@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { AdminAiCallList } from "@/components/admin/admin-ai-call-list";
 import { AdminGroupActions } from "@/components/admin/admin-group-actions";
+import { AdminGroupAiLimit } from "@/components/admin/admin-group-ai-limit";
+import { getGroupAi } from "@/lib/admin/ai";
 import { categoryIconElement } from "@/lib/categories";
 import { getGroupDetail } from "@/lib/admin/groups";
 import { requireAdminSession } from "@/lib/auth/admin";
@@ -41,8 +44,11 @@ const RANK_MEDALS = ["🥇", "🥈", "🥉"];
 export default async function AdminGroupPage({ params }: { params: Promise<{ groupId: string }> }) {
   await requireAdminSession();
   const { groupId } = await params;
-  const group = await getGroupDetail(groupId);
+  const [group, ai] = await Promise.all([getGroupDetail(groupId), getGroupAi(groupId)]);
   if (!group) notFound();
+  const userNames = Object.fromEntries(
+    group.members.map((member) => [member.uid, member.displayName || "(unnamed)"]),
+  );
 
   const lotteryRanked = group.members
     .map((member) => ({
@@ -289,6 +295,14 @@ export default async function AdminGroupPage({ params }: { params: Promise<{ gro
             })}
           </ul>
         )}
+      </div>
+
+      <div id="ai" className="flex scroll-mt-4 flex-col gap-3">
+        <h2 className="text-sm font-medium">
+          AI — {ai.used} / {ai.limit === 0 ? "blocked" : ai.limit} prompts in {ai.month}
+        </h2>
+        <AdminGroupAiLimit key={String(ai.ownLimit)} groupId={groupId} ownLimit={ai.ownLimit} />
+        <AdminAiCallList calls={ai.recentCalls} userNames={userNames} />
       </div>
 
       <AdminGroupActions groupId={groupId} archived={group.archived} />

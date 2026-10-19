@@ -15,6 +15,7 @@ users/{uid}                                (.notificationPrefs — see Push Noti
 pushSubscriptions/{sha256(endpoint)}       (server-only: one device's push subscription)
 receiptScans/{uid}                         (server-only: { day, count } — the Receipt Scan daily quota)
 productClassifyRuns/{uid}                  (server-only: { day, count } — the Auswertung's "Jetzt einordnen" daily quota)
+aiProviderUsage/{yyyy-mm-dd}               (server-only: { day, counts: { provider: requests } } — see AI Usage)
 groups/{groupId}
   groups/{groupId}/expenses/{expenseId}
   groups/{groupId}/settlements/{settlementId}
@@ -22,6 +23,8 @@ groups/{groupId}
   groups/{groupId}/activityLog/{logId}
   groups/{groupId}/messages/{messageId}
   groups/{groupId}/chatReads/{uid}        (doc id == uid)
+  groups/{groupId}/aiUsage/{yyyy-mm}      (prompts this month — managers read; see AI Usage)
+  groups/{groupId}/aiCalls/{callId}       (one per prompt, texts only, TTL 90 days — managers read)
   groups/{groupId}/tournaments/{tournamentId}
   groups/{groupId}/tournaments/{tournamentId}/liveMatches/{matchId}   (online play, doc id == bracket match id)
   groups/{groupId}/tournaments/{tournamentId}/liveSecrets/{matchId}   (hidden memory deck — no client reads)

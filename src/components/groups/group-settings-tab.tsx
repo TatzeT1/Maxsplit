@@ -3,6 +3,7 @@
 import { ChevronRight, LogOut, Pencil, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AiUsagePanel } from "@/components/groups/ai-usage-panel";
 import { ArchiveGroupRow } from "@/components/groups/archive-group";
 import { EditGroupDialog } from "@/components/groups/edit-group-dialog";
 import { InviteShareButton } from "@/components/groups/invite-share-button";
@@ -151,6 +152,8 @@ export function GroupSettingsTab({
         currency={group.currency}
         currentUid={currentUid}
       />
+
+      {canManage && <AiUsagePanel group={group} />}
 
       <section className="flex flex-col gap-3">
         <SectionHeading>{t("groups.manageTitle")}</SectionHeading>

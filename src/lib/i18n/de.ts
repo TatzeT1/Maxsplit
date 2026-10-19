@@ -1369,6 +1369,8 @@ export const de = {
     errorUnavailable: "Belegscan ist auf diesem Server nicht eingerichtet.",
     errorLimit:
       "Für heute sind genug Belege gescannt. Morgen geht's weiter – oder tipp die Positionen ein.",
+    errorAiLimit:
+      "Die KI-Anfragen dieser Gruppe sind für diesen Monat aufgebraucht. Tipp die Positionen ein.",
     errorFailed:
       "Der Beleg konnte gerade nicht gelesen werden. Versuch es gleich noch mal oder tipp die Positionen ein.",
     errorEmpty:
@@ -1462,10 +1464,27 @@ export const de = {
     classifyDone: "Alles eingeordnet.",
     classifyStuck: "Die KI konnte gerade nichts einordnen. Versuch es später noch mal.",
     classifyLimit: "Für heute ist genug eingeordnet. Morgen geht's weiter.",
+    classifyAiLimit: "Die KI-Anfragen dieser Gruppe sind für diesen Monat aufgebraucht.",
     classifyUnavailable: "Die KI-Einordnung ist auf diesem Server nicht eingerichtet.",
     empty: "In diesem Zeitraum gibt es keine Ausgaben.",
     emptyMine: "Davon hattest du in diesem Zeitraum nichts.",
     emptyOf: "Davon hatte {{name}} in diesem Zeitraum nichts.",
+  },
+  aiUsage: {
+    title: "KI-Anfragen",
+    body: "Belegscans und Einordnungen gehen an ein KI-Modell. Pro Monat hat die Gruppe ein festes Kontingent.",
+    used: "{{used}} von {{limit}} diesen Monat",
+    blocked: "Für diese Gruppe ist die KI gesperrt.",
+    spent: "Für diesen Monat aufgebraucht – ab dem 1. geht's weiter.",
+    recentTitle: "Zuletzt",
+    empty: "Diesen Monat noch keine Anfragen.",
+    kindScan: "Belegscan",
+    kindClassify: "Einordnen",
+    kindClassifyAuto: "Einordnen nach dem Speichern",
+    failed: "fehlgeschlagen",
+    texts: "{{count}} Texte",
+    loadError: "Die KI-Anfragen konnten nicht geladen werden.",
+    notSynced: "Die KI-Anfragen waren auf diesem Gerät noch nicht geladen.",
   },
   balances: {
     youOwe: "Du schuldest {{name}} {{amount}}",

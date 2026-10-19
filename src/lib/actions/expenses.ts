@@ -497,7 +497,7 @@ export async function addExpense(
       actorUid: session.uid,
     }),
   );
-  if (needsProductClass(expense)) classifyAfterResponse(input.groupId, expenseRef.id);
+  if (needsProductClass(expense)) classifyAfterResponse(input.groupId, expenseRef.id, session.uid);
   return { ok: true, data: { expenseId: expenseRef.id } };
 }
 
@@ -570,7 +570,7 @@ export async function editExpense(
     receipt,
     deletedAt: stored.deletedAt,
   };
-  if (needsProductClass(edited)) classifyAfterResponse(input.groupId, input.expenseId);
+  if (needsProductClass(edited)) classifyAfterResponse(input.groupId, input.expenseId, session.uid);
 
   return { ok: true, data: { expenseId: input.expenseId } };
 }

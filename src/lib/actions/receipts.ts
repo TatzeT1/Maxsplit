@@ -1,5 +1,6 @@
 "use server";
 
+import { aiAllowanceLeft, groupAiMeter } from "@/lib/ai/usage";
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import type { ScannedReceipt } from "@/lib/receipt/parse";
@@ -62,10 +63,16 @@ export async function scanReceipt(input: {
   }
 
   if (!isReceiptScanConfigured()) return { ok: false, error: "scan-unavailable" };
+  // The group's monthly allowance first, read only: a blocked group must not
+  // spend the member's daily scans. The meter takes it for real below.
+  if ((await aiAllowanceLeft(input.groupId, group)) <= 0) return { ok: false, error: "ai-limit" };
   const today = new Date().toISOString().slice(0, 10);
   if (!(await takeScanQuota(session.uid, today))) return { ok: false, error: "scan-limit" };
 
-  const outcome = await scanReceiptImage({ mimeType: match[1], base64: match[2] });
+  const outcome = await scanReceiptImage(
+    { mimeType: match[1], base64: match[2] },
+    { meter: groupAiMeter(input.groupId, session.uid, "receipt-scan") },
+  );
   if (!outcome.ok) return { ok: false, error: outcome.error };
   return { ok: true, data: outcome.receipt };
 }

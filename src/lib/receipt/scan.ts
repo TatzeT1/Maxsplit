@@ -35,6 +35,8 @@ const DEFAULT_RETRY_DELAY_MS = 1_500;
 interface Http {
   fetchImpl: typeof fetch;
   retryDelayMs: number;
+  /** HTTP requests sent so far — a retry is one more against the provider's quota. */
+  requests: number;
 }
 
 /** The environment variables read here — `process.env` by default, a plain object in tests. */
@@ -48,13 +50,41 @@ export interface ReceiptImage {
 
 export type ScanOutcome =
   | { ok: true; receipt: ScannedReceipt; provider: string }
-  | { ok: false; error: "scan-unavailable" | "scan-failed" };
+  | { ok: false; error: "scan-unavailable" | "scan-failed" | "ai-limit" };
 
 /** One question to a model: a prompt, and a photo for the vision ones. */
 export interface ModelRequest {
   prompt: string;
   image?: ReceiptImage;
 }
+
+/** One provider tried for one prompt — what the AI log (lib/ai/usage.ts) shows. */
+export interface ModelAttempt {
+  provider: string;
+  ok: boolean;
+  ms: number;
+  /** HTTP requests it took: 2 when an overload was retried. */
+  requests: number;
+  error?: string;
+}
+
+/**
+ * Counts and logs prompts per group (lib/ai/usage.ts) — passed in, so this
+ * file stays free of Firestore. Without one, nothing is counted (tests).
+ */
+export interface ModelMeter {
+  /** Before each prompt: false when the allowance is spent, and nothing is sent. */
+  take(): Promise<boolean>;
+  /** After each prompt: every provider tried, and what was asked or read — never the photo. */
+  record(call: {
+    answeredBy: string | null;
+    attempts: ModelAttempt[];
+    summary: string[];
+  }): Promise<void>;
+}
+
+/** The meter said no: the group's allowance of prompts is spent. */
+export class ModelLimitError extends Error {}
 
 interface Provider {
   name: string;
@@ -70,6 +100,7 @@ async function postJson(
   body: unknown,
 ): Promise<unknown> {
   for (let attempt = 1; ; attempt++) {
+    http.requests++;
     const response = await http.fetchImpl(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers },
@@ -199,38 +230,93 @@ export interface AskOptions {
   env?: ScanEnv;
   fetchImpl?: typeof fetch;
   retryDelayMs?: number;
+  meter?: ModelMeter;
 }
 
 function httpFrom(options: AskOptions): Http {
   return {
     fetchImpl: options.fetchImpl ?? fetch,
     retryDelayMs: options.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS,
+    requests: 0,
   };
+}
+
+/** Runs one provider's turn and notes it in `attempts`, failed or not. */
+async function attempt<T>(
+  provider: Provider,
+  http: Http,
+  attempts: ModelAttempt[],
+  run: () => Promise<T>,
+): Promise<T> {
+  const started = Date.now();
+  const requestsBefore = http.requests;
+  const note = (ok: boolean, error?: string) =>
+    attempts.push({
+      provider: provider.name,
+      ok,
+      ms: Date.now() - started,
+      requests: http.requests - requestsBefore,
+      ...(error ? { error: error.slice(0, 200) } : {}),
+    });
+  try {
+    const result = await run();
+    note(true);
+    return result;
+  } catch (error) {
+    note(false, (error as Error).message);
+    throw error;
+  }
+}
+
+/** A failed log write must never fail the scan or the classification it describes. */
+async function record(
+  meter: ModelMeter | undefined,
+  call: Parameters<ModelMeter["record"]>[0],
+): Promise<void> {
+  if (!meter) return;
+  try {
+    await meter.record(call);
+  } catch (error) {
+    console.error("[ai-usage] record failed:", error);
+  }
 }
 
 /**
  * Asks the providers in order and returns the first answer `accept` takes
  * (non-null), or `null` when none does or none is configured. A provider
  * that fails — HTTP error, timeout, an answer `accept` refuses — is logged
- * under `label` and the next one asked.
+ * under `label` and the next one asked. Throws ModelLimitError, having sent
+ * nothing, when the meter refuses the prompt; `summary` is what its log shows.
  */
 export async function askModels<T>(
   request: ModelRequest,
   accept: (answer: string) => T | null,
   label: string,
   options: AskOptions = {},
+  summary: string[] = [],
 ): Promise<T | null> {
+  const providers = configuredProviders(options.env);
+  if (providers.length === 0) return null;
+  if (options.meter && !(await options.meter.take())) throw new ModelLimitError();
   const http = httpFrom(options);
-  for (const provider of configuredProviders(options.env)) {
+  const attempts: ModelAttempt[] = [];
+  let result: T | null = null;
+  let answeredBy: string | null = null;
+  for (const provider of providers) {
     try {
-      const result = accept(await provider.ask(request, http));
-      if (result !== null) return result;
-      throw new ProviderError("unusable answer");
+      result = await attempt(provider, http, attempts, async () => {
+        const accepted = accept(await provider.ask(request, http));
+        if (accepted === null) throw new ProviderError("unusable answer");
+        return accepted;
+      });
+      answeredBy = provider.name;
+      break;
     } catch (error) {
       console.warn(`[${label}] ${provider.name} failed:`, (error as Error).message);
     }
   }
-  return null;
+  await record(options.meter, { answeredBy, attempts, summary });
+  return result;
 }
 
 /** Whether any provider is configured — the UI hides the scan button otherwise. */
@@ -251,20 +337,36 @@ export async function scanReceiptImage(
 ): Promise<ScanOutcome> {
   const providers = configuredProviders(options.env);
   if (providers.length === 0) return { ok: false, error: "scan-unavailable" };
+  if (options.meter && !(await options.meter.take())) return { ok: false, error: "ai-limit" };
   const http = httpFrom(options);
+  const attempts: ModelAttempt[] = [];
 
-  let empty: { receipt: ScannedReceipt; provider: string } | null = null;
+  let found: { receipt: ScannedReceipt; provider: string } | null = null;
   for (const provider of providers) {
     try {
-      const receipt = parseScannedReceipt(
-        await provider.ask({ prompt: RECEIPT_PROMPT, image }, http),
-      );
-      if (!receipt) throw new ProviderError("answer was not JSON");
-      if (receipt.items.length > 0) return { ok: true, receipt, provider: provider.name };
-      empty ??= { receipt, provider: provider.name };
+      const receipt = await attempt(provider, http, attempts, async () => {
+        const parsed = parseScannedReceipt(
+          await provider.ask({ prompt: RECEIPT_PROMPT, image }, http),
+        );
+        if (!parsed) throw new ProviderError("answer was not JSON");
+        return parsed;
+      });
+      if (receipt.items.length > 0) {
+        found = { receipt, provider: provider.name };
+        break;
+      }
+      found ??= { receipt, provider: provider.name };
     } catch (error) {
       console.warn(`[receipt-scan] ${provider.name} failed:`, (error as Error).message);
     }
   }
-  return empty ? { ok: true, ...empty } : { ok: false, error: "scan-failed" };
+  // The log keeps what was read, not the photo: the merchant and the line names.
+  const summary = found
+    ? [
+        ...(found.receipt.merchant ? [found.receipt.merchant] : []),
+        ...found.receipt.items.map((item) => item.name),
+      ]
+    : [];
+  await record(options.meter, { answeredBy: found?.provider ?? null, attempts, summary });
+  return found ? { ok: true, ...found } : { ok: false, error: "scan-failed" };
 }

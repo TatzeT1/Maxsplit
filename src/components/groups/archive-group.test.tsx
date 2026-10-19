@@ -15,6 +15,7 @@ const actions = vi.hoisted(() => ({
 vi.mock("@/lib/actions/groups", () => actions);
 vi.mock("@/components/groups/members-panel", () => ({ MembersPanel: () => null }));
 vi.mock("@/components/groups/recurring-panel", () => ({ RecurringPanel: () => null }));
+vi.mock("@/components/groups/ai-usage-panel", () => ({ AiUsagePanel: () => null }));
 vi.mock("@/components/groups/edit-group-dialog", () => ({ EditGroupDialog: () => null }));
 vi.mock("@/components/groups/invite-share-button", () => ({ InviteShareButton: () => null }));
 

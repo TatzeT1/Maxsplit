@@ -1,6 +1,7 @@
 "use server";
 
 import { FieldValue } from "firebase-admin/firestore";
+import { isValidAiLimit } from "@/lib/ai/limits";
 import { isAdminEmail, isAdminSession } from "@/lib/auth/admin";
 import { getSession, type Session } from "@/lib/auth/session";
 import { adminAuth, adminDb } from "@/lib/firebase/admin";
@@ -45,6 +46,28 @@ export async function adminSetGroupArchived(input: {
   if (!groupSnap.exists) return { ok: false, error: "not-found" };
 
   await groupRef.update({ archived: input.archived });
+  return { ok: true, data: null };
+}
+
+/**
+ * Sets how many AI prompts a group may send per month (lib/ai/usage.ts):
+ * a number, 0 to block AI for the group, or null for the default. Takes
+ * effect with the next prompt; what the month already used stays counted.
+ */
+export async function adminSetGroupAiLimit(input: {
+  groupId: string;
+  limit: number | null;
+}): Promise<ActionResult<null>> {
+  const session = await requireAdminActionSession();
+  if (!session) return { ok: false, error: "forbidden" };
+  if (!isValidAiLimit(input?.limit)) return { ok: false, error: "invalid-limit" };
+
+  if (typeof input.groupId !== "string" || !input.groupId) return { ok: false, error: "not-found" };
+  const groupRef = adminDb.collection("groups").doc(input.groupId);
+  const groupSnap = await groupRef.get();
+  if (!groupSnap.exists) return { ok: false, error: "not-found" };
+
+  await groupRef.update({ aiRequestLimit: input.limit });
   return { ok: true, data: null };
 }
 

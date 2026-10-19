@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
+import { adminSetGroupAiLimit } from "@/lib/actions/admin";
 import { scanReceipt } from "@/lib/actions/receipts";
+import { DEFAULT_GROUP_AI_LIMIT, aiUsageDay, aiUsageMonth } from "@/lib/ai/limits";
 import { adminDb } from "@/lib/firebase/admin";
 import { RECEIPT_SCANS_PER_DAY } from "@/lib/receipt/receipt";
 import type { ExpenseReceipt } from "@/lib/types";
@@ -292,6 +294,84 @@ describe("scanReceipt", () => {
     expect((await adminDb.collection("receiptScans").doc("max").get()).data()).toEqual({
       day: today,
       count: 1,
+    });
+  });
+
+  it("counts the scan against the group's month and logs what was read, not the photo", async () => {
+    const groupRef = await seedDinnerTable();
+    process.env.GEMINI_API_KEY = "test-key";
+    signInAs({ uid: "lea" });
+    expect((await scanReceipt({ groupId: "g1", image })).ok).toBe(true);
+
+    const usage = await groupRef.collection("aiUsage").doc(aiUsageMonth()).get();
+    expect(usage.data()).toMatchObject({ month: aiUsageMonth(), count: 1 });
+    const [call] = (await groupRef.collection("aiCalls").get()).docs;
+    expect(call.data()).toMatchObject({
+      kind: "receipt-scan",
+      uid: "lea",
+      ok: true,
+      answeredBy: "gemini:gemini-flash-latest",
+      summary: ["Krone", "Cola", "Käsespätzle"],
+    });
+    expect(call.data().expiresAt.toMillis()).toBeGreaterThan(Date.now());
+    expect(JSON.stringify(call.data())).not.toContain("/9j/AAAA");
+    const providers = await adminDb.collection("aiProviderUsage").doc(aiUsageDay()).get();
+    expect(providers.data()?.counts).toEqual({ "gemini:gemini-flash-latest": 1 });
+  });
+
+  it("stops a group at its monthly limit, and a blocked group at once, sparing the daily scans", async () => {
+    const groupRef = await seedDinnerTable();
+    process.env.GEMINI_API_KEY = "test-key";
+    await groupRef
+      .collection("aiUsage")
+      .doc(aiUsageMonth())
+      .set({ month: aiUsageMonth(), count: DEFAULT_GROUP_AI_LIMIT, updatedAt: "" });
+    signInAs({ uid: "lea" });
+    expect(await scanReceipt({ groupId: "g1", image })).toEqual({ ok: false, error: "ai-limit" });
+
+    // A higher limit of its own lets it go on.
+    await groupRef.update({ aiRequestLimit: DEFAULT_GROUP_AI_LIMIT + 1 });
+    expect((await scanReceipt({ groupId: "g1", image })).ok).toBe(true);
+
+    await groupRef.update({ aiRequestLimit: 0 });
+    expect(await scanReceipt({ groupId: "g1", image })).toEqual({ ok: false, error: "ai-limit" });
+    expect(modelCalls).toBe(1);
+    expect((await adminDb.collection("receiptScans").doc("lea").get()).data()?.count).toBe(1);
+  });
+});
+
+describe("adminSetGroupAiLimit", () => {
+  it("lets only the admin set, block or reset a group's limit", async () => {
+    const groupRef = await seedDinnerTable();
+    signInAs({ uid: "max" });
+    expect(await adminSetGroupAiLimit({ groupId: "g1", limit: 0 })).toEqual({
+      ok: false,
+      error: "forbidden",
+    });
+
+    signInAs({ uid: "admin", email: "max123.tietz@gmail.com", emailVerified: true });
+    expect(await adminSetGroupAiLimit({ groupId: "g1", limit: 0 })).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect((await groupRef.get()).data()?.aiRequestLimit).toBe(0);
+    expect(await adminSetGroupAiLimit({ groupId: "g1", limit: 120 })).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect((await groupRef.get()).data()?.aiRequestLimit).toBe(120);
+    expect(await adminSetGroupAiLimit({ groupId: "g1", limit: null })).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect((await groupRef.get()).data()?.aiRequestLimit).toBeNull();
+    expect(await adminSetGroupAiLimit({ groupId: "g1", limit: -3 })).toEqual({
+      ok: false,
+      error: "invalid-limit",
+    });
+    expect(await adminSetGroupAiLimit({ groupId: "nope", limit: 5 })).toEqual({
+      ok: false,
+      error: "not-found",
     });
   });
 });

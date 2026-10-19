@@ -41,6 +41,20 @@ export default async function AdminPage() {
         </div>
       </div>
 
+      <Link
+        href="/admin/ai"
+        className="hover:bg-accent bg-card ring-foreground/10 flex items-center gap-3 rounded-xl p-3 ring-1 transition-colors"
+      >
+        <span aria-hidden>🤖</span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="font-medium">AI usage</span>
+          <span className="text-muted-foreground truncate text-xs">
+            Prompts sent to Gemini/OpenRouter, budgets, limits per group
+          </span>
+        </span>
+        <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+      </Link>
+
       <AdminMaintenanceActions />
 
       <div className="flex flex-col gap-3">

@@ -30,6 +30,7 @@ jobs, not one:
 isSignedIn()       → request.auth != null
 isBanned()         → looks up users/{uid}.banned — see Admin Panel
 isGroupMember(id)  → isSignedIn() && !isBanned() && auth.uid in groups/{id}.memberUids
+isGroupManager(id) → isGroupMember + members[auth.uid].role in ['owner', 'admin']
 
 users/{uid}          → read: only your own doc. write: false.
 groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: false.
@@ -52,6 +53,8 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
     secrets/{stage}  → read, write: false — the full bank row and the hidden guesses. Rules do not
                        cascade, so it has its own block: a member who could read it would see the
                        answer before guessing.
+  aiUsage/{month}    → read: isGroupManager(groupId). write: false. See [[AI Usage]].
+  aiCalls/{id}       → read: isGroupManager(groupId). write: false.
   estimateState/{id} → read, write: false — the seen-set (a member who could read it would learn
                        which questions are coming) and the creation log. Needs deploying.
 
@@ -59,6 +62,7 @@ pushSubscriptions/{id} → read, write: false — devices' push endpoints and ke
 receiptScans/{uid}     → read, write: false — the [[Receipt Scan]] daily counter; a client that
                          could write it would reset its own limit on the shared free model quota.
 productClassifyRuns/{uid} → read, write: false — the [[Product Insights]] catch-up counter, same reason.
+aiProviderUsage/{day}  → read, write: false — [[AI Usage]]'s provider counts, admin page only.
 
 {document=**}        → deny-all backstop for anything unmatched.
 ```

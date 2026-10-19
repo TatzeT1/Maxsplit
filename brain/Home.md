@@ -46,6 +46,8 @@ re-deriving it from scratch by reading every file.
 - [[Product Insights]] — 📊 Auswertung tab: every receipt line and expense classified by the
   same free models (Obergruppe + Produktart, "Fleisch & Wurst · Mett"), summed per month/year/all,
   for the group or one person's share; corrected in the editor or the expense detail
+- [[AI Usage]] — 🤖 every model prompt counted per group and month (default 50, admin sets a
+  limit or blocks), logged without photos; the admin's own provider counts vs the free tiers
 - [[Chat]] — per-group chat: optimistic retry-safe sending, reactions, replies, @mentions, mute,
   unread line, silent expense/payment cards, read receipts
 - [[Split Games]] — the gamified split pickers: eight luck-based (🎲🎡🎰🎫🎈🦆🥃🎱), seven skill-based

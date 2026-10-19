@@ -1,5 +1,6 @@
 "use server";
 
+import { aiAllowanceLeft, groupAiMeter } from "@/lib/ai/usage";
 import { getSession } from "@/lib/auth/session";
 import { adminDb } from "@/lib/firebase/admin";
 import { classifyExpenseSnapshots } from "@/lib/products/classify-expenses";
@@ -22,13 +23,15 @@ const TEXTS_PER_RUN = 120;
 async function requireMember(
   groupId: unknown,
   uid: string,
-): Promise<{ groupRef: FirebaseFirestore.DocumentReference } | { error: string }> {
+): Promise<
+  { groupRef: FirebaseFirestore.DocumentReference; group: Omit<Group, "id"> } | { error: string }
+> {
   if (typeof groupId !== "string" || !groupId) return { error: "not-found" };
   const groupSnap = await adminDb.collection("groups").doc(groupId).get();
   if (!groupSnap.exists) return { error: "not-found" };
   const group = groupSnap.data() as Omit<Group, "id">;
   if (!group.memberUids.includes(uid)) return { error: "forbidden" };
-  return { groupRef: groupSnap.ref };
+  return { groupRef: groupSnap.ref, group };
 }
 
 /** Like `receiptScans`: per user and UTC day, server-only, counted before the model is asked. */
@@ -72,6 +75,9 @@ export async function classifyGroupExpenses(input: {
   });
   if (waiting.length === 0) return { ok: true, data: { classified: 0, remaining: 0 } };
 
+  if ((await aiAllowanceLeft(input.groupId, membership.group)) <= 0) {
+    return { ok: false, error: "ai-limit" };
+  }
   const today = new Date().toISOString().slice(0, 10);
   if (!(await takeClassifyQuota(session.uid, today))) return { ok: false, error: "classify-limit" };
 
@@ -87,7 +93,9 @@ export async function classifyGroupExpenses(input: {
     texts += count;
   }
 
-  const classified = await classifyExpenseSnapshots(step);
+  const classified = await classifyExpenseSnapshots(step, {
+    meter: groupAiMeter(input.groupId, session.uid, "classify"),
+  });
   return { ok: true, data: { classified, remaining: waiting.length - classified } };
 }
 

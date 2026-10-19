@@ -26,6 +26,13 @@ service cloud.firestore {
         request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.memberUids;
     }
 
+    // Owner and admin of the group (isGroupManager in lib/groups/permissions.ts).
+    function isGroupManager(groupId) {
+      let group = get(/databases/$(database)/documents/groups/$(groupId)).data;
+      return isSignedIn() && !isBanned() && request.auth.uid in group.memberUids &&
+        group.members[request.auth.uid].role in ['owner', 'admin'];
+    }
+
     match /users/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
       allow write: if false;
@@ -123,6 +130,20 @@ service cloud.firestore {
         allow read, write: if false;
       }
 
+      // The group's AI prompts (lib/ai/usage.ts): the month's count against its
+      // limit, and one entry per prompt with the texts sent. Managers see them
+      // in the group settings; only the server writes — a client that could
+      // would lift the limit on the shared free model quota.
+      match /aiUsage/{month} {
+        allow read: if isGroupManager(groupId);
+        allow write: if false;
+      }
+
+      match /aiCalls/{callId} {
+        allow read: if isGroupManager(groupId);
+        allow write: if false;
+      }
+
       // Doc id == uid, so a member can only ever read their own read
       // receipt — no need to gate on it beyond that plus membership.
       match /chatReads/{uid} {
@@ -149,6 +170,12 @@ service cloud.firestore {
     // "Jetzt einordnen" runs counted per user per day (lib/actions/products.ts),
     // server-only for the same reason as receiptScans: the quota is shared.
     match /productClassifyRuns/{uid} {
+      allow read, write: if false;
+    }
+
+    // AI requests per provider and day (lib/ai/usage.ts), for the admin page.
+    // Server-only.
+    match /aiProviderUsage/{day} {
       allow read, write: if false;
     }
 

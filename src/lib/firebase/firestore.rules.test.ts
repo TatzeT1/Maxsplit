@@ -478,4 +478,40 @@ describe("firestore.rules", () => {
     expect(snap.data()?.memberUids).toEqual(["alice"]);
     expect(snap.data()?.activeEstimateRound).toEqual({ id: "r1" });
   });
+
+  describe("AI usage (lib/ai/usage.ts)", () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.doc("groups/group1").set({
+          name: "WG Küche",
+          memberUids: ["alice", "bob"],
+          members: { alice: { role: "owner" }, bob: { role: "member" } },
+        });
+        await db.doc("groups/group1/aiUsage/2026-10").set({ month: "2026-10", count: 3 });
+        await db.doc("groups/group1/aiCalls/c1").set({ kind: "classify", summary: ["Miete"] });
+        await db.doc("aiProviderUsage/2026-10-19").set({ counts: { "gemini:x": 3 } });
+      });
+    });
+
+    it("lets a manager read the group's count and calls, and nobody write them", async () => {
+      const alice = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(getDoc(doc(alice, "groups/group1/aiUsage/2026-10")));
+      await assertSucceeds(getDocs(collection(alice, "groups/group1/aiCalls")));
+      await assertFails(setDoc(doc(alice, "groups/group1/aiUsage/2026-10"), { count: 0 }));
+      await assertFails(updateDoc(doc(alice, "groups/group1"), { aiRequestLimit: 999 }));
+      await assertFails(deleteDoc(doc(alice, "groups/group1/aiCalls/c1")));
+    });
+
+    it("denies plain members, strangers and everyone the provider counts", async () => {
+      const bob = testEnv.authenticatedContext("bob").firestore();
+      await assertFails(getDoc(doc(bob, "groups/group1/aiUsage/2026-10")));
+      await assertFails(getDocs(collection(bob, "groups/group1/aiCalls")));
+      const mallory = testEnv.authenticatedContext("mallory").firestore();
+      await assertFails(getDoc(doc(mallory, "groups/group1/aiUsage/2026-10")));
+      const alice = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(getDoc(doc(alice, "aiProviderUsage/2026-10-19")));
+      await assertFails(getDocs(collectionGroup(alice, "aiCalls")));
+    });
+  });
 });

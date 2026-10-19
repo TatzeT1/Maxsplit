@@ -145,11 +145,13 @@ export function InsightsTab({
         message =
           result.error === "classify-limit"
             ? t("insights.classifyLimit")
-            : result.error === "scan-unavailable"
-              ? t("insights.classifyUnavailable")
-              : result.error === "network"
-                ? t("errors.network")
-                : t("common.somethingWentWrong");
+            : result.error === "ai-limit"
+              ? t("insights.classifyAiLimit")
+              : result.error === "scan-unavailable"
+                ? t("insights.classifyUnavailable")
+                : result.error === "network"
+                  ? t("errors.network")
+                  : t("common.somethingWentWrong");
         break;
       }
       if (result.data.remaining === 0) {

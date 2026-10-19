@@ -144,6 +144,8 @@ function scanErrorMessage(code: string, t: ReturnType<typeof useT>): string {
       return t("receipt.errorUnavailable");
     case "scan-limit":
       return t("receipt.errorLimit");
+    case "ai-limit":
+      return t("receipt.errorAiLimit");
     case "forbidden":
       return t("errors.forbidden");
     case "network":

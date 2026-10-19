@@ -6,7 +6,7 @@ import "server-only";
 // count requests, not tokens, and catching up on a group's history would
 // otherwise spend a day's quota on one click.
 
-import { askModels, type AskOptions } from "@/lib/receipt/scan";
+import { askModels, ModelLimitError, type AskOptions } from "@/lib/receipt/scan";
 import type { ProductClass } from "@/lib/types";
 import { PRODUCT_FAMILY_GUIDE, toProductClass } from "./products";
 
@@ -68,8 +68,8 @@ export function parseClassification(text: string, count: number): (ProductClass 
 
 /**
  * Classifies `entries`, CLASSIFY_BATCH_SIZE per request. An entry the model
- * left out (or a batch nobody answered) comes back `null`: unclassified,
- * for the next try.
+ * left out (or a batch nobody answered, or one the group's AI allowance no
+ * longer covered) comes back `null`: unclassified, for the next try.
  */
 export async function classifyEntries(
   entries: readonly ClassifyEntry[],
@@ -78,12 +78,20 @@ export async function classifyEntries(
   const result: (ProductClass | null)[] = [];
   for (let start = 0; start < entries.length; start += CLASSIFY_BATCH_SIZE) {
     const batch = entries.slice(start, start + CLASSIFY_BATCH_SIZE);
-    const answer = await askModels(
-      { prompt: classifyPrompt(batch) },
-      (text) => parseClassification(text, batch.length),
-      "product-classify",
-      options,
-    );
+    let answer: (ProductClass | null)[] | null;
+    try {
+      answer = await askModels(
+        { prompt: classifyPrompt(batch) },
+        (text) => parseClassification(text, batch.length),
+        "product-classify",
+        options,
+        batch.map((entry) => entry.text),
+      );
+    } catch (error) {
+      if (!(error instanceof ModelLimitError)) throw error;
+      result.push(...entries.slice(start).map(() => null));
+      break;
+    }
     result.push(...(answer ?? batch.map(() => null)));
   }
   return result;

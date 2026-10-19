@@ -74,6 +74,51 @@ export interface Group {
    * that never played one.
    */
   activeEstimateRound?: { id: string } | null;
+  /**
+   * Prompts this group may send to the AI models per month (receipt scans and
+   * classifications, lib/ai/usage.ts). Set only by the app admin
+   * (adminSetGroupAiLimit); 0 blocks AI for the group. Absent or null means
+   * DEFAULT_GROUP_AI_LIMIT — read it through effectiveAiLimit.
+   */
+  aiRequestLimit?: number | null;
+}
+
+/** `groups/{groupId}/aiUsage/{month}` — prompts the group sent that month; written by lib/ai/usage.ts. */
+export interface GroupAiUsage {
+  /** "2026-10" (UTC), also the doc id. */
+  month: string;
+  count: number;
+  updatedAt: string;
+}
+
+export type AiCallKind = "receipt-scan" | "classify" | "classify-auto";
+
+/** One provider tried for one prompt — mirrors ModelAttempt in lib/receipt/scan.ts. */
+export interface AiCallAttempt {
+  provider: string;
+  ok: boolean;
+  ms: number;
+  requests: number;
+  error?: string;
+}
+
+/**
+ * `groups/{groupId}/aiCalls/{id}` — one prompt sent for the group, kept
+ * LOG_RETENTION_DAYS (Firestore TTL on `expiresAt`). Holds what was asked or
+ * read as text — never the receipt photo.
+ */
+export interface AiCall {
+  id: string;
+  kind: AiCallKind;
+  /** Who caused it; null when nobody did directly. */
+  uid: string | null;
+  createdAt: string;
+  ok: boolean;
+  /** The provider whose answer was used, null when none answered usably. */
+  answeredBy: string | null;
+  attempts: AiCallAttempt[];
+  /** Classify: the texts sent. Scan: merchant and line names read. */
+  summary: string[];
 }
 
 export interface ExpenseSplit {

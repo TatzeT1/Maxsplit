@@ -16,6 +16,8 @@ Hosting: Vercel, auto-deploy from GitHub `main`. Cron: `vercel.json`. Security h
   stays gitignored, `.env.example` is the committed template — see [[Environment and Config]]).
 - Deploying rule changes: `pnpm exec firebase deploy --only firestore:rules,storage` — rules
   are **not** deployed automatically by `next build`/Vercel; that's a separate, explicit step.
+  The same holds for `firestore.indexes.json` (`--only firestore:indexes`): the `aiCalls`
+  collection-group index and its TTL policy ([[AI Usage]]) exist only once deployed.
 
 ### CI — `.github/workflows/ci.yml`
 

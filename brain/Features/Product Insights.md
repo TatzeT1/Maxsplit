@@ -36,7 +36,9 @@ the whole group or one person's share.
   (two requests of `CLASSIFY_BATCH_SIZE` = 60, one text asked once however many expenses carry
   it), and the client repeats while `remaining > 0` and a step made progress (≤8 steps).
   `productClassifyRuns/{uid}` caps a user at `CLASSIFY_RUNS_PER_DAY` (20) — the free quota is
-  per key, shared by everyone, same as [[Receipt Scan]]'s. Hidden without a model key.
+  per key, shared by everyone, same as [[Receipt Scan]]'s. Hidden without a model key. Every
+  request (manual or after saving) also counts against the group's monthly AI allowance —
+  [[AI Usage]]; once spent, nothing is asked and the expenses stay unclassified.
 - **Corrections** — a receipt line in the receipt editor (books through `editExpense`); an
   expense without a receipt in the detail dialog's "📊 Einordnung" (`setExpenseProduct`,
   **any member** — it moves no money).
