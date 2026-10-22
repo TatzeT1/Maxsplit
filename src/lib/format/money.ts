@@ -57,6 +57,20 @@ export function parseMoneyInput(input: string): number | null {
   return Math.round(Number.parseFloat(normalized) * 100);
 }
 
+/**
+ * Splits a typed leading minus ("-3,25", "−3,25") off an amount field's
+ * input. Phone keypads (`inputMode="decimal"`) have no minus key, so the
+ * forms keep a credit's sign in a toggle and the field holds the amount;
+ * someone who types the minus anyway flips the toggle instead of getting an
+ * "invalid" field.
+ */
+export function takeLeadingMinus(input: string): { input: string; negative: boolean } {
+  const match = /^\s*[-−]\s*/.exec(input);
+  return match
+    ? { input: input.slice(match[0].length), negative: true }
+    : { input, negative: false };
+}
+
 /** Formats an integer minor-units amount as an editable German-locale decimal string, e.g. `moneyToInput(2550)` -> "25,50". The inverse of `parseMoneyInput`. */
 export function moneyToInput(amountMinor: number): string {
   return (amountMinor / 100).toFixed(2).replace(".", ",");

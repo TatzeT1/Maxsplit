@@ -143,6 +143,11 @@ export type CategoryId =
 export interface Expense {
   id: string;
   description: string;
+  /**
+   * Negative for a credit (Gutschrift — a deposit slip, a refund): money the
+   * group gets back. Then `paidBy` holds who received it and every share is
+   * negative too, so the balance math needs no special case.
+   */
   amountMinor: number;
   currency: string;
   date: string;

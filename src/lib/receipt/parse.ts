@@ -1,8 +1,9 @@
 // Turns what a vision model said about a receipt photo into line items the
 // receipt editor can show. Models are told to answer with bare JSON, but the
 // free ones wrap it in code fences, write "3,50" or "€ 3.50", leave out the
-// quantity or invent a negative "Pfand" line — so this accepts all of that,
-// and drops what it can't make sense of rather than guessing.
+// quantity or write "3,50-" — so this accepts all of that, and drops what it
+// can't make sense of rather than guessing. A negative line (a deposit
+// return) is kept: it credits whoever it is assigned to.
 
 import { isIsoDate } from "@/lib/ledger-input";
 import { PRODUCT_FAMILY_GUIDE, toProductClass } from "@/lib/products/products";
@@ -37,8 +38,9 @@ Rules:
 - "kind" is what the product generically is, in German, singular, without brand, size, weight, variety or packaging, so that the same product on different receipts gets the same kind: "Kalbsleberwurst fein 125g" -> "Leberwurst", "Schweinemett" -> "Mett", "Rügenwalder Teewurst" -> "Teewurst", "Coca-Cola 0,5l" -> "Cola", "Vollkornbrot geschn." -> "Brot", "4x Käsespätzle" -> "Käsespätzle". Expand abbreviations you can read ("H-MILCH 1,5%" -> "Milch").
 - "family" is exactly one of these ids:
 ${PRODUCT_FAMILY_GUIDE}
-- Leave out subtotals, taxes/VAT summaries, payment lines, change, tips, and deposit returns. Discounts are not items.
-- "total" at the top level is the final amount due printed on the receipt.
+- Leave out subtotals, taxes/VAT summaries, payment lines, change and tips. Discounts are not items.
+- Deposit returns ("Pfand", "Leergut", "Pfandrückgabe") are items with a NEGATIVE total, family "fees", kind "Pfand". A deposit refund slip from a bottle machine (Leergutbon/Pfandbon) is a receipt of only such items.
+- "total" at the top level is the final amount due printed on the receipt, negative when the receipt pays money out (a deposit refund slip).
 - If the image is not a receipt, answer {"merchant": null, "date": null, "total": null, "items": []}.`;
 
 /** The first `{…}` block in a model's answer, fences and chatter around it ignored. */
@@ -65,6 +67,8 @@ export function toMinor(value: unknown): number | null {
   if (typeof value !== "string") return null;
   let cleaned = value.replace(/[^\d,.-]/g, "");
   if (!/\d/.test(cleaned)) return null;
+  // German receipts print a credit with the minus behind it: "0,25-".
+  if (/^[^-]*\d-$/.test(cleaned)) cleaned = `-${cleaned.slice(0, -1)}`;
   const lastComma = cleaned.lastIndexOf(",");
   const lastDot = cleaned.lastIndexOf(".");
   // Whichever separator comes last is the decimal one; the other groups thousands.
@@ -108,9 +112,9 @@ export function parseScannedReceipt(text: string): ScannedReceipt | null {
         const unit = toMinor(item.unitPrice ?? item.unit_price);
         return unit === null ? null : unit * quantity;
       })();
-    // A negative line is a deposit return or a discount: the receipt's
-    // total already accounts for it, and the editor spreads the difference.
-    if (!name || totalMinor === null || totalMinor < 0) continue;
+    // A negative line is a deposit return: it stays a line of its own, so
+    // whoever returned the bottles is credited (see allocateReceipt).
+    if (!name || totalMinor === null) continue;
     const product = toProductClass(item.family ?? item.category, item.kind ?? item.type);
     items.push({ name, quantity, totalMinor, product });
   }
@@ -120,7 +124,7 @@ export function parseScannedReceipt(text: string): ScannedReceipt | null {
   return {
     merchant: toName(raw.merchant),
     date,
-    totalMinor: totalMinor !== null && totalMinor > 0 ? totalMinor : null,
+    totalMinor: totalMinor !== null && totalMinor !== 0 ? totalMinor : null,
     items,
   };
 }

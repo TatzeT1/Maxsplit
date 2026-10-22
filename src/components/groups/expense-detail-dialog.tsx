@@ -172,6 +172,8 @@ export function ExpenseDetailDialog({
 }) {
   const t = useT();
   const payerEntries = Object.entries(expense.paidBy);
+  // A credit's "payers" received the money; listed with what they received.
+  const credit = expense.amountMinor < 0;
   const splitEntries = Object.entries(expense.splits);
   const nameOf = (uid: string) => members[uid]?.displayName ?? "?";
   const receiptAdjustment = expense.receipt
@@ -215,7 +217,7 @@ export function ExpenseDetailDialog({
 
           <div className="flex flex-col gap-2">
             <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-              {t("expenses.detailPaidBy")}
+              {credit ? t("expenses.detailReceivedBy") : t("expenses.detailPaidBy")}
             </h3>
             <ul className="flex flex-col gap-1.5">
               {payerEntries.map(([uid, amountMinor]) => (
@@ -225,7 +227,7 @@ export function ExpenseDetailDialog({
                     {members[uid]?.displayName ?? "?"}
                   </span>
                   <span className="tabular-money font-medium">
-                    {formatMoney(amountMinor, expense.currency)}
+                    {formatMoney(Math.abs(amountMinor), expense.currency)}
                   </span>
                 </li>
               ))}

@@ -69,7 +69,8 @@ export function expensePushes(input: {
     if (uid === input.actorUid || input.skip?.includes(uid) || !hasAccount(group, uid)) continue;
     const share = expense.splits[uid]?.amountMinor ?? 0;
     const paid = expense.paidBy[uid] ?? 0;
-    if (share <= 0 && paid <= 0) continue;
+    // Not `<= 0`: in a credit (a deposit refund) every amount is negative.
+    if (share === 0 && paid === 0) continue;
 
     const body: PushText[] = [
       {

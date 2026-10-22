@@ -12,9 +12,9 @@ server-side, in plain TypeScript, never trusted from a client.
 ## The three invariants (from the original project brief, still enforced)
 
 1. `sum(paidBy) === amountMinor` exactly — checked by `validatePaidBy` (`split.ts`), which
-   also requires **each** payer amount to be a non-negative integer. The sum alone used to
-   accept `{ a: 1.5, b: 98.5 }` for 100 — fractional minor units in the ledger — and negative
-   "payments" that still added up.
+   also requires **each** payer amount to be an integer **on the total's side of zero** (or
+   zero). The sum alone used to accept `{ a: 1.5, b: 98.5 }` for 100 — fractional minor units
+   in the ledger — and "payments" against the bill's direction that still added up.
 2. `sum(splits[*].amountMinor) === amountMinor` exactly — checked by `validateSplits`
    (`split.ts`). The rounding remainder is distributed deterministically, **never** silently
    dropped or invented.
@@ -24,6 +24,26 @@ server-side, in plain TypeScript, never trusted from a client.
 
 All amounts are **integer minor units** (cents). `assertIntegerMinorUnits` throws on any
 non-integer amount reaching split logic — floats are never allowed past this boundary.
+
+## Credits (Gutschrift) — negative expenses
+
+An expense may be **negative** (`isValidLedgerAmountMinor`: non-zero, within
+`MAX_AMOUNT_MINOR`): money the group gets back — a deposit slip (Pfandbon), a refund. It is
+stored as a plain expense with everything negated: `amountMinor < 0`, `paidBy` holds **who
+received** the money (negative amounts), every split is negative. So `computeBalances`,
+`computePairwiseDebts`, the balance cache, CSV/PDF need no special case: the receiver ends up
+owing everyone else their part. Example: Anna cashes 3,25 € for three → splits −109/−108/−108,
+balances Anna −216, Ben +108, Carl +108.
+
+- `distributeByWeights` distributes a negative amount as the **mirror image** of the positive
+  one (so a credit undoes the same expense cent for cent) and accepts all-negative weights
+  (the pairwise attribution weights by a credit's negative `paidBy`). Only a zero weight sum
+  throws.
+- `splitExact` accepts a share **against** the total's sign as long as the sum holds — only a
+  receipt with a deposit line produces one (see [[Receipt Scan]]); `validatePaidBy` does not.
+- Games never decide a credit (`invalid-split` for `amountMinor < 0` with `viaLottery`); games
+  keep `isValidAmountMinor` (positive only).
+- The Auswertung and category chips **net** credits against spending.
 
 ## `distributeByWeights` — the mechanism behind every split mode
 

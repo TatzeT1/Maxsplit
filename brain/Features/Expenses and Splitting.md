@@ -32,7 +32,7 @@ Both add and edit funnel through `resolveExpense`, in this order:
 
 1. **Membership** — `session.uid` must be in `group.memberUids` (`requireGroupMembership`).
 2. **Shape** — `validateExpenseInput`: description (non-blank, ≤ `MAX_DESCRIPTION_LENGTH`),
-   positive integer amount, real `yyyy-mm-dd` date, known category or null, a single emoji
+   a non-zero integer amount (negative = a credit, see below; never with `viaLottery`), real `yyyy-mm-dd` date, known category or null, a single emoji
    or null, a known split mode, at least one payer, at least one split participant — then
    `currency === group.currency` (see [[Balances and Settlements]]). See [[Conventions]] on
    why every field is checked, not only the money.
@@ -85,6 +85,18 @@ three, and its button is disabled offline like every saving control.
 
 The delete confirmation used to say "Das kann nicht rückgängig gemacht werden" — it now says
 the opposite; keep the two in step if either changes.
+
+## Credits — "Ausgabe | Gutschrift"
+
+A credit (a deposit slip, a refund) is an expense booked **negative** — the math is in
+[[Money Invariants]]. The form (`ExpenseKindToggle`, also in the recurring-rule dialog) has a
+segmented toggle instead of a typed minus, because the iPhone's `inputMode="decimal"` keypad
+has **no minus key** ([[Mobile iOS Quirks]]). Every amount field keeps holding a positive
+number; the form negates total, `paidBy` and exact inputs on submit. A typed leading minus
+(desktop/Android) flips the toggle instead of making the field invalid (`takeLeadingMinus`).
+In credit mode "Bezahlt von" reads "Erhalten von", the 🎮 game button is hidden, and rows,
+detail view and push say "hat erhalten". Only an exact share against the direction (a
+receipt's deposit line) shows a minus in the field.
 
 ## Categories
 

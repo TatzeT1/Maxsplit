@@ -94,6 +94,26 @@ describe("allocateReceipt", () => {
     expect(() => allocateReceipt(500, [item("Cola", 500, [[]])])).toThrow();
     expect(() => allocateReceipt(500, [item("Brot", 0, [["a"]])])).toThrow();
     expect(() => allocateReceipt(0, [item("Cola", 500, [["a"]])])).toThrow();
+    expect(() => allocateReceipt(-100, [item("Cola", 500, [["a"]])])).toThrow();
+  });
+
+  it("credits a deposit return to whoever brought the bottles back", () => {
+    // Ben's shopping, Anna's empties on the same receipt: she ends up with a credit.
+    const items = [item("Brot", 1000, [["ben"]]), item("Pfand", -25, [["anna"]])];
+    expect(allocateReceipt(975, items)).toEqual({ ben: 1000, anna: -25 });
+  });
+
+  it("spreads a tip only over the people on the bill's side", () => {
+    const items = [item("Brot", 1000, [["ben"], ["carl"]]), item("Pfand", -50, [["anna"]])];
+    const booked = allocateReceipt(1050, items);
+    expect(booked).toEqual({ ben: 550, carl: 550, anna: -50 });
+    expect(sum(booked)).toBe(1050);
+  });
+
+  it("splits a deposit slip as a credit for everyone on it", () => {
+    const slip = [item("Leergut", -325, [["anna", "ben", "carl"]])];
+    expect(allocateReceipt(-325, slip)).toEqual({ anna: -109, ben: -108, carl: -108 });
+    expect(() => allocateReceipt(325, slip)).toThrow();
   });
 });
 
@@ -104,13 +124,16 @@ describe("validateReceipt", () => {
     expect(validateReceipt({ items: dinner }, members)).toBeNull();
   });
 
+  it("accepts a deposit return as a negative line", () => {
+    expect(validateReceipt({ items: [item("Pfand", -25, [["anna"]])] }, members)).toBeNull();
+  });
+
   it.each([
     ["no items", { items: [] }],
     ["not an object", "receipt"],
     ["a blank name", { items: [item("  ", 100, [["anna"]])] }],
     ["a quantity that doesn't match the units", { items: [{ ...dinner[0], quantity: 2 }] }],
     ["too many units", { items: [item("Bier", 100, Array(MAX_ITEM_QUANTITY + 1).fill(["anna"]))] }],
-    ["a negative price", { items: [item("Pfand", -25, [["anna"]])] }],
     ["a fractional price", { items: [item("Cola", 3.5, [["anna"]])] }],
     ["a unit nobody had", { items: [item("Cola", 350, [[]])] }],
     ["a stranger", { items: [item("Cola", 350, [["mallory"]])] }],
@@ -179,6 +202,14 @@ describe("receiptLineShares", () => {
       }
       expect(shares.reduce((total, line) => total + sum(line), 0)).toBe(amount);
     }
+  });
+});
+
+describe("receiptLineShares with a deposit line", () => {
+  it("keeps the credit on its own line", () => {
+    const items = [item("Bier", 1000, [["anna"], ["ben"]]), item("Pfand", -16, [["anna"]])];
+    const shares = receiptLineShares(984, items);
+    expect(shares).toEqual([{ anna: 500, ben: 500 }, { anna: -16 }]);
   });
 });
 

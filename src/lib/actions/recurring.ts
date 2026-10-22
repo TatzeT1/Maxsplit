@@ -5,6 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { isCategoryId } from "@/lib/categories";
 import { isGroupManager } from "@/lib/groups/permissions";
 import { isIsoDate, isValidDescription } from "@/lib/ledger-input";
+import { isValidLedgerAmountMinor } from "@/lib/money/game-expense";
 import { splitEqual, validatePaidBy } from "@/lib/money/split";
 import { ruleHasMissingMembers } from "@/lib/recurring/rule-members";
 import { firstRunOnOrAfter, utcToday } from "@/lib/recurring/schedule";
@@ -60,7 +61,8 @@ const FREQUENCIES: readonly RecurringFrequency[] = ["weekly", "monthly"];
  */
 function validateRuleInput(input: RecurringRuleInput): string | null {
   if (!isValidDescription(input.description)) return "invalid-description";
-  if (!Number.isInteger(input.amountMinor) || input.amountMinor <= 0) return "invalid-amount";
+  // Negative: a recurring credit (a refund every month), shared like a bill.
+  if (!isValidLedgerAmountMinor(input.amountMinor)) return "invalid-amount";
   if (input.category !== null && !isCategoryId(input.category)) return "invalid-category";
   if (!FREQUENCIES.includes(input.frequency)) return "invalid-frequency";
   if (!isIsoDate(input.startDate)) return "invalid-date";

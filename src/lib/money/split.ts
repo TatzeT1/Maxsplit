@@ -17,6 +17,12 @@ function assertIntegerMinorUnits(amountMinor: number, label = "amountMinor"): vo
  *
  * Used for `equal` splits (all weights 1) and `shares`/`percent` splits
  * (weights are the share counts or percentages).
+ *
+ * A negative amount (a credit, e.g. a deposit refund) is distributed as the
+ * mirror image of the positive one, so a credit undoes the same expense cent
+ * for cent. Weights all of one sign mean the same either way (a split by
+ * what each payer contributed works for a credit's negative `paidBy` too);
+ * only their total must not be zero.
  */
 export function distributeByWeights(
   amountMinor: number,
@@ -25,10 +31,21 @@ export function distributeByWeights(
   assertIntegerMinorUnits(amountMinor);
 
   const uids = Object.keys(weights);
-  const totalWeight = uids.reduce((sum, uid) => sum + weights[uid], 0);
-  if (totalWeight <= 0) {
-    throw new Error("Total weight must be greater than zero");
+  const weightSum = uids.reduce((sum, uid) => sum + weights[uid], 0);
+  if (weightSum === 0 || !Number.isFinite(weightSum)) {
+    throw new Error("Total weight must not be zero");
   }
+  if (weightSum < 0) {
+    return distributeByWeights(
+      amountMinor,
+      Object.fromEntries(uids.map((uid) => [uid, -weights[uid]])),
+    );
+  }
+  if (amountMinor < 0) {
+    const mirrored = distributeByWeights(-amountMinor, weights);
+    return Object.fromEntries(uids.map((uid) => [uid, -mirrored[uid] || 0]));
+  }
+  const totalWeight = weightSum;
 
   const floors: Record<string, number> = {};
   const remainders: { uid: string; remainder: number }[] = [];
@@ -121,14 +138,19 @@ export function splitByPercent(
   return distributeByWeights(amountMinor, percents);
 }
 
-/** Validates and returns exact per-participant amounts; they must sum to the expense total. */
+/**
+ * Validates and returns exact per-participant amounts; they must sum to the
+ * expense total. A share may have the other sign than the total: a receipt's
+ * deposit line can leave the one person who returned the bottles with a
+ * credit on a bill everyone else pays (see allocateReceipt).
+ */
 export function splitExact(
   amountMinor: number,
   exactAmounts: Record<string, number>,
 ): Record<string, number> {
   for (const [uid, value] of Object.entries(exactAmounts)) {
-    if (!Number.isInteger(value) || value < 0) {
-      throw new Error(`Exact amount for "${uid}" must be a non-negative integer, got ${value}`);
+    if (!Number.isSafeInteger(value)) {
+      throw new Error(`Exact amount for "${uid}" must be an integer, got ${value}`);
     }
   }
   validateSplits(amountMinor, exactAmounts);
@@ -136,16 +158,20 @@ export function splitExact(
 }
 
 /**
- * Throws unless every payer amount is a non-negative integer and they sum
- * exactly to the expense total. The per-payer check matters on its own: the
- * sum alone accepted `{ a: 1.5, b: 98.5 }` for 100, putting fractional minor
- * units into the ledger, and negative "payments" that still added up.
+ * Throws unless every payer amount is an integer with the sign of the total
+ * (or zero) and they sum exactly to the expense total. The per-payer check
+ * matters on its own: the sum alone accepted `{ a: 1.5, b: 98.5 }` for 100,
+ * putting fractional minor units into the ledger, and "payments" against the
+ * bill's direction that still added up. For a credit (negative total) the
+ * payers are whoever received the money, each with a negative amount.
  */
 export function validatePaidBy(amountMinor: number, paidBy: Record<string, number>): void {
   assertIntegerMinorUnits(amountMinor);
+  const direction = Math.sign(amountMinor) || 1;
   for (const [uid, value] of Object.entries(paidBy)) {
-    if (!Number.isInteger(value) || value < 0) {
-      throw new Error(`Paid amount for "${uid}" must be a non-negative integer, got ${value}`);
+    if (!Number.isInteger(value) || value * direction < 0) {
+      const expected = direction > 0 ? "non-negative" : "non-positive";
+      throw new Error(`Paid amount for "${uid}" must be a ${expected} integer, got ${value}`);
     }
   }
   const sum = Object.values(paidBy).reduce((total, value) => total + value, 0);

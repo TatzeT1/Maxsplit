@@ -246,4 +246,34 @@ describe("ReceiptSplitDialog", () => {
     await user.click(screen.getByRole("button", { name: "Übernehmen" }));
     expect(onApply.mock.calls[0][0].receipt.items[0]).not.toHaveProperty("product");
   });
+
+  it("takes a deposit return as a credit line via its Pfand toggle", async () => {
+    const { onApply, user } = renderEditor({
+      items: [
+        { name: "Brot", quantity: 1, totalMinor: 300, units: [{ uids: ["ben"] }] },
+        { name: "Pfand", quantity: 1, totalMinor: 25, units: [{ uids: ["anna"] }] },
+      ],
+      totalMinor: null,
+    });
+    await user.click(within(unitButtons(1, 0).item).getByRole("button", { name: "Pfand" }));
+    await user.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({ amountMinor: 275, allocation: { ben: 300, anna: -25 } }),
+    );
+  });
+
+  it("books a slip of only deposit lines as a credit", async () => {
+    const { onApply, user } = renderEditor({
+      items: [{ name: "Leergut", quantity: 1, totalMinor: -325 }],
+      totalMinor: -325,
+    });
+    expect(screen.getByText(/als Gutschrift/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(onApply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        amountMinor: -325,
+        allocation: { anna: -109, ben: -108, carl: -108 },
+      }),
+    );
+  });
 });

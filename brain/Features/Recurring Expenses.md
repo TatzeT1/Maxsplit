@@ -91,6 +91,13 @@ already validated when the rule itself was created (see `src/lib/actions/recurri
 you change what recurring rules can store, make sure creation-time validation still guarantees
 the invariants in [[Money Invariants]] hold for every future materialized expense.
 
+## Credits
+
+A rule may be a recurring **credit** (negative `amountMinor`, e.g. a monthly refund) — the
+dialog has the same "Ausgabe | Gutschrift" toggle as the expense form, and
+`validateRuleInput` uses `isValidLedgerAmountMinor`. Materialization copies the rule's
+negative `paidBy`/`splits` as-is. See [[Money Invariants]].
+
 ## Related
 
 [[Money Invariants]] · [[Expenses and Splitting]] · [[Environment and Config]] (CRON_SECRET) · [[Deployment and Production Debugging]]

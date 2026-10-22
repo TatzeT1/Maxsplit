@@ -15,7 +15,7 @@ import { recomputeGroupBalances } from "@/lib/money/balance-cache";
 import {
   isClaimableEstimateRound,
   isEqualSplitAmong,
-  isValidAmountMinor,
+  isValidLedgerAmountMinor,
   sameUidSet,
   splitPayerUids,
 } from "@/lib/money/game-expense";
@@ -139,7 +139,9 @@ const SPLIT_MODES: readonly SplitMode[] = ["equal", "shares", "percent", "exact"
  */
 function validateExpenseInput(input: ExpenseInput): string | null {
   if (!isValidDescription(input.description)) return "invalid-description";
-  if (!isValidAmountMinor(input.amountMinor)) return "invalid-amount";
+  if (!isValidLedgerAmountMinor(input.amountMinor)) return "invalid-amount";
+  // A game decides who pays a bill; nobody plays for a share of a refund.
+  if (input.amountMinor < 0 && input.viaLottery === true) return "invalid-split";
   if (!isIsoDate(input.date)) return "invalid-date";
   if (input.category !== null && !isCategoryId(input.category)) return "invalid-category";
   if (!isValidEmoji(input.emoji)) return "invalid-emoji";

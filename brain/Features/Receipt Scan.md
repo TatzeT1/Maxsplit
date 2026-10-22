@@ -73,8 +73,17 @@ recomputes a stored receipt's split from its items, so one booked before the cha
 saves.) The difference to the booked amount (tip if positive,
 discount if negative) is spread **in proportion to the subtotals** with
 `distributeByWeights`. Every step is largest-remainder, so the result sums to the amount
-exactly ([[Money Invariants]]). A discount `≥` the items total throws (nothing fair to split);
-nobody can go below zero.
+exactly ([[Money Invariants]]). A booked amount not on the items' side of zero (a discount
+`≥` the items total) throws (nothing fair to split); a discount never takes anyone across zero.
+
+**Negative lines (Pfand).** A line may be negative — a deposit return credits whoever it is
+assigned to, and can leave that person with a negative share on a bill the others pay (the tip
+or discount is spread only over people on the bill's side). A receipt of only negative lines (a
+Leergutbon) is a **credit**: negative total, everyone's share negative, and applying it flips
+the expense form to "Gutschrift". The scan prompt asks for deposit returns as negative items
+(family `fees`, kind `Pfand`), `toMinor` reads a trailing minus ("0,25-"), and the editor has a
+per-line **Pfand** toggle (no minus key on the iPhone keypad); its total field holds the amount
+without sign and takes the items' direction.
 
 ## Server checks (`resolveReceipt` in `expenses.ts`)
 

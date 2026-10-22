@@ -31,6 +31,21 @@ export function isValidAmountMinor(value: unknown): value is number {
 }
 
 /**
+ * An amount a ledger entry may book: like `isValidAmountMinor`, but negative
+ * too — a credit (a deposit refund, a reimbursement) the group shares out.
+ * Never zero: a bill of nothing has no split. Games only ever stake a bill,
+ * never a credit, so they keep `isValidAmountMinor`.
+ */
+export function isValidLedgerAmountMinor(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value !== 0 &&
+    Math.abs(value) <= MAX_AMOUNT_MINOR
+  );
+}
+
+/**
  * Checks an auto-book draft at game start, so a bad amount or a stranger as
  * payer is rejected while the person can still fix it — not discovered at the
  * end of a tournament, when nobody's looking at the form anymore. Same rules

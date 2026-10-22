@@ -129,9 +129,11 @@ function ExpenseRow({
   const online = useOnline();
   const canEdit = expense.createdBy === currentUid || isGroupManager(members[currentUid]?.role);
   const payerUids = Object.keys(expense.paidBy);
+  // A credit (a deposit refund) was received, not paid.
+  const credit = expense.amountMinor < 0;
   const paidByText =
     payerUids.length > 1
-      ? t("expenses.paidByMultiple", {
+      ? t(credit ? "expenses.receivedByMultiple" : "expenses.paidByMultiple", {
           names: listFormatter.format(
             payerUids.map((uid) =>
               uid === currentUid ? t("expenses.you") : (members[uid]?.displayName ?? "?"),
@@ -139,8 +141,10 @@ function ExpenseRow({
           ),
         })
       : payerUids[0] === currentUid
-        ? t("expenses.paidBySelf")
-        : t("expenses.paidByOne", { name: members[payerUids[0]]?.displayName ?? "?" });
+        ? t(credit ? "expenses.receivedBySelf" : "expenses.paidBySelf")
+        : t(credit ? "expenses.receivedByOne" : "expenses.paidByOne", {
+            name: members[payerUids[0]]?.displayName ?? "?",
+          });
 
   async function handleDelete() {
     setDeleting(true);

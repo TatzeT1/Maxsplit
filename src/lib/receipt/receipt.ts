@@ -74,13 +74,19 @@ function lineSubtotals(items: readonly ReceiptItem[]): Record<string, number>[] 
  * unit by unit, which handed every unit's odd cent to the same people
  * (6 yoghurts at 0,50 for three: 17/17/16 cents six times over left the
  * third person 6 cents short). The difference between `amountMinor` and
- * the line totals — a tip when positive, a discount when negative — is
- * then spread in proportion to what each person had. Every step is the
- * largest-remainder method, so the result always sums to `amountMinor`
- * exactly.
+ * the line totals — a tip when it adds to the bill, a discount when it
+ * takes away — is then spread in proportion to what each person had. Every
+ * step is the largest-remainder method, so the result always sums to
+ * `amountMinor` exactly.
+ *
+ * A line may be negative — a deposit return ("Pfand -0,25") credits whoever
+ * it is assigned to, which can leave one person with a credit on a bill the
+ * others pay. A receipt of only such lines (a deposit slip) is a credit: its
+ * total is negative and so is everyone's share.
  *
  * Throws when a unit has nobody, the lines add up to nothing, or the
- * discount would be the whole bill: there is no fair split to compute.
+ * booked amount isn't on the lines' side of zero (a discount that is the
+ * whole bill): there is no fair split to compute.
  */
 export function allocateReceipt(
   amountMinor: number,
@@ -94,21 +100,28 @@ export function allocateReceipt(
   }
 
   const itemsTotal = receiptItemsTotal(items);
-  if (itemsTotal <= 0) throw new Error("The receipt items add up to nothing");
+  if (itemsTotal === 0) throw new Error("The receipt items add up to nothing");
+  const direction = Math.sign(itemsTotal);
+  if (Math.sign(amountMinor) !== direction) {
+    throw new Error("The discount covers the whole receipt");
+  }
   const adjustment = amountMinor - itemsTotal;
-  if (-adjustment >= itemsTotal) throw new Error("The discount covers the whole receipt");
 
-  const weighted = Object.fromEntries(Object.entries(subtotals).filter(([, amount]) => amount > 0));
+  // Spread over the people on the bill's side only: someone whose lines are
+  // a credit on a bill has no part in its tip.
+  const weighted = Object.fromEntries(
+    Object.entries(subtotals).filter(([, amount]) => amount * direction > 0),
+  );
   const result = { ...subtotals };
   if (adjustment !== 0) {
-    // A discount below the items total never takes anyone below zero: each
-    // share is under that person's subtotal (see distributeByWeights).
-    const spread = distributeByWeights(Math.abs(adjustment), weighted);
+    // A discount short of the items total never takes anyone across zero:
+    // each share is at most that person's subtotal (see distributeByWeights).
+    const spread = distributeByWeights(adjustment, weighted);
     for (const [uid, share] of Object.entries(spread)) {
-      result[uid] += Math.sign(adjustment) * share;
+      result[uid] += share;
     }
   }
-  return Object.fromEntries(Object.entries(result).filter(([, amount]) => amount > 0));
+  return Object.fromEntries(Object.entries(result).filter(([, amount]) => amount !== 0));
 }
 
 /**
@@ -133,7 +146,7 @@ export function receiptLineShares(
       if (line[uid]) weights[String(index)] = line[uid];
     });
     for (const [index, share] of Object.entries(distributeByWeights(amount, weights))) {
-      if (share > 0) shares[Number(index)][uid] = share;
+      if (share !== 0) shares[Number(index)][uid] = share;
     }
   }
   return shares;
@@ -166,7 +179,8 @@ function isValidItem(value: unknown, memberIds: ReadonlySet<string>): boolean {
   if (product !== undefined && !isValidProductClass(product)) return false;
   if (typeof name !== "string" || !name.trim() || name.length > MAX_ITEM_NAME_LENGTH) return false;
   if (!Number.isInteger(quantity) || quantity! < 1 || quantity! > MAX_ITEM_QUANTITY) return false;
-  if (!Number.isSafeInteger(totalMinor) || totalMinor! < 0) return false;
+  // Negative: a deposit return or a credit line (see allocateReceipt).
+  if (!Number.isSafeInteger(totalMinor)) return false;
   if (!Array.isArray(units) || units.length !== quantity) return false;
   return units.every((unit: unknown) => {
     const uids = (unit as { uids?: unknown } | null)?.uids;

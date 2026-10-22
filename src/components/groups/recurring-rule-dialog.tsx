@@ -14,9 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useT } from "@/components/locale-provider";
+import { ExpenseKindToggle } from "@/components/groups/expense-kind-toggle";
 import { createRecurringRule } from "@/lib/actions/recurring";
 import { CATEGORY_IDS, categoryLabel } from "@/lib/categories";
-import { parseMoneyInput } from "@/lib/format/money";
+import { parseMoneyInput, takeLeadingMinus } from "@/lib/format/money";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import { useOnline } from "@/lib/use-online";
 import type { CategoryId, GroupMember, RecurringFrequency } from "@/lib/types";
@@ -60,6 +61,8 @@ export function RecurringRuleDialog({
 
   const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
+  // A recurring credit (a refund every month) is booked negative, see ExpenseKindToggle.
+  const [credit, setCredit] = useState(false);
   const [amountInput, setAmountInput] = useState("");
   const [category, setCategory] = useState<CategoryId | null>(null);
   const [payerUid, setPayerUid] = useState(currentUid);
@@ -94,7 +97,7 @@ export function RecurringRuleDialog({
     const result = await createRecurringRule({
       groupId,
       description,
-      amountMinor,
+      amountMinor: credit ? -amountMinor : amountMinor,
       currency,
       category,
       payerUid,
@@ -111,6 +114,7 @@ export function RecurringRuleDialog({
 
     setOpen(false);
     setDescription("");
+    setCredit(false);
     setAmountInput("");
     setCategory(null);
     setPayerUid(currentUid);
@@ -132,6 +136,7 @@ export function RecurringRuleDialog({
             <DialogTitle>{t("recurring.addTitle")}</DialogTitle>
           </DialogHeader>
           <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto py-4">
+            <ExpenseKindToggle credit={credit} onChange={setCredit} />
             <div className="flex flex-col gap-2">
               <Label htmlFor="recurring-description">{t("expenses.descriptionLabel")}</Label>
               <Input
@@ -149,7 +154,11 @@ export function RecurringRuleDialog({
               <Input
                 id="recurring-amount"
                 value={amountInput}
-                onChange={(event) => setAmountInput(event.target.value)}
+                onChange={(event) => {
+                  const typed = takeLeadingMinus(event.target.value);
+                  if (typed.negative) setCredit(true);
+                  setAmountInput(typed.input);
+                }}
                 placeholder={`0,00 ${currency}`}
                 inputMode="decimal"
                 required
@@ -171,7 +180,9 @@ export function RecurringRuleDialog({
               </Select>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="recurring-payer">{t("expenses.paidByLabel")}</Label>
+              <Label htmlFor="recurring-payer">
+                {credit ? t("expenses.receivedByLabel") : t("expenses.paidByLabel")}
+              </Label>
               <Select
                 id="recurring-payer"
                 value={payerUid}

@@ -95,6 +95,21 @@ describe("distributeByWeights", () => {
 
   it("throws for zero total weight", () => {
     expect(() => distributeByWeights(100, { a: 0 })).toThrow();
+    expect(() => distributeByWeights(100, { a: 1, b: -1 })).toThrow();
+  });
+
+  it("splits a credit as the exact mirror image of the same expense", () => {
+    expect(distributeByWeights(-325, { a: 1, b: 1, c: 1 })).toEqual({ a: -109, b: -108, c: -108 });
+    expect(distributeByWeights(325, { a: 1, b: 1, c: 1 })).toEqual({ a: 109, b: 108, c: 108 });
+  });
+
+  it("reads all-negative weights like their positive counterparts", () => {
+    // How a credit's negative paidBy attributes a share across its receivers.
+    expect(distributeByWeights(-100, { a: -60, b: -40 })).toEqual({ a: -60, b: -40 });
+  });
+
+  it("never hands out a negative zero", () => {
+    expect(Object.is(distributeByWeights(-1, { a: 1, b: 1 }).b, 0)).toBe(true);
   });
 });
 
@@ -158,9 +173,17 @@ describe("splitExact", () => {
     expect(() => splitExact(1000, { a: 400, b: 500 })).toThrow(AmountMismatchError);
   });
 
-  it("throws for a negative or non-integer amount", () => {
-    expect(() => splitExact(1000, { a: -100, b: 1100 })).toThrow();
+  it("throws for a non-integer amount", () => {
     expect(() => splitExact(1000, { a: 400.5, b: 599.5 })).toThrow();
+  });
+
+  it("accepts a share against the total's direction as long as the sum holds", () => {
+    // Anna returned the bottles on Ben's shopping receipt.
+    expect(splitExact(1000, { a: -25, b: 1025 })).toEqual({ a: -25, b: 1025 });
+  });
+
+  it("splits a credit", () => {
+    expect(splitExact(-325, { a: -200, b: -125 })).toEqual({ a: -200, b: -125 });
   });
 });
 
@@ -179,6 +202,12 @@ describe("validatePaidBy", () => {
 
   it("rejects a negative payer amount even when the payers still sum to the total", () => {
     expect(() => validatePaidBy(1000, { a: -1000, b: 2000 })).toThrow(/non-negative integer/);
+  });
+
+  it("takes a credit's receivers as negative payers", () => {
+    expect(() => validatePaidBy(-325, { a: -325 })).not.toThrow();
+    expect(() => validatePaidBy(-325, { a: -300, b: -25 })).not.toThrow();
+    expect(() => validatePaidBy(-325, { a: -425, b: 100 })).toThrow(/non-positive integer/);
   });
 
   it("accepts a payer listed with zero", () => {

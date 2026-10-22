@@ -12,6 +12,7 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 
 | German                            | English meaning                      | Where                                                                                                                                        |
 | --------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gutschrift                        | "Credit" — money coming in           | a negative expense (Pfandbon, refund), shared like a bill — [[Money Invariants]], [[Expenses and Splitting]]                                 |
 | Schulden vereinfachen             | "Simplify debts"                     | `simplifyDebts`, opt-in per-group debt-simplification toggle — [[Money Invariants]], [[Balances and Settlements]]                            |
 | Du schuldest Anna 12,50 €         | "You owe Anna 12.50 €"               | pairwise debt display — `computePairwiseDebts`                                                                                               |
 | Schuldenausgleich                 | "Debt settlement"                    | filename `schuldenausgleich.pdf` from the [[Settlement PDF Export]] route                                                                    |

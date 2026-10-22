@@ -187,3 +187,43 @@ describe("simplifyDebts", () => {
     }
   });
 });
+
+describe("a credit (Gutschrift)", () => {
+  // Anna cashed a 3,25 deposit slip for the flat of three.
+  const deposit: BalanceExpense = {
+    paidBy: { anna: -325 },
+    splits: splitEqual(-325, ["anna", "ben", "carl"]),
+  };
+
+  it("leaves whoever received the money owing the others their part", () => {
+    expect(computeBalances([deposit])).toEqual({ anna: -216, ben: 108, carl: 108 });
+  });
+
+  it("undoes the same expense exactly", () => {
+    const bottles: BalanceExpense = {
+      paidBy: { anna: 325 },
+      splits: splitEqual(325, ["anna", "ben", "carl"]),
+    };
+    const net = computeBalances([bottles, deposit]);
+    expect(Object.values(net).every((amount) => amount === 0)).toBe(true);
+  });
+
+  it("names the mirrored debts pairwise, with several receivers too", () => {
+    expect(computePairwiseDebts([deposit]).ben.anna).toBe(-108);
+    const credit: BalanceExpense = {
+      paidBy: { anna: -200, ben: -100 },
+      splits: splitEqual(-300, ["anna", "ben", "carl"]),
+    };
+    const bill: BalanceExpense = {
+      paidBy: { anna: 200, ben: 100 },
+      splits: splitEqual(300, ["anna", "ben", "carl"]),
+    };
+    const fromCredit = computePairwiseDebts([credit]);
+    const fromBill = computePairwiseDebts([bill]);
+    for (const [debtor, row] of Object.entries(fromBill)) {
+      for (const [creditor, amount] of Object.entries(row)) {
+        expect(fromCredit[debtor][creditor]).toBe(-amount);
+      }
+    }
+  });
+});

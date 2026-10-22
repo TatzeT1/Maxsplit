@@ -51,10 +51,48 @@ describe("addExpense rejects malformed input before it reaches the ledger", () =
     [{ splitMode: "random" as unknown as SplitMode }, "invalid-split"],
     [{ paidBy: { max: 1500.5, lea: 1499.5 } }, "invalid-split"],
     [{ paidBy: { max: 6000, lea: -3000 } }, "invalid-split"],
+    [{ amountMinor: 0, paidBy: { max: 0 } }, "invalid-amount"],
+    // A credit's receivers are negative payers; a positive one isn't receiving.
+    [{ amountMinor: -3000, paidBy: { max: 3000 } }, "invalid-split"],
+    [{ amountMinor: -3000, paidBy: { max: -4000, lea: 1000 } }, "invalid-split"],
+    // Nobody plays a game for a share of a refund.
+    [{ amountMinor: -3000, paidBy: { max: -3000 }, viaLottery: true }, "invalid-split"],
   ] as const)("rejects %o with %s", async (patch, error) => {
     const groupRef = await seedMaxAndLea();
     expect(await addExpense({ ...expense, ...patch })).toEqual({ ok: false, error });
     expect((await groupRef.collection("expenses").get()).empty).toBe(true);
+  });
+});
+
+describe("addExpense with a credit (Gutschrift)", () => {
+  it("books a deposit slip negative, shared like a bill", async () => {
+    const groupRef = await seedMaxAndLea();
+    const result = await addExpense({
+      ...expense,
+      description: "Pfandbon",
+      amountMinor: -325,
+      paidBy: { lea: -325 },
+    });
+    expect(result.ok).toBe(true);
+    const [doc] = (await groupRef.collection("expenses").get()).docs;
+    expect(doc.data().splits).toEqual({
+      max: { rawValue: 1, amountMinor: -163 },
+      lea: { rawValue: 1, amountMinor: -162 },
+    });
+    // Lea has the money, so she owes Max his half.
+    expect((await readGroup("g1")).balancesMinor).toEqual({ max: 163, lea: -163 });
+  });
+
+  it("books an exact credit split", async () => {
+    await seedMaxAndLea();
+    const result = await addExpense({
+      ...expense,
+      amountMinor: -500,
+      paidBy: { max: -500 },
+      splitMode: "exact",
+      splitInputs: { max: -100, lea: -400 },
+    });
+    expect(result.ok).toBe(true);
   });
 });
 
@@ -165,9 +203,15 @@ describe("createRecurringRule", () => {
     [{ startDate: "0026-10-01" }, "invalid-date"],
     [{ currency: "GBP" }, "invalid-currency"],
     [{ description: " " }, "invalid-description"],
+    [{ amountMinor: 0 }, "invalid-amount"],
   ] as const)("rejects %o with %s", async (patch, error) => {
     await seedMaxAndLea();
     expect(await createRecurringRule({ ...rule, ...patch })).toEqual({ ok: false, error });
+  });
+
+  it("accepts a recurring credit", async () => {
+    await seedMaxAndLea();
+    expect((await createRecurringRule({ ...rule, amountMinor: -2000 })).ok).toBe(true);
   });
 });
 

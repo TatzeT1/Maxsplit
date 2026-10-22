@@ -19,6 +19,7 @@ import { Select } from "@/components/ui/select";
 import { SaveCelebration } from "@/components/ui/save-celebration";
 import { useT } from "@/components/locale-provider";
 import { EmojiPicker } from "@/components/groups/emoji-picker";
+import { ExpenseKindToggle } from "@/components/groups/expense-kind-toggle";
 import { useReceiptScanEnabled } from "@/components/groups/receipt-scan-context";
 import { ReceiptScanOverlay } from "@/components/groups/receipt-scan-overlay";
 import {
@@ -54,7 +55,7 @@ import { estimateRoundPath } from "@/lib/games/round-paths";
 import { addExpense, editExpense, type ExpenseInput } from "@/lib/actions/expenses";
 import { scanReceipt } from "@/lib/actions/receipts";
 import { prepareReceiptImage } from "@/lib/receipt/prepare-image";
-import { allocateReceipt } from "@/lib/receipt/receipt";
+import { allocateReceipt, receiptItemsTotal } from "@/lib/receipt/receipt";
 import {
   CATEGORY_IDS,
   categoryTileClasses,
@@ -62,7 +63,7 @@ import {
   categoryLabel,
 } from "@/lib/categories";
 import { EXPENSE_EMOJIS } from "@/lib/emoji";
-import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
+import { formatMoney, moneyToInput, parseMoneyInput, takeLeadingMinus } from "@/lib/format/money";
 import { MAX_DESCRIPTION_LENGTH } from "@/lib/ledger-input";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { splitEqual } from "@/lib/money/split";
@@ -156,6 +157,25 @@ function scanErrorMessage(code: string, t: ReturnType<typeof useT>): string {
 }
 
 /**
+ * The form's amount fields hold amounts in the bill's direction: a credit
+ * (`sign` -1) shows its negative shares as positive numbers, the same way
+ * its total is typed. Only a share against the direction — a deposit line
+ * on someone else's shopping receipt — shows a minus.
+ */
+function toExactInputs(amounts: Record<string, number>, sign: number): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(amounts).map(([uid, amount]) => [uid, moneyToInput(sign * amount)]),
+  );
+}
+
+/** An amount field's value in minor units, a typed minus kept; null when it isn't one. */
+function parseSignedMoneyInput(raw: string): number | null {
+  const { input, negative } = takeLeadingMinus(raw);
+  const parsed = parseMoneyInput(input);
+  return parsed === null ? null : negative ? -parsed : parsed;
+}
+
+/**
  * The exact inputs a receipt split books, recomputed from its items rather
  * than read from the stored split: the server checks them against
  * `allocateReceipt`, and one stored before its rounding changed (2026-10)
@@ -163,12 +183,7 @@ function scanErrorMessage(code: string, t: ReturnType<typeof useT>): string {
  */
 function receiptExactInputs(amountMinor: number, receipt: ExpenseReceipt): Record<string, string> {
   try {
-    return Object.fromEntries(
-      Object.entries(allocateReceipt(amountMinor, receipt.items)).map(([uid, amount]) => [
-        uid,
-        moneyToInput(amount),
-      ]),
-    );
+    return toExactInputs(allocateReceipt(amountMinor, receipt.items), Math.sign(amountMinor));
   } catch {
     return {};
   }
@@ -178,7 +193,7 @@ function receiptExactInputs(amountMinor: number, receipt: ExpenseReceipt): Recor
 const SCAN_STAMP_HOLD_MS = 1_100;
 
 function sumMoneyInputs(map: Record<string, string>): number {
-  return Object.values(map).reduce((total, raw) => total + (parseMoneyInput(raw) ?? 0), 0);
+  return Object.values(map).reduce((total, raw) => total + (parseSignedMoneyInput(raw) ?? 0), 0);
 }
 
 function sumNumberInputs(map: Record<string, string>): number {
@@ -265,7 +280,14 @@ export function AddExpenseDialog({
   const prefill = expenseToEdit ?? duplicateFrom;
 
   const [description, setDescription] = useState(prefill?.description ?? "");
-  const [amountInput, setAmountInput] = useState(prefill ? moneyToInput(prefill.amountMinor) : "");
+  // A credit (Gutschrift): money the group gets back, e.g. a deposit slip.
+  // Booked negative; every amount field still takes it as a positive number,
+  // since phone keypads have no minus key.
+  const [credit, setCredit] = useState((prefill?.amountMinor ?? 0) < 0);
+  const sign = credit ? -1 : 1;
+  const [amountInput, setAmountInput] = useState(
+    prefill ? moneyToInput(Math.abs(prefill.amountMinor)) : "",
+  );
   const [date, setDate] = useState(expenseToEdit?.date ?? todayIsoDate());
   const [category, setCategory] = useState<CategoryId | null>(prefill?.category ?? null);
   const [emoji, setEmoji] = useState<string | null>(prefill?.emoji ?? null);
@@ -276,7 +298,10 @@ export function AddExpenseDialog({
   const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(() =>
     prefill && initialPayerUids.length > 1
       ? Object.fromEntries(
-          Object.entries(prefill.paidBy).map(([uid, amount]) => [uid, moneyToInput(amount)]),
+          Object.entries(prefill.paidBy).map(([uid, amount]) => [
+            uid,
+            moneyToInput(Math.abs(amount)),
+          ]),
         )
       : {},
   );
@@ -307,8 +332,11 @@ export function AddExpenseDialog({
     prefill?.splitMode === "exact" && prefill.receipt
       ? receiptExactInputs(prefill.amountMinor, prefill.receipt)
       : prefill?.splitMode === "exact"
-        ? Object.fromEntries(
-            Object.entries(prefill.splits).map(([uid, s]) => [uid, moneyToInput(s.amountMinor)]),
+        ? toExactInputs(
+            Object.fromEntries(
+              Object.entries(prefill.splits).map(([uid, split]) => [uid, split.amountMinor]),
+            ),
+            Math.sign(prefill.amountMinor),
           )
         : {},
   );
@@ -506,19 +534,18 @@ export function AddExpenseDialog({
     setScannedMeta({ merchant: null, date: null });
     openReceiptEditor(
       receipt
-        ? { items: receipt.items, totalMinor: amountMinor > 0 ? amountMinor : null }
-        : { items: [], totalMinor: amountMinor > 0 ? amountMinor : null },
+        ? { items: receipt.items, totalMinor: amountMinor > 0 ? sign * amountMinor : null }
+        : { items: [], totalMinor: amountMinor > 0 ? sign * amountMinor : null },
     );
   }
 
   function handleApplyReceipt(applied: AppliedReceipt) {
+    // A deposit slip (only credit lines) makes the whole entry a credit.
+    const appliedSign = Math.sign(applied.amountMinor);
+    setCredit(appliedSign < 0);
     setReceipt(applied.receipt);
-    setAmountInput(moneyToInput(applied.amountMinor));
-    setExactInputs(
-      Object.fromEntries(
-        Object.entries(applied.allocation).map(([uid, amount]) => [uid, moneyToInput(amount)]),
-      ),
-    );
+    setAmountInput(moneyToInput(Math.abs(applied.amountMinor)));
+    setExactInputs(toExactInputs(applied.allocation, appliedSign));
     setSplitMode("exact");
     setViaLottery(false);
     setGameRecord(null);
@@ -529,20 +556,35 @@ export function AddExpenseDialog({
 
   /** A receipt split follows the amount: a corrected total re-spreads the tip. */
   function handleAmountChange(value: string) {
-    setAmountInput(value);
-    if (!receipt) return;
-    const next = parseMoneyInput(value);
+    const typed = takeLeadingMinus(value);
+    // A typed minus (a desktop keyboard has one) means a credit.
+    const nextSign = typed.negative ? -1 : sign;
+    if (typed.negative) handleCreditChange(true);
+    setAmountInput(typed.input);
+    if (!receipt || (typed.negative && !credit)) return;
+    const next = parseMoneyInput(typed.input);
     if (next === null || next <= 0) return;
     try {
-      const allocation = allocateReceipt(next, receipt.items);
-      setExactInputs(
-        Object.fromEntries(
-          Object.entries(allocation).map(([uid, amount]) => [uid, moneyToInput(amount)]),
-        ),
-      );
+      setExactInputs(toExactInputs(allocateReceipt(nextSign * next, receipt.items), nextSign));
     } catch {
       // A total at or below the discount: nothing fair to show. The save
       // reports it (invalid-split) rather than booking a wrong split.
+    }
+  }
+
+  /**
+   * Switches between an expense and a credit. A receipt only stays when its
+   * lines point the same way, and a game never decides a credit.
+   */
+  function handleCreditChange(next: boolean) {
+    if (next === credit) return;
+    setCredit(next);
+    if (receipt && Math.sign(receiptItemsTotal(receipt.items)) !== (next ? -1 : 1)) {
+      setReceipt(null);
+    }
+    if (next) {
+      setViaLottery(false);
+      setGameRecord(null);
     }
   }
 
@@ -564,11 +606,11 @@ export function AddExpenseDialog({
   }
 
   function buildPaidBy(): Record<string, number> {
-    if (!multiplePayers) return { [payerUid]: amountMinor };
+    if (!multiplePayers) return { [payerUid]: sign * amountMinor };
     const result: Record<string, number> = {};
     for (const [uid, raw] of Object.entries(payerAmounts)) {
       const parsed = parseMoneyInput(raw);
-      if (parsed !== null && parsed > 0) result[uid] = parsed;
+      if (parsed !== null && parsed > 0) result[uid] = sign * parsed;
     }
     return result;
   }
@@ -593,8 +635,9 @@ export function AddExpenseDialog({
     if (splitMode === "exact") {
       const result: Record<string, number> = {};
       for (const [uid, raw] of Object.entries(exactInputs)) {
-        const parsed = parseMoneyInput(raw);
-        if (parsed !== null && parsed > 0) result[uid] = parsed;
+        // Signed: a receipt's deposit line can credit one person on a bill.
+        const parsed = parseSignedMoneyInput(raw);
+        if (parsed !== null && parsed !== 0) result[uid] = sign * parsed;
       }
       return result;
     }
@@ -608,6 +651,7 @@ export function AddExpenseDialog({
    */
   function buildExpenseDraft(): GameExpenseDraft | null | undefined {
     if (expenseToEdit) return undefined;
+    if (credit) return null;
     const paidBy = buildPaidBy();
     const paidTotal = Object.values(paidBy).reduce((sum, n) => sum + n, 0);
     if (!description.trim() || amountMinor <= 0 || paidTotal !== amountMinor) return null;
@@ -616,6 +660,7 @@ export function AddExpenseDialog({
 
   function resetForm() {
     setDescription("");
+    setCredit(false);
     setAmountInput("");
     setCategory(null);
     setEmoji(null);
@@ -684,7 +729,7 @@ export function AddExpenseDialog({
     const payload: ExpenseInput = {
       groupId,
       description,
-      amountMinor,
+      amountMinor: sign * amountMinor,
       currency,
       date,
       category,
@@ -728,7 +773,7 @@ export function AddExpenseDialog({
       <DialogContent showCloseButton={!celebrating}>
         {celebrating ? (
           <SaveCelebration
-            label={t("expenses.celebrateTitle")}
+            label={credit ? t("expenses.creditCelebrateTitle") : t("expenses.celebrateTitle")}
             amountMinor={amountMinor}
             currency={currency}
           />
@@ -780,6 +825,7 @@ export function AddExpenseDialog({
                   </p>
                 )}
               </div>
+              <ExpenseKindToggle credit={credit} onChange={handleCreditChange} />
               <div className="flex flex-col gap-2">
                 <Label htmlFor="expense-description">{t("expenses.descriptionLabel")}</Label>
                 <Input
@@ -846,7 +892,9 @@ export function AddExpenseDialog({
 
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <Label>{t("expenses.paidByLabel")}</Label>
+                  <Label>
+                    {credit ? t("expenses.receivedByLabel") : t("expenses.paidByLabel")}
+                  </Label>
                   <label className="text-muted-foreground flex cursor-pointer items-center gap-2 py-1 text-sm">
                     <input
                       type="checkbox"
@@ -854,13 +902,13 @@ export function AddExpenseDialog({
                       onChange={(event) => setMultiplePayers(event.target.checked)}
                       className="accent-primary size-4"
                     />
-                    {t("expenses.multiplePayers")}
+                    {credit ? t("expenses.multipleReceivers") : t("expenses.multiplePayers")}
                   </label>
                 </div>
                 {multiplePayers ? (
                   <div className="flex flex-col gap-2">
                     <p className="text-muted-foreground text-sm">
-                      {t("expenses.payerAmountsHint")}
+                      {credit ? t("expenses.receiverAmountsHint") : t("expenses.payerAmountsHint")}
                     </p>
                     {memberUids.map((uid) => (
                       <div key={uid} className="flex items-center gap-2">
@@ -919,13 +967,16 @@ export function AddExpenseDialog({
                       {t(labelKey)}
                     </button>
                   ))}
-                  <button
-                    type="button"
-                    onClick={openGamePicker}
-                    className="text-muted-foreground hover:bg-muted hover:text-foreground flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95"
-                  >
-                    🎮 {t("expenses.splitGame")}
-                  </button>
+                  {/* A game decides who pays a bill — nobody plays for a share of a refund. */}
+                  {!credit && (
+                    <button
+                      type="button"
+                      onClick={openGamePicker}
+                      className="text-muted-foreground hover:bg-muted hover:text-foreground flex-1 rounded-md px-2 py-2 text-sm font-medium transition-all duration-200 active:scale-95"
+                    >
+                      🎮 {t("expenses.splitGame")}
+                    </button>
+                  )}
                 </div>
 
                 {splitMode === "equal" && (

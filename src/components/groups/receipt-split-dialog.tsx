@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ProductChip, ProductClassFields } from "@/components/groups/product-class-fields";
 import { useT } from "@/components/locale-provider";
-import { formatMoney, moneyToInput, parseMoneyInput } from "@/lib/format/money";
+import { formatMoney, moneyToInput, parseMoneyInput, takeLeadingMinus } from "@/lib/format/money";
 import {
   allocateReceipt,
   MAX_ITEM_NAME_LENGTH,
@@ -58,7 +58,10 @@ interface DraftItem {
   key: number;
   name: string;
   quantity: string;
+  /** The line's amount without its sign — see `credit`. */
   total: string;
+  /** A deposit return or other credit line: the amount counts negative. */
+  credit: boolean;
   /** One list of uids per unit; resized when the quantity changes. */
   units: string[][];
   /**
@@ -112,7 +115,8 @@ function toDraftItem(item: ReceiptDraft["items"][number], memberUids: string[]):
     key: nextKey++,
     name: item.name,
     quantity: String(item.quantity),
-    total: moneyToInput(item.totalMinor),
+    total: moneyToInput(Math.abs(item.totalMinor)),
+    credit: item.totalMinor < 0,
     units,
     perUnit: !sameUnits(units),
     family: item.product?.family ?? null,
@@ -127,6 +131,7 @@ function emptyItem(memberUids: string[]): DraftItem {
     name: "",
     quantity: "1",
     total: "",
+    credit: false,
     units: [[...memberUids]],
     perUnit: false,
     family: null,
@@ -145,13 +150,13 @@ function draftProduct(item: Pick<DraftItem, "family" | "kind">): ProductClass | 
 function toReceiptItem(item: DraftItem): ReceiptItem | null {
   const name = item.name.trim();
   const quantity = parseQuantity(item.quantity);
-  const totalMinor = parseMoneyInput(item.total);
-  if (!name || quantity === null || totalMinor === null || totalMinor < 0) return null;
+  const amount = parseMoneyInput(item.total);
+  if (!name || quantity === null || amount === null) return null;
   const product = draftProduct(item);
   return {
     name,
     quantity,
-    totalMinor,
+    totalMinor: item.credit ? -amount : amount,
     units: resizeUnits(item.units, quantity, item.units[0] ?? []).map((uids) => ({ uids })),
     ...(product ? { product } : {}),
   };
@@ -215,24 +220,33 @@ export function ReceiptSplitDialog({
       ? initial.items.map((item) => toDraftItem(item, memberUids))
       : [emptyItem(memberUids)],
   );
+  // The total without its sign: it takes the items' side of zero, so a
+  // deposit slip (only credit lines) has a negative total.
   const [totalInput, setTotalInput] = useState(() =>
-    initial.totalMinor !== null ? moneyToInput(initial.totalMinor) : "",
+    initial.totalMinor !== null ? moneyToInput(Math.abs(initial.totalMinor)) : "",
   );
 
   const parsedItems = items.map(toReceiptItem);
   const completeItems = parsedItems.filter((item): item is ReceiptItem => item !== null);
   const allParsed = completeItems.length === items.length && items.length > 0;
   const itemsTotal = receiptItemsTotal(completeItems);
+  const direction = itemsTotal < 0 ? -1 : 1;
   // An empty total field means "what the items add up to".
-  const totalMinor = totalInput.trim() ? parseMoneyInput(totalInput) : itemsTotal;
-  const adjustment = totalMinor !== null ? totalMinor - itemsTotal : 0;
+  const typedTotal = parseMoneyInput(totalInput);
+  const totalMinor = !totalInput.trim()
+    ? itemsTotal
+    : typedTotal !== null
+      ? direction * typedTotal
+      : null;
+  // How much the total is beyond the items (a tip) or short of them (a discount).
+  const adjustment = totalMinor !== null ? direction * (totalMinor - itemsTotal) : 0;
   const unassigned = completeItems.reduce(
     (count, item) => count + item.units.filter((unit) => unit.uids.length === 0).length,
     0,
   );
 
   const allocation = (() => {
-    if (!allParsed || unassigned > 0 || totalMinor === null || totalMinor <= 0) return null;
+    if (!allParsed || unassigned > 0 || !totalMinor) return null;
     try {
       return allocateReceipt(totalMinor, completeItems);
     } catch {
@@ -358,13 +372,33 @@ export function ReceiptSplitDialog({
                       inputMode="decimal"
                       placeholder="0,00"
                       aria-invalid={item.total !== "" && parsedItems[itemIndex] === null}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const typed = takeLeadingMinus(event.target.value);
                         updateItem(item.key, (current) => ({
                           ...current,
-                          total: event.target.value,
-                        }))
-                      }
+                          total: typed.input,
+                          credit: current.credit || typed.negative,
+                        }));
+                      }}
                     />
+                  </div>
+                  <div className="flex shrink-0 flex-col justify-end">
+                    {/* Phone keypads have no minus: a deposit return is a toggle. */}
+                    <button
+                      type="button"
+                      aria-pressed={item.credit}
+                      onClick={() =>
+                        updateItem(item.key, (current) => ({ ...current, credit: !current.credit }))
+                      }
+                      className={cn(
+                        "h-9 rounded-md border px-2.5 text-sm transition-colors active:scale-95",
+                        item.credit
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {t("receipt.itemCredit")}
+                    </button>
                   </div>
                 </div>
                 <ProductChip
@@ -454,18 +488,21 @@ export function ReceiptSplitDialog({
                 className="w-28"
                 value={totalInput}
                 inputMode="decimal"
-                placeholder={moneyToInput(itemsTotal)}
-                onChange={(event) => setTotalInput(event.target.value)}
+                placeholder={moneyToInput(Math.abs(itemsTotal))}
+                onChange={(event) => setTotalInput(takeLeadingMinus(event.target.value).input)}
               />
             </div>
             {totalMinor !== null && adjustment !== 0 && (
               <p className="text-muted-foreground text-sm">
-                {totalMinor <= 0
+                {totalMinor === 0
                   ? t("receipt.discountTooLarge")
                   : adjustment > 0
                     ? t("receipt.tip", { amount: formatMoney(adjustment, currency) })
                     : t("receipt.discount", { amount: formatMoney(-adjustment, currency) })}
               </p>
+            )}
+            {itemsTotal < 0 && (
+              <p className="text-muted-foreground text-sm">{t("receipt.creditTotal")}</p>
             )}
           </div>
 

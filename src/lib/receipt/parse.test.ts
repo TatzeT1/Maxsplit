@@ -66,10 +66,9 @@ describe("parseScannedReceipt", () => {
     ]);
   });
 
-  it("drops deposit returns, nameless and priceless lines", () => {
+  it("drops nameless and priceless lines", () => {
     const text = JSON.stringify({
       items: [
-        { name: "Pfand zurück", total: -0.25 },
         { name: "", total: 3 },
         { name: "Brot" },
         { name: "  Salat   gemischt ", total: 5.9 },
@@ -78,6 +77,19 @@ describe("parseScannedReceipt", () => {
     expect(parseScannedReceipt(text)?.items).toEqual([
       { name: "Salat gemischt", quantity: 1, totalMinor: 590, product: null },
     ]);
+  });
+
+  it("keeps a deposit return as a negative line, the minus in front or behind", () => {
+    const text = JSON.stringify({
+      total: "-3,25",
+      items: [
+        { name: "Pfand zurück", total: -0.25 },
+        { name: "Leergut", total: "3,00-" },
+      ],
+    });
+    const parsed = parseScannedReceipt(text);
+    expect(parsed?.items.map((item) => item.totalMinor)).toEqual([-25, -300]);
+    expect(parsed?.totalMinor).toBe(-325);
   });
 
   it("reads what each line is, normalized, and drops an unknown family", () => {

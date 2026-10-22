@@ -77,6 +77,8 @@ absent; entries written before 2026-09 may hold `""` instead, which reads the sa
 
 ## `Expense`
 
+- `amountMinor` — negative for a **credit** (Gutschrift); then `paidBy` and every split are
+  negative too. See [[Money Invariants]].
 - `paidBy: Record<uid, amountMinor>` — supports multiple payers on one expense.
 - `splitMode: 'equal' | 'shares' | 'percent' | 'exact'` and `splits: Record<uid,
 ExpenseSplit>` where `ExpenseSplit = { rawValue, amountMinor }` — `rawValue` is what the
