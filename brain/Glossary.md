@@ -12,6 +12,8 @@ how they appear in `de.ts`, dialog titles, and design discussions.
 
 | German                            | English meaning                      | Where                                                                                                                                        |
 | --------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| Einkaufsliste                     | "Shopping list"                      | several per group, anyone adds, ticking off works offline — [[Shopping Lists]]                                                               |
+| Im Wagen                          | "In the cart"                        | the shopping list's section of checked items, cleared by "Erledigte entfernen" — [[Shopping Lists]]                                          |
 | Gutschrift                        | "Credit" — money coming in           | a negative expense (Pfandbon, refund), shared like a bill — [[Money Invariants]], [[Expenses and Splitting]]                                 |
 | Schulden vereinfachen             | "Simplify debts"                     | `simplifyDebts`, opt-in per-group debt-simplification toggle — [[Money Invariants]], [[Balances and Settlements]]                            |
 | Du schuldest Anna 12,50 €         | "You owe Anna 12.50 €"               | pairwise debt display — `computePairwiseDebts`                                                                                               |

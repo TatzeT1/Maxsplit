@@ -3,6 +3,7 @@
 import { clearIndexedDbPersistence, terminate } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { clearSyncMarks } from "@/lib/offline/sync-marks";
+import { clearPendingChecks } from "@/lib/shopping/pending-checks";
 
 /** The service worker's (public/sw.js) saved pages — its build-file cache holds nothing personal. */
 const PAGES_CACHE_PREFIX = "split-pages-";
@@ -11,12 +12,14 @@ const OFFLINE_PAGE = "/offline.html";
 
 /**
  * Removes everything personal this device kept for offline use — Firestore's
- * copy of the ledger, the pages the service worker saved, the sync marks — so the
+ * copy of the ledger, the pages the service worker saved, the sync marks, the
+ * shopping-list ticks not yet sent — so the
  * next person to sign in on a shared phone can't read the last one's groups,
  * online or off. Terminates Firestore: the page has to be reloaded after.
  */
 export async function clearLocalData(): Promise<void> {
   clearSyncMarks();
+  clearPendingChecks();
   try {
     await terminate(db);
     await clearIndexedDbPersistence(db);

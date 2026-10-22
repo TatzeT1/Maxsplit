@@ -24,6 +24,7 @@ header        ← back · icon · name · member stack ("5 Mitglieder · EUR" �
 BalanceHero   where *you* stand, printed as a till receipt, with settle-up actions
 banner        only while a tournament, an online luck round or an online Schätzfragen round runs (time-critical, above the tabs)
 ChatEntryCard stays visible with the last message — the group uses chat regularly
+ShoppingEntryCard  🛒 the shopping lists and what's still open on them — see Shopping Lists
 tabs          Ausgaben (default) · Salden · Spiele · Gruppe   (sticky, pinned band)
 action bar    "Ausgabe hinzufügen" + "Zahlung", sticky under the thumb
 ```

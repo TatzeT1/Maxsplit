@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { AppSidebar } from "@/components/app-sidebar";
 import { PushSubscriptionSync } from "@/components/push-subscription-sync";
 import { SessionGuard } from "@/components/session-guard";
+import { ShoppingCheckSync } from "@/components/shopping-check-sync";
 import { isAdminSession } from "@/lib/auth/admin";
 import { getSession } from "@/lib/auth/session";
 
@@ -16,6 +17,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <SessionGuard>{children}</SessionGuard>
       </main>
       <PushSubscriptionSync />
+      <ShoppingCheckSync />
     </div>
   );
 }

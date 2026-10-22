@@ -21,6 +21,9 @@ Next.js App Router, `src/app/`. This note is the "what guards what" map — see
   /groups                            group list (balancesMinor cache — see Data Model)
   /groups/[groupId]                  group detail — see Group Page; ?tab=balances|games|group
   /groups/[groupId]/chat             per-group chat — see Chat, Mobile iOS Quirks
+  /groups/[groupId]/shopping         the group's shopping lists — see Shopping Lists
+  /groups/[groupId]/shopping/[listId]
+                                      one list: add, tick off (offline too, ADR-009), tidy up
   /groups/[groupId]/tournaments/[tournamentId]
                                       live tournament bracket / online duel board — watch/play from any device, see Split Games
   /groups/[groupId]/rounds/[roundId] online luck round (scratch cards on everyone's own phone) — see Split Games, ADR-005

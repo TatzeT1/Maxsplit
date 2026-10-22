@@ -29,6 +29,8 @@ counts, in the group's month:
 - 📊 each request of "Jetzt einordnen" — 60 texts per request, so a run of 120 texts is two
   (`classify`);
 - 📊 the classification after saving an expense (`classify-auto`), caused by whoever saved.
+- 🛒 the aisle of a shopping item whose name the group's catalog doesn't know yet (also
+  `classify-auto`, caused by whoever added it) — once per name, see [[Shopping Lists]].
 
 The per-user daily limits (`receiptScans`, `productClassifyRuns`) stay as they were, on top.
 

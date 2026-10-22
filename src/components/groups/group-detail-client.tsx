@@ -11,6 +11,7 @@ import { ArchivedBanner } from "@/components/groups/archive-group";
 import { BalanceHero } from "@/components/groups/balance-hero";
 import { BalancesTab } from "@/components/groups/balances-tab";
 import { ChatEntryCard } from "@/components/groups/chat-entry-card";
+import { ShoppingEntryCard } from "@/components/shopping/shopping-entry-card";
 import { GamesTab } from "@/components/groups/games-tab";
 import { InsightsTab } from "@/components/groups/insights-tab";
 import { StartGameButton } from "@/components/groups/start-game-button";
@@ -345,6 +346,8 @@ export function GroupDetailClient({ groupId }: { groupId: string }) {
         <EstimateRoundBanner group={group} currentUid={user.uid} />
 
         <ChatEntryCard groupId={groupId} members={group.members} currentUid={user.uid} />
+
+        <ShoppingEntryCard groupId={groupId} />
 
         <StartGameButton groupId={groupId} group={group} currentUid={user.uid} className="w-full" />
 

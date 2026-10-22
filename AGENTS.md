@@ -76,6 +76,12 @@ nothing to queue them, so:
 - bump `VERSION` in `public/sw.js` whenever its caching rules or
   `offline.html` change, or devices keep the old worker.
 
+**One exception: ticking off a shopping-list item** (ADR-009). The tap goes to a
+device-side outbox (`lib/shopping/pending-checks.ts`) and is sent through a
+Server Action once online — an idempotent end state with the tap's time, shown
+as "noch nicht gesendet" until it's out. Any further offline write must follow
+that shape and get its own ADR; never a client write to Firestore.
+
 ## Mobile is the primary surface — two iOS rules
 
 Both of these shipped as "the chat is unusable on my phone" bugs and are

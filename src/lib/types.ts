@@ -412,6 +412,72 @@ export interface ChatRead {
   lastReadAt: string;
 }
 
+/**
+ * `groups/{groupId}/shoppingLists/{listId}` — one shopping list ("Rewe",
+ * "Grillabend"). Moves no money: any member may create, rename or delete one.
+ * Written only by lib/actions/shopping.ts. The doc id is client-chosen, which
+ * makes a retried create safe.
+ */
+export interface ShoppingList {
+  id: string;
+  name: string;
+  /** An emoji, or null for the default 🛒. */
+  icon: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Items not yet checked off — recounted by the server after every item change, display only. */
+  openCount: number;
+}
+
+/**
+ * `groups/{groupId}/shoppingLists/{listId}/items/{itemId}` — one thing to buy.
+ * The doc id is client-chosen (retry-safe add).
+ */
+export interface ShoppingItem {
+  id: string;
+  name: string;
+  /** Free text ("2 Packungen", "500 g"), null when not given. */
+  quantity: string | null;
+  /** Whom it's for (a member uid, placeholders included), null for everyone. */
+  forUid: string | null;
+  addedBy: string;
+  createdAt: string;
+  checked: boolean;
+  checkedBy: string | null;
+  /**
+   * When the tap that set `checked` happened, on the tapping device's clock
+   * (capped at the server's): a tick sent late from an offline phone loses to
+   * a newer one already here (ADR-009). Null until it was ever ticked.
+   */
+  checkedChangedAt: string | null;
+  /**
+   * What it is, for sorting the list by the shop's aisles. Absent = not
+   * classified yet (filled in after the response, see lib/shopping/classify.ts).
+   */
+  product?: ProductClass;
+}
+
+/** One name this group has put on a shopping list before — see ShoppingCatalog. */
+export interface ShoppingCatalogEntry {
+  /** As last typed ("Hafermilch"). */
+  name: string;
+  product?: ProductClass;
+  /** How often it was put on a list. */
+  count: number;
+  lastAddedAt: string;
+}
+
+/**
+ * `groups/{groupId}/shoppingState/catalog` — what this group has put on its
+ * shopping lists before, keyed by `shoppingNameKey(name)`: the quick-add
+ * suggestions, and the aisle of a name already classified once (so "Milch"
+ * costs the AI allowance once, not every week). Server-written, capped.
+ */
+export interface ShoppingCatalog {
+  entries: Record<string, ShoppingCatalogEntry>;
+}
+
 /** The 1-vs-1 duel split mini-games that can run as a tournament bracket — see [[Split Games]]. */
 export type DuelGameId =
   "tictactoe" | "connectfour" | "memory" | "reaction" | "rps" | "nim" | "dots";

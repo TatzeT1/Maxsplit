@@ -479,6 +479,43 @@ describe("firestore.rules", () => {
     expect(snap.data()?.activeEstimateRound).toEqual({ id: "r1" });
   });
 
+  describe("shopping lists (lib/actions/shopping.ts)", () => {
+    beforeEach(async () => {
+      await testEnv.withSecurityRulesDisabled(async (context) => {
+        const db = context.firestore();
+        await db.doc("groups/group1/shoppingLists/l1").set({ name: "Rewe", openCount: 1 });
+        await db.doc("groups/group1/shoppingLists/l1/items/i1").set({ name: "Milch" });
+        await db.doc("groups/group1/shoppingState/catalog").set({ entries: {} });
+      });
+    });
+
+    it("lets a member read lists, items and the catalog", async () => {
+      const alice = testEnv.authenticatedContext("alice").firestore();
+      await assertSucceeds(getDocs(collection(alice, "groups/group1/shoppingLists")));
+      await assertSucceeds(getDocs(collection(alice, "groups/group1/shoppingLists/l1/items")));
+      await assertSucceeds(getDoc(doc(alice, "groups/group1/shoppingState/catalog")));
+    });
+
+    it("keeps them from a non-member", async () => {
+      const bob = testEnv.authenticatedContext("bob").firestore();
+      await assertFails(getDoc(doc(bob, "groups/group1/shoppingLists/l1")));
+      await assertFails(getDoc(doc(bob, "groups/group1/shoppingLists/l1/items/i1")));
+      await assertFails(getDoc(doc(bob, "groups/group1/shoppingState/catalog")));
+    });
+
+    it("denies every client write, a member's tick included (ADR-009)", async () => {
+      const alice = testEnv.authenticatedContext("alice").firestore();
+      await assertFails(
+        updateDoc(doc(alice, "groups/group1/shoppingLists/l1/items/i1"), { checked: true }),
+      );
+      await assertFails(
+        setDoc(doc(alice, "groups/group1/shoppingLists/l2"), { name: "dm", openCount: 0 }),
+      );
+      await assertFails(deleteDoc(doc(alice, "groups/group1/shoppingLists/l1")));
+      await assertFails(setDoc(doc(alice, "groups/group1/shoppingState/catalog"), { entries: {} }));
+    });
+  });
+
   describe("AI usage (lib/ai/usage.ts)", () => {
     beforeEach(async () => {
       await testEnv.withSecurityRulesDisabled(async (context) => {

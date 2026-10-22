@@ -2,6 +2,7 @@ import { generateKeyPairSync } from "node:crypto";
 import { beforeEach, vi } from "vitest";
 import { clearScheduledClassifications } from "@/test/classify-mock";
 import { clearSentPushes } from "@/test/push-mock";
+import { clearScheduledShoppingClassifications } from "@/test/shopping-classify-mock";
 
 // Runs before every emulator integration test file (vitest.emulator.config.ts).
 
@@ -27,6 +28,7 @@ process.env.FIRESTORE_EMULATOR_HOST ??= "127.0.0.1:8080";
 vi.mock("@/lib/auth/session", () => import("@/test/session-mock"));
 vi.mock("@/lib/push/notify", () => import("@/test/push-mock"));
 vi.mock("@/lib/products/classify-after", () => import("@/test/classify-mock"));
+vi.mock("@/lib/shopping/classify-after", () => import("@/test/shopping-classify-mock"));
 // Actions write chat messages (game invites and results) in the request's
 // language, read from a cookie — which a plain node run doesn't have.
 vi.mock("@/lib/i18n/server", async () => {
@@ -42,6 +44,7 @@ vi.mock("@/lib/i18n/server", async () => {
 beforeEach(async () => {
   clearSentPushes();
   clearScheduledClassifications();
+  clearScheduledShoppingClassifications();
   const response = await fetch(
     `http://${process.env.FIRESTORE_EMULATOR_HOST}/emulator/v1/projects/${EMULATOR_PROJECT_ID}/databases/(default)/documents`,
     { method: "DELETE" },

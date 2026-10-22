@@ -88,6 +88,12 @@ the add-expense dialog spinning forever (the rejected `await` skipped `setLoadin
 **New write button? Disable it on `!useOnline()` and call the action through
 `callAction`.**
 
+**The one exception: ticking off a shopping-list item** (ADR-009). The tap goes into a
+per-user `localStorage` outbox, shows at once, and is sent by `ShoppingCheckSync` once online
+— an end state with the tap's time, so late or repeated sends are safe and a newer tap wins.
+"n Haken noch nicht gesendet" stays on screen until they're out. See [[Shopping Lists]];
+any further offline write follows that shape and needs its own ADR.
+
 The chat follows it everywhere: send, reactions, delete and the mute bell are disabled
 offline, the composer says why ("Du bist offline …") and keeps the text (and a per-group
 draft), and a send that fails _after_ it started stays on screen as "Nicht gesendet" with
@@ -96,8 +102,8 @@ draft), and a send that fails _after_ it started stays on screen as "Nicht gesen
 
 ## Sign-out wipes it
 
-`useSignOut` → `clearLocalData()` (`src/lib/offline/clear-local-data.ts`): terminates
-Firestore and runs `clearIndexedDbPersistence`, deletes every saved page except
+`useSignOut` → `clearLocalData()` (`src/lib/offline/clear-local-data.ts`): drops unsent
+shopping ticks, terminates Firestore and runs `clearIndexedDbPersistence`, deletes every saved page except
 `offline.html` (and sends the worker `"forget-pages"`, which bumps a generation counter so
 a save still in flight can't put the last person's page back), clears the sync marks —
 then a full reload (a terminated Firestore can't be reused). It also works offline now: the cookie `DELETE` failing no longer skips the

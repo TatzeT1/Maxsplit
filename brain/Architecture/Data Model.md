@@ -22,6 +22,9 @@ groups/{groupId}
   groups/{groupId}/recurring/{ruleId}
   groups/{groupId}/activityLog/{logId}
   groups/{groupId}/messages/{messageId}
+  groups/{groupId}/shoppingLists/{listId}                             (a shopping list — see Shopping Lists)
+  groups/{groupId}/shoppingLists/{listId}/items/{itemId}              (one thing to buy; ticks carry their tap time)
+  groups/{groupId}/shoppingState/catalog                              (names put on lists before, with their aisle)
   groups/{groupId}/chatReads/{uid}        (doc id == uid)
   groups/{groupId}/aiUsage/{yyyy-mm}      (prompts this month — managers read; see AI Usage)
   groups/{groupId}/aiCalls/{callId}       (one per prompt, texts only, TTL 90 days — managers read)
@@ -221,6 +224,14 @@ query). See [[Chat]].
 
 `users/{uid}.mutedChatGroupIds` (absent = none) lists the groups whose chat pushes the user
 silenced — server-only, read into `Session`.
+
+## `ShoppingList` / `ShoppingItem` / `ShoppingCatalog`
+
+Since 2026-10, see [[Shopping Lists]]. Client-chosen ids (retry-safe creates). An item's
+`checkedChangedAt` is the **time of the tap** that set `checked` (device clock, capped at the
+server's) — the newer tap wins, which is what lets an offline tick arrive late (ADR-009).
+`product?` (a `ProductClass`) is absent until classified, like an expense's. `forUid` is null
+or a key of `group.members`. `ShoppingList.openCount` is a display-only recount.
 
 ## Related
 

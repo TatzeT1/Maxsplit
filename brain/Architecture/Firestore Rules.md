@@ -40,6 +40,10 @@ groups/{groupId}     → read: signed-in, not banned, uid in memberUids. write: 
   activityLog/{id}   → read: isGroupMember(groupId). write: false.
   messages/{id}      → read: isGroupMember(groupId). write: false.
   chatReads/{uid}    → read: isSignedIn() && !isBanned() && auth.uid == uid && isGroupMember(groupId). write: false.
+  shoppingLists/{id} → read: isGroupMember(groupId). write: false. See [[Shopping Lists]];
+    items/{id}       → read: isGroupMember(groupId). write: false — even a tick (ADR-009: the offline
+                       outbox sends it through a Server Action, never a client write). Own block: rules don't cascade.
+  shoppingState/{id} → read: isGroupMember(groupId). write: false. The catalog (quick-add suggestions).
   tournaments/{id}   → read: isGroupMember(groupId). write: false. See Split Games.
     liveMatches/{id} → read: isGroupMember(groupId). write: false. (online play)
     liveSecrets/{id} → read, write: false — the hidden memory deck; nobody may peek.

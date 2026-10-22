@@ -55,6 +55,8 @@ re-deriving it from scratch by reading every file.
   table at once, plus an opt-in live tournament bracket for all seven duel games, syncing across
   every player's own phone; online scratch cards, rematches, nudges, counted reshuffles, a duel
   record and a luck index in the Spiele tab
+- [[Shopping Lists]] — 🛒 several named lists per group, anyone adds (also "für Lea"), sorted
+  by aisle, suggestions from the catalog and receipts; ticking off works offline (ADR-009)
 - [[Admin Panel]] — the single hardcoded admin email, ban, group moderation
 - [[Onboarding and Payment Details]] — first-run guide, PayPal/IBAN details
 - [[Offline Mode]] — view-only offline: Firestore's IndexedDB cache, the service worker,

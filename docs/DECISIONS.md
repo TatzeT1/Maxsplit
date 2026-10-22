@@ -643,3 +643,61 @@ firestore:rules`) before the first use, as with ADR-005; without them the round 
   document) rather than a new one.
 - If absence turns out to anger groups, replace "ranks furthest" with an excluded-and-restart
   rule (an owner decision); if one player keeps paying, add handicaps or category balancing.
+
+## ADR-009: Shopping lists — ticking off works offline, through a device-side outbox
+
+**Status:** Accepted
+**Date:** 2026-10-22
+
+### Context
+
+The owner asked for shopping lists: several named lists per group ("Rewe", "dm",
+"Grillabend"), everyone adds, anything can be marked as being for one person, and people
+split up in the shop and tick off live. A shop is exactly where reception fails — the
+basement of a supermarket, a discounter's dead spot. Under ADR-004 every saving control is
+disabled offline, which would leave the list readable but impossible to tick off at the
+one moment it is used. The owner chose "tick offline, send later" over "view only".
+
+### Decision
+
+- **Lists and items are ordinary server-written data** (ADR-001): `shoppingLists/{listId}`
+  and `shoppingLists/{listId}/items/{itemId}` under the group, written only by
+  `lib/actions/shopping.ts`, read live by members. They move no money, so any member may
+  create, rename and delete lists and add, edit, tick and remove items. Ids of new lists and
+  items are client-chosen, so a retried create can't double.
+- **Ticking is the one offline write, and it is still a Server Action.** A tap lands in a
+  per-user outbox in `localStorage` (`lib/shopping/pending-checks.ts`), shows at once, and
+  `ShoppingCheckSync` (on every screen of the app) sends it through
+  `setShoppingItemChecked` as soon as the device is online. Rules keep denying every client
+  write; nothing reaches Firestore except via the action.
+- **A tick is an end state with the time of the tap**, not a toggle:
+  `{ checked, changedAt }`. The server applies it only if it is newer than the
+  `checkedChangedAt` it holds — so a tick that sat on an offline phone for ten minutes can't
+  undo what someone else did in the meantime, and sending the same tick twice is harmless.
+  A `changedAt` in the future is taken as now, so a phone with a fast clock can't lock an item.
+- **Unsent is visible.** The list says "n Haken noch nicht gesendet" while the outbox holds
+  any, and a sent tick stays in the outbox until the listener shows it, so it can't flicker
+  back. Everything else on the list — adding, editing, deleting, clearing — stays disabled
+  offline, as ADR-004 says.
+- **Aisles reuse the Auswertung's product families.** An item without a known class is
+  classified after the response (`classify-auto`, against the group's AI allowance); the
+  group's `shoppingState/catalog` remembers every name's class, so a weekly "Milch" costs
+  one prompt ever, not one a week. Suggestions come from that catalog and from the product
+  kinds of the group's receipts.
+
+### Consequences
+
+- The first exception to "offline is view-only" — and the template for any later one:
+  idempotent end-state actions plus a visible outbox, never a client write to Firestore.
+- Ticks made offline are lost if the person signs out before they were sent (sign-out
+  wipes the device, ADR-004).
+- Device clocks decide between two taps on the same item made close together; a few
+  seconds of skew only matters for two people tapping the same thing at the same moment.
+- `openCount` on a list is recounted after every item change — display only, so a race
+  between two simultaneous changes is corrected by the next one.
+
+### What would make us reverse this
+
+- Wanting to add or edit items offline too: then items need the same outbox shape
+  (client ids already make adds idempotent), and a deleted list needs a story for queued
+  adds into it.
