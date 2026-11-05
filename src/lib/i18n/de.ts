@@ -161,8 +161,24 @@ export const de = {
     iosStep2: "Wähl „Zum Home-Bildschirm“.",
   },
   auth: {
+    featureScanTitle: "Kassenbon scannen",
+    featureScanDescription:
+      "Foto vom Bon machen — Split liest die Positionen, und ihr tippt an, wer was hatte.",
+    featureShoppingTitle: "Einkaufslisten",
+    featureShoppingDescription:
+      "Gemeinsame Listen nach Gängen sortiert. Abhaken klappt auch im Laden ohne Netz.",
+    featureChatTitle: "Gruppenchat",
+    featureChatDescription: "Absprechen, wer was besorgt — direkt neben den Ausgaben.",
+    howEyebrow: "So funktioniert's",
+    howTitle: "In drei Schritten startklar",
+    howStep1Title: "Gruppe anlegen",
+    howStep1Description: "Zum Beispiel „Familie“, „WG“ oder „Urlaub Italien“.",
+    howStep2Title: "Andere einladen",
+    howStep2Description:
+      "Link per WhatsApp schicken — wer kein Konto hat, legt in einer Minute eins an.",
+    howStep3Title: "Ausgaben eintragen",
+    howStep3Description: "Wer bezahlt, trägt es ein. Split rechnet, wer wem wie viel schuldet.",
     signInTitle: "Willkommen bei Split",
-    signInSubtitle: "Neu hier? Ein Konto ist in einer Minute angelegt — kostenlos.",
     signInWithGoogle: "Mit Google anmelden",
     signInError: "Anmeldung fehlgeschlagen. Versuch's noch mal.",
     signingIn: "Anmeldung läuft …",
@@ -186,15 +202,11 @@ export const de = {
     tabNew: "Ich bin neu",
     tabExisting: "Ich habe ein Konto",
     signUpWithGoogle: "Mit Google registrieren",
-    googleHintNew:
-      "Am einfachsten, wenn du ein Google- oder Gmail-Konto hast: Dein Split-Konto wird dabei automatisch angelegt.",
+    googleHintNew: "Am schnellsten, wenn du Gmail hast — dein Konto entsteht dabei automatisch.",
     googleHintExisting: "Du hast dich mit Google registriert? Dann tipp hier.",
     orEmailDivider: "oder mit E-Mail",
-    signUpEmailHint:
-      "Kein Google-Konto? Kein Problem: Leg dein Konto mit deiner E-Mail-Adresse und einem selbst ausgedachten Passwort an.",
     nameHint: "So sehen dich die anderen in der Gruppe.",
-    passwordHintNew:
-      "Mindestens 6 Zeichen. Du brauchst es, wenn du dich das nächste Mal anmeldest.",
+    passwordHintNew: "Mindestens 6 Zeichen — gut merken.",
     showPassword: "Passwort anzeigen",
     hidePassword: "Passwort verbergen",
     noAccountYet: "Noch kein Konto? Jetzt mit dieser E-Mail anlegen",
@@ -218,18 +230,12 @@ export const de = {
     featuresEyebrow: "Alles in einer App",
     featuresTitle: "Für jede geteilte Rechnung gemacht",
     featuresSubtitle: "Egal ob WG, Reise oder Freundeskreis — Split hat, was ihr braucht.",
-    featureInviteTitle: "Freunde einladen",
-    featureInviteDescription:
-      "Teil einen Link — alle treten nach der Anmeldung mit einem Klick der Gruppe bei.",
     featureSplitTitle: "Flexibel aufteilen",
     featureSplitDescription:
-      "Gleich, nach Anteilen, Prozent oder genauem Betrag — mit Kategorien und mehreren Zahlern pro Ausgabe.",
+      "Gleich, nach Anteilen, Prozent oder genauem Betrag — oder lasst ein kleines Spiel entscheiden, wer zahlt.",
     featureBalanceTitle: "Salden auf einen Blick",
     featureBalanceDescription:
-      "Split rechnet automatisch aus, wer wem was schuldet, und schlägt die wenigsten nötigen Überweisungen vor.",
-    featurePdfTitle: "Abrechnung als PDF",
-    featurePdfDescription:
-      "Exportier den Schuldenausgleich als PDF und teil ihn per Link — auch mit Leuten ohne Split-Konto.",
+      "Split rechnet aus, wer wem was schuldet, schlägt die wenigsten Überweisungen vor und macht daraus ein PDF.",
     featureFreeTitle: "100 % kostenlos",
     featureFreeDescription:
       "Keine Werbung, keine Abo-Falle, keine versteckten Kosten. Einfach faire Aufteilung für alle.",

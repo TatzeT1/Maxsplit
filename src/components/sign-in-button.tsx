@@ -207,12 +207,6 @@ export function SignInButton({
         </div>
       )}
 
-      {isNew && !inApp && (
-        <p className="text-muted-foreground -mt-1 text-center text-xs text-pretty">
-          {t("auth.signUpEmailHint")}
-        </p>
-      )}
-
       <EmailAuthForm
         key={mode}
         mode={mode}

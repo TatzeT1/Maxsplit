@@ -1,4 +1,15 @@
-import { FileDown, Heart, Scale, Split, UserPlus, type LucideIcon } from "lucide-react";
+import {
+  Heart,
+  MessageCircle,
+  Receipt,
+  Scale,
+  ScanLine,
+  ShoppingCart,
+  Split,
+  UserPlus,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 import type { CSSProperties } from "react";
 import { BrandMark } from "@/components/brand-mark";
@@ -14,19 +25,31 @@ import { getServerT } from "@/lib/i18n/server";
 import type { TranslationKey } from "@/lib/i18n/translate";
 
 const FEATURES: { icon: LucideIcon; title: TranslationKey; description: TranslationKey }[] = [
-  {
-    icon: UserPlus,
-    title: "auth.featureInviteTitle",
-    description: "auth.featureInviteDescription",
-  },
   { icon: Split, title: "auth.featureSplitTitle", description: "auth.featureSplitDescription" },
   {
     icon: Scale,
     title: "auth.featureBalanceTitle",
     description: "auth.featureBalanceDescription",
   },
-  { icon: FileDown, title: "auth.featurePdfTitle", description: "auth.featurePdfDescription" },
+  { icon: ScanLine, title: "auth.featureScanTitle", description: "auth.featureScanDescription" },
+  {
+    icon: ShoppingCart,
+    title: "auth.featureShoppingTitle",
+    description: "auth.featureShoppingDescription",
+  },
+  {
+    icon: MessageCircle,
+    title: "auth.featureChatTitle",
+    description: "auth.featureChatDescription",
+  },
   { icon: Heart, title: "auth.featureFreeTitle", description: "auth.featureFreeDescription" },
+];
+
+/** "So funktioniert's" — what happens after signing up, for people who've never used such an app. */
+const STEPS: { icon: LucideIcon; title: TranslationKey; description: TranslationKey }[] = [
+  { icon: Users, title: "auth.howStep1Title", description: "auth.howStep1Description" },
+  { icon: UserPlus, title: "auth.howStep2Title", description: "auth.howStep2Description" },
+  { icon: Receipt, title: "auth.howStep3Title", description: "auth.howStep3Description" },
 ];
 
 export default async function Home() {
@@ -79,15 +102,18 @@ export default async function Home() {
             >
               {t("auth.heroDescription")}
             </p>
+            {/* The sign-in block as one card: on a phone it is most of the
+                first screen, and framed it reads as one form, not a column
+                of loose buttons and small print. */}
             <div
-              className="animate-rise flex w-full max-w-sm flex-col items-start gap-3"
+              className="animate-rise bg-card shadow-e1 ring-foreground/10 flex w-full max-w-sm flex-col gap-4 rounded-2xl p-4 ring-1 sm:p-5"
               style={{ "--stagger": 4 } as CSSProperties}
             >
-              <p className="text-muted-foreground w-full text-center text-sm">
-                {t("auth.signInSubtitle")}
-              </p>
               <SignInButton />
             </div>
+            <p className="text-muted-foreground w-full max-w-sm text-center text-sm">
+              {t("auth.heroSocialProof")}
+            </p>
           </div>
 
           <div
@@ -135,6 +161,33 @@ export default async function Home() {
           </div>
         </section>
 
+        <section className="border-border/70 border-t pt-14 pb-14">
+          <div className="mb-8 flex max-w-xl flex-col gap-3">
+            <span className="text-muted-foreground text-xs font-medium tracking-[0.12em] uppercase">
+              {t("auth.howEyebrow")}
+            </span>
+            <h2 className="font-heading text-3xl font-normal tracking-[-0.02em] text-balance sm:text-4xl">
+              {t("auth.howTitle")}
+            </h2>
+          </div>
+          <ol className="grid gap-6 sm:grid-cols-3">
+            {STEPS.map(({ icon: Icon, title, description }, index) => (
+              <li key={title} className="flex gap-4">
+                <span className="monogram relative flex size-10 shrink-0 items-center justify-center rounded-[0.7rem]">
+                  <Icon className="size-[18px]" strokeWidth={1.75} />
+                  <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full text-xs font-semibold">
+                    {index + 1}
+                  </span>
+                </span>
+                <div className="flex flex-col gap-1">
+                  <h3 className="font-medium">{t(title)}</h3>
+                  <p className="text-muted-foreground text-sm text-pretty">{t(description)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
         <section className="border-border/70 border-t pt-14 pb-24">
           <div className="mb-10 flex max-w-xl flex-col gap-3">
             <span className="text-muted-foreground text-xs font-medium tracking-[0.12em] uppercase">
@@ -160,7 +213,6 @@ export default async function Home() {
               </li>
             ))}
           </ul>
-          <p className="text-muted-foreground mt-14 text-sm">{t("auth.heroSocialProof")}</p>
         </section>
       </main>
     </div>

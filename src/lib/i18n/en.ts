@@ -160,8 +160,23 @@ export const en: Dictionary = {
     iosStep2: 'Choose "Add to Home Screen".',
   },
   auth: {
+    featureScanTitle: "Scan receipts",
+    featureScanDescription: "Snap the receipt — Split reads the items, and you tap who had what.",
+    featureShoppingTitle: "Shopping lists",
+    featureShoppingDescription:
+      "Shared lists sorted by aisle. Ticking off works in the shop even without signal.",
+    featureChatTitle: "Group chat",
+    featureChatDescription: "Agree who buys what — right next to the expenses.",
+    howEyebrow: "How it works",
+    howTitle: "Ready in three steps",
+    howStep1Title: "Create a group",
+    howStep1Description: "For example “Family”, “Flat” or “Trip to Italy”.",
+    howStep2Title: "Invite the others",
+    howStep2Description:
+      "Send the link via WhatsApp — anyone without an account creates one in a minute.",
+    howStep3Title: "Add expenses",
+    howStep3Description: "Whoever pays adds it. Split works out who owes whom how much.",
     signInTitle: "Welcome to Split",
-    signInSubtitle: "New here? Creating an account takes a minute — and it's free.",
     signInWithGoogle: "Sign in with Google",
     signInError: "Sign-in failed. Please try again.",
     signingIn: "Signing in …",
@@ -185,14 +200,11 @@ export const en: Dictionary = {
     tabNew: "I'm new",
     tabExisting: "I have an account",
     signUpWithGoogle: "Sign up with Google",
-    googleHintNew:
-      "Easiest if you have a Google or Gmail account: your Split account is created automatically.",
+    googleHintNew: "Fastest if you have Gmail — your account is created automatically.",
     googleHintExisting: "Signed up with Google? Then tap here.",
     orEmailDivider: "or with email",
-    signUpEmailHint:
-      "No Google account? No problem: create your account with your email address and a password you make up.",
     nameHint: "This is how the others in the group see you.",
-    passwordHintNew: "At least 6 characters. You'll need it the next time you sign in.",
+    passwordHintNew: "At least 6 characters — remember it.",
     showPassword: "Show password",
     hidePassword: "Hide password",
     noAccountYet: "No account yet? Create one with this email",
@@ -216,18 +228,12 @@ export const en: Dictionary = {
     featuresEyebrow: "Everything in one app",
     featuresTitle: "Built for every shared bill",
     featuresSubtitle: "Roommates, trips, or friends — Split has what you need.",
-    featureInviteTitle: "Invite friends",
-    featureInviteDescription:
-      "Share a link — everyone joins the group in one click after signing in.",
     featureSplitTitle: "Split flexibly",
     featureSplitDescription:
-      "Equally, by shares, percent, or exact amount — with categories and multiple payers per expense.",
+      "Equally, by shares, percent or exact amount — or let a little game decide who pays.",
     featureBalanceTitle: "Balances at a glance",
     featureBalanceDescription:
-      "Split automatically works out who owes whom, and suggests the fewest transfers needed to settle up.",
-    featurePdfTitle: "Settlement as a PDF",
-    featurePdfDescription:
-      "Export the settlement as a PDF and share it via link — even with people who don't have a Split account.",
+      "Split works out who owes whom, suggests the fewest transfers and turns it into a PDF.",
     featureFreeTitle: "100% free",
     featureFreeDescription:
       "No ads, no subscription trap, no hidden costs. Just fair splitting for everyone.",
