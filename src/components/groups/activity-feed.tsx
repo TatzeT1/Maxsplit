@@ -32,6 +32,12 @@ import { isGroupManager } from "@/lib/groups/permissions";
 import type { TranslationKey } from "@/lib/i18n/translate";
 import { computeCategoryTotals } from "@/lib/money/category-totals";
 import { expenseImpactFor } from "@/lib/money/expense-impact";
+import {
+  type MonthSummary,
+  monthKeyOfDate,
+  previousMonthKey,
+  summarizeMonths,
+} from "@/lib/money/month-summary";
 import { cn } from "@/lib/utils";
 import { useOnline } from "@/lib/use-online";
 import type {
@@ -176,18 +182,18 @@ function ExpenseRow({
             setDetailOpen(true);
           }
         }}
-        className="hover:bg-muted/50 focus-visible:ring-ring/50 flex cursor-pointer items-center gap-2.5 py-3 pr-3 pl-3.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset"
+        className="hover:bg-muted/50 focus-visible:ring-ring/50 flex cursor-pointer items-center gap-3 py-3.5 pr-3 pl-3.5 transition-colors outline-none focus-visible:ring-3 focus-visible:ring-inset"
       >
         <div
           className={cn(
-            "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
             categoryTileClasses(expense.category),
           )}
         >
           {expense.emoji ? (
-            <span className="text-base leading-none">{expense.emoji}</span>
+            <span className="text-lg leading-none">{expense.emoji}</span>
           ) : (
-            categoryIconElement(expense.category, "h-4 w-4")
+            categoryIconElement(expense.category, "h-[18px] w-[18px]")
           )}
         </div>
         {/* Two independent lines rather than two columns: the description
@@ -198,14 +204,14 @@ function ExpenseRow({
           <div className="flex items-baseline justify-between gap-3">
             {/* Wraps rather than truncates: the description is the one thing
                 a row exists to tell you. */}
-            <span className="line-clamp-2 min-w-0 text-[0.95rem] leading-snug font-medium">
+            <span className="line-clamp-2 min-w-0 text-base leading-snug font-medium">
               {expense.description}
             </span>
-            <span className="font-heading tabular-money shrink-0 text-[0.95rem] font-medium">
+            <span className="font-heading tabular-money shrink-0 text-base font-semibold">
               {formatMoney(expense.amountMinor, expense.currency)}
             </span>
           </div>
-          <div className="flex items-baseline justify-between gap-2 text-xs">
+          <div className="flex items-baseline justify-between gap-2 text-sm">
             <span className="text-muted-foreground min-w-0 truncate">{paidByText}</span>
             <ImpactLabel
               impact={expenseImpactFor(expense, currentUid)}
@@ -349,14 +355,14 @@ function SettlementRow({
           <span className="text-lg leading-none">{SETTLEMENT_EMOJI}</span>
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-sm leading-snug">
+          <span className="text-base leading-snug">
             {t("activity.settlementRecorded", {
               from: fromName,
               to: toName,
               amount: formatMoney(settlement.amountMinor, settlement.currency),
             })}
           </span>
-          <span className="text-muted-foreground text-xs">
+          <span className="text-muted-foreground text-sm">
             {formatDayMonth(new Date(settlement.date))}
           </span>
         </div>
@@ -517,6 +523,71 @@ function CategoryChips({
   );
 }
 
+/**
+ * "Diesen Monat": what the group spent this calendar month, your part of it,
+ * and last month for comparison — the overview the ledger's month cards only
+ * give one card at a time. Unfiltered on purpose: it sits above the filters.
+ */
+function ThisMonthSummary({
+  expenses,
+  currency,
+  currentUid,
+}: {
+  expenses: Expense[];
+  currency: string;
+  currentUid: string;
+}) {
+  const t = useT();
+  const summaries = useMemo(() => summarizeMonths(expenses, currentUid), [expenses, currentUid]);
+  const thisKey = monthKeyOfDate(new Date());
+  const current = summaries.get(thisKey);
+  const previous = summaries.get(previousMonthKey(thisKey));
+  if (!current && !previous) return null;
+
+  const totalMinor = current?.totalMinor ?? 0;
+  const shareMinor = current?.shareMinor ?? 0;
+  const count = current?.count ?? 0;
+
+  return (
+    <section
+      aria-label={t("expenses.thisMonthTitle")}
+      className="bg-card ring-foreground/10 shadow-e1 animate-rise flex flex-col gap-3 rounded-xl p-4 ring-1"
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="text-muted-foreground font-mono text-xs tracking-[0.12em] uppercase">
+          {t("expenses.thisMonthTitle")} · {formatMonthKey(thisKey)}
+        </h3>
+        <span className="text-muted-foreground text-sm">
+          {count === 1 ? t("expenses.thisMonthCountOne") : t("expenses.thisMonthCount", { count })}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-muted-foreground text-sm">{t("expenses.thisMonthSpent")}</span>
+          <span className="font-heading tabular-money text-2xl font-medium">
+            {formatMoney(totalMinor, currency)}
+          </span>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-muted-foreground text-sm">{t("expenses.thisMonthShare")}</span>
+          <span className="font-heading tabular-money text-2xl font-medium">
+            {formatMoney(shareMinor, currency)}
+          </span>
+        </div>
+      </div>
+      {previous && (
+        <p className="text-muted-foreground border-border/70 border-t pt-2.5 text-sm">
+          {t("expenses.lastMonthCompare", {
+            month: formatMonthKey(previous.monthKey),
+            amount: formatMoney(previous.totalMinor, currency),
+            share: formatMoney(previous.shareMinor, currency),
+          })}
+        </p>
+      )}
+    </section>
+  );
+}
+
 function monthKeyOf(iso: string): string {
   return iso.slice(0, 7);
 }
@@ -581,16 +652,17 @@ function Ledger({
         ]),
   ].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 
-  const months: { key: string; items: ActivityItem[]; totalMinor: number }[] = [];
+  // Totals follow the filter: searching "Pizza" gives each month's pizza total.
+  const monthSummaries = summarizeMonths(filteredExpenses, currentUid);
+  const months: { key: string; items: ActivityItem[]; summary: MonthSummary | undefined }[] = [];
   for (const item of items) {
     const key = monthKeyOf(item.date);
     let month = months[months.length - 1];
     if (!month || month.key !== key) {
-      month = { key, items: [], totalMinor: 0 };
+      month = { key, items: [], summary: monthSummaries.get(key) };
       months.push(month);
     }
     month.items.push(item);
-    if (item.kind === "expense") month.totalMinor += item.expense.amountMinor;
   }
 
   const isEmpty = expenses.length === 0 && settlements.length === 0;
@@ -613,6 +685,7 @@ function Ledger({
 
   return (
     <div className="flex flex-col gap-5">
+      <ThisMonthSummary expenses={expenses} currency={group.currency} currentUid={currentUid} />
       {/* `empty:hidden`: with neither control needed, no stray gap is left behind. */}
       <div className="flex flex-col gap-2.5 empty:hidden">
         {(expenses.length >= SEARCH_MIN_EXPENSES || query.length > 0) && (
@@ -649,12 +722,20 @@ function Ledger({
         months.map((month) => (
           <section key={month.key} className="flex flex-col gap-2">
             <div className="text-muted-foreground flex items-baseline justify-between gap-3 px-1">
-              <h3 className="font-mono text-[11px] tracking-[0.14em] uppercase">
+              <h3 className="font-mono text-xs tracking-[0.12em] uppercase">
                 {formatMonthKey(month.key)}
               </h3>
-              {month.totalMinor > 0 && (
-                <span className="tabular-money text-xs">
-                  {formatMoney(month.totalMinor, group.currency)}
+              {month.summary && month.summary.totalMinor > 0 && (
+                <span className="tabular-money text-right text-sm">
+                  {formatMoney(month.summary.totalMinor, group.currency)}
+                  {month.summary.shareMinor !== 0 && (
+                    <>
+                      {" · "}
+                      {t("expenses.monthYourShare", {
+                        amount: formatMoney(month.summary.shareMinor, group.currency),
+                      })}
+                    </>
+                  )}
                 </span>
               )}
             </div>

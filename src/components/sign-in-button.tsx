@@ -1,14 +1,21 @@
 "use client";
 
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  getRedirectResult,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect,
+} from "firebase/auth";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { EmailAuthForm } from "@/components/email-auth-form";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { EmailAuthForm, type EmailAuthMode } from "@/components/email-auth-form";
+import { InAppBrowserNotice, useInAppBrowser } from "@/components/in-app-browser-notice";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useT } from "@/components/locale-provider";
-import { authErrorKey } from "@/lib/firebase/auth-error";
+import { authErrorKey, shouldFallBackToRedirect } from "@/lib/firebase/auth-error";
 import { auth } from "@/lib/firebase/client";
 import { createServerSession } from "@/lib/firebase/complete-sign-in";
 import type { TranslationKey } from "@/lib/i18n/translate";
@@ -36,60 +43,184 @@ function GoogleLogo() {
   );
 }
 
-export function SignInButton({ redirectTo = "/onboarding" }: { redirectTo?: string }) {
+/** Where to go once a redirect sign-in returns — the page reloads in between. */
+const REDIRECT_TARGET_KEY = "split.signInRedirectTo";
+
+function readRedirectTarget(): string | null {
+  try {
+    return window.sessionStorage.getItem(REDIRECT_TARGET_KEY);
+  } catch {
+    return null;
+  }
+}
+
+const noopSubscribe = () => () => {};
+
+function writeRedirectTarget(value: string | null) {
+  try {
+    if (value === null) window.sessionStorage.removeItem(REDIRECT_TARGET_KEY);
+    else window.sessionStorage.setItem(REDIRECT_TARGET_KEY, value);
+  } catch {
+    // Storage blocked: the redirect still signs in, it just lands on the
+    // default page instead of the one that started it.
+  }
+}
+
+/**
+ * The whole sign-in block: a "Ich bin neu / Ich habe ein Konto" switch first,
+ * so nobody has to find a small "Konto erstellen" link, then Google and email
+ * under it. Inside a messenger's built-in browser Google can't sign anyone in
+ * at all, so there the notice explains it and email is all that's offered.
+ */
+export function SignInButton({
+  redirectTo = "/onboarding",
+  // New people are who meets this screen: a returning user still has their
+  // session cookie and never sees it. "Ich habe ein Konto" is one tap away.
+  defaultMode = "signUp",
+}: {
+  redirectTo?: string;
+  defaultMode?: EmailAuthMode;
+}) {
+  const [mode, setMode] = useState<EmailAuthMode>(defaultMode);
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorKey, setErrorKey] = useState<TranslationKey | null>(null);
-  const [showEmail, setShowEmail] = useState(false);
   const router = useRouter();
   const t = useT();
+  const inApp = useInAppBrowser();
+  // A redirect sign-in is being finished (see the effect below) until it settles.
+  const redirectStarted = useSyncExternalStore(
+    noopSubscribe,
+    () => readRedirectTarget() !== null,
+    () => false,
+  );
+  const [redirectSettled, setRedirectSettled] = useState(false);
+  const busy = loading || (redirectStarted && !redirectSettled);
 
-  async function handleSignIn() {
+  // Back from a redirect sign-in (the popup fallback below): finish it.
+  useEffect(() => {
+    const target = readRedirectTarget();
+    if (target === null) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const credential = await getRedirectResult(auth);
+        if (cancelled) return;
+        writeRedirectTarget(null);
+        if (!credential) {
+          setRedirectSettled(true);
+          return;
+        }
+        const ok = await createServerSession(await credential.user.getIdToken());
+        if (!ok) throw new Error("Session creation failed");
+        router.push(target);
+        router.refresh();
+      } catch (error) {
+        if (cancelled) return;
+        writeRedirectTarget(null);
+        setErrorKey(authErrorKey(error));
+        setRedirectSettled(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  async function handleGoogle() {
     setLoading(true);
     setErrorKey(null);
+    const provider = new GoogleAuthProvider();
     try {
-      const credential = await signInWithPopup(auth, new GoogleAuthProvider());
+      const credential = await signInWithPopup(auth, provider);
       const idToken = await credential.user.getIdToken();
       const ok = await createServerSession(idToken);
       if (!ok) throw new Error("Session creation failed");
       router.push(redirectTo);
       router.refresh();
     } catch (error) {
+      if (shouldFallBackToRedirect(error)) {
+        writeRedirectTarget(redirectTo);
+        try {
+          await signInWithRedirect(auth, provider);
+          return; // The page navigates away.
+        } catch (redirectError) {
+          writeRedirectTarget(null);
+          setErrorKey(authErrorKey(redirectError));
+          setLoading(false);
+          return;
+        }
+      }
       setErrorKey(authErrorKey(error));
       setLoading(false);
     }
   }
 
-  return (
-    <div className="flex w-full max-w-xs flex-col items-center gap-3">
-      <Button onClick={handleSignIn} disabled={loading} size="lg" className="w-full gap-2.5">
-        {loading ? (
-          <>
-            <Loader2 className="size-4 animate-spin" />
-            {t("auth.signingIn")}
-          </>
-        ) : (
-          <>
-            <GoogleLogo />
-            {t("auth.signInWithGoogle")}
-          </>
-        )}
-      </Button>
-      {errorKey && <p className="animate-rise text-destructive text-sm">{t(errorKey)}</p>}
+  const isNew = mode === "signUp";
 
-      {showEmail ? (
-        <EmailAuthForm redirectTo={redirectTo} />
-      ) : (
-        <>
-          <div className="flex w-full items-center gap-3">
-            <Separator className="flex-1" />
-            <span className="text-muted-foreground text-xs">{t("auth.orDivider")}</span>
-            <Separator className="flex-1" />
-          </div>
-          <Button variant="ghost" size="sm" onClick={() => setShowEmail(true)}>
-            {t("auth.continueWithEmail")}
+  return (
+    <div className="flex w-full max-w-sm flex-col items-stretch gap-4">
+      {inApp && <InAppBrowserNotice />}
+
+      <Tabs value={mode} onValueChange={(value) => setMode(value as EmailAuthMode)}>
+        <TabsList className="min-h-12">
+          <TabsTrigger value="signUp" className="text-sm">
+            {t("auth.tabNew")}
+          </TabsTrigger>
+          <TabsTrigger value="signIn" className="text-sm">
+            {t("auth.tabExisting")}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {!inApp && (
+        <div className="flex flex-col gap-2">
+          <Button onClick={handleGoogle} disabled={busy} size="lg" className="w-full gap-2.5">
+            {busy ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                {t("auth.signingIn")}
+              </>
+            ) : (
+              <>
+                <GoogleLogo />
+                {t(isNew ? "auth.signUpWithGoogle" : "auth.signInWithGoogle")}
+              </>
+            )}
           </Button>
-        </>
+          <p className="text-muted-foreground text-center text-xs text-pretty">
+            {t(isNew ? "auth.googleHintNew" : "auth.googleHintExisting")}
+          </p>
+          {errorKey && (
+            <p className="animate-rise text-destructive text-center text-sm" role="alert">
+              {t(errorKey)}
+            </p>
+          )}
+        </div>
       )}
+
+      {!inApp && (
+        <div className="flex w-full items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-muted-foreground text-xs">{t("auth.orEmailDivider")}</span>
+          <Separator className="flex-1" />
+        </div>
+      )}
+
+      {isNew && !inApp && (
+        <p className="text-muted-foreground -mt-1 text-center text-xs text-pretty">
+          {t("auth.signUpEmailHint")}
+        </p>
+      )}
+
+      <EmailAuthForm
+        key={mode}
+        mode={mode}
+        onModeChange={setMode}
+        email={email}
+        onEmailChange={setEmail}
+        redirectTo={redirectTo}
+      />
     </div>
   );
 }

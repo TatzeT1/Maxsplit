@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDayMonth, formatIsoDate, formatMonthKey } from "./date";
+import { formatDayMonth, formatIsoDate, formatMonthKey, formatRelativeDay } from "./date";
 
 describe("formatMonthKey", () => {
   it("names the month in German with its year", () => {
@@ -24,5 +24,27 @@ describe("formatIsoDate", () => {
   it("formats a stored yyyy-mm-dd date the German way", () => {
     expect(formatIsoDate("2026-09-29")).toBe("29.09.2026");
     expect(formatIsoDate("2026-01-01")).toBe("01.01.2026");
+  });
+});
+
+describe("formatRelativeDay", () => {
+  const now = new Date(2026, 10, 5, 9, 0);
+
+  it("says heute and gestern by calendar day, not 24 hours", () => {
+    expect(formatRelativeDay(new Date(2026, 10, 5, 0, 5), now)).toBe("heute");
+    expect(formatRelativeDay(new Date(2026, 10, 4, 23, 50), now)).toBe("gestern");
+  });
+
+  it("counts days, then weeks", () => {
+    expect(formatRelativeDay(new Date(2026, 10, 2), now)).toBe("vor 3 Tagen");
+    expect(formatRelativeDay(new Date(2026, 9, 22), now)).toBe("vor 2 Wochen");
+  });
+
+  it("falls back to the date after about a month", () => {
+    expect(formatRelativeDay(new Date(2026, 8, 1), now)).toBe("01.09.2026");
+  });
+
+  it("speaks English when asked", () => {
+    expect(formatRelativeDay(new Date(2026, 10, 4), now, "en-GB")).toBe("yesterday");
   });
 });

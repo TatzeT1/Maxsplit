@@ -181,3 +181,10 @@ header list and reasoning.
 ## Related
 
 [[Mobile iOS Quirks]] · [[i18n]] · [[Deployment and Production Debugging]] · [[Group Page]]
+
+## Text size
+
+The appearance menu has "Schriftgröße": Normal / Groß (112.5 %) / Sehr groß (125 %), per
+device (`lib/text-size.ts`, `localStorage.textSize`, applied before paint by
+`THEME_INIT_SCRIPT`). It scales the root font size, so everything sized in rem grows with it;
+fixed `text-[11px]`-style sizes don't — prefer rem sizes on anything people need to read.

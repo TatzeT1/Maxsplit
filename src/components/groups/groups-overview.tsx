@@ -3,7 +3,8 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
-import { useT } from "@/components/locale-provider";
+import { useLocale, useT } from "@/components/locale-provider";
+import { formatRelativeDay } from "@/lib/format/date";
 import { formatMoney } from "@/lib/format/money";
 import {
   type BalanceSummary,
@@ -30,7 +31,7 @@ function GroupBalanceBadge({ group, uid }: { group: Group; uid: string }) {
 
   if (amountMinor === 0) {
     return (
-      <span className="text-muted-foreground shrink-0 text-xs">{t("groups.balanceSettled")}</span>
+      <span className="text-muted-foreground shrink-0 text-sm">{t("groups.balanceSettled")}</span>
     );
   }
 
@@ -39,24 +40,63 @@ function GroupBalanceBadge({ group, uid }: { group: Group; uid: string }) {
     <div className="flex shrink-0 flex-col items-end gap-0.5">
       <span
         className={cn(
-          "tabular-money text-[0.95rem] font-medium",
+          "tabular-money text-base font-semibold",
           isOwedToYou ? "text-success" : "text-destructive",
         )}
       >
         {isOwedToYou ? "+" : "−"}
         {formatMoney(Math.abs(amountMinor), group.currency)}
       </span>
-      <span className="text-muted-foreground text-[11px]">
+      <span className="text-muted-foreground text-xs">
         {isOwedToYou ? t("groups.balanceOwedToYouLabel") : t("groups.balanceYouOweLabel")}
       </span>
     </div>
   );
 }
 
-/** One row of the grouped list: a tile, the name, who's in it, and where you stand. */
-function GroupRow({ group, uid, index }: { group: Group; uid: string; index: number }) {
+/**
+ * The row's second line: what last happened in the group and when — "🍕 Pizza
+ * · 24,00 € · gestern" — read from the cached `lastActivity` (types.ts), so
+ * the list needs no listener per group. Groups without one yet (empty, or not
+ * touched since the field exists) say who's in them instead.
+ */
+function GroupSubline({ group }: { group: Group }) {
   const t = useT();
+  const { locale } = useLocale();
+  const activity = group.lastActivity;
 
+  let text: string;
+  if (activity) {
+    const when = formatRelativeDay(
+      new Date(activity.at),
+      new Date(),
+      locale === "en" ? "en-GB" : "de-DE",
+    );
+    const amount = formatMoney(activity.amountMinor, group.currency);
+    const name = (uid: string | undefined) =>
+      (uid && group.members[uid]?.displayName) || t("groups.someone");
+    const what =
+      activity.kind === "settlement"
+        ? t("groups.lastActivityPayment", { from: name(activity.byUid), to: name(activity.toUid) })
+        : [activity.emoji, activity.description].filter(Boolean).join(" ");
+    text = `${what} · ${amount} · ${when}`;
+  } else {
+    text = `${
+      group.memberUids.length === 1
+        ? t("groups.memberCountSingular")
+        : t("groups.membersCount", { count: group.memberUids.length })
+    } · ${group.currency}`;
+  }
+
+  return (
+    <span className="text-muted-foreground truncate text-sm" title={text}>
+      {text}
+    </span>
+  );
+}
+
+/** One row of the grouped list: a tile, the name, what happened last, and where you stand. */
+function GroupRow({ group, uid, index }: { group: Group; uid: string; index: number }) {
   return (
     <li className="animate-rise" style={{ "--stagger": Math.min(index, 8) + 2 } as CSSProperties}>
       <Link
@@ -70,14 +110,8 @@ function GroupRow({ group, uid, index }: { group: Group; uid: string; index: num
           {group.icon || group.name.charAt(0).toUpperCase() || "?"}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="truncate font-medium">{group.name}</span>
-          <span className="text-muted-foreground truncate text-xs">
-            {group.memberUids.length === 1
-              ? t("groups.memberCountSingular")
-              : t("groups.membersCount", { count: group.memberUids.length })}
-            {" · "}
-            {group.currency}
-          </span>
+          <span className="truncate text-[1.05rem] font-medium">{group.name}</span>
+          <GroupSubline group={group} />
         </div>
         <GroupBalanceBadge group={group} uid={uid} />
         <ChevronRight className="text-muted-foreground/60 group-hover:text-foreground h-4 w-4 shrink-0 transition-[color,transform] duration-(--duration-fast) group-hover:translate-x-0.5" />

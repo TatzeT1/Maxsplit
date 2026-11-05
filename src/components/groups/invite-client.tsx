@@ -78,8 +78,10 @@ export function InviteClient({
 
   if (!signedIn) {
     return (
-      <div className="animate-rise flex flex-col items-center gap-4 text-center">
-        <p className="text-muted-foreground text-sm">{t("invite.subtitle", { name: groupName })}</p>
+      <div className="animate-rise flex w-full max-w-sm flex-col items-center gap-4 text-center">
+        <p className="text-muted-foreground text-sm text-pretty">
+          {t("invite.subtitle", { name: groupName })}
+        </p>
         <SignInButton redirectTo={`/invite/${code}`} />
       </div>
     );

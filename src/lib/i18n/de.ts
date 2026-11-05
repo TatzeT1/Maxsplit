@@ -110,6 +110,10 @@ export const de = {
     laterHint: "Kein Stress — du findest das später jederzeit unter „Profil“.",
   },
   theme: {
+    textSizeLabel: "Schriftgröße",
+    textSizeNormal: "Normal",
+    textSizeLarge: "Groß",
+    textSizeXLarge: "Sehr groß",
     light: "Hell",
     dark: "Dunkel",
     system: "System",
@@ -158,12 +162,10 @@ export const de = {
   },
   auth: {
     signInTitle: "Willkommen bei Split",
-    signInSubtitle: "Melde dich an, um deine Gruppen zu sehen.",
+    signInSubtitle: "Neu hier? Ein Konto ist in einer Minute angelegt — kostenlos.",
     signInWithGoogle: "Mit Google anmelden",
     signInError: "Anmeldung fehlgeschlagen. Versuch's noch mal.",
     signingIn: "Anmeldung läuft …",
-    orDivider: "oder",
-    continueWithEmail: "Mit E-Mail fortfahren",
     nameLabel: "Name",
     namePlaceholder: "z. B. Max",
     emailLabel: "E-Mail",
@@ -171,8 +173,6 @@ export const de = {
     signInButton: "Anmelden",
     createAccount: "Konto erstellen",
     sendResetLink: "Link zum Zurücksetzen senden",
-    switchToSignUp: "Neu hier? Konto erstellen",
-    switchToSignIn: "Schon ein Konto? Anmelden",
     forgotPassword: "Passwort vergessen?",
     resetPasswordSent: "E-Mail zum Zurücksetzen gesendet — bitte Posteingang prüfen.",
     errorEmailInUse: "Für diese E-Mail-Adresse besteht bereits ein Konto.",
@@ -181,6 +181,30 @@ export const de = {
     errorInvalidCredentials: "E-Mail oder Passwort ist falsch.",
     errorTooManyRequests: "Zu viele Versuche. Bitte kurz warten und erneut versuchen.",
     errorPopupClosed: "Anmeldung wurde abgebrochen.",
+    errorNetwork: "Keine Internetverbindung. Prüf dein WLAN oder deine mobilen Daten.",
+    errorMissingPassword: "Bitte gib dein Passwort ein.",
+    tabNew: "Ich bin neu",
+    tabExisting: "Ich habe ein Konto",
+    signUpWithGoogle: "Mit Google registrieren",
+    googleHintNew:
+      "Am einfachsten, wenn du ein Google- oder Gmail-Konto hast: Dein Split-Konto wird dabei automatisch angelegt.",
+    googleHintExisting: "Du hast dich mit Google registriert? Dann tipp hier.",
+    orEmailDivider: "oder mit E-Mail",
+    signUpEmailHint:
+      "Kein Google-Konto? Kein Problem: Leg dein Konto mit deiner E-Mail-Adresse und einem selbst ausgedachten Passwort an.",
+    nameHint: "So sehen dich die anderen in der Gruppe.",
+    passwordHintNew:
+      "Mindestens 6 Zeichen. Du brauchst es, wenn du dich das nächste Mal anmeldest.",
+    showPassword: "Passwort anzeigen",
+    hidePassword: "Passwort verbergen",
+    noAccountYet: "Noch kein Konto? Jetzt mit dieser E-Mail anlegen",
+    signInInstead: "Stattdessen anmelden",
+    inAppTitle: "Bitte im Browser öffnen",
+    inAppBody:
+      "Du hast den Link in einer App wie WhatsApp oder Instagram geöffnet. Dort lässt Google keine Anmeldung zu. Öffne die Seite in Safari oder Chrome — oder melde dich unten mit E-Mail an, das klappt auch hier.",
+    inAppOpen: "Im Browser öffnen",
+    inAppCopy: "Link kopieren",
+    inAppCopied: "Link kopiert — füg ihn in Safari oder Chrome ein.",
     heroTitle: "Ausgaben teilen",
     heroTitleLine2Prefix: "ohne",
     heroTitleHighlight: "Kopfrechnen",
@@ -196,7 +220,7 @@ export const de = {
     featuresSubtitle: "Egal ob WG, Reise oder Freundeskreis — Split hat, was ihr braucht.",
     featureInviteTitle: "Freunde einladen",
     featureInviteDescription:
-      "Teil einen Link — alle treten nach der Google-Anmeldung mit einem Klick der Gruppe bei.",
+      "Teil einen Link — alle treten nach der Anmeldung mit einem Klick der Gruppe bei.",
     featureSplitTitle: "Flexibel aufteilen",
     featureSplitDescription:
       "Gleich, nach Anteilen, Prozent oder genauem Betrag — mit Kategorien und mehreren Zahlern pro Ausgabe.",
@@ -211,8 +235,22 @@ export const de = {
       "Keine Werbung, keine Abo-Falle, keine versteckten Kosten. Einfach faire Aufteilung für alle.",
   },
   groups: {
+    firstStepsTitle: "So geht's los",
+    firstStep1Title: "Gruppe erstellen",
+    firstStep1Body:
+      "Zum Beispiel „Familie“, „WG“ oder „Urlaub Italien“ — unten auf „Gruppe erstellen“ tippen.",
+    firstStep2Title: "Andere einladen",
+    firstStep2Body:
+      "Schick den Einladungslink per WhatsApp oder E-Mail. Wer noch kein Konto hat, legt eins in einer Minute an.",
+    firstStep3Title: "Ausgaben eintragen",
+    firstStep3Body:
+      "Wer etwas bezahlt hat, trägt es ein. Split rechnet aus, wer wem wie viel schuldet.",
+    firstStepsInvited:
+      "Jemand hat dir einen Einladungslink geschickt? Öffne ihn einfach noch mal — oder tipp auf „Gruppe beitreten“ und gib den Code ein.",
+    lastActivityPayment: "{{from}} hat {{to}} bezahlt",
+    someone: "Jemand",
     title: "Deine Gruppen",
-    empty: "Du bist noch in keiner Gruppe. Leg eine an oder tritt einer bei.",
+    empty: "Du bist noch in keiner Gruppe. In drei Schritten bist du startklar:",
     create: "Gruppe erstellen",
     createTitle: "Neue Gruppe",
     editGroup: "Gruppe bearbeiten",
@@ -326,6 +364,13 @@ export const de = {
     manageTitle: "Verwaltung",
   },
   expenses: {
+    monthYourShare: "dein Anteil {{amount}}",
+    thisMonthTitle: "Diesen Monat",
+    thisMonthSpent: "Gruppe hat ausgegeben",
+    thisMonthShare: "Dein Anteil",
+    thisMonthCount: "{{count}} Ausgaben",
+    thisMonthCountOne: "1 Ausgabe",
+    lastMonthCompare: "{{month}}: {{amount}} ausgegeben, dein Anteil {{share}}",
     title: "Ausgaben",
     empty: "Noch keine Ausgaben. Leg die erste an.",
     add: "Ausgabe hinzufügen",
@@ -1795,7 +1840,8 @@ export const de = {
   },
   invite: {
     title: "Du bist eingeladen",
-    subtitle: "Melde dich mit Google an, um „{{name}}“ beizutreten.",
+    subtitle:
+      "Melde dich an — oder leg in einer Minute ein kostenloses Konto an —, um „{{name}}“ beizutreten.",
     notFoundTitle: "Einladung ungültig",
     notFoundBody: "Dieser Einladungslink ist abgelaufen oder falsch.",
     joining: "Du trittst „{{name}}“ bei …",

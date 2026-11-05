@@ -17,9 +17,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAppStyle } from "@/lib/app-style";
+import { isTextSize, setTextSize, useTextSize } from "@/lib/text-size";
 
 /**
- * Appearance menu: light/dark/system, and below it a "Styles" entry that opens
+ * Appearance menu: light/dark/system, the text size (stays open while you
+ * pick, so you see the effect), and a "Styles" entry that opens
  * the style gallery (style-picker-dialog.tsx) with a preview of every style.
  */
 export function ThemeToggle({
@@ -31,6 +33,7 @@ export function ThemeToggle({
 }) {
   const { theme, setTheme } = useTheme();
   const style = useAppStyle();
+  const textSize = useTextSize();
   const t = useT();
   const [stylesOpen, setStylesOpen] = useState(false);
 
@@ -62,6 +65,24 @@ export function ThemeToggle({
             <DropdownMenuRadioItem value="light">{t("theme.light")}</DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="dark">{t("theme.dark")}</DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="system">{t("theme.system")}</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel>{t("theme.textSizeLabel")}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={textSize}
+            onValueChange={(value) => {
+              if (isTextSize(value)) setTextSize(value);
+            }}
+          >
+            <DropdownMenuRadioItem value="normal" onSelect={(event) => event.preventDefault()}>
+              {t("theme.textSizeNormal")}
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="large" onSelect={(event) => event.preventDefault()}>
+              <span className="text-[1.1em]">{t("theme.textSizeLarge")}</span>
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="xlarge" onSelect={(event) => event.preventDefault()}>
+              <span className="text-[1.2em]">{t("theme.textSizeXLarge")}</span>
+            </DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem className="py-2" onSelect={() => setStylesOpen(true)}>

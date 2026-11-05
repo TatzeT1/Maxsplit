@@ -80,13 +80,13 @@ export default async function Home() {
               {t("auth.heroDescription")}
             </p>
             <div
-              className="animate-rise flex w-full max-w-xs flex-col items-start gap-2"
+              className="animate-rise flex w-full max-w-sm flex-col items-start gap-3"
               style={{ "--stagger": 4 } as CSSProperties}
             >
-              <SignInButton />
-              <p className="text-muted-foreground w-full text-center text-xs">
+              <p className="text-muted-foreground w-full text-center text-sm">
                 {t("auth.signInSubtitle")}
               </p>
+              <SignInButton />
             </div>
           </div>
 

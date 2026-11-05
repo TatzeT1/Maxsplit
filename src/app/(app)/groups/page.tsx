@@ -1,7 +1,7 @@
 "use client";
 
 import { collection, onSnapshot, query, where } from "firebase/firestore";
-import { Users } from "lucide-react";
+import { Receipt, Share2, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CreateGroupDialog } from "@/components/groups/create-group-dialog";
 import { JoinGroupDialog } from "@/components/groups/join-group-dialog";
@@ -19,6 +19,44 @@ import { useOnline } from "@/lib/use-online";
 import type { Group } from "@/lib/types";
 
 const LIVE_SOURCES = ["groups"] as const;
+
+const FIRST_STEPS = [
+  { icon: Users, title: "groups.firstStep1Title", body: "groups.firstStep1Body" },
+  { icon: Share2, title: "groups.firstStep2Title", body: "groups.firstStep2Body" },
+  { icon: Receipt, title: "groups.firstStep3Title", body: "groups.firstStep3Body" },
+] as const;
+
+/**
+ * The empty list as a short how-to: a first-timer who lands on "no groups"
+ * should see what the app is for and what to do next, not just an empty box.
+ */
+function FirstSteps() {
+  const t = useT();
+  return (
+    <section className="bg-card shadow-e1 animate-rise flex flex-col gap-5 rounded-2xl p-5">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-heading text-xl font-medium">{t("groups.firstStepsTitle")}</h2>
+        <p className="text-muted-foreground text-sm text-pretty">{t("groups.empty")}</p>
+      </div>
+      <ol className="flex flex-col gap-4">
+        {FIRST_STEPS.map(({ icon: Icon, title, body }, index) => (
+          <li key={title} className="flex gap-3.5">
+            <span className="monogram relative flex size-10 shrink-0 items-center justify-center rounded-[0.7rem]">
+              <Icon className="size-[18px]" strokeWidth={1.75} />
+              <span className="bg-primary text-primary-foreground absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full text-[11px] font-semibold">
+                {index + 1}
+              </span>
+            </span>
+            <div className="flex flex-col gap-0.5">
+              <h3 className="font-medium">{t(title)}</h3>
+              <p className="text-muted-foreground text-sm text-pretty">{t(body)}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
 
 export default function GroupsPage() {
   const user = useCurrentUser();
@@ -90,11 +128,11 @@ export default function GroupsPage() {
         ) : groups.length === 0 ? (
           <>
             {heading}
-            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed p-10 text-center">
-              <Users className="text-muted-foreground h-6 w-6" />
-              <p className="text-muted-foreground text-sm">{t("groups.empty")}</p>
-            </div>
+            <FirstSteps />
             {actions}
+            <p className="text-muted-foreground text-center text-sm text-pretty">
+              {t("groups.firstStepsInvited")}
+            </p>
           </>
         ) : (
           user && (

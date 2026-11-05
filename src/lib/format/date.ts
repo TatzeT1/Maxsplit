@@ -63,3 +63,29 @@ const isoDateFormatter = new Intl.DateTimeFormat("de-DE", {
 export function formatIsoDate(isoDate: string): string {
   return isoDateFormatter.format(new Date(`${isoDate}T00:00:00Z`));
 }
+
+const relativeFormatters = new Map<string, Intl.RelativeTimeFormat>();
+
+function relativeFormatter(locale: string): Intl.RelativeTimeFormat {
+  let formatter = relativeFormatters.get(locale);
+  if (!formatter) {
+    formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    relativeFormatters.set(locale, formatter);
+  }
+  return formatter;
+}
+
+/**
+ * How long ago a moment was, in calendar days of the device's time zone:
+ * "heute", "gestern", "vor 3 Tagen", "vor 2 Wochen" — and the plain date
+ * ("12.08.2026") from about a month on, where "vor 7 Wochen" stops helping.
+ */
+export function formatRelativeDay(at: Date, now: Date = new Date(), locale = "de-DE"): string {
+  const startOfDay = (date: Date) => Date.UTC(date.getFullYear(), date.getMonth(), date.getDate());
+  const days = Math.round((startOfDay(now) - startOfDay(at)) / 86_400_000);
+  const formatter = relativeFormatter(locale);
+  if (days <= 0) return formatter.format(0, "day");
+  if (days < 7) return formatter.format(-days, "day");
+  if (days < 35) return formatter.format(-Math.floor(days / 7), "week");
+  return formatDate(at);
+}

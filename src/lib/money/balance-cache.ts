@@ -1,10 +1,12 @@
 import "server-only";
 import type { Expense, Settlement } from "@/lib/types";
 import { computeBalances } from "./balances";
+import { latestActivity } from "./last-activity";
 
 /**
  * Recomputes a group's full balance ledger and writes it to
- * `groups/{id}.balancesMinor` (see the field's doc comment in types.ts).
+ * `groups/{id}.balancesMinor`, plus the newest entry as `lastActivity` (see
+ * the fields' doc comments in types.ts).
  * Called after every Server Action that mutates a group's expenses or
  * settlements, so the cache is always as fresh as the ledger it mirrors.
  * Best-effort: a write failure here must never fail the caller's primary
@@ -33,7 +35,8 @@ export async function recomputeGroupBalances(
     }));
 
     const balancesMinor = computeBalances(balanceExpenses, settlements);
-    await groupRef.update({ balancesMinor });
+    const lastActivity = latestActivity(expenses, settlements);
+    await groupRef.update({ balancesMinor, lastActivity });
   } catch (error) {
     console.error("recomputeGroupBalances failed", error);
   }

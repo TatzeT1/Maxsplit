@@ -22,10 +22,26 @@ export function authErrorKey(error: unknown): TranslationKey {
       return "auth.errorInvalidCredentials";
     case "auth/too-many-requests":
       return "auth.errorTooManyRequests";
+    case "auth/network-request-failed":
+      return "auth.errorNetwork";
+    case "auth/missing-password":
+      return "auth.errorMissingPassword";
     case "auth/popup-closed-by-user":
     case "auth/cancelled-popup-request":
       return "auth.errorPopupClosed";
     default:
       return "auth.signInError";
   }
+}
+
+/**
+ * Popup errors that mean "this browser can't do popups" rather than "the user
+ * closed it" — sign-in retries as a full-page redirect instead.
+ */
+export function shouldFallBackToRedirect(error: unknown): boolean {
+  return (
+    error instanceof FirebaseError &&
+    (error.code === "auth/popup-blocked" ||
+      error.code === "auth/operation-not-supported-in-this-environment")
+  );
 }

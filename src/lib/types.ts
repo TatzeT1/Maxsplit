@@ -32,6 +32,20 @@ export interface GroupMember {
   accountHolderName?: string;
 }
 
+export interface GroupLastActivity {
+  kind: "expense" | "settlement";
+  /** Expense description; empty for a payment. */
+  description: string;
+  emoji?: string | null;
+  amountMinor: number;
+  /** ISO timestamp the entry was created. */
+  at: string;
+  /** Who paid — for a payment, the sender. */
+  byUid: string;
+  /** Payment recipient; absent for an expense. */
+  toUid?: string;
+}
+
 export interface Group {
   id: string;
   name: string;
@@ -60,6 +74,14 @@ export interface Group {
    * groups created before this field existed, until their next mutation.
    */
   balancesMinor?: Record<string, number>;
+  /**
+   * The newest live entry in the group's ledger (expense or payment, by
+   * createdAt), so the groups list can say "Pizza · vor 2 Tagen" without a
+   * listener per group. Display-only, maintained next to `balancesMinor` by
+   * `recomputeGroupBalances`; a deleted entry falls back to the one before.
+   * Absent until the group's next mutation, null for an empty ledger.
+   */
+  lastActivity?: GroupLastActivity | null;
   /**
    * The online luck round running in this group, if any — lets the group
    * page show its banner without another listener. Set and cleared by

@@ -80,3 +80,24 @@ truth** (`users/{uid}` is). The field list lives once, in `MEMBER_PAYMENT_FIELDS
 ## Related
 
 [[Data Model]] · [[Admin Panel]] · [[Balances and Settlements]] (what these details are ultimately used to display alongside)
+
+## Sign-in for first-timers
+
+A newcomer (someone's mum, via an invite link in WhatsApp) got stuck, so the sign-in block
+(`sign-in-button.tsx` + `email-auth-form.tsx`) is built for people who have never seen it:
+
+- **"Ich bin neu / Ich habe ein Konto" first**, defaulting to new — a returning user still has
+  the session cookie and never sees this screen. The old layout hid email behind a ghost
+  button and opened it in _sign-in_ mode, so a new user read "E-Mail oder Passwort ist falsch".
+  That error now offers "Noch kein Konto? Jetzt mit dieser E-Mail anlegen" as a button
+  (and "email already in use" offers "Stattdessen anmelden"), keeping the typed email.
+- Name is required on sign-up; the password field has a show/hide eye.
+- **In-app browsers** (`lib/auth/in-app-browser.ts`): Google answers sign-in inside
+  Instagram/Facebook/TikTok/Android WebView/iOS WKWebView with `403 disallowed_useragent` in
+  the popup — no Firebase error reaches the app. There `InAppBrowserNotice` explains it,
+  offers "Im Browser öffnen" (Chrome intent / `x-safari-https://`) and "Link kopieren", and
+  only email sign-in is shown.
+- `auth/popup-blocked` falls back to `signInWithRedirect`; the target survives the reload in
+  `sessionStorage` (`split.signInRedirectTo`). Note that redirect sign-in on Safari needs the
+  auth domain to be same-site with the app — with the default `*.firebaseapp.com` it can
+  still fail there, and then shows the usual error.

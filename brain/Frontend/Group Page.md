@@ -119,3 +119,18 @@ would otherwise sit on top of half the remaining screen. On `md+` it becomes a f
 ## Related
 
 [[Design System and Theming]] · [[Balances and Settlements]] · [[Split Games]] · [[Groups and Members]] · [[Mobile iOS Quirks]] · [[Routing Map]]
+
+## "Diesen Monat" and the month headers
+
+Above the filters, `ThisMonthSummary` (in `activity-feed.tsx`) shows what the group spent
+this calendar month, your share (sum of your splits) and last month for comparison. Each
+month header shows the month's total and "dein Anteil", following the active filter. Both come
+from `summarizeMonths` (`lib/money/month-summary.ts`) — display arithmetic only.
+
+## Groups list: last activity
+
+Each row's second line is the newest live ledger entry ("🍕 Pizza · 24,00 € · gestern"),
+read from `group.lastActivity`, which `recomputeGroupBalances` writes next to `balancesMinor`
+(`lib/money/last-activity.ts`). Groups untouched since the field exists still show
+"4 Mitglieder · EUR" until their next expense or payment. An empty list shows a three-step
+"So geht's los" how-to instead of an empty box.

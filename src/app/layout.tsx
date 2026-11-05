@@ -91,15 +91,22 @@ export const viewport: Viewport = {
   ],
 };
 
-// Runs before hydration to apply the stored theme and style to <html> and
-// avoid a flash of the wrong look. Keep in sync with theme-provider.tsx and
-// lib/app-style.ts (storage keys and the list of styles).
+// Runs before hydration to apply the stored theme, style and text size to
+// <html> and avoid a flash of the wrong look. Keep in sync with
+// theme-provider.tsx, lib/app-style.ts and lib/text-size.ts (storage keys and
+// the lists of values).
 const THEME_INIT_SCRIPT = `
 (function() {
   try {
     var style = localStorage.getItem("style");
     if (["graphit", "original", "fallblatt", "bierdeckel", "riso", "schmetterling", "herzblatt"].indexOf(style) !== -1) {
       document.documentElement.setAttribute("data-style", style);
+    }
+  } catch (e) {}
+  try {
+    var textSize = localStorage.getItem("textSize");
+    if (textSize === "large" || textSize === "xlarge") {
+      document.documentElement.setAttribute("data-text-size", textSize);
     }
   } catch (e) {}
   try {
